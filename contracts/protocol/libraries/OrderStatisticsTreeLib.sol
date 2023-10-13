@@ -40,12 +40,12 @@ library OrderStatisticsTreeLib {
         uint48 tail;
         uint256 orderCounter;
         uint256 orderTotalAmount;
-        mapping(uint256 => OrderItem) orders;
+        mapping(uint48 orderId => OrderItem) orders;
     }
 
     struct Tree {
         uint256 root;
-        mapping(uint256 => Node) nodes;
+        mapping(uint256 value => Node) nodes;
     }
 
     struct OrderItem {
@@ -56,19 +56,19 @@ library OrderStatisticsTreeLib {
         uint256 amount;
     }
 
-    function first(Tree storage self) internal view returns (uint256 _value) {
-        _value = self.root;
-        if (_value == EMPTY) return 0;
-        while (self.nodes[_value].left != EMPTY) {
-            _value = self.nodes[_value].left;
+    function first(Tree storage self) internal view returns (uint256 value) {
+        value = self.root;
+        if (value == EMPTY) return 0;
+        while (self.nodes[value].left != EMPTY) {
+            value = self.nodes[value].left;
         }
     }
 
-    function last(Tree storage self) internal view returns (uint256 _value) {
-        _value = self.root;
-        if (_value == EMPTY) return 0;
-        while (self.nodes[_value].right != EMPTY) {
-            _value = self.nodes[_value].right;
+    function last(Tree storage self) internal view returns (uint256 value) {
+        value = self.root;
+        if (value == EMPTY) return 0;
+        while (self.nodes[value].right != EMPTY) {
+            value = self.nodes[value].right;
         }
     }
 
@@ -76,33 +76,33 @@ library OrderStatisticsTreeLib {
         return self.root != EMPTY;
     }
 
-    function next(Tree storage self, uint256 value) internal view returns (uint256 _cursor) {
+    function next(Tree storage self, uint256 value) internal view returns (uint256 cursor) {
         require(value != EMPTY, "OrderStatisticsTreeLib: Starting value cannot be zero");
         if (self.nodes[value].right != EMPTY) {
-            _cursor = treeMinimum(self, self.nodes[value].right);
+            cursor = treeMinimum(self, self.nodes[value].right);
         } else {
-            _cursor = self.nodes[value].parent;
-            while (_cursor != EMPTY && value == self.nodes[_cursor].right) {
-                value = _cursor;
-                _cursor = self.nodes[_cursor].parent;
+            cursor = self.nodes[value].parent;
+            while (cursor != EMPTY && value == self.nodes[cursor].right) {
+                value = cursor;
+                cursor = self.nodes[cursor].parent;
             }
         }
     }
 
-    function prev(Tree storage self, uint256 value) internal view returns (uint256 _cursor) {
+    function prev(Tree storage self, uint256 value) internal view returns (uint256 cursor) {
         require(value != EMPTY, "OrderStatisticsTreeLib: Starting value cannot be zero");
         if (self.nodes[value].left != EMPTY) {
-            _cursor = treeMaximum(self, self.nodes[value].left);
+            cursor = treeMaximum(self, self.nodes[value].left);
         } else {
-            _cursor = self.nodes[value].parent;
-            while (_cursor != EMPTY && value == self.nodes[_cursor].left) {
-                value = _cursor;
-                _cursor = self.nodes[_cursor].parent;
+            cursor = self.nodes[value].parent;
+            while (cursor != EMPTY && value == self.nodes[cursor].left) {
+                value = cursor;
+                cursor = self.nodes[cursor].parent;
             }
         }
     }
 
-    function exists(Tree storage self, uint256 value) internal view returns (bool _exists) {
+    function exists(Tree storage self, uint256 value) internal view returns (bool) {
         if (value == self.root) return true;
 
         uint256 cursor = value;
@@ -128,20 +128,10 @@ library OrderStatisticsTreeLib {
         return orderIdExists(self, value, orderId) && exists(self, value);
     }
 
-    function getNode(Tree storage self, uint256 value)
-        internal
-        view
-        returns (
-            uint256,
-            uint256,
-            uint256,
-            bool,
-            uint256,
-            uint256,
-            uint256,
-            uint256
-        )
-    {
+    function getNode(
+        Tree storage self,
+        uint256 value
+    ) internal view returns (uint256, uint256, uint256, bool, uint256, uint256, uint256, uint256) {
         require(exists(self, value), "OrderStatisticsTreeLib: Value does not exist");
         Node storage gn = self.nodes[value];
         return (
@@ -161,19 +151,17 @@ library OrderStatisticsTreeLib {
         return gn.orderCounter;
     }
 
-    function getNodeTotalAmount(Tree storage self, uint256 value)
-        internal
-        view
-        returns (uint256 totalAmount)
-    {
+    function getNodeTotalAmount(
+        Tree storage self,
+        uint256 value
+    ) internal view returns (uint256 totalAmount) {
         return self.nodes[value].orderTotalAmount;
     }
 
-    function getNodeOrderIds(Tree storage self, uint256 value)
-        internal
-        view
-        returns (uint48[] memory orderIds)
-    {
+    function getNodeOrderIds(
+        Tree storage self,
+        uint256 value
+    ) internal view returns (uint48[] memory orderIds) {
         Node storage gn = self.nodes[value];
         OrderItem memory order = gn.orders[gn.head];
         orderIds = new uint48[](gn.orderCounter);
@@ -184,7 +172,7 @@ library OrderStatisticsTreeLib {
         }
     }
 
-    function count(Tree storage self) internal view returns (uint256 _count) {
+    function count(Tree storage self) internal view returns (uint256) {
         return getNodeCount(self, self.root);
     }
 
@@ -373,11 +361,7 @@ library OrderStatisticsTreeLib {
         self.nodes[self.root].red = false;
     }
 
-    function replaceParent(
-        Tree storage self,
-        uint256 a,
-        uint256 b
-    ) private {
+    function replaceParent(Tree storage self, uint256 a, uint256 b) private {
         uint256 bParent = self.nodes[b].parent;
         self.nodes[a].parent = bParent;
         if (bParent == EMPTY) {
@@ -462,11 +446,7 @@ library OrderStatisticsTreeLib {
     )
         internal
         view
-        returns (
-            uint256 droppedValue,
-            uint256 droppedAmount,
-            uint256 droppedAmountInFV
-        )
+        returns (uint256 droppedValue, uint256 droppedAmount, uint256 droppedAmountInFV)
     {
         (droppedValue, , , droppedAmount, droppedAmountInFV, , ) = _calculateDroppedAmountFromLeft(
             self,
@@ -485,11 +465,7 @@ library OrderStatisticsTreeLib {
     )
         internal
         view
-        returns (
-            uint256 droppedValue,
-            uint256 droppedAmount,
-            uint256 droppedAmountInFV
-        )
+        returns (uint256 droppedValue, uint256 droppedAmount, uint256 droppedAmountInFV)
     {
         (droppedValue, , , droppedAmount, droppedAmountInFV, , ) = _calculateDroppedAmountFromRight(
             self,
@@ -1047,7 +1023,7 @@ library OrderStatisticsTreeLib {
 
         OrderItem memory order = gn.orders[orderId];
         amount = order.amount;
-        uint256 cursor = gn.head;
+        uint48 cursor = gn.head;
         uint256 removedCount = 1;
         uint256 removedAmount = gn.orders[cursor].amount;
 
@@ -1072,11 +1048,7 @@ library OrderStatisticsTreeLib {
     /**
      * @dev Internal function to update the Head pointer.
      */
-    function _setHead(
-        Tree storage self,
-        uint256 value,
-        uint48 orderId
-    ) internal {
+    function _setHead(Tree storage self, uint256 value, uint48 orderId) internal {
         Node storage gn = self.nodes[value];
 
         gn.head = orderId;
@@ -1085,11 +1057,7 @@ library OrderStatisticsTreeLib {
     /**
      * @dev Internal function to update the Tail pointer.
      */
-    function _setTail(
-        Tree storage self,
-        uint256 value,
-        uint48 orderId
-    ) internal {
+    function _setTail(Tree storage self, uint256 value, uint48 orderId) internal {
         Node storage gn = self.nodes[value];
 
         gn.tail = orderId;
@@ -1098,31 +1066,24 @@ library OrderStatisticsTreeLib {
     /**
      * @dev Internal function to link an Object to another.
      */
-    function _link(
-        Tree storage self,
-        uint256 value,
-        uint48 _prevId,
-        uint48 _nextId
-    ) internal {
+    function _link(Tree storage self, uint256 value, uint48 prevId, uint48 nextId) internal {
         Node storage gn = self.nodes[value];
 
-        gn.orders[_prevId].next = _nextId;
-        gn.orders[_nextId].prev = _prevId;
+        gn.orders[prevId].next = nextId;
+        gn.orders[nextId].prev = prevId;
     }
 
-    function _calculateFutureValue(uint256 unitPrice, uint256 amount)
-        internal
-        pure
-        returns (uint256)
-    {
+    function _calculateFutureValue(
+        uint256 unitPrice,
+        uint256 amount
+    ) internal pure returns (uint256) {
         return (amount * Constants.PRICE_DIGIT).div(unitPrice);
     }
 
-    function _calculatePresentValue(uint256 unitPrice, uint256 amount)
-        internal
-        pure
-        returns (uint256)
-    {
+    function _calculatePresentValue(
+        uint256 unitPrice,
+        uint256 amount
+    ) internal pure returns (uint256) {
         return (amount * unitPrice).div(Constants.PRICE_DIGIT);
     }
 }

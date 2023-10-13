@@ -8,7 +8,7 @@ library MixinAddressResolverStorage {
 
     struct Storage {
         IAddressResolver resolver;
-        mapping(bytes32 => address) addressCache;
+        mapping(bytes32 contractName => address contractAddress) addressCache;
     }
 
     function slot() internal pure returns (Storage storage r) {

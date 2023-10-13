@@ -25,11 +25,7 @@ contract MockV3Aggregator is AggregatorV2V3Interface, Ownable {
     mapping(uint256 => uint256) public override getTimestamp;
     mapping(uint256 => uint256) private getStartedAt;
 
-    constructor(
-        uint8 _decimals,
-        bytes32 _ccy,
-        int256 _initialAnswer
-    ) {
+    constructor(uint8 _decimals, bytes32 _ccy, int256 _initialAnswer) {
         _transferOwnership(msg.sender);
         priceFeedCcy = _ccy;
         decimals = _decimals;
@@ -59,7 +55,9 @@ contract MockV3Aggregator is AggregatorV2V3Interface, Ownable {
         getStartedAt[latestRound] = _startedAt;
     }
 
-    function getRoundData(uint80 _roundId)
+    function getRoundData(
+        uint80 _roundId
+    )
         external
         view
         override

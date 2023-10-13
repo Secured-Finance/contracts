@@ -7,11 +7,7 @@ library QuickSort {
         return data;
     }
 
-    function quickSort(
-        uint256[] memory arr,
-        int256 left,
-        int256 right
-    ) internal pure {
+    function quickSort(uint256[] memory arr, int256 left, int256 right) internal pure {
         int256 i = left;
         int256 j = right;
         if (i == j) return;

@@ -44,7 +44,9 @@ contract OrderStatisticsTreeContract {
         _exists = tree.exists(value);
     }
 
-    function getNode(uint256 value)
+    function getNode(
+        uint256 value
+    )
         public
         view
         returns (
@@ -62,11 +64,10 @@ contract OrderStatisticsTreeContract {
             .getNode(value);
     }
 
-    function getOrderById(uint256 value, uint48 orderId)
-        public
-        view
-        returns (address maker, uint256 amount)
-    {
+    function getOrderById(
+        uint256 value,
+        uint48 orderId
+    ) public view returns (address maker, uint256 amount) {
         return tree.getOrderById(value, orderId);
     }
 
@@ -78,12 +79,7 @@ contract OrderStatisticsTreeContract {
         _orderCounter = tree.getNodeCount(value);
     }
 
-    function insertAmountValue(
-        uint256 value,
-        uint48 orderId,
-        address user,
-        uint256 amount
-    ) public {
+    function insertAmountValue(uint256 value, uint48 orderId, address user, uint256 amount) public {
         emit OrderInserted("insert", amount, value, orderId);
         tree.insertOrder(value, orderId, user, amount);
     }
@@ -97,15 +93,7 @@ contract OrderStatisticsTreeContract {
         uint256 amount,
         uint256 amountInFV,
         uint256 limitValue
-    )
-        public
-        view
-        returns (
-            uint256 droppedValue,
-            uint256 droppedAmount,
-            uint256 droppedAmountInFV
-        )
-    {
+    ) public view returns (uint256 droppedValue, uint256 droppedAmount, uint256 droppedAmountInFV) {
         return tree.calculateDroppedAmountFromLeft(amount, amountInFV, limitValue);
     }
 
@@ -113,23 +101,11 @@ contract OrderStatisticsTreeContract {
         uint256 amount,
         uint256 amountInFV,
         uint256 limitValue
-    )
-        public
-        view
-        returns (
-            uint256 droppedValue,
-            uint256 droppedAmount,
-            uint256 droppedAmountInFV
-        )
-    {
+    ) public view returns (uint256 droppedValue, uint256 droppedAmount, uint256 droppedAmountInFV) {
         return tree.calculateDroppedAmountFromRight(amount, amountInFV, limitValue);
     }
 
-    function dropValuesFromFirst(
-        uint256 value,
-        uint256 amountInFV,
-        uint256 limitValue
-    ) public {
+    function dropValuesFromFirst(uint256 value, uint256 amountInFV, uint256 limitValue) public {
         (
             ,
             uint256 droppedAmount,
@@ -145,11 +121,7 @@ contract OrderStatisticsTreeContract {
         );
     }
 
-    function dropValuesFromLast(
-        uint256 amount,
-        uint256 amountInFV,
-        uint256 limitValue
-    ) public {
+    function dropValuesFromLast(uint256 amount, uint256 amountInFV, uint256 limitValue) public {
         (
             ,
             uint256 droppedAmount,

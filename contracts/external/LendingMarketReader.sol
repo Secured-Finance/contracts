@@ -97,11 +97,7 @@ contract LendingMarketReader is MixinAddressResolver {
     )
         external
         view
-        returns (
-            uint256[] memory unitPrices,
-            uint256[] memory amounts,
-            uint256[] memory quantities
-        )
+        returns (uint256[] memory unitPrices, uint256[] memory amounts, uint256[] memory quantities)
     {
         return
             _getLendingMarket(_ccy).getBorrowOrderBook(
@@ -126,11 +122,7 @@ contract LendingMarketReader is MixinAddressResolver {
     )
         external
         view
-        returns (
-            uint256[] memory unitPrices,
-            uint256[] memory amounts,
-            uint256[] memory quantities
-        )
+        returns (uint256[] memory unitPrices, uint256[] memory amounts, uint256[] memory quantities)
     {
         return
             _getLendingMarket(_ccy).getLendOrderBook(
@@ -148,7 +140,10 @@ contract LendingMarketReader is MixinAddressResolver {
      * @return lastBorrowUnitPrice The price of the last borrow order filled by Itayose.
      * @return totalOffsetAmount The total amount of the orders filled by Itayose.
      */
-    function getItayoseEstimation(bytes32 _ccy, uint256 _maturity)
+    function getItayoseEstimation(
+        bytes32 _ccy,
+        uint256 _maturity
+    )
         public
         view
         returns (
@@ -173,11 +168,9 @@ contract LendingMarketReader is MixinAddressResolver {
      * @param _ccys Currency name list in bytes32
      * @return orderBookDetails The array of detailed information on the order book.
      */
-    function getOrderBookDetails(bytes32[] memory _ccys)
-        external
-        view
-        returns (OrderBookDetail[] memory orderBookDetails)
-    {
+    function getOrderBookDetails(
+        bytes32[] memory _ccys
+    ) external view returns (OrderBookDetail[] memory orderBookDetails) {
         uint256 totalCount;
 
         OrderBookDetail[][] memory detailLists = new OrderBookDetail[][](_ccys.length);
@@ -202,11 +195,9 @@ contract LendingMarketReader is MixinAddressResolver {
      * @param _ccy Currency name in bytes32
      * @return orderBookDetails The array of detailed information on the order book.
      */
-    function getOrderBookDetails(bytes32 _ccy)
-        public
-        view
-        returns (OrderBookDetail[] memory orderBookDetails)
-    {
+    function getOrderBookDetails(
+        bytes32 _ccy
+    ) public view returns (OrderBookDetail[] memory orderBookDetails) {
         uint256[] memory maturities = lendingMarketController().getMaturities(_ccy);
         orderBookDetails = new OrderBookDetail[](maturities.length);
 
@@ -221,11 +212,10 @@ contract LendingMarketReader is MixinAddressResolver {
      * @param _maturity The maturity of the order book
      * @return orderBookDetail The detailed information on the order book.
      */
-    function getOrderBookDetail(bytes32 _ccy, uint256 _maturity)
-        public
-        view
-        returns (OrderBookDetail memory orderBookDetail)
-    {
+    function getOrderBookDetail(
+        bytes32 _ccy,
+        uint256 _maturity
+    ) public view returns (OrderBookDetail memory orderBookDetail) {
         ILendingMarket market = _getLendingMarket(_ccy);
         uint8 orderBookId = lendingMarketController().getOrderBookId(_ccy, _maturity);
 
@@ -256,11 +246,10 @@ contract LendingMarketReader is MixinAddressResolver {
      * @param _user User's address
      * @return positions The array of active positions
      */
-    function getPositions(bytes32[] memory _ccys, address _user)
-        external
-        view
-        returns (Position[] memory positions)
-    {
+    function getPositions(
+        bytes32[] memory _ccys,
+        address _user
+    ) external view returns (Position[] memory positions) {
         uint256 totalPositionCount;
 
         Position[][] memory positionLists = new Position[][](_ccys.length);
@@ -286,11 +275,10 @@ contract LendingMarketReader is MixinAddressResolver {
      * @param _user User's address
      * @return positions The array of active positions
      */
-    function getPositions(bytes32 _ccy, address _user)
-        public
-        view
-        returns (Position[] memory positions)
-    {
+    function getPositions(
+        bytes32 _ccy,
+        address _user
+    ) public view returns (Position[] memory positions) {
         uint256[] memory maturities = lendingMarketController().getMaturities(_ccy);
         positions = new Position[](maturities.length);
         uint256 positionIdx;
@@ -321,11 +309,10 @@ contract LendingMarketReader is MixinAddressResolver {
      * @return activeOrders The array of active orders in the order book
      * @return inactiveOrders The array of inactive orders
      */
-    function getOrders(bytes32[] memory _ccys, address _user)
-        external
-        view
-        returns (Order[] memory activeOrders, Order[] memory inactiveOrders)
-    {
+    function getOrders(
+        bytes32[] memory _ccys,
+        address _user
+    ) external view returns (Order[] memory activeOrders, Order[] memory inactiveOrders) {
         uint256 totalActiveOrderCount;
         uint256 totalInactiveOrderCount;
 
@@ -349,11 +336,10 @@ contract LendingMarketReader is MixinAddressResolver {
      * @return activeOrders The array of active orders in the order book
      * @return inactiveOrders The array of inactive orders
      */
-    function getOrders(bytes32 _ccy, address _user)
-        public
-        view
-        returns (Order[] memory activeOrders, Order[] memory inactiveOrders)
-    {
+    function getOrders(
+        bytes32 _ccy,
+        address _user
+    ) public view returns (Order[] memory activeOrders, Order[] memory inactiveOrders) {
         uint256 totalActiveOrderCount;
         uint256 totalInactiveOrderCount;
 
@@ -445,11 +431,10 @@ contract LendingMarketReader is MixinAddressResolver {
         return ILendingMarket(lendingMarketController().getLendingMarket(_ccy));
     }
 
-    function _flattenOrders(Order[][] memory orders, uint256 totalLength)
-        internal
-        pure
-        returns (Order[] memory flattened)
-    {
+    function _flattenOrders(
+        Order[][] memory orders,
+        uint256 totalLength
+    ) internal pure returns (Order[] memory flattened) {
         flattened = new Order[](totalLength);
         uint256 index;
         for (uint256 i; i < orders.length; i++) {

@@ -23,11 +23,7 @@ contract TokenFaucet is Ownable {
         return currencies[_ccy];
     }
 
-    function registerCurrency(
-        bytes32 _ccy,
-        address _token,
-        uint256 _amountPerMint
-    ) external {
+    function registerCurrency(bytes32 _ccy, address _token, uint256 _amountPerMint) external {
         currencies[_ccy] = _token;
         amountPerMint[_ccy] = _amountPerMint;
     }

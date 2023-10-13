@@ -50,20 +50,15 @@ library OrderBookLib {
         uint80 blockUnitPriceHistory;
         uint256 blockTotalAmount;
         uint256 blockTotalFutureValue;
-        // Mapping from user to active lend order ids
-        mapping(address => uint48[]) activeLendOrderIds;
-        // Mapping from user to active borrow order ids
-        mapping(address => uint48[]) activeBorrowOrderIds;
-        // Mapping from user to current maturity
-        mapping(address => uint256) userCurrentMaturities;
-        // Mapping from orderId to order micro slots
-        mapping(uint256 => uint256) orders;
-        // Mapping from orderId to boolean for pre-order or not
-        mapping(uint256 => bool) isPreOrder;
-        // Mapping from maturity to lending orders
-        mapping(uint256 => OrderStatisticsTreeLib.Tree) lendOrders;
-        // Mapping from maturity to borrowing orders
-        mapping(uint256 => OrderStatisticsTreeLib.Tree) borrowOrders;
+        mapping(address user => uint48[] orderIds) activeLendOrderIds;
+        mapping(address user => uint48[] orderIds) activeBorrowOrderIds;
+        // Maturity when user last executes order
+        mapping(address user => uint256 maturity) userCurrentMaturities;
+        // Micro slots for order
+        mapping(uint48 orderId => uint256 slots) orders;
+        mapping(uint48 orderId => bool isPreOrder) isPreOrder;
+        mapping(uint256 maturity => OrderStatisticsTreeLib.Tree orders) lendOrders;
+        mapping(uint256 maturity => OrderStatisticsTreeLib.Tree orders) borrowOrders;
     }
 
     function initialize(
@@ -108,11 +103,10 @@ library OrderBookLib {
         return self.activeLendOrderIds[_user].length != 0;
     }
 
-    function getOrder(OrderBook storage self, uint256 _orderId)
-        internal
-        view
-        returns (PlacedOrder memory order)
-    {
+    function getOrder(
+        OrderBook storage self,
+        uint48 _orderId
+    ) internal view returns (PlacedOrder memory order) {
         (
             ProtocolTypes.Side side,
             uint256 unitPrice,
@@ -122,11 +116,10 @@ library OrderBookLib {
         order = PlacedOrder(side, unitPrice, maturity, timestamp);
     }
 
-    function getBlockUnitPriceHistory(OrderBook storage self, bool _isReadOnly)
-        internal
-        view
-        returns (uint256[] memory prices)
-    {
+    function getBlockUnitPriceHistory(
+        OrderBook storage self,
+        bool _isReadOnly
+    ) internal view returns (uint256[] memory prices) {
         prices = _unpackBlockUnitPriceHistory(self.blockUnitPriceHistory);
 
         // NOTE: If an order is in the first block of the order book, the block unit price history is empty.
@@ -146,11 +139,10 @@ library OrderBookLib {
         }
     }
 
-    function getMarketUnitPrice(OrderBook storage self, bool _isReadOnly)
-        internal
-        view
-        returns (uint256 unitPrice)
-    {
+    function getMarketUnitPrice(
+        OrderBook storage self,
+        bool _isReadOnly
+    ) internal view returns (uint256 unitPrice) {
         unitPrice = _unpackBlockUnitPriceHistory(self.blockUnitPriceHistory)[0];
 
         // NOTE: If an order is in the first block of the order book, the block unit price history is empty.
@@ -194,14 +186,13 @@ library OrderBookLib {
         unitPrice = count > 0 ? sum.div(count) : 0;
     }
 
-    function getLendOrderBook(OrderBook storage self, uint256 _limit)
+    function getLendOrderBook(
+        OrderBook storage self,
+        uint256 _limit
+    )
         internal
         view
-        returns (
-            uint256[] memory unitPrices,
-            uint256[] memory amounts,
-            uint256[] memory quantities
-        )
+        returns (uint256[] memory unitPrices, uint256[] memory amounts, uint256[] memory quantities)
     {
         unitPrices = new uint256[](_limit);
         amounts = new uint256[](_limit);
@@ -224,14 +215,13 @@ library OrderBookLib {
         }
     }
 
-    function getBorrowOrderBook(OrderBook storage self, uint256 _limit)
+    function getBorrowOrderBook(
+        OrderBook storage self,
+        uint256 _limit
+    )
         internal
         view
-        returns (
-            uint256[] memory unitPrices,
-            uint256[] memory amounts,
-            uint256[] memory quantities
-        )
+        returns (uint256[] memory unitPrices, uint256[] memory amounts, uint256[] memory quantities)
     {
         unitPrices = new uint256[](_limit);
         amounts = new uint256[](_limit);
@@ -254,11 +244,10 @@ library OrderBookLib {
         }
     }
 
-    function getLendOrderIds(OrderBook storage self, address _user)
-        internal
-        view
-        returns (uint48[] memory activeOrderIds, uint48[] memory inActiveOrderIds)
-    {
+    function getLendOrderIds(
+        OrderBook storage self,
+        address _user
+    ) internal view returns (uint48[] memory activeOrderIds, uint48[] memory inActiveOrderIds) {
         uint256 activeOrderCount = 0;
         uint256 inActiveOrderCount = 0;
         uint256 userMaturity = self.userCurrentMaturities[_user];
@@ -297,11 +286,10 @@ library OrderBookLib {
         }
     }
 
-    function getBorrowOrderIds(OrderBook storage self, address _user)
-        internal
-        view
-        returns (uint48[] memory activeOrderIds, uint48[] memory inActiveOrderIds)
-    {
+    function getBorrowOrderIds(
+        OrderBook storage self,
+        address _user
+    ) internal view returns (uint48[] memory activeOrderIds, uint48[] memory inActiveOrderIds) {
         uint256 activeOrderCount = 0;
         uint256 inActiveOrderCount = 0;
         uint256 userMaturity = self.userCurrentMaturities[_user];
@@ -348,11 +336,7 @@ library OrderBookLib {
     )
         internal
         view
-        returns (
-            uint256 lastUnitPrice,
-            uint256 filledAmount,
-            uint256 filledAmountInFV
-        )
+        returns (uint256 lastUnitPrice, uint256 filledAmount, uint256 filledAmountInFV)
     {
         if (_amount == 0) return (0, 0, 0);
 
@@ -501,14 +485,7 @@ library OrderBookLib {
         OrderBook storage self,
         address _user,
         uint48 _orderId
-    )
-        internal
-        returns (
-            ProtocolTypes.Side,
-            uint256,
-            uint256
-        )
-    {
+    ) internal returns (ProtocolTypes.Side, uint256, uint256) {
         (ProtocolTypes.Side side, uint256 unitPrice, , ) = _unpackOrder(self.orders[_orderId]);
         uint256 removedAmount;
 
@@ -525,7 +502,9 @@ library OrderBookLib {
         return (side, removedAmount, unitPrice);
     }
 
-    function calculateItayoseResult(OrderBook storage self)
+    function calculateItayoseResult(
+        OrderBook storage self
+    )
         internal
         view
         returns (
@@ -714,15 +693,12 @@ library OrderBookLib {
     /**
      * @notice Unpacks order parameters from uint256
      */
-    function _unpackOrder(uint256 _order)
+    function _unpackOrder(
+        uint256 _order
+    )
         private
         pure
-        returns (
-            ProtocolTypes.Side side,
-            uint256 unitPrice,
-            uint256 maturity,
-            uint256 timestamp
-        )
+        returns (ProtocolTypes.Side side, uint256 unitPrice, uint256 maturity, uint256 timestamp)
     {
         side = ProtocolTypes.Side(uint8(_order));
         unitPrice = uint16(_order >> 8);
@@ -730,11 +706,9 @@ library OrderBookLib {
         timestamp = uint64(_order >> 88);
     }
 
-    function _unpackBlockUnitPriceHistory(uint80 _blockUnitPriceHistory)
-        private
-        pure
-        returns (uint256[] memory prices)
-    {
+    function _unpackBlockUnitPriceHistory(
+        uint80 _blockUnitPriceHistory
+    ) private pure returns (uint256[] memory prices) {
         prices = new uint256[](5);
 
         prices[0] = uint16(_blockUnitPriceHistory);

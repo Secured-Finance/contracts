@@ -111,7 +111,10 @@ contract LendingMarketCaller {
         );
     }
 
-    function executeItayoseCall(bytes32 _ccy, uint8 _orderBookId)
+    function executeItayoseCall(
+        bytes32 _ccy,
+        uint8 _orderBookId
+    )
         external
         returns (
             uint256 openingUnitPrice,
@@ -124,11 +127,7 @@ contract LendingMarketCaller {
         return ILendingMarket(lendingMarkets[_ccy]).executeItayoseCall(_orderBookId);
     }
 
-    function cleanUpOrders(
-        bytes32 _ccy,
-        uint8 _orderBookId,
-        address _user
-    ) external {
+    function cleanUpOrders(bytes32 _ccy, uint8 _orderBookId, address _user) external {
         ILendingMarket(lendingMarkets[_ccy]).cleanUpOrders(_orderBookId, _user);
     }
 }

@@ -5,8 +5,7 @@ library AddressResolverStorage {
     bytes32 internal constant STORAGE_SLOT = keccak256("sf.storage.addressResolver");
 
     struct Storage {
-        // Mapping from contract name to contract address
-        mapping(bytes32 => address) addresses;
+        mapping(bytes32 contractName => address contractAddress) addresses;
         // Contract address list
         address[] addressCaches;
     }

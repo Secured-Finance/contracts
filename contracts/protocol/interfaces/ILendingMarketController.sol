@@ -65,10 +65,10 @@ interface ILendingMarketController {
 
     function getMinDebtUnitPrice(bytes32 _ccy) external view returns (uint256);
 
-    function getCurrentMinDebtUnitPrice(bytes32 _ccy, uint256 _maturity)
-        external
-        view
-        returns (uint256);
+    function getCurrentMinDebtUnitPrice(
+        bytes32 _ccy,
+        uint256 _maturity
+    ) external view returns (uint256);
 
     function getGenesisDate(bytes32 ccy) external view returns (uint256);
 
@@ -78,7 +78,9 @@ interface ILendingMarketController {
 
     function getOrderBookId(bytes32 _ccy, uint256 _maturity) external view returns (uint8);
 
-    function getOrderEstimation(GetOrderEstimationParams calldata params)
+    function getOrderEstimation(
+        GetOrderEstimationParams calldata params
+    )
         external
         view
         returns (
@@ -99,10 +101,9 @@ interface ILendingMarketController {
 
     function getTotalPresentValue(bytes32 ccy, address user) external view returns (int256);
 
-    function getTotalPresentValueInBaseCurrency(address user)
-        external
-        view
-        returns (int256 totalPresentValue);
+    function getTotalPresentValueInBaseCurrency(
+        address user
+    ) external view returns (int256 totalPresentValue);
 
     function getGenesisValue(bytes32 ccy, address user) external view returns (int256 genesisValue);
 
@@ -135,11 +136,7 @@ interface ILendingMarketController {
         uint256 minDebtUnitPrice
     ) external;
 
-    function createOrderBook(
-        bytes32 ccy,
-        uint256 openingDate,
-        uint256 preOpeningDate
-    ) external;
+    function createOrderBook(bytes32 ccy, uint256 openingDate, uint256 preOpeningDate) external;
 
     function executeOrder(
         bytes32 ccy,
@@ -175,9 +172,10 @@ interface ILendingMarketController {
 
     function unwindPosition(bytes32 ccy, uint256 maturity) external returns (bool);
 
-    function executeItayoseCalls(bytes32[] calldata currencies, uint256 maturity)
-        external
-        returns (bool);
+    function executeItayoseCalls(
+        bytes32[] calldata currencies,
+        uint256 maturity
+    ) external returns (bool);
 
     function executeRedemption(bytes32 _ccy, uint256 _maturity) external returns (bool);
 
@@ -199,11 +197,7 @@ interface ILendingMarketController {
         address _user
     ) external returns (bool);
 
-    function cancelOrder(
-        bytes32 ccy,
-        uint256 maturity,
-        uint48 orderId
-    ) external returns (bool);
+    function cancelOrder(bytes32 ccy, uint256 maturity, uint48 orderId) external returns (bool);
 
     function rotateOrderBooks(bytes32 ccy) external;
 

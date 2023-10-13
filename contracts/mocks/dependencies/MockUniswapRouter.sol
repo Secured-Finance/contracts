@@ -29,10 +29,9 @@ contract MockUniswapRouter is MixinAddressResolver {
         currencies[token] = ccy;
     }
 
-    function exactOutputSingle(ISwapRouter.ExactOutputSingleParams calldata params)
-        external
-        returns (uint256 amountIn)
-    {
+    function exactOutputSingle(
+        ISwapRouter.ExactOutputSingleParams calldata params
+    ) external returns (uint256 amountIn) {
         amountIn = currencyController().convert(
             currencies[params.tokenOut],
             currencies[params.tokenIn],
@@ -45,11 +44,9 @@ contract MockUniswapRouter is MixinAddressResolver {
         TransferHelper.safeTransfer(params.tokenOut, msg.sender, params.amountOut);
     }
 
-    function exactInputSingle(ISwapRouter.ExactInputSingleParams calldata params)
-        external
-        payable
-        returns (uint256 amountOut)
-    {
+    function exactInputSingle(
+        ISwapRouter.ExactInputSingleParams calldata params
+    ) external payable returns (uint256 amountOut) {
         amountOut = currencyController().convert(
             currencies[params.tokenIn],
             currencies[params.tokenOut],

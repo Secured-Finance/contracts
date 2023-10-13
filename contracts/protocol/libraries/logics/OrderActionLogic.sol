@@ -105,11 +105,7 @@ library OrderActionLogic {
         bool isCircuitBreakerTriggered
     );
 
-    function cancelOrder(
-        uint8 _orderBookId,
-        address _user,
-        uint48 _orderId
-    ) external {
+    function cancelOrder(uint8 _orderBookId, address _user, uint48 _orderId) external {
         OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
 
         (ProtocolTypes.Side side, uint256 removedAmount, uint256 unitPrice) = orderBook.removeOrder(
@@ -128,7 +124,10 @@ library OrderActionLogic {
         );
     }
 
-    function cleanUpOrders(uint8 _orderBookId, address _user)
+    function cleanUpOrders(
+        uint8 _orderBookId,
+        address _user
+    )
         external
         returns (
             uint256 activeLendOrderCount,
@@ -376,7 +375,10 @@ library OrderActionLogic {
         );
     }
 
-    function _cleanLendOrders(uint8 _orderBookId, address _user)
+    function _cleanLendOrders(
+        uint8 _orderBookId,
+        address _user
+    )
         internal
         returns (
             uint48[] memory orderIds,
@@ -407,7 +409,10 @@ library OrderActionLogic {
         }
     }
 
-    function _cleanBorrowOrders(uint8 _orderBookId, address _user)
+    function _cleanBorrowOrders(
+        uint8 _orderBookId,
+        address _user
+    )
         internal
         returns (
             uint48[] memory orderIds,
@@ -544,11 +549,9 @@ library OrderActionLogic {
         isCircuitBreakerTriggered = orderExists && _futureValue != filledOrder.futureValue;
     }
 
-    function _getOrderBook(uint8 _orderBookId)
-        private
-        view
-        returns (OrderBookLib.OrderBook storage)
-    {
+    function _getOrderBook(
+        uint8 _orderBookId
+    ) private view returns (OrderBookLib.OrderBook storage) {
         return Storage.slot().orderBooks[_orderBookId];
     }
 }

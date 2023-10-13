@@ -44,30 +44,30 @@ interface ICurrencyController {
         uint256[] calldata _amounts
     ) external view returns (uint256[] memory amounts);
 
-    function convertToBaseCurrency(bytes32 _ccy, uint256 _amount)
-        external
-        view
-        returns (uint256 amount);
+    function convertToBaseCurrency(
+        bytes32 _ccy,
+        uint256 _amount
+    ) external view returns (uint256 amount);
 
-    function convertToBaseCurrency(bytes32 _ccy, int256 _amount)
-        external
-        view
-        returns (int256 amount);
+    function convertToBaseCurrency(
+        bytes32 _ccy,
+        int256 _amount
+    ) external view returns (int256 amount);
 
-    function convertToBaseCurrency(bytes32 _ccy, uint256[] calldata _amounts)
-        external
-        view
-        returns (uint256[] memory amounts);
+    function convertToBaseCurrency(
+        bytes32 _ccy,
+        uint256[] calldata _amounts
+    ) external view returns (uint256[] memory amounts);
 
-    function convertFromBaseCurrency(bytes32 _ccy, uint256 _amountETH)
-        external
-        view
-        returns (uint256 amount);
+    function convertFromBaseCurrency(
+        bytes32 _ccy,
+        uint256 _amountETH
+    ) external view returns (uint256 amount);
 
-    function convertFromBaseCurrency(bytes32 _ccy, uint256[] calldata _amounts)
-        external
-        view
-        returns (uint256[] memory amounts);
+    function convertFromBaseCurrency(
+        bytes32 _ccy,
+        uint256[] calldata _amounts
+    ) external view returns (uint256[] memory amounts);
 
     function getDecimals(bytes32) external view returns (uint8);
 

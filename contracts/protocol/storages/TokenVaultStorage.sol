@@ -17,14 +17,11 @@ library TokenVaultStorage {
         uint256 liquidatorFeeRate;
         // Currencies accepted as collateral
         EnumerableSet.Bytes32Set collateralCurrencies;
-        // Mapping from currency name to token address
-        mapping(bytes32 => address) tokenAddresses;
-        // Mapping for used currency vaults per user.
-        mapping(address => EnumerableSet.Bytes32Set) usedCurrencies;
-        // Mapping from currency to total deposit amount
-        mapping(bytes32 => uint256) totalDepositAmount;
-        // Mapping for all deposits per users
-        mapping(address => mapping(bytes32 => uint256)) depositAmounts;
+        mapping(bytes32 ccy => address tokenAddress) tokenAddresses;
+        // List of currency that the user has deposit amounts
+        mapping(address user => EnumerableSet.Bytes32Set currency) usedCurrencies;
+        mapping(bytes32 ccy => uint256 totalDepositAmount) totalDepositAmount;
+        mapping(address user => mapping(bytes32 currency => uint256 depositAmount)) depositAmounts;
     }
 
     function slot() internal pure returns (Storage storage r) {

@@ -45,10 +45,10 @@ interface IGenesisValueVault {
 
     function getBorrowingCompoundFactor(bytes32 ccy) external view returns (uint256);
 
-    function getAutoRollLog(bytes32 ccy, uint256 maturity)
-        external
-        view
-        returns (AutoRollLog memory);
+    function getAutoRollLog(
+        bytes32 ccy,
+        uint256 maturity
+    ) external view returns (AutoRollLog memory);
 
     function getLatestAutoRollLog(bytes32 ccy) external view returns (AutoRollLog memory);
 
@@ -114,18 +114,9 @@ interface IGenesisValueVault {
         uint256 basisMaturity
     ) external;
 
-    function transferFrom(
-        bytes32 ccy,
-        address sender,
-        address receiver,
-        int256 amount
-    ) external;
+    function transferFrom(bytes32 ccy, address sender, address receiver, int256 amount) external;
 
-    function cleanUpBalance(
-        bytes32 ccy,
-        address user,
-        uint256 maturity
-    ) external;
+    function cleanUpBalance(bytes32 ccy, address user, uint256 maturity) external;
 
     function executeForcedReset(bytes32 _ccy, address _user) external;
 

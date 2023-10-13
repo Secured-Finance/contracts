@@ -93,15 +93,9 @@ library BokkyPooBahsDateTimeLibrary {
     // month = month + 2 - 12 * L
     // year = 100 * (N - 49) + year + L
     // ------------------------------------------------------------------------
-    function _daysToDate(uint256 _days)
-        internal
-        pure
-        returns (
-            uint256 year,
-            uint256 month,
-            uint256 day
-        )
-    {
+    function _daysToDate(
+        uint256 _days
+    ) internal pure returns (uint256 year, uint256 month, uint256 day) {
         int256 __days = int256(_days);
 
         int256 L = __days + 68569 + OFFSET19700101;
@@ -146,19 +140,15 @@ library BokkyPooBahsDateTimeLibrary {
             second;
     }
 
-    function timestampToDate(uint256 timestamp)
-        internal
-        pure
-        returns (
-            uint256 year,
-            uint256 month,
-            uint256 day
-        )
-    {
+    function timestampToDate(
+        uint256 timestamp
+    ) internal pure returns (uint256 year, uint256 month, uint256 day) {
         (year, month, day) = _daysToDate(timestamp / SECONDS_PER_DAY);
     }
 
-    function timestampToDateTime(uint256 timestamp)
+    function timestampToDateTime(
+        uint256 timestamp
+    )
         internal
         pure
         returns (
@@ -228,11 +218,10 @@ library BokkyPooBahsDateTimeLibrary {
         daysInMonth = _getDaysInMonth(year, month);
     }
 
-    function _getDaysInMonth(uint256 year, uint256 month)
-        internal
-        pure
-        returns (uint256 daysInMonth)
-    {
+    function _getDaysInMonth(
+        uint256 year,
+        uint256 month
+    ) internal pure returns (uint256 daysInMonth) {
         if (
             month == 1 ||
             month == 3 ||
@@ -282,11 +271,10 @@ library BokkyPooBahsDateTimeLibrary {
         second = timestamp % SECONDS_PER_MINUTE;
     }
 
-    function addYears(uint256 timestamp, uint256 _years)
-        internal
-        pure
-        returns (uint256 newTimestamp)
-    {
+    function addYears(
+        uint256 timestamp,
+        uint256 _years
+    ) internal pure returns (uint256 newTimestamp) {
         (uint256 year, uint256 month, uint256 day) = _daysToDate(timestamp / SECONDS_PER_DAY);
         year += _years;
         uint256 daysInMonth = _getDaysInMonth(year, month);
@@ -300,11 +288,10 @@ library BokkyPooBahsDateTimeLibrary {
         require(newTimestamp >= timestamp);
     }
 
-    function addMonths(uint256 timestamp, uint256 _months)
-        internal
-        pure
-        returns (uint256 newTimestamp)
-    {
+    function addMonths(
+        uint256 timestamp,
+        uint256 _months
+    ) internal pure returns (uint256 newTimestamp) {
         (uint256 year, uint256 month, uint256 day) = _daysToDate(timestamp / SECONDS_PER_DAY);
         month += _months;
         year += (month - 1) / 12;
@@ -320,47 +307,42 @@ library BokkyPooBahsDateTimeLibrary {
         require(newTimestamp >= timestamp);
     }
 
-    function addDays(uint256 timestamp, uint256 _days)
-        internal
-        pure
-        returns (uint256 newTimestamp)
-    {
+    function addDays(
+        uint256 timestamp,
+        uint256 _days
+    ) internal pure returns (uint256 newTimestamp) {
         newTimestamp = timestamp + _days * SECONDS_PER_DAY;
         require(newTimestamp >= timestamp);
     }
 
-    function addHours(uint256 timestamp, uint256 _hours)
-        internal
-        pure
-        returns (uint256 newTimestamp)
-    {
+    function addHours(
+        uint256 timestamp,
+        uint256 _hours
+    ) internal pure returns (uint256 newTimestamp) {
         newTimestamp = timestamp + _hours * SECONDS_PER_HOUR;
         require(newTimestamp >= timestamp);
     }
 
-    function addMinutes(uint256 timestamp, uint256 _minutes)
-        internal
-        pure
-        returns (uint256 newTimestamp)
-    {
+    function addMinutes(
+        uint256 timestamp,
+        uint256 _minutes
+    ) internal pure returns (uint256 newTimestamp) {
         newTimestamp = timestamp + _minutes * SECONDS_PER_MINUTE;
         require(newTimestamp >= timestamp);
     }
 
-    function addSeconds(uint256 timestamp, uint256 _seconds)
-        internal
-        pure
-        returns (uint256 newTimestamp)
-    {
+    function addSeconds(
+        uint256 timestamp,
+        uint256 _seconds
+    ) internal pure returns (uint256 newTimestamp) {
         newTimestamp = timestamp + _seconds;
         require(newTimestamp >= timestamp);
     }
 
-    function subYears(uint256 timestamp, uint256 _years)
-        internal
-        pure
-        returns (uint256 newTimestamp)
-    {
+    function subYears(
+        uint256 timestamp,
+        uint256 _years
+    ) internal pure returns (uint256 newTimestamp) {
         (uint256 year, uint256 month, uint256 day) = _daysToDate(timestamp / SECONDS_PER_DAY);
         year -= _years;
         uint256 daysInMonth = _getDaysInMonth(year, month);
@@ -374,11 +356,10 @@ library BokkyPooBahsDateTimeLibrary {
         require(newTimestamp <= timestamp);
     }
 
-    function subMonths(uint256 timestamp, uint256 _months)
-        internal
-        pure
-        returns (uint256 newTimestamp)
-    {
+    function subMonths(
+        uint256 timestamp,
+        uint256 _months
+    ) internal pure returns (uint256 newTimestamp) {
         (uint256 year, uint256 month, uint256 day) = _daysToDate(timestamp / SECONDS_PER_DAY);
         uint256 yearMonth = year * 12 + (month - 1) - _months;
         year = yearMonth / 12;
@@ -394,96 +375,86 @@ library BokkyPooBahsDateTimeLibrary {
         require(newTimestamp <= timestamp);
     }
 
-    function subDays(uint256 timestamp, uint256 _days)
-        internal
-        pure
-        returns (uint256 newTimestamp)
-    {
+    function subDays(
+        uint256 timestamp,
+        uint256 _days
+    ) internal pure returns (uint256 newTimestamp) {
         newTimestamp = timestamp - _days * SECONDS_PER_DAY;
         require(newTimestamp <= timestamp);
     }
 
-    function subHours(uint256 timestamp, uint256 _hours)
-        internal
-        pure
-        returns (uint256 newTimestamp)
-    {
+    function subHours(
+        uint256 timestamp,
+        uint256 _hours
+    ) internal pure returns (uint256 newTimestamp) {
         newTimestamp = timestamp - _hours * SECONDS_PER_HOUR;
         require(newTimestamp <= timestamp);
     }
 
-    function subMinutes(uint256 timestamp, uint256 _minutes)
-        internal
-        pure
-        returns (uint256 newTimestamp)
-    {
+    function subMinutes(
+        uint256 timestamp,
+        uint256 _minutes
+    ) internal pure returns (uint256 newTimestamp) {
         newTimestamp = timestamp - _minutes * SECONDS_PER_MINUTE;
         require(newTimestamp <= timestamp);
     }
 
-    function subSeconds(uint256 timestamp, uint256 _seconds)
-        internal
-        pure
-        returns (uint256 newTimestamp)
-    {
+    function subSeconds(
+        uint256 timestamp,
+        uint256 _seconds
+    ) internal pure returns (uint256 newTimestamp) {
         newTimestamp = timestamp - _seconds;
         require(newTimestamp <= timestamp);
     }
 
-    function diffYears(uint256 fromTimestamp, uint256 toTimestamp)
-        internal
-        pure
-        returns (uint256 _years)
-    {
+    function diffYears(
+        uint256 fromTimestamp,
+        uint256 toTimestamp
+    ) internal pure returns (uint256 _years) {
         require(fromTimestamp <= toTimestamp);
         (uint256 fromYear, , ) = _daysToDate(fromTimestamp / SECONDS_PER_DAY);
         (uint256 toYear, , ) = _daysToDate(toTimestamp / SECONDS_PER_DAY);
         _years = toYear - fromYear;
     }
 
-    function diffMonths(uint256 fromTimestamp, uint256 toTimestamp)
-        internal
-        pure
-        returns (uint256 _months)
-    {
+    function diffMonths(
+        uint256 fromTimestamp,
+        uint256 toTimestamp
+    ) internal pure returns (uint256 _months) {
         require(fromTimestamp <= toTimestamp);
         (uint256 fromYear, uint256 fromMonth, ) = _daysToDate(fromTimestamp / SECONDS_PER_DAY);
         (uint256 toYear, uint256 toMonth, ) = _daysToDate(toTimestamp / SECONDS_PER_DAY);
         _months = toYear * 12 + toMonth - fromYear * 12 - fromMonth;
     }
 
-    function diffDays(uint256 fromTimestamp, uint256 toTimestamp)
-        internal
-        pure
-        returns (uint256 _days)
-    {
+    function diffDays(
+        uint256 fromTimestamp,
+        uint256 toTimestamp
+    ) internal pure returns (uint256 _days) {
         require(fromTimestamp <= toTimestamp);
         _days = (toTimestamp - fromTimestamp) / SECONDS_PER_DAY;
     }
 
-    function diffHours(uint256 fromTimestamp, uint256 toTimestamp)
-        internal
-        pure
-        returns (uint256 _hours)
-    {
+    function diffHours(
+        uint256 fromTimestamp,
+        uint256 toTimestamp
+    ) internal pure returns (uint256 _hours) {
         require(fromTimestamp <= toTimestamp);
         _hours = (toTimestamp - fromTimestamp) / SECONDS_PER_HOUR;
     }
 
-    function diffMinutes(uint256 fromTimestamp, uint256 toTimestamp)
-        internal
-        pure
-        returns (uint256 _minutes)
-    {
+    function diffMinutes(
+        uint256 fromTimestamp,
+        uint256 toTimestamp
+    ) internal pure returns (uint256 _minutes) {
         require(fromTimestamp <= toTimestamp);
         _minutes = (toTimestamp - fromTimestamp) / SECONDS_PER_MINUTE;
     }
 
-    function diffSeconds(uint256 fromTimestamp, uint256 toTimestamp)
-        internal
-        pure
-        returns (uint256 _seconds)
-    {
+    function diffSeconds(
+        uint256 fromTimestamp,
+        uint256 toTimestamp
+    ) internal pure returns (uint256 _seconds) {
         require(fromTimestamp <= toTimestamp);
         _seconds = toTimestamp - fromTimestamp;
     }

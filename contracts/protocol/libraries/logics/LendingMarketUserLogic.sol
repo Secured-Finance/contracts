@@ -31,7 +31,9 @@ library LendingMarketUserLogic {
     error TooManyActiveOrders();
     error NotEnoughCollateral();
 
-    function getOrderEstimation(ILendingMarketController.GetOrderEstimationParams memory input)
+    function getOrderEstimation(
+        ILendingMarketController.GetOrderEstimationParams memory input
+    )
         external
         view
         returns (
@@ -161,11 +163,7 @@ library LendingMarketUserLogic {
         if (!AddressResolverLib.tokenVault().isCovered(_user)) revert NotEnoughCollateral();
     }
 
-    function unwindPosition(
-        bytes32 _ccy,
-        uint256 _maturity,
-        address _user
-    ) external {
+    function unwindPosition(bytes32 _ccy, uint256 _maturity, address _user) external {
         FundManagementLogic.cleanUpFunds(_ccy, _user);
 
         int256 futureValue = FundManagementLogic

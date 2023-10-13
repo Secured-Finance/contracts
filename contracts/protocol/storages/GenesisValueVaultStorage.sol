@@ -20,22 +20,20 @@ library GenesisValueVaultStorage {
     bytes32 internal constant STORAGE_SLOT = keccak256("sf.storage.genesisValueVault");
 
     struct Storage {
-        mapping(bytes32 => bool) isInitialized;
-        mapping(bytes32 => uint256) initialCompoundFactors;
-        mapping(bytes32 => uint256) lendingCompoundFactors;
-        mapping(bytes32 => uint256) borrowingCompoundFactors;
-        mapping(bytes32 => uint256) currentMaturity;
-        mapping(bytes32 => uint8) decimals;
-        // Mapping from user to balance per currency
-        mapping(bytes32 => mapping(address => int256)) balances;
-        mapping(bytes32 => uint256) totalLendingSupplies;
-        mapping(bytes32 => uint256) totalBorrowingSupplies;
-        // Mapping from maturity balance per currency
-        mapping(bytes32 => mapping(uint256 => int256)) maturityBalances;
-        // Mapping from maturity to auto-roll log per currency
-        mapping(bytes32 => mapping(uint256 => AutoRollLog)) autoRollLogs;
-        // Mapping from user to maturity per currency
-        mapping(bytes32 => mapping(address => uint256)) userMaturities;
+        mapping(bytes32 ccy => bool isInitialized) isInitialized;
+        mapping(bytes32 ccy => uint256 compoundFactor) initialCompoundFactors;
+        mapping(bytes32 ccy => uint256 compoundFactor) lendingCompoundFactors;
+        mapping(bytes32 ccy => uint256 compoundFactor) borrowingCompoundFactors;
+        mapping(bytes32 ccy => uint256 maturity) currentMaturity;
+        mapping(bytes32 ccy => uint8 decimals) decimals;
+        mapping(bytes32 ccy => mapping(address user => int256 balance)) balances;
+        mapping(bytes32 ccy => uint256 amount) totalLendingSupplies;
+        mapping(bytes32 ccy => uint256 amount) totalBorrowingSupplies;
+        // Total amount supplied per maturity
+        mapping(bytes32 ccy => mapping(uint256 maturity => int256 balance)) maturityBalances;
+        mapping(bytes32 ccy => mapping(uint256 maturity => AutoRollLog log)) autoRollLogs;
+        // Maturity when the user receives the balance on the target currency
+        mapping(bytes32 ccy => mapping(address user => uint256 maturity)) userMaturities;
     }
 
     function slot() internal pure returns (Storage storage r) {

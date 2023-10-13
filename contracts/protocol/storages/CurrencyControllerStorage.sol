@@ -17,11 +17,10 @@ library CurrencyControllerStorage {
     struct Storage {
         // Protocol currencies
         EnumerableSet.Bytes32Set currencies;
-        mapping(bytes32 => uint256) haircuts;
+        mapping(bytes32 ccy => uint256 haircut) haircuts;
         // Total cached decimals of the price feeds
-        mapping(bytes32 => uint8) decimalsCaches;
-        // Mapping from currency to price feed
-        mapping(bytes32 => PriceFeed) priceFeeds;
+        mapping(bytes32 ccy => uint8 decimals) decimalsCaches;
+        mapping(bytes32 ccy => PriceFeed priceFeed) priceFeeds;
     }
 
     function slot() internal pure returns (Storage storage r) {
