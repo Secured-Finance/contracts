@@ -1,8 +1,7 @@
 import { Contract } from 'ethers';
 import { task } from 'hardhat/config';
 import moment from 'moment';
-import { currencyIterator } from '../utils/currencies';
-import { toBytes32 } from '../utils/strings';
+import { fromBytes32, toBytes32 } from '../utils/strings';
 
 task(
   'open-markets',
@@ -12,22 +11,25 @@ task(
     .get('ProxyController')
     .then(({ address }) => ethers.getContractAt('ProxyController', address));
 
-  const contracts = ['LendingMarketController'];
+  const contracts = ['CurrencyController', 'LendingMarketController'];
 
-  const [lendingMarketController]: Contract[] = await Promise.all(
-    contracts.map((contract) =>
-      proxyController
-        .getAddress(toBytes32(contract))
-        .then((address: string) => ethers.getContractAt(contract, address)),
-    ),
-  );
+  const [currencyController, lendingMarketController]: Contract[] =
+    await Promise.all(
+      contracts.map((contract) =>
+        proxyController
+          .getAddress(toBytes32(contract))
+          .then((address: string) => ethers.getContractAt(contract, address)),
+      ),
+    );
 
-  for (const currency of currencyIterator()) {
+  const currencies: string[] = await currencyController.getCurrencies();
+
+  for (const currency of currencies) {
     const lendingMarket = await lendingMarketController
-      .getLendingMarket(currency.key)
+      .getLendingMarket(currency)
       .then((address) => ethers.getContractAt('LendingMarket', address));
     const orderBookIds = await lendingMarketController.getOrderBookIds(
-      currency.key,
+      currency,
     );
 
     for (const orderBookId of orderBookIds) {
@@ -38,33 +40,34 @@ task(
       ]);
 
       if (isItayosePeriod) {
-        await lendingMarketController.executeItayoseCalls(
-          [currency.key],
-          maturity,
-        );
+        await lendingMarketController.executeItayoseCalls([currency], maturity);
         console.log(
-          `Successfully executed ${currency.symbol} market Itayose call with maturity ${maturity}`,
+          `Successfully executed ${fromBytes32(
+            currency,
+          )} market Itayose call with maturity ${maturity}`,
         );
       }
 
       if (isMatured) {
         await lendingMarketController
-          .rotateOrderBooks(currency.key)
+          .rotateOrderBooks(currency)
           .then((tx) => tx.wait());
         console.log(
-          `Successfully executed ${currency.symbol} market auto-roll with maturity ${maturity}`,
+          `Successfully executed ${fromBytes32(
+            currency,
+          )} market auto-roll with maturity ${maturity}`,
         );
       }
     }
   }
 
-  for (const currency of currencyIterator()) {
+  for (const currency of currencies) {
     const marketLog: Record<string, string | undefined>[] = [];
     const lendingMarket = await lendingMarketController
-      .getLendingMarket(currency.key)
+      .getLendingMarket(currency)
       .then((address) => ethers.getContractAt('LendingMarket', address));
     const orderBookIds = await lendingMarketController.getOrderBookIds(
-      currency.key,
+      currency,
     );
 
     for (const orderBookId of orderBookIds) {
@@ -82,7 +85,7 @@ task(
         Maturity: moment.unix(maturity.toString()).format('LLL').toString(),
       });
     }
-    console.log(`Current ${currency.symbol} lending markets:`);
+    console.log(`Current ${fromBytes32(currency)} lending markets:`);
     console.table(marketLog);
   }
 });
