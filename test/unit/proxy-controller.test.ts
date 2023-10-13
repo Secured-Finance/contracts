@@ -209,6 +209,9 @@ describe('ProxyController', () => {
       const haircut1 = await currencyControllerProxy1.getHaircut(hexWBTC);
       expect(haircut1.toString()).to.equal(HAIRCUT.toString());
 
+      const revision = await currencyControllerProxy1.getRevision();
+      expect(revision.toString()).to.equal('1');
+
       // update (second time)
       const currencyController2 = await deployContract(
         owner,

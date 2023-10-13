@@ -20,6 +20,10 @@ abstract contract Proxyable is Initializable {
         _;
     }
 
+    function getRevision() external pure virtual returns (uint256) {
+        return 0x1;
+    }
+
     function _getImplementation() private view returns (address) {
         return StorageSlot.getAddressSlot(_IMPLEMENTATION_SLOT).value;
     }
