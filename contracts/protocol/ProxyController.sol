@@ -1,10 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import {Ownable} from "./utils/Ownable.sol";
+// dependencies
+import {Multicall} from "../dependencies/openzeppelin/utils/Multicall.sol";
+// interfaces
 import {IAddressResolver} from "./interfaces/IAddressResolver.sol";
 import {IProxyController} from "./interfaces/IProxyController.sol";
+// libraries
 import {Contracts} from "./libraries/Contracts.sol";
+// utils
+import {Ownable} from "./utils/Ownable.sol";
 import {UpgradeabilityProxy} from "./utils/UpgradeabilityProxy.sol";
 
 /**
@@ -14,7 +19,7 @@ import {UpgradeabilityProxy} from "./utils/UpgradeabilityProxy.sol";
  * This contract is also used to update the proxy implementation.
  */
 
-contract ProxyController is IProxyController, Ownable {
+contract ProxyController is IProxyController, Ownable, Multicall {
     IAddressResolver private resolver;
     bytes32 private constant ADDRESS_RESOLVER = "AddressResolver";
 

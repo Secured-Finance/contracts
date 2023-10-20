@@ -225,11 +225,11 @@ describe('LendingMarketController - Terminations', () => {
       ).to.revertedWith('AlreadyTerminated');
 
       await expect(
-        lendingMarketControllerProxy.pauseLendingMarkets(targetCurrency),
+        lendingMarketControllerProxy.pauseLendingMarket(targetCurrency),
       ).to.revertedWith('AlreadyTerminated');
 
       await expect(
-        lendingMarketControllerProxy.unpauseLendingMarkets(targetCurrency),
+        lendingMarketControllerProxy.unpauseLendingMarket(targetCurrency),
       ).to.revertedWith('AlreadyTerminated');
     });
 

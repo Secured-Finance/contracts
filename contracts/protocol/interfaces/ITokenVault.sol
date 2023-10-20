@@ -88,7 +88,7 @@ interface ITokenVault {
         uint256 amount
     ) external returns (uint256 untransferredAmount);
 
-    function pauseVault() external;
+    function pause() external;
 
-    function unpauseVault() external;
+    function unpause() external;
 }

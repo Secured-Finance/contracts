@@ -260,7 +260,7 @@ library LendingMarketOperationLogic {
         for (uint256 i; i < currencies.length; i++) {
             bytes32 ccy = currencies[i];
 
-            pauseLendingMarkets(ccy);
+            pauseLendingMarket(ccy);
             Storage.slot().marketTerminationPrices[ccy] = AddressResolverLib
                 .currencyController()
                 .getAggregatedLastPrice(ccy);
@@ -281,14 +281,14 @@ library LendingMarketOperationLogic {
         emit EmergencyTerminationExecuted(block.timestamp);
     }
 
-    function pauseLendingMarkets(bytes32 _ccy) public {
+    function pauseLendingMarket(bytes32 _ccy) public {
         ILendingMarket market = ILendingMarket(Storage.slot().lendingMarkets[_ccy]);
-        market.pauseMarket();
+        market.pause();
     }
 
-    function unpauseLendingMarkets(bytes32 _ccy) public {
+    function unpauseLendingMarket(bytes32 _ccy) public {
         ILendingMarket market = ILendingMarket(Storage.slot().lendingMarkets[_ccy]);
-        market.unpauseMarket();
+        market.unpause();
     }
 
     function updateOrderLogs(

@@ -203,9 +203,9 @@ interface ILendingMarketController {
 
     function executeEmergencyTermination() external;
 
-    function pauseLendingMarkets(bytes32 ccy) external returns (bool);
+    function pauseLendingMarket(bytes32 ccy) external returns (bool);
 
-    function unpauseLendingMarkets(bytes32 ccy) external returns (bool);
+    function unpauseLendingMarket(bytes32 ccy) external returns (bool);
 
     function cleanUpAllFunds(address user) external returns (bool);
 

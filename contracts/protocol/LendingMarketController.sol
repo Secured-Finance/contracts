@@ -16,6 +16,7 @@ import {LendingMarketOperationLogic} from "./libraries/logics/LendingMarketOpera
 import {LendingMarketUserLogic} from "./libraries/logics/LendingMarketUserLogic.sol";
 import {LiquidationLogic} from "./libraries/logics/LiquidationLogic.sol";
 // mixins
+import {MixinAccessControl} from "./mixins/MixinAccessControl.sol";
 import {MixinAddressResolver} from "./mixins/MixinAddressResolver.sol";
 import {MixinLendingMarketConfiguration} from "./mixins/MixinLendingMarketConfiguration.sol";
 // types
@@ -43,6 +44,7 @@ import {LendingMarketControllerStorage as Storage} from "./storages/LendingMarke
 contract LendingMarketController is
     ILendingMarketController,
     MixinLendingMarketConfiguration,
+    MixinAccessControl,
     MixinAddressResolver,
     ReentrancyGuard,
     Proxyable,
@@ -91,6 +93,7 @@ contract LendingMarketController is
     ) public initializer onlyProxy {
         Storage.slot().marketBasePeriod = _marketBasePeriod;
         MixinLendingMarketConfiguration._initialize(_owner);
+        MixinAccessControl._setupInitialRoles(_owner);
         registerAddressResolver(_resolver);
     }
 
@@ -781,24 +784,26 @@ contract LendingMarketController is
     }
 
     /**
-     * @notice Pauses previously deployed lending market by currency
+     * @notice Pauses the lending market by currency
      * @param _ccy Currency for pausing all lending markets
      * @return True if the execution of the operation succeeds
      */
-    function pauseLendingMarkets(bytes32 _ccy) external override ifActive onlyOwner returns (bool) {
-        LendingMarketOperationLogic.pauseLendingMarkets(_ccy);
+    function pauseLendingMarket(
+        bytes32 _ccy
+    ) external override ifActive onlyOperator returns (bool) {
+        LendingMarketOperationLogic.pauseLendingMarket(_ccy);
         return true;
     }
 
     /**
-     * @notice Unpauses previously deployed lending market by currency
+     * @notice Unpauses the lending market by currency
      * @param _ccy Currency name in bytes32
      * @return True if the execution of the operation succeeds
      */
-    function unpauseLendingMarkets(
+    function unpauseLendingMarket(
         bytes32 _ccy
-    ) external override ifActive onlyOwner returns (bool) {
-        LendingMarketOperationLogic.unpauseLendingMarkets(_ccy);
+    ) external override ifActive onlyOperator returns (bool) {
+        LendingMarketOperationLogic.unpauseLendingMarket(_ccy);
         return true;
     }
 

@@ -262,7 +262,7 @@ interface ILendingMarket {
 
     function updateCircuitBreakerLimitRange(uint256 limitRange) external;
 
-    function pauseMarket() external;
+    function pause() external;
 
-    function unpauseMarket() external;
+    function unpause() external;
 }
