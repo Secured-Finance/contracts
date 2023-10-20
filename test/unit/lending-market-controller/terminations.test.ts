@@ -538,6 +538,17 @@ describe('LendingMarketController - Terminations', () => {
       }
     });
 
+    it('Execute an emergency termination with paused markets', async () => {
+      await mockTokenVault.mock.executeForcedReset.returns('50000000000000000');
+      await mockTokenVault.mock.isCollateral.returns(true);
+
+      await lendingMarketControllerProxy.pauseLendingMarket(targetCurrency);
+
+      await expect(
+        lendingMarketControllerProxy.executeEmergencyTermination(),
+      ).to.emit(lendingMarketOperationLogic, 'EmergencyTerminationExecuted');
+    });
+
     it('Fail to redeem due to a insolvent user', async () => {
       await mockTokenVault.mock.executeForcedReset.returns('40000000000000000');
       await mockTokenVault.mock.isCollateral.returns(true);

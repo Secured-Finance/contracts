@@ -260,7 +260,6 @@ library LendingMarketOperationLogic {
         for (uint256 i; i < currencies.length; i++) {
             bytes32 ccy = currencies[i];
 
-            pauseLendingMarket(ccy);
             Storage.slot().marketTerminationPrices[ccy] = AddressResolverLib
                 .currencyController()
                 .getAggregatedLastPrice(ccy);
