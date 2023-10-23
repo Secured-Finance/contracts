@@ -504,18 +504,18 @@ Transfers the token from sender to receiver.
 | _to | address | Receiver's address |
 | _amount | uint256 | Amount of funds to sent |
 
-### pauseVault
+### pause
 
 ```solidity
-function pauseVault() external
+function pause() external
 ```
 
 Pauses the token vault.
 
-### unpauseVault
+### unpause
 
 ```solidity
-function unpauseVault() external
+function unpause() external
 ```
 
 Unpauses the token vault.

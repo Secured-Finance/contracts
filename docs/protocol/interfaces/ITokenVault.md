@@ -236,15 +236,15 @@ function executeForcedReset(address user, bytes32 ccy) external returns (uint256
 function transferFrom(bytes32 ccy, address sender, address receiver, uint256 amount) external returns (uint256 untransferredAmount)
 ```
 
-### pauseVault
+### pause
 
 ```solidity
-function pauseVault() external
+function pause() external
 ```
 
-### unpauseVault
+### unpause
 
 ```solidity
-function unpauseVault() external
+function unpause() external
 ```
 

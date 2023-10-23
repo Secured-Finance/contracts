@@ -701,13 +701,13 @@ function executeEmergencyTermination() external
 Executes an emergency termination to stop the protocol. Once this function is executed,
 the protocol cannot be run again. Also, users will only be able to redeem and withdraw.
 
-### pauseLendingMarkets
+### pauseLendingMarket
 
 ```solidity
-function pauseLendingMarkets(bytes32 _ccy) external returns (bool)
+function pauseLendingMarket(bytes32 _ccy) external returns (bool)
 ```
 
-Pauses previously deployed lending market by currency
+Pauses the lending market by currency
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -717,13 +717,13 @@ Pauses previously deployed lending market by currency
 | ---- | ---- | ----------- |
 | [0] | bool | True if the execution of the operation succeeds |
 
-### unpauseLendingMarkets
+### unpauseLendingMarket
 
 ```solidity
-function unpauseLendingMarkets(bytes32 _ccy) external returns (bool)
+function unpauseLendingMarket(bytes32 _ccy) external returns (bool)
 ```
 
-Unpauses previously deployed lending market by currency
+Unpauses the lending market by currency
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
