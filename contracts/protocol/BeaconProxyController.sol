@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
+// dependencies
+import {Multicall} from "../dependencies/openzeppelin/utils/Multicall.sol";
 // interfaces
 import {IBeaconProxyController} from "./interfaces/IBeaconProxyController.sol";
 import {IProxyController} from "./interfaces/IProxyController.sol";
@@ -23,7 +25,13 @@ import {BeaconProxyControllerStorage as Storage} from "./storages/BeaconProxyCon
  * All beacon proxy contracts are deployed from this contract.
  * This contract is also used to update the beacon proxy implementation.
  */
-contract BeaconProxyController is IBeaconProxyController, MixinAddressResolver, Ownable, Proxyable {
+contract BeaconProxyController is
+    IBeaconProxyController,
+    MixinAddressResolver,
+    Ownable,
+    Proxyable,
+    Multicall
+{
     /**
      * @notice Initializes the contract.
      * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController.

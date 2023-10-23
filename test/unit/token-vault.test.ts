@@ -1250,7 +1250,7 @@ describe('TokenVault', () => {
         true,
       );
 
-      await tokenVaultProxy.pauseVault();
+      await tokenVaultProxy.pause();
       await expect(
         tokenVaultProxy.connect(alice).deposit(targetCurrency, arbitraryAmount),
       ).to.be.revertedWith('Pausable: paused');
@@ -1290,7 +1290,7 @@ describe('TokenVault', () => {
     });
 
     it('Unpause token vault', async () => {
-      await tokenVaultProxy.unpauseVault();
+      await tokenVaultProxy.unpause();
 
       await expect(
         tokenVaultProxy.connect(alice).deposit(targetCurrency, arbitraryAmount),
@@ -1333,6 +1333,28 @@ describe('TokenVault', () => {
           arbitraryAmount,
         ),
       ).to.be.not.reverted;
+    });
+
+    it('Change the operator', async () => {
+      await expect(tokenVaultProxy.connect(alice).pause()).to.be.revertedWith(
+        'CallerNotOperator',
+      );
+      await expect(tokenVaultProxy.connect(alice).unpause()).to.be.revertedWith(
+        'CallerNotOperator',
+      );
+
+      await tokenVaultProxy.addOperator(alice.address);
+      await tokenVaultProxy.removeOperator(owner.address);
+
+      await expect(tokenVaultProxy.connect(owner).pause()).to.be.revertedWith(
+        'CallerNotOperator',
+      );
+      await expect(tokenVaultProxy.connect(owner).unpause()).to.be.revertedWith(
+        'CallerNotOperator',
+      );
+
+      await expect(tokenVaultProxy.connect(alice).pause()).to.be.not.reverted;
+      await expect(tokenVaultProxy.connect(alice).unpause()).to.be.not.reverted;
     });
   });
 

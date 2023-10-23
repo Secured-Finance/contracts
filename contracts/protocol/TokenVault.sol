@@ -13,6 +13,7 @@ import {DepositManagementLogic} from "./libraries/logics/DepositManagementLogic.
 import {ITokenVault} from "./interfaces/ITokenVault.sol";
 import {ILendingMarketController} from "./interfaces/ILendingMarketController.sol";
 // mixins
+import {MixinAccessControl} from "./mixins/MixinAccessControl.sol";
 import {MixinAddressResolver} from "./mixins/MixinAddressResolver.sol";
 import {MixinLiquidationConfiguration} from "./mixins/MixinLiquidationConfiguration.sol";
 // types
@@ -39,6 +40,7 @@ import {TokenVaultStorage as Storage} from "./storages/TokenVaultStorage.sol";
 contract TokenVault is
     ITokenVault,
     MixinLiquidationConfiguration,
+    MixinAccessControl,
     MixinAddressResolver,
     Pausable,
     Proxyable,
@@ -77,6 +79,7 @@ contract TokenVault is
         registerAddressResolver(_resolver);
 
         TransferHelper.initialize(_nativeToken);
+        MixinAccessControl._setupInitialRoles(_owner);
         MixinLiquidationConfiguration._initialize(
             _owner,
             _liquidationThresholdRate,
@@ -468,14 +471,14 @@ contract TokenVault is
     /**
      * @notice Pauses the token vault.
      */
-    function pauseVault() external override onlyOwner {
+    function pause() external override onlyOperator {
         _pause();
     }
 
     /**
      * @notice Unpauses the token vault.
      */
-    function unpauseVault() external override onlyOwner {
+    function unpause() external override onlyOperator {
         _unpause();
     }
 

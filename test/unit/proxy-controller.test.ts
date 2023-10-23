@@ -6,8 +6,10 @@ import { hexETH, hexWBTC, toBytes32 } from '../../utils/strings';
 import { btcToUSDRate, wBtcToBTCRate } from '../common/currencies';
 
 const AddressResolver = artifacts.require('AddressResolver');
+const BeaconProxyController = artifacts.require('BeaconProxyController');
 const CurrencyController = artifacts.require('CurrencyController');
 const GenesisValueVault = artifacts.require('GenesisValueVault');
+const ReserveFund = artifacts.require('ReserveFund');
 const MockV3Aggregator = artifacts.require('MockV3Aggregator');
 const ProxyController = artifacts.require('ProxyController');
 const UpgradeabilityProxy = artifacts.require('UpgradeabilityProxy');
@@ -45,7 +47,7 @@ describe('ProxyController', () => {
   });
 
   describe('Register contracts', async () => {
-    it('Successfully register a CurrencyController contract', async () => {
+    it('Register a CurrencyController contract', async () => {
       const currencyController = await deployContract(
         owner,
         CurrencyController,
@@ -76,7 +78,7 @@ describe('ProxyController', () => {
       ).revertedWith('Ownable: caller is not the owner');
     });
 
-    it('Successfully update a CurrencyController contract', async () => {
+    it('Update a CurrencyController contract', async () => {
       // register (fist time)
       const currencyController1 = await deployContract(
         owner,
@@ -116,6 +118,39 @@ describe('ProxyController', () => {
           [ethers.constants.AddressZero],
         ),
       ).revertedWith('UnmatchedInputs');
+    });
+
+    it('Register multiple contracts using multicall', async () => {
+      const genesisValueVault = await deployContract(owner, GenesisValueVault);
+      const beaconProxyController = await deployContract(
+        owner,
+        BeaconProxyController,
+      );
+
+      const inputs = [
+        {
+          function: 'setGenesisValueVaultImpl',
+          args: [genesisValueVault.address],
+        },
+        {
+          function: 'setBeaconProxyControllerImpl',
+          args: [beaconProxyController.address],
+        },
+      ];
+
+      const tx = await proxyController.multicall(
+        inputs.map((input) =>
+          proxyController.interface.encodeFunctionData(
+            input.function,
+            input.args,
+          ),
+        ),
+      );
+
+      const { events } = await tx.wait();
+      const addresses = events?.filter(({ event }) => event === 'ProxyCreated');
+
+      expect(addresses?.length).to.equal(2);
     });
   });
 

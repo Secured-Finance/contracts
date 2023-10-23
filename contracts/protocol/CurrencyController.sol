@@ -5,6 +5,7 @@ pragma solidity ^0.8.19;
 import {AggregatorV3Interface} from "../dependencies/chainlink/AggregatorV3Interface.sol";
 import {EnumerableSet} from "../dependencies/openzeppelin/utils/structs/EnumerableSet.sol";
 import {SafeCast} from "../dependencies/openzeppelin/utils/math/SafeCast.sol";
+import {Multicall} from "../dependencies/openzeppelin/utils/Multicall.sol";
 // interfaces
 import {ICurrencyController} from "./interfaces/ICurrencyController.sol";
 // libraries
@@ -22,7 +23,7 @@ import {CurrencyControllerStorage as Storage, PriceFeed} from "./storages/Curren
  * This contract links new currencies to Chainlink price feeds. To add a new currency to the protocol except for the base currency,
  * the owner needs to also add an existing price feed contract.
  */
-contract CurrencyController is ICurrencyController, Ownable, Proxyable {
+contract CurrencyController is ICurrencyController, Ownable, Proxyable, Multicall {
     using EnumerableSet for EnumerableSet.Bytes32Set;
     using SafeCast for uint256;
     using SafeCast for int256;

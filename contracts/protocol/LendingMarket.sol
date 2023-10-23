@@ -784,14 +784,14 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     /**
      * @notice Pauses the lending market.
      */
-    function pauseMarket() external override onlyAcceptedContracts {
+    function pause() external override onlyAcceptedContracts {
         _pause();
     }
 
     /**
      * @notice Unpauses the lending market.
      */
-    function unpauseMarket() external override onlyAcceptedContracts {
+    function unpause() external override onlyAcceptedContracts {
         _unpause();
     }
 }
