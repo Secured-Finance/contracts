@@ -52,7 +52,7 @@ const func: DeployFunction = async function ({
     );
   }
 
-  await proposal.submit(deployer, 'Upgrades');
+  await proposal.submit(deployer);
 };
 
 func.tags = ['Proposal'];

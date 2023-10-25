@@ -109,7 +109,7 @@ class Proposal {
     });
   }
 
-  async submit(sender: string, origin: string) {
+  async submit(sender: string) {
     if (this.safeTransactionData.length === 0) {
       console.warn('Skipped proposal submission due to no update');
       return;
@@ -128,7 +128,6 @@ class Proposal {
       safeTxHash,
       senderAddress: sender,
       senderSignature: senderSignature.data,
-      origin,
     });
 
     const tx = await this.safeService.getTransaction(safeTxHash);
