@@ -73,7 +73,7 @@ const func: DeployFunction = async function ({
         .then((contract) => contract.getAddresses());
 
       // Change admin address of all proxy contracts from the old ProxyController to the new one.
-      DeploymentStorage.instance.addDeployment(
+      DeploymentStorage.instance.add(
         prevProxyController.address,
         'ProxyController',
         'changeProxyAdmins',

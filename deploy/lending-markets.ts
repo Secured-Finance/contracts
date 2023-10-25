@@ -43,7 +43,7 @@ const func: DeployFunction = async function ({
         ethers.getContractAt('BeaconProxyController', address),
       );
 
-    DeploymentStorage.instance.addDeployment(
+    DeploymentStorage.instance.add(
       beaconProxyController.address,
       'BeaconProxyController',
       'setLendingMarketImpl',

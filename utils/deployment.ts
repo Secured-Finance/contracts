@@ -39,7 +39,7 @@ class DeploymentStorage {
     return this._instance;
   }
 
-  addDeployment(
+  add(
     contractAddress: string,
     contractName: string,
     functionName: string,

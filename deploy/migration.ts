@@ -40,7 +40,7 @@ const func: DeployFunction = async function ({
 
     await tx.wait();
 
-    console.log('Upgraded proxy contracts');
+    console.log('Updated proxy contracts');
     console.table(
       deployment.functions.map(({ name, args }) => ({
         FunctionName: name,
