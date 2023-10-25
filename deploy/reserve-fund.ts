@@ -1,6 +1,9 @@
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { executeIfNewlyDeployment } from '../utils/deployment';
+import {
+  DeploymentStorage,
+  executeIfNewlyDeployment,
+} from '../utils/deployment';
 
 const func: DeployFunction = async function ({
   getNamedAccounts,
@@ -23,9 +26,12 @@ const func: DeployFunction = async function ({
       .get('ProxyController')
       .then(({ address }) => ethers.getContractAt('ProxyController', address));
 
-    await proxyController
-      .setReserveFundImpl(deployResult.address, nativeToken)
-      .then((tx) => tx.wait());
+    DeploymentStorage.instance.addDeployment(
+      proxyController.address,
+      'ProxyController',
+      'setReserveFundImpl',
+      [deployResult.address, nativeToken],
+    );
   });
 };
 

@@ -15,7 +15,7 @@ describe('OrderStatisticsTree - insert and delete', () => {
 
   it('Insert all orders and delete after', async () => {
     console.log('Number of steps: ' + steps.length);
-    let s = await loadScenario(steps);
+    await loadScenario(steps);
     await printScenario(steps);
     await printExists(steps);
   });
@@ -87,14 +87,14 @@ async function loadScenario(steps: Step[]) {
     const amount = step.amount;
     const orderId = step.orderId;
     const unitPrice = step.unitPrice;
-    if (step.action == 'insert') {
+    if (step.action === 'insert') {
       await ost.insertAmountValue(
         unitPrice,
         orderId,
         constants.AddressZero,
         amount,
       );
-    } else if (step.action == 'delete') {
+    } else if (step.action === 'delete') {
       await ost.removeAmountValue(unitPrice, orderId);
     }
   }

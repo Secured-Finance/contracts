@@ -1,7 +1,9 @@
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-
-import { executeIfNewlyDeployment } from '../utils/deployment';
+import {
+  DeploymentStorage,
+  executeIfNewlyDeployment,
+} from '../utils/deployment';
 import { toBytes32 } from '../utils/strings';
 
 const func: DeployFunction = async function ({
@@ -14,23 +16,27 @@ const func: DeployFunction = async function ({
 
   const deployResult = await deploy('FutureValueVault', { from: deployer });
 
-  const proxyController = await deployments
-    .get('ProxyController')
-    .then(({ address }) => ethers.getContractAt('ProxyController', address));
-
-  // Get contracts from proxyController
-  const beaconProxyController = await proxyController
-    .getAddress(toBytes32('BeaconProxyController'))
-    .then((address) => ethers.getContractAt('BeaconProxyController', address));
-
   await executeIfNewlyDeployment('FutureValueVault', deployResult, async () => {
-    await beaconProxyController
-      .setFutureValueVaultImpl(deployResult.address)
-      .then((tx) => tx.wait());
+    const proxyController = await deployments
+      .get('ProxyController')
+      .then(({ address }) => ethers.getContractAt('ProxyController', address));
+
+    const beaconProxyController = await proxyController
+      .getAddress(toBytes32('BeaconProxyController'))
+      .then((address) =>
+        ethers.getContractAt('BeaconProxyController', address),
+      );
+
+    DeploymentStorage.instance.addDeployment(
+      beaconProxyController.address,
+      'BeaconProxyController',
+      'setFutureValueVaultImpl',
+      [deployResult.address],
+    );
   });
 };
 
 func.tags = ['FutureValueVault'];
-func.dependencies = ['BeaconProxyController', 'Migration'];
+func.dependencies = ['Migration'];
 
 export default func;

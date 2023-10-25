@@ -17,7 +17,6 @@ import { deployContracts } from '../common/deployment';
 import { Signers } from '../common/signers';
 
 describe('Integration Test: Calculations', async () => {
-  let owner: SignerWithAddress;
   let alice: SignerWithAddress;
   let bob: SignerWithAddress;
 
@@ -38,7 +37,6 @@ describe('Integration Test: Calculations', async () => {
 
   before('Deploy Contracts', async () => {
     signers = new Signers(await ethers.getSigners());
-    [owner] = await signers.get(1);
 
     ({
       genesisDate,

@@ -462,6 +462,7 @@ describe('OrderStatisticsTree - drop values', () => {
   });
 });
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function getTotalAmount(msg?: string) {
   // msg && console.log(msg);
 

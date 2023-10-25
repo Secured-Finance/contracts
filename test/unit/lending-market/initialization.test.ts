@@ -14,10 +14,9 @@ describe('LendingMarket - Initialization', () => {
   let currencyIdx = 0;
 
   let owner: SignerWithAddress;
-  let signers: SignerWithAddress[];
 
   beforeEach(async () => {
-    [owner, ...signers] = await ethers.getSigners();
+    [owner] = await ethers.getSigners();
     targetCurrency = ethers.utils.formatBytes32String(`Test${currencyIdx}`);
     currencyIdx++;
 

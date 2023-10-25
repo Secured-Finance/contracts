@@ -21,7 +21,6 @@ describe('LendingMarket - Circuit Breakers', () => {
   let alice: SignerWithAddress;
   let bob: SignerWithAddress;
   let carol: SignerWithAddress;
-  let signers: SignerWithAddress[];
 
   let lendingMarket: Contract;
   let orderActionLogic: Contract;
@@ -38,7 +37,7 @@ describe('LendingMarket - Circuit Breakers', () => {
   };
 
   before(async () => {
-    [owner, alice, bob, carol, ...signers] = await ethers.getSigners();
+    [owner, alice, bob, carol] = await ethers.getSigners();
     targetCurrency = ethers.utils.formatBytes32String('Test');
 
     ({
@@ -148,10 +147,10 @@ describe('LendingMarket - Circuit Breakers', () => {
     const title = side === Side.BORROW ? 'Borrow orders' : 'Lend orders';
 
     describe(title, async () => {
-      const isBorrow = side == Side.BORROW;
+      const isBorrow = side === Side.BORROW;
 
       before(function () {
-        if (process.env.TEST_TYPE == 'coverage') {
+        if (process.env.TEST_TYPE === 'coverage') {
           // The test fails because `solidity-coverage` do not work nicely with `evm_setAutomine` and `evm_mine`.
           // To avoid this, those tests are skipped when running coverage test.
           this.skip();
@@ -165,7 +164,7 @@ describe('LendingMarket - Circuit Breakers', () => {
             8500,
           );
 
-          if (orderType == 'market') {
+          if (orderType === 'market') {
             unitPrice = 0;
           }
 
@@ -804,7 +803,7 @@ describe('LendingMarket - Circuit Breakers', () => {
     });
 
     it('Unwind no position due to circuit breaker', async function () {
-      if (process.env.TEST_TYPE == 'coverage') {
+      if (process.env.TEST_TYPE === 'coverage') {
         this.skip();
       }
 

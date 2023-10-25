@@ -320,10 +320,6 @@ describe('Integration Test: Emergency terminations', async () => {
         ).to.emit(fundManagementLogic, 'EmergencySettlementExecuted');
 
         // Execute forced redemption for reserve fund
-        const reserveFundPV =
-          await lendingMarketController.getTotalPresentValueInBaseCurrency(
-            reserveFund.address,
-          );
         const data = lendingMarketController.interface.encodeFunctionData(
           'executeEmergencySettlement',
         );
