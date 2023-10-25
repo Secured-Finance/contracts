@@ -52,6 +52,28 @@ const config: HardhatUserConfig = {
       gasPrice: 'auto',
       gasMultiplier: 3,
     },
+    goerli: {
+      url:
+        process.env.FORK_RPC_ENDPOINT ||
+        `https://eth-goerli.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
+      chainId: 5,
+      accounts: privateKey,
+      live: true,
+      saveDeployments: true,
+      gasPrice: 'auto',
+      gasMultiplier: 3,
+    },
+    mainnet: {
+      url:
+        process.env.FORK_RPC_ENDPOINT ||
+        `https://eth-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
+      chainId: 1,
+      accounts: privateKey,
+      live: true,
+      saveDeployments: true,
+      gasPrice: 'auto',
+      gasMultiplier: 3,
+    },
   },
   solidity: {
     compilers: [

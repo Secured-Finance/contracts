@@ -22,13 +22,12 @@ describe('ReserveFund', () => {
   let reserveFundProxy: Contract;
 
   let owner: SignerWithAddress;
-  let signers: SignerWithAddress[];
 
   let targetCurrency: string;
   let currencyIdx = 0;
 
   before(async () => {
-    [owner, ...signers] = await ethers.getSigners();
+    [owner] = await ethers.getSigners();
 
     // Set up for the mocks
     mockTokenVault = await deployMockContract(owner, TokenVault.abi);

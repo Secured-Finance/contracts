@@ -1,6 +1,10 @@
+import { Contract } from 'ethers';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { executeIfNewlyDeployment } from '../utils/deployment';
+import {
+  DeploymentStorage,
+  executeIfNewlyDeployment,
+} from '../utils/deployment';
 
 const func: DeployFunction = async function ({
   getNamedAccounts,
@@ -10,13 +14,13 @@ const func: DeployFunction = async function ({
   const { deploy, fetchIfDifferent } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  let prevAddressResolverAddress = ethers.constants.AddressZero;
-  let prevProxyController;
+  let addressResolverAddress = ethers.constants.AddressZero;
+  let prevProxyController: Contract;
 
   const { differences, address: prevProxyControllerAddress } =
     await fetchIfDifferent('ProxyController', {
       from: deployer,
-      args: [prevAddressResolverAddress],
+      args: [addressResolverAddress],
     });
 
   // Set the previous proxy contract address of AddressResolver as an initial address
@@ -26,26 +30,27 @@ const func: DeployFunction = async function ({
       'ProxyController',
       prevProxyControllerAddress,
     );
-    prevAddressResolverAddress =
+    addressResolverAddress =
       await prevProxyController.getAddressResolverAddress();
   }
 
   const deployResult = await deploy('ProxyController', {
     from: deployer,
-    args: [prevAddressResolverAddress],
+    args: [addressResolverAddress],
   });
 
   await executeIfNewlyDeployment('ProxyController', deployResult, async () => {
+    const proxyController = await ethers.getContractAt(
+      'ProxyController',
+      deployResult.address,
+    );
+
     // Set AddressResolver as an implementation of the proxy using `setAddressResolverImpl`
     // when the ProxyController is deployed the first time.
     if (!prevProxyControllerAddress) {
       const addressResolver = await deployments.get('AddressResolver');
-      const proxyControllerContract = await ethers.getContractAt(
-        'ProxyController',
-        deployResult.address,
-      );
 
-      await proxyControllerContract
+      await proxyController
         .setAddressResolverImpl(addressResolver.address)
         .then((tx) => tx.wait());
 
@@ -54,17 +59,26 @@ const func: DeployFunction = async function ({
         addressResolver.address,
       );
     } else {
+      const prevOwner = await prevProxyController.owner();
+      const currentOwner = await proxyController.owner();
+
+      if (prevOwner !== currentOwner) {
+        await proxyController
+          .transferOwnership(prevOwner)
+          .then((tx) => tx.wait());
+      }
+
       const addresses = await ethers
-        .getContractAt('AddressResolver', prevAddressResolverAddress)
+        .getContractAt('AddressResolver', addressResolverAddress)
         .then((contract) => contract.getAddresses());
 
       // Change admin address of all proxy contracts from the old ProxyController to the new one.
-      await prevProxyController
-        .changeProxyAdmins(deployResult.address, [
-          prevAddressResolverAddress,
-          ...addresses,
-        ])
-        .then((tx) => tx.wait());
+      DeploymentStorage.instance.addDeployment(
+        prevProxyController.address,
+        'ProxyController',
+        'changeProxyAdmins',
+        [deployResult.address, [addressResolverAddress, ...addresses]],
+      );
     }
   });
 };

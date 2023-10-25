@@ -38,7 +38,6 @@ describe('LendingMarketController - Itayose', () => {
   let bob: SignerWithAddress;
   let carol: SignerWithAddress;
   let dave: SignerWithAddress;
-  let signers: SignerWithAddress[];
 
   beforeEach(async () => {
     targetCurrency = ethers.utils.formatBytes32String(`Test${currencyIdx}`);
@@ -51,7 +50,7 @@ describe('LendingMarketController - Itayose', () => {
   });
 
   before(async () => {
-    [owner, alice, bob, carol, dave, ...signers] = await ethers.getSigners();
+    [owner, alice, bob, carol, dave] = await ethers.getSigners();
 
     ({
       mockCurrencyController,
@@ -971,7 +970,6 @@ describe('LendingMarketController - Itayose', () => {
 
       // the matching amount of the above orders
       const expectedOpeningPrice = '8050';
-      const expectedFilledAmount = BigNumber.from('200000000000000');
       const expectedLastLendUnitPrice = '8100';
       const expectedLastBorrowUnitPrice = '8000';
 

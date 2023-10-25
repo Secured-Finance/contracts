@@ -392,7 +392,7 @@ describe('Performance Test: Order Book', async () => {
         it(`Active orders: ${i}`, async () => {
           let unitPrice = 8000 - i - 1;
 
-          if (i != 0) {
+          if (i !== 0) {
             await lendingMarketController
               .connect(signers[signerIdx])
               .executeOrder(

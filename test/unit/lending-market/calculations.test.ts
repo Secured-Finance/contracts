@@ -18,7 +18,6 @@ describe('LendingMarket - Calculations', () => {
   let owner: SignerWithAddress;
   let alice: SignerWithAddress;
   let bob: SignerWithAddress;
-  let signers: SignerWithAddress[];
 
   let lendingMarket: Contract;
   let currentOrderBookId: BigNumber;
@@ -34,7 +33,7 @@ describe('LendingMarket - Calculations', () => {
   };
 
   before(async () => {
-    [owner, alice, bob, ...signers] = await ethers.getSigners();
+    [owner, alice, bob] = await ethers.getSigners();
     targetCurrency = ethers.utils.formatBytes32String('Test');
 
     ({ mockCurrencyController, lendingMarketCaller, lendingMarket } =

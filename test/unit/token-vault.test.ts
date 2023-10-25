@@ -41,7 +41,6 @@ describe('TokenVault', () => {
   let bob: SignerWithAddress;
   let carol: SignerWithAddress;
   let dave: SignerWithAddress;
-  let ellen: SignerWithAddress;
   let signers: SignerWithAddress[];
 
   let targetCurrency: string;
@@ -87,8 +86,7 @@ describe('TokenVault', () => {
   };
 
   before(async () => {
-    [owner, alice, bob, carol, dave, ellen, ...signers] =
-      await ethers.getSigners();
+    [owner, alice, bob, carol, dave, ...signers] = await ethers.getSigners();
 
     // Set up for the mocks
     mockCurrencyController = await deployMockContract(

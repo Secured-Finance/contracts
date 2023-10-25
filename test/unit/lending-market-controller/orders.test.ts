@@ -48,7 +48,6 @@ describe('LendingMarketController - Orders', () => {
   let carol: SignerWithAddress;
   let dave: SignerWithAddress;
   let ellen: SignerWithAddress;
-  let signers: SignerWithAddress[];
 
   beforeEach(async () => {
     targetCurrency = ethers.utils.formatBytes32String(`Test${currencyIdx}`);
@@ -61,8 +60,7 @@ describe('LendingMarketController - Orders', () => {
   });
 
   before(async () => {
-    [owner, alice, bob, carol, dave, ellen, ...signers] =
-      await ethers.getSigners();
+    [owner, alice, bob, carol, dave, ellen] = await ethers.getSigners();
 
     ({
       mockCurrencyController,
