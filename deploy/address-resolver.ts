@@ -28,7 +28,7 @@ const func: DeployFunction = async function ({
         prevProxyController.address,
       );
 
-      DeploymentStorage.instance.addDeployment(
+      DeploymentStorage.instance.add(
         proxyController.address,
         'ProxyController',
         'setAddressResolverImpl',

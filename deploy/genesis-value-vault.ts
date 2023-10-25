@@ -27,7 +27,7 @@ const func: DeployFunction = async function ({
           ethers.getContractAt('ProxyController', address),
         );
 
-      DeploymentStorage.instance.addDeployment(
+      DeploymentStorage.instance.add(
         proxyController.address,
         'ProxyController',
         'setGenesisValueVaultImpl',

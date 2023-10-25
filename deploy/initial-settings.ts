@@ -30,7 +30,7 @@ const updateBeaconProxyContracts = async (beaconProxyController: Contract) => {
 
     await tx.wait();
 
-    console.log('Upgraded beacon proxy contracts');
+    console.log('Updated beacon proxy contracts');
     console.table(
       deployment.functions.map(({ name, args }) => ({
         FunctionName: name,
