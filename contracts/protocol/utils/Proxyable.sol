@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.19;
 
 import "../../dependencies/openzeppelin/utils/StorageSlot.sol";
 import "../../dependencies/openzeppelin/proxy/utils/Initializable.sol";
@@ -18,6 +18,10 @@ abstract contract Proxyable is Initializable {
     modifier onlyBeacon() {
         require(_getBeacon() != address(0), "Must be called from beacon contract");
         _;
+    }
+
+    function getRevision() external pure virtual returns (uint256) {
+        return 0x1;
     }
 
     function _getImplementation() private view returns (address) {

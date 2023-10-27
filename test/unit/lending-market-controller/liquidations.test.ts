@@ -133,6 +133,91 @@ describe('LendingMarketController - Liquidations', () => {
     await initialize(targetCurrency);
   });
 
+  describe('External liquidator', async () => {
+    let liquidator: Contract;
+
+    beforeEach(async () => {
+      [alice] = getUsers(1);
+
+      await mockTokenVault.mock.getTokenAddress.returns(
+        ethers.constants.AddressZero,
+      );
+
+      liquidator = await ethers
+        .getContractFactory('Liquidator')
+        .then((factory) =>
+          factory
+            .connect(owner)
+            .deploy(
+              targetCurrency,
+              lendingMarketControllerProxy.address,
+              mockTokenVault.address,
+              ethers.constants.AddressZero,
+              ethers.constants.AddressZero,
+            ),
+        );
+    });
+
+    it('Fail to execute liquidation call due to non-owner', async () => {
+      await expect(
+        liquidator
+          .connect(alice)
+          .executeLiquidationCall(
+            targetCurrency,
+            maturities,
+            targetCurrency,
+            maturities[0],
+            alice.address,
+            10,
+          ),
+      ).revertedWith('Ownable: caller is not the owner');
+    });
+
+    it('Fail to execute forced repayment due to non-owner', async () => {
+      await expect(
+        liquidator
+          .connect(alice)
+          .executeForcedRepayment(
+            targetCurrency,
+            maturities,
+            targetCurrency,
+            maturities[0],
+            alice.address,
+            10,
+          ),
+      ).revertedWith('Ownable: caller is not the owner');
+    });
+
+    it('Fail to execute operations for collateral due to non lending market controller', async () => {
+      await expect(
+        liquidator
+          .connect(owner)
+          .executeOperationForCollateral(
+            liquidator.address,
+            alice.address,
+            targetCurrency,
+            10,
+          ),
+      ).revertedWith('Invalid caller');
+    });
+
+    it('Fail to execute operations for debt due to non lending market controller', async () => {
+      await expect(
+        liquidator
+          .connect(owner)
+          .executeOperationForDebt(
+            liquidator.address,
+            alice.address,
+            targetCurrency,
+            10,
+            targetCurrency,
+            maturities[0],
+            10,
+          ),
+      ).revertedWith('Invalid caller');
+    });
+  });
+
   describe('Liquidations', async () => {
     it("Liquidate less than 50% borrowing position in case the one position doesn't cover liquidation amount", async () => {
       const orderAmount = ethers.BigNumber.from('100000000000000000');

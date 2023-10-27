@@ -788,18 +788,18 @@ Updates the auto-roll fee rate
 | ---- | ---- | ----------- |
 | _cbLimitRange | uint256 | The circuit breaker limit range |
 
-### pauseMarket
+### pause
 
 ```solidity
-function pauseMarket() external
+function pause() external
 ```
 
 Pauses the lending market.
 
-### unpauseMarket
+### unpause
 
 ```solidity
-function unpauseMarket() external
+function unpause() external
 ```
 
 Unpauses the lending market.

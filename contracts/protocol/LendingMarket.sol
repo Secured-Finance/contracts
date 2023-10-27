@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.19;
 
 // interfaces
 import {ILendingMarket} from "./interfaces/ILendingMarket.sol";
@@ -174,16 +174,13 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @return openingDate The opening date of the order book
      * @return preOpeningDate The pre-opening date of the order book
      */
-    function getOrderBookDetail(uint8 _orderBookId)
+    function getOrderBookDetail(
+        uint8 _orderBookId
+    )
         public
         view
         override
-        returns (
-            bytes32 ccy,
-            uint256 maturity,
-            uint256 openingDate,
-            uint256 preOpeningDate
-        )
+        returns (bytes32 ccy, uint256 maturity, uint256 openingDate, uint256 preOpeningDate)
     {
         return OrderBookLogic.getOrderBookDetail(_orderBookId);
     }
@@ -194,12 +191,9 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @return maxLendUnitPrice The maximum unit price for lending
      * @return minBorrowUnitPrice The minimum unit price for borrowing
      */
-    function getCircuitBreakerThresholds(uint8 _orderBookId)
-        external
-        view
-        override
-        returns (uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice)
-    {
+    function getCircuitBreakerThresholds(
+        uint8 _orderBookId
+    ) external view override returns (uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice) {
         return OrderBookLogic.getCircuitBreakerThresholds(_orderBookId);
     }
 
@@ -216,12 +210,9 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @notice Gets the best prices for lending.
      * @return The array of the best price for lending
      */
-    function getBestLendUnitPrices(uint8[] calldata _orderBookIds)
-        external
-        view
-        override
-        returns (uint256[] memory)
-    {
+    function getBestLendUnitPrices(
+        uint8[] calldata _orderBookIds
+    ) external view override returns (uint256[] memory) {
         return OrderBookLogic.getBestLendUnitPrices(_orderBookIds);
     }
 
@@ -238,12 +229,9 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @notice Gets the best prices for borrowing.
      * @return The array of the best price for borrowing
      */
-    function getBestBorrowUnitPrices(uint8[] calldata _orderBookIds)
-        external
-        view
-        override
-        returns (uint256[] memory)
-    {
+    function getBestBorrowUnitPrices(
+        uint8[] calldata _orderBookIds
+    ) external view override returns (uint256[] memory) {
         return OrderBookLogic.getBestBorrowUnitPrices(_orderBookIds);
     }
 
@@ -270,12 +258,9 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @param _orderBookId The order book id
      * @return The array of the block unit price
      */
-    function getBlockUnitPriceHistory(uint8 _orderBookId)
-        external
-        view
-        override
-        returns (uint256[] memory)
-    {
+    function getBlockUnitPriceHistory(
+        uint8 _orderBookId
+    ) external view override returns (uint256[] memory) {
         return OrderBookLogic.getBlockUnitPriceHistory(_orderBookId);
     }
 
@@ -285,12 +270,10 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @param _count Count of data used for averaging
      * @return The block unit price average
      */
-    function getBlockUnitPriceAverage(uint8 _orderBookId, uint256 _count)
-        external
-        view
-        override
-        returns (uint256)
-    {
+    function getBlockUnitPriceAverage(
+        uint8 _orderBookId,
+        uint256 _count
+    ) external view override returns (uint256) {
         return OrderBookLogic.getBlockUnitPriceAverage(_orderBookId, _count);
     }
 
@@ -300,15 +283,14 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @param _limit Max limit to get unit prices
      * @return unitPrices The array of borrow unit prices
      */
-    function getBorrowOrderBook(uint8 _orderBookId, uint256 _limit)
+    function getBorrowOrderBook(
+        uint8 _orderBookId,
+        uint256 _limit
+    )
         external
         view
         override
-        returns (
-            uint256[] memory unitPrices,
-            uint256[] memory amounts,
-            uint256[] memory quantities
-        )
+        returns (uint256[] memory unitPrices, uint256[] memory amounts, uint256[] memory quantities)
     {
         return OrderBookLogic.getBorrowOrderBook(_orderBookId, _limit);
     }
@@ -319,15 +301,14 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @param _limit Max limit to get unit prices
      * @return unitPrices The array of lending unit prices
      */
-    function getLendOrderBook(uint8 _orderBookId, uint256 _limit)
+    function getLendOrderBook(
+        uint8 _orderBookId,
+        uint256 _limit
+    )
         external
         view
         override
-        returns (
-            uint256[] memory unitPrices,
-            uint256[] memory amounts,
-            uint256[] memory quantities
-        )
+        returns (uint256[] memory unitPrices, uint256[] memory amounts, uint256[] memory quantities)
     {
         return OrderBookLogic.getLendOrderBook(_orderBookId, _limit);
     }
@@ -340,7 +321,9 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @return lastBorrowUnitPrice The price of the last borrow order filled by Itayose.
      * @return totalOffsetAmount The total amount of the orders filled by Itayose.
      */
-    function getItayoseEstimation(uint8 _orderBookId)
+    function getItayoseEstimation(
+        uint8 _orderBookId
+    )
         external
         view
         returns (
@@ -366,12 +349,9 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @notice Gets the order book maturities.
      * @return maturities The array of maturity
      */
-    function getMaturities(uint8[] calldata _orderBookIds)
-        external
-        view
-        override
-        returns (uint256[] memory maturities)
-    {
+    function getMaturities(
+        uint8[] calldata _orderBookIds
+    ) external view override returns (uint256[] memory maturities) {
         return OrderBookLogic.getMaturities(_orderBookIds);
     }
 
@@ -429,7 +409,10 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @return timestamp Timestamp when the order was created
      * @return isPreOrder The boolean if the order is a pre-order.
      */
-    function getOrder(uint8 _orderBookId, uint48 _orderId)
+    function getOrder(
+        uint8 _orderBookId,
+        uint48 _orderId
+    )
         public
         view
         override
@@ -455,7 +438,10 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @return inactiveFutureValue The total future value amount of inactive orders filled on the order book
      * @return maturity The maturity of market that orders were placed.
      */
-    function getTotalAmountFromLendOrders(uint8 _orderBookId, address _user)
+    function getTotalAmountFromLendOrders(
+        uint8 _orderBookId,
+        address _user
+    )
         external
         view
         override
@@ -501,7 +487,10 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @param _orderBookId The order book id
      * @param _user User's address
      */
-    function getLendOrderIds(uint8 _orderBookId, address _user)
+    function getLendOrderIds(
+        uint8 _orderBookId,
+        address _user
+    )
         external
         view
         override
@@ -515,7 +504,10 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @param _orderBookId The order book id
      * @param _user User's address
      */
-    function getBorrowOrderIds(uint8 _orderBookId, address _user)
+    function getBorrowOrderIds(
+        uint8 _orderBookId,
+        address _user
+    )
         external
         view
         override
@@ -621,7 +613,10 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @return removedBorrowOrderAmount The total PV amount of the removed borrow order amount from the order book
      * @return maturity The maturity of the removed orders
      */
-    function cleanUpOrders(uint8 _orderBookId, address _user)
+    function cleanUpOrders(
+        uint8 _orderBookId,
+        address _user
+    )
         external
         override
         returns (
@@ -749,7 +744,9 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @return partiallyFilledLendingOrder Partially filled lending order on the order book
      * @return partiallyFilledBorrowingOrder Partially filled borrowing order on the order book
      */
-    function executeItayoseCall(uint8 _orderBookId)
+    function executeItayoseCall(
+        uint8 _orderBookId
+    )
         external
         override
         whenNotPaused
@@ -778,25 +775,23 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @notice Updates the auto-roll fee rate
      * @param _cbLimitRange The circuit breaker limit range
      */
-    function updateCircuitBreakerLimitRange(uint256 _cbLimitRange)
-        external
-        override
-        onlyAcceptedContracts
-    {
+    function updateCircuitBreakerLimitRange(
+        uint256 _cbLimitRange
+    ) external override onlyAcceptedContracts {
         OrderBookLogic.updateCircuitBreakerLimitRange(_cbLimitRange);
     }
 
     /**
      * @notice Pauses the lending market.
      */
-    function pauseMarket() external override onlyAcceptedContracts {
+    function pause() external override onlyAcceptedContracts {
         _pause();
     }
 
     /**
      * @notice Unpauses the lending market.
      */
-    function unpauseMarket() external override onlyAcceptedContracts {
+    function unpause() external override onlyAcceptedContracts {
         _unpause();
     }
 }

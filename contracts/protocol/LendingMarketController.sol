@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.19;
 
 // dependencies
 import {ReentrancyGuard} from "../dependencies/openzeppelin/security/ReentrancyGuard.sol";
 import {EnumerableSet} from "../dependencies/openzeppelin/utils/structs/EnumerableSet.sol";
+import {Multicall} from "../dependencies/openzeppelin/utils/Multicall.sol";
 // interfaces
 import {ILendingMarketController} from "./interfaces/ILendingMarketController.sol";
 import {ILendingMarket} from "./interfaces/ILendingMarket.sol";
@@ -15,6 +16,7 @@ import {LendingMarketOperationLogic} from "./libraries/logics/LendingMarketOpera
 import {LendingMarketUserLogic} from "./libraries/logics/LendingMarketUserLogic.sol";
 import {LiquidationLogic} from "./libraries/logics/LiquidationLogic.sol";
 // mixins
+import {MixinAccessControl} from "./mixins/MixinAccessControl.sol";
 import {MixinAddressResolver} from "./mixins/MixinAddressResolver.sol";
 import {MixinLendingMarketConfiguration} from "./mixins/MixinLendingMarketConfiguration.sol";
 // types
@@ -42,10 +44,12 @@ import {LendingMarketControllerStorage as Storage} from "./storages/LendingMarke
 contract LendingMarketController is
     ILendingMarketController,
     MixinLendingMarketConfiguration,
+    MixinAccessControl,
     MixinAddressResolver,
     ReentrancyGuard,
     Proxyable,
-    LockAndMsgSender
+    LockAndMsgSender,
+    Multicall
 {
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
@@ -89,6 +93,7 @@ contract LendingMarketController is
     ) public initializer onlyProxy {
         Storage.slot().marketBasePeriod = _marketBasePeriod;
         MixinLendingMarketConfiguration._initialize(_owner);
+        MixinAccessControl._setupInitialRoles(_owner);
         registerAddressResolver(_resolver);
     }
 
@@ -167,12 +172,10 @@ contract LendingMarketController is
      * @param _maturity The maturity of the order book
      * @return The current min debt unit price
      */
-    function getCurrentMinDebtUnitPrice(bytes32 _ccy, uint256 _maturity)
-        external
-        view
-        override
-        returns (uint256)
-    {
+    function getCurrentMinDebtUnitPrice(
+        bytes32 _ccy,
+        uint256 _maturity
+    ) external view override returns (uint256) {
         return
             FundManagementLogic.getCurrentMinDebtUnitPrice(
                 _maturity,
@@ -204,12 +207,10 @@ contract LendingMarketController is
      * @param _maturity The maturity of the order book
      * @return The order book id
      */
-    function getOrderBookId(bytes32 _ccy, uint256 _maturity)
-        external
-        view
-        override
-        returns (uint8)
-    {
+    function getOrderBookId(
+        bytes32 _ccy,
+        uint256 _maturity
+    ) external view override returns (uint8) {
         return Storage.slot().maturityOrderBookIds[_ccy][_maturity];
     }
 
@@ -241,7 +242,9 @@ contract LendingMarketController is
      * @return isInsufficientDepositAmount The boolean if the order amount for lending in the selected currency is insufficient
      * for the deposit amount or not
      */
-    function getOrderEstimation(GetOrderEstimationParams calldata _params)
+    function getOrderEstimation(
+        GetOrderEstimationParams calldata _params
+    )
         external
         view
         override
@@ -294,12 +297,10 @@ contract LendingMarketController is
      * @param _user User's address
      * @return totalPresentValue The total present value
      */
-    function getTotalPresentValue(bytes32 _ccy, address _user)
-        external
-        view
-        override
-        returns (int256 totalPresentValue)
-    {
+    function getTotalPresentValue(
+        bytes32 _ccy,
+        address _user
+    ) external view override returns (int256 totalPresentValue) {
         totalPresentValue = FundManagementLogic.getActualFunds(_ccy, 0, _user, 0).presentValue;
     }
 
@@ -308,12 +309,9 @@ contract LendingMarketController is
      * @param _user User's address
      * @return totalPresentValue The total present value in base currency
      */
-    function getTotalPresentValueInBaseCurrency(address _user)
-        external
-        view
-        override
-        returns (int256 totalPresentValue)
-    {
+    function getTotalPresentValueInBaseCurrency(
+        address _user
+    ) external view override returns (int256 totalPresentValue) {
         EnumerableSet.Bytes32Set storage currencySet = Storage.slot().usedCurrencies[_user];
 
         for (uint256 i; i < currencySet.length(); i++) {
@@ -329,12 +327,10 @@ contract LendingMarketController is
      * @param _user User's address
      * @return genesisValue The genesis value
      */
-    function getGenesisValue(bytes32 _ccy, address _user)
-        external
-        view
-        override
-        returns (int256 genesisValue)
-    {
+    function getGenesisValue(
+        bytes32 _ccy,
+        address _user
+    ) external view override returns (int256 genesisValue) {
         genesisValue = FundManagementLogic.getActualFunds(_ccy, 0, _user, 0).genesisValue;
     }
 
@@ -594,14 +590,10 @@ contract LendingMarketController is
      * @param _ccy Currency name in bytes32 of the selected order book
      * @param _maturity The maturity of the selected order book
      */
-    function unwindPosition(bytes32 _ccy, uint256 _maturity)
-        external
-        override
-        nonReentrant
-        ifValidMaturity(_ccy, _maturity)
-        ifActive
-        returns (bool)
-    {
+    function unwindPosition(
+        bytes32 _ccy,
+        uint256 _maturity
+    ) external override nonReentrant ifValidMaturity(_ccy, _maturity) ifActive returns (bool) {
         LendingMarketUserLogic.unwindPosition(_ccy, _maturity, msg.sender);
         return true;
     }
@@ -612,14 +604,10 @@ contract LendingMarketController is
      * @param _ccy Currency name in bytes32 of the selected order book
      * @param _maturity The maturity of the selected order book
      */
-    function executeRedemption(bytes32 _ccy, uint256 _maturity)
-        external
-        override
-        nonReentrant
-        ifValidMaturity(_ccy, _maturity)
-        ifActive
-        returns (bool)
-    {
+    function executeRedemption(
+        bytes32 _ccy,
+        uint256 _maturity
+    ) external override nonReentrant ifValidMaturity(_ccy, _maturity) ifActive returns (bool) {
         FundManagementLogic.executeRedemption(_ccy, _maturity, msg.sender);
         return true;
     }
@@ -630,14 +618,10 @@ contract LendingMarketController is
      * @param _ccy Currency name in bytes32 of the selected order book
      * @param _maturity The maturity of the selected order book
      */
-    function executeRepayment(bytes32 _ccy, uint256 _maturity)
-        external
-        override
-        nonReentrant
-        ifValidMaturity(_ccy, _maturity)
-        ifActive
-        returns (bool)
-    {
+    function executeRepayment(
+        bytes32 _ccy,
+        uint256 _maturity
+    ) external override nonReentrant ifValidMaturity(_ccy, _maturity) ifActive returns (bool) {
         FundManagementLogic.executeRepayment(_ccy, _maturity, msg.sender, 0);
         return true;
     }
@@ -658,13 +642,10 @@ contract LendingMarketController is
      * @param _currencies Currency name list in bytes32
      * @param _maturity The maturity of the selected order book
      */
-    function executeItayoseCalls(bytes32[] calldata _currencies, uint256 _maturity)
-        external
-        override
-        nonReentrant
-        ifActive
-        returns (bool)
-    {
+    function executeItayoseCalls(
+        bytes32[] calldata _currencies,
+        uint256 _maturity
+    ) external override nonReentrant ifActive returns (bool) {
         for (uint256 i; i < _currencies.length; i++) {
             bytes32 ccy = _currencies[i];
 
@@ -803,28 +784,26 @@ contract LendingMarketController is
     }
 
     /**
-     * @notice Pauses previously deployed lending market by currency
+     * @notice Pauses the lending market by currency
      * @param _ccy Currency for pausing all lending markets
      * @return True if the execution of the operation succeeds
      */
-    function pauseLendingMarkets(bytes32 _ccy) external override ifActive onlyOwner returns (bool) {
-        LendingMarketOperationLogic.pauseLendingMarkets(_ccy);
+    function pauseLendingMarket(
+        bytes32 _ccy
+    ) external override ifActive onlyOperator returns (bool) {
+        LendingMarketOperationLogic.pauseLendingMarket(_ccy);
         return true;
     }
 
     /**
-     * @notice Unpauses previously deployed lending market by currency
+     * @notice Unpauses the lending market by currency
      * @param _ccy Currency name in bytes32
      * @return True if the execution of the operation succeeds
      */
-    function unpauseLendingMarkets(bytes32 _ccy)
-        external
-        override
-        ifActive
-        onlyOwner
-        returns (bool)
-    {
-        LendingMarketOperationLogic.unpauseLendingMarkets(_ccy);
+    function unpauseLendingMarket(
+        bytes32 _ccy
+    ) external override ifActive onlyOperator returns (bool) {
+        LendingMarketOperationLogic.unpauseLendingMarket(_ccy);
         return true;
     }
 
@@ -844,12 +823,10 @@ contract LendingMarketController is
      * @param _ccy Currency name in bytes32
      * @param _user User's address
      */
-    function cleanUpFunds(bytes32 _ccy, address _user)
-        external
-        override
-        nonReentrant
-        returns (uint256 totalActiveOrderCount)
-    {
+    function cleanUpFunds(
+        bytes32 _ccy,
+        address _user
+    ) external override nonReentrant returns (uint256 totalActiveOrderCount) {
         return FundManagementLogic.cleanUpFunds(_ccy, _user);
     }
 
@@ -858,12 +835,10 @@ contract LendingMarketController is
      * @param _ccy Currency name in bytes32
      * @param _minDebtUnitPrice The min debt unit price
      */
-    function updateMinDebtUnitPrice(bytes32 _ccy, uint256 _minDebtUnitPrice)
-        external
-        override
-        ifActive
-        onlyOwner
-    {
+    function updateMinDebtUnitPrice(
+        bytes32 _ccy,
+        uint256 _minDebtUnitPrice
+    ) external override ifActive onlyOwner {
         LendingMarketOperationLogic.updateMinDebtUnitPrice(_ccy, _minDebtUnitPrice);
     }
 }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.19;
 
 import {Constants} from "../Constants.sol";
 import {OrderBookLib, PlacedOrder} from "../OrderBookLib.sol";
@@ -13,7 +13,10 @@ library OrderReaderLogic {
     using OrderStatisticsTreeLib for OrderStatisticsTreeLib.Tree;
     using RoundingUint256 for uint256;
 
-    function getOrder(uint8 _orderBookId, uint48 _orderId)
+    function getOrder(
+        uint8 _orderBookId,
+        uint48 _orderId
+    )
         external
         view
         returns (
@@ -50,7 +53,10 @@ library OrderReaderLogic {
         }
     }
 
-    function getTotalAmountFromLendOrders(uint8 _orderBookId, address _user)
+    function getTotalAmountFromLendOrders(
+        uint8 _orderBookId,
+        address _user
+    )
         external
         view
         returns (
@@ -161,19 +167,17 @@ library OrderReaderLogic {
         }
     }
 
-    function getLendOrderIds(uint8 _orderBookId, address _user)
-        external
-        view
-        returns (uint48[] memory activeOrderIds, uint48[] memory inActiveOrderIds)
-    {
+    function getLendOrderIds(
+        uint8 _orderBookId,
+        address _user
+    ) external view returns (uint48[] memory activeOrderIds, uint48[] memory inActiveOrderIds) {
         (activeOrderIds, inActiveOrderIds) = _getOrderBook(_orderBookId).getLendOrderIds(_user);
     }
 
-    function getBorrowOrderIds(uint8 _orderBookId, address _user)
-        external
-        view
-        returns (uint48[] memory activeOrderIds, uint48[] memory inActiveOrderIds)
-    {
+    function getBorrowOrderIds(
+        uint8 _orderBookId,
+        address _user
+    ) external view returns (uint48[] memory activeOrderIds, uint48[] memory inActiveOrderIds) {
         (activeOrderIds, inActiveOrderIds) = _getOrderBook(_orderBookId).getBorrowOrderIds(_user);
     }
 
@@ -218,11 +222,10 @@ library OrderReaderLogic {
         }
     }
 
-    function calculateOrderFeeAmount(uint256 _maturity, uint256 _amount)
-        public
-        view
-        returns (uint256 orderFeeAmount)
-    {
+    function calculateOrderFeeAmount(
+        uint256 _maturity,
+        uint256 _amount
+    ) public view returns (uint256 orderFeeAmount) {
         if (block.timestamp >= _maturity) return 0;
 
         uint256 currentMaturity = _maturity - block.timestamp;
@@ -235,11 +238,10 @@ library OrderReaderLogic {
         );
     }
 
-    function getLendOrderAmounts(OrderBookLib.OrderBook storage orderBook, uint48 _orderId)
-        public
-        view
-        returns (uint256 presentValue, uint256 futureValue)
-    {
+    function getLendOrderAmounts(
+        OrderBookLib.OrderBook storage orderBook,
+        uint48 _orderId
+    ) public view returns (uint256 presentValue, uint256 futureValue) {
         PlacedOrder memory order = orderBook.getOrder(_orderId);
         (, uint256 orderAmount) = orderBook.lendOrders[order.maturity].getOrderById(
             order.unitPrice,
@@ -257,15 +259,10 @@ library OrderReaderLogic {
         futureValue = (orderAmount * Constants.PRICE_DIGIT).div(unitPrice);
     }
 
-    function getBorrowOrderAmounts(OrderBookLib.OrderBook storage orderBook, uint48 _orderId)
-        public
-        view
-        returns (
-            uint256 presentValue,
-            uint256 futureValue,
-            uint256 unitPrice
-        )
-    {
+    function getBorrowOrderAmounts(
+        OrderBookLib.OrderBook storage orderBook,
+        uint48 _orderId
+    ) public view returns (uint256 presentValue, uint256 futureValue, uint256 unitPrice) {
         PlacedOrder memory order = orderBook.getOrder(_orderId);
         (, uint256 orderAmount) = orderBook.borrowOrders[order.maturity].getOrderById(
             order.unitPrice,
@@ -301,11 +298,9 @@ library OrderReaderLogic {
         }
     }
 
-    function _getOrderBook(uint8 _orderBookId)
-        private
-        view
-        returns (OrderBookLib.OrderBook storage)
-    {
+    function _getOrderBook(
+        uint8 _orderBookId
+    ) private view returns (OrderBookLib.OrderBook storage) {
         return Storage.slot().orderBooks[_orderBookId];
     }
 }

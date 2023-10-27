@@ -47,7 +47,7 @@ struct Node {
   uint48 tail;
   uint256 orderCounter;
   uint256 orderTotalAmount;
-  mapping(uint256 => struct OrderStatisticsTreeLib.OrderItem) orders;
+  mapping(uint48 => struct OrderStatisticsTreeLib.OrderItem) orders;
 }
 ```
 
@@ -75,13 +75,13 @@ struct OrderItem {
 ### first
 
 ```solidity
-function first(struct OrderStatisticsTreeLib.Tree self) internal view returns (uint256 _value)
+function first(struct OrderStatisticsTreeLib.Tree self) internal view returns (uint256 value)
 ```
 
 ### last
 
 ```solidity
-function last(struct OrderStatisticsTreeLib.Tree self) internal view returns (uint256 _value)
+function last(struct OrderStatisticsTreeLib.Tree self) internal view returns (uint256 value)
 ```
 
 ### hasOrders
@@ -93,19 +93,19 @@ function hasOrders(struct OrderStatisticsTreeLib.Tree self) internal view return
 ### next
 
 ```solidity
-function next(struct OrderStatisticsTreeLib.Tree self, uint256 value) internal view returns (uint256 _cursor)
+function next(struct OrderStatisticsTreeLib.Tree self, uint256 value) internal view returns (uint256 cursor)
 ```
 
 ### prev
 
 ```solidity
-function prev(struct OrderStatisticsTreeLib.Tree self, uint256 value) internal view returns (uint256 _cursor)
+function prev(struct OrderStatisticsTreeLib.Tree self, uint256 value) internal view returns (uint256 cursor)
 ```
 
 ### exists
 
 ```solidity
-function exists(struct OrderStatisticsTreeLib.Tree self, uint256 value) internal view returns (bool _exists)
+function exists(struct OrderStatisticsTreeLib.Tree self, uint256 value) internal view returns (bool)
 ```
 
 ### isActiveOrderId
@@ -141,7 +141,7 @@ function getNodeOrderIds(struct OrderStatisticsTreeLib.Tree self, uint256 value)
 ### count
 
 ```solidity
-function count(struct OrderStatisticsTreeLib.Tree self) internal view returns (uint256 _count)
+function count(struct OrderStatisticsTreeLib.Tree self) internal view returns (uint256)
 ```
 
 ### insert
@@ -345,7 +345,7 @@ _Internal function to update the Tail pointer._
 ### _link
 
 ```solidity
-function _link(struct OrderStatisticsTreeLib.Tree self, uint256 value, uint48 _prevId, uint48 _nextId) internal
+function _link(struct OrderStatisticsTreeLib.Tree self, uint256 value, uint48 prevId, uint48 nextId) internal
 ```
 
 _Internal function to link an Object to another._

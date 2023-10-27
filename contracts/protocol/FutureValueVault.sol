@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.19;
 
 // dependencies
 import {SafeCast} from "../dependencies/openzeppelin/utils/math/SafeCast.sol";
@@ -59,12 +59,10 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
      * @return balance The user balance
      * @return maturity The maturity of the market that the future value was added
      */
-    function getBalance(uint8 _orderBookId, address _user)
-        public
-        view
-        override
-        returns (int256 balance, uint256 maturity)
-    {
+    function getBalance(
+        uint8 _orderBookId,
+        address _user
+    ) public view override returns (int256 balance, uint256 maturity) {
         return (
             Storage.slot().balances[_orderBookId][_user],
             Storage.slot().balanceMaturities[_orderBookId][_user]
@@ -191,12 +189,7 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
         external
         override
         onlyAcceptedContracts
-        returns (
-            int256 removedAmount,
-            int256 currentAmount,
-            uint256 maturity,
-            bool isAllRemoved
-        )
+        returns (int256 removedAmount, int256 currentAmount, uint256 maturity, bool isAllRemoved)
     {
         currentAmount = Storage.slot().balances[_orderBookId][_user];
 
@@ -230,11 +223,10 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
      * @param _maturity The maturity of the market
      * @param _amount The amount to add
      */
-    function setInitialTotalSupply(uint256 _maturity, int256 _amount)
-        external
-        override
-        onlyAcceptedContracts
-    {
+    function setInitialTotalSupply(
+        uint256 _maturity,
+        int256 _amount
+    ) external override onlyAcceptedContracts {
         if (Storage.slot().totalSupply[_maturity] != 0) revert TotalSupplyNotZero();
         _updateTotalSupply(_maturity, 0, _amount, true);
     }
@@ -243,11 +235,10 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
      * @notice Forces a reset of the user's future value.
      * @param _user User's address
      */
-    function executeForcedReset(uint8 _orderBookId, address _user)
-        external
-        override
-        onlyAcceptedContracts
-    {
+    function executeForcedReset(
+        uint8 _orderBookId,
+        address _user
+    ) external override onlyAcceptedContracts {
         int256 removedAmount = Storage.slot().balances[_orderBookId][_user];
 
         if (removedAmount != 0) {

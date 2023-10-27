@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.19;
 
 import "../../protocol/interfaces/ITokenVault.sol";
 import "../../protocol/interfaces/ILendingMarketController.sol";
@@ -13,19 +13,11 @@ contract TokenVaultCaller {
         lendingMarketController = ILendingMarketController(_lendingMarketController);
     }
 
-    function addDepositAmount(
-        address user,
-        bytes32 ccy,
-        uint256 amount
-    ) public {
+    function addDepositAmount(address user, bytes32 ccy, uint256 amount) public {
         tokenVault.addDepositAmount(user, ccy, amount);
     }
 
-    function removeDepositAmount(
-        address user,
-        bytes32 ccy,
-        uint256 amount
-    ) public {
+    function removeDepositAmount(address user, bytes32 ccy, uint256 amount) public {
         tokenVault.removeDepositAmount(user, ccy, amount);
     }
 
@@ -33,20 +25,11 @@ contract TokenVaultCaller {
         tokenVault.executeForcedReset(user, ccy);
     }
 
-    function depositFrom(
-        address from,
-        bytes32 ccy,
-        uint256 amount
-    ) public {
+    function depositFrom(address from, bytes32 ccy, uint256 amount) public {
         tokenVault.depositFrom(from, ccy, amount);
     }
 
-    function transferFrom(
-        bytes32 ccy,
-        address from,
-        address to,
-        uint256 amount
-    ) external {
+    function transferFrom(bytes32 ccy, address from, address to, uint256 amount) external {
         tokenVault.transferFrom(ccy, from, to, amount);
     }
 

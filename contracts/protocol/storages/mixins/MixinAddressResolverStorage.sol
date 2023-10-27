@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.19;
 
 import {IAddressResolver} from "../../interfaces/IAddressResolver.sol";
 
@@ -8,7 +8,7 @@ library MixinAddressResolverStorage {
 
     struct Storage {
         IAddressResolver resolver;
-        mapping(bytes32 => address) addressCache;
+        mapping(bytes32 contractName => address contractAddress) addressCache;
     }
 
     function slot() internal pure returns (Storage storage r) {

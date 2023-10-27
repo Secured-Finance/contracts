@@ -299,7 +299,7 @@ describe('LendingMarketController - Operations', () => {
     });
 
     it('Pause lending markets', async () => {
-      await lendingMarketControllerProxy.pauseLendingMarkets(targetCurrency);
+      await lendingMarketControllerProxy.pauseLendingMarket(targetCurrency);
 
       await expect(
         lendingMarketControllerProxy
@@ -313,7 +313,7 @@ describe('LendingMarketController - Operations', () => {
           ),
       ).to.be.revertedWith('Pausable: paused');
 
-      await lendingMarketControllerProxy.unpauseLendingMarkets(targetCurrency);
+      await lendingMarketControllerProxy.unpauseLendingMarket(targetCurrency);
 
       await lendingMarketControllerProxy
         .connect(alice)
@@ -324,6 +324,47 @@ describe('LendingMarketController - Operations', () => {
           '100000000000000000',
           '8000',
         );
+    });
+
+    it('Change the operator', async () => {
+      await expect(
+        lendingMarketControllerProxy
+          .connect(alice)
+          .pauseLendingMarket(targetCurrency),
+      ).to.be.revertedWith('CallerNotOperator');
+
+      await expect(
+        lendingMarketControllerProxy
+          .connect(alice)
+          .unpauseLendingMarket(targetCurrency),
+      ).to.be.revertedWith('CallerNotOperator');
+
+      await lendingMarketControllerProxy.addOperator(alice.address);
+      await lendingMarketControllerProxy.removeOperator(owner.address);
+
+      await expect(
+        lendingMarketControllerProxy
+          .connect(owner)
+          .pauseLendingMarket(targetCurrency),
+      ).to.be.revertedWith('CallerNotOperator');
+
+      await expect(
+        lendingMarketControllerProxy
+          .connect(owner)
+          .unpauseLendingMarket(targetCurrency),
+      ).to.be.revertedWith('CallerNotOperator');
+
+      await expect(
+        lendingMarketControllerProxy
+          .connect(alice)
+          .pauseLendingMarket(targetCurrency),
+      ).to.be.not.reverted;
+
+      await expect(
+        lendingMarketControllerProxy
+          .connect(alice)
+          .unpauseLendingMarket(targetCurrency),
+      ).to.be.not.reverted;
     });
 
     it('Update the order fee rate', async () => {

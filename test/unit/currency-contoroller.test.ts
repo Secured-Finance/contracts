@@ -253,7 +253,7 @@ describe('CurrencyController', () => {
       );
     });
 
-    it('Remove a  price feed', async () => {
+    it('Remove a price feed', async () => {
       const { timestamp: now } = await ethers.provider.getBlock('latest');
 
       // Set up for the mocks
@@ -277,6 +277,31 @@ describe('CurrencyController', () => {
       await expect(currencyControllerProxy.removePriceFeed(currency))
         .to.emit(currencyControllerProxy, 'PriceFeedRemoved')
         .withArgs(currency);
+    });
+
+    it('Update multiple data using multicall', async () => {
+      const currency1 = ethers.utils.formatBytes32String('CCY1');
+      const currency2 = ethers.utils.formatBytes32String('CCY2');
+
+      const inputs = [
+        [currency1, 18, 9000, [mockPriceFeed.address], 86400],
+        [currency2, 18, 8000, [mockPriceFeed.address], 3600],
+      ];
+
+      await currencyControllerProxy.multicall(
+        inputs.map((input) =>
+          currencyControllerProxy.interface.encodeFunctionData(
+            'addCurrency',
+            input,
+          ),
+        ),
+      );
+
+      const haircut1 = await currencyControllerProxy.getHaircut(currency1);
+      const haircut2 = await currencyControllerProxy.getHaircut(currency2);
+
+      expect(haircut1).to.equal(9000);
+      expect(haircut2).to.equal(8000);
     });
 
     it('Fail to update a haircut due to overflow', async () => {

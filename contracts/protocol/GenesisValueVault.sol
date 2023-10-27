@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.19;
 
 // dependencies
 import {SafeCast} from "../dependencies/openzeppelin/utils/math/SafeCast.sol";
@@ -106,17 +106,15 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
      * @param _user User's address
      * @return The future value of the user balance
      */
-    function getBalanceInFutureValue(bytes32 _ccy, address _user)
-        external
-        view
-        override
-        returns (int256)
-    {
+    function getBalanceInFutureValue(
+        bytes32 _ccy,
+        address _user
+    ) external view override returns (int256) {
         // NOTE: The formula is:
         // futureValue = genesisValue * currentCompoundFactor.
         return
             (getBalance(_ccy, _user) * getLendingCompoundFactor(_ccy).toInt256()).div(
-                (10**decimals(_ccy)).toInt256()
+                (10 ** decimals(_ccy)).toInt256()
             );
     }
 
@@ -126,12 +124,10 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
      * @param _maturity The maturity
      * @return The current total supply
      */
-    function getMaturityGenesisValue(bytes32 _ccy, uint256 _maturity)
-        external
-        view
-        override
-        returns (int256)
-    {
+    function getMaturityGenesisValue(
+        bytes32 _ccy,
+        uint256 _maturity
+    ) external view override returns (int256) {
         return Storage.slot().maturityBalances[_ccy][_maturity];
     }
 
@@ -168,12 +164,10 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
      * @param _maturity The maturity
      * @return The auto-roll log
      */
-    function getAutoRollLog(bytes32 _ccy, uint256 _maturity)
-        external
-        view
-        override
-        returns (AutoRollLog memory)
-    {
+    function getAutoRollLog(
+        bytes32 _ccy,
+        uint256 _maturity
+    ) external view override returns (AutoRollLog memory) {
         return Storage.slot().autoRollLogs[_ccy][_maturity];
     }
 
@@ -182,12 +176,9 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
      * @param _ccy Currency name in bytes32
      * @return The auto-roll log
      */
-    function getLatestAutoRollLog(bytes32 _ccy)
-        external
-        view
-        override
-        returns (AutoRollLog memory)
-    {
+    function getLatestAutoRollLog(
+        bytes32 _ccy
+    ) external view override returns (AutoRollLog memory) {
         return Storage.slot().autoRollLogs[_ccy][Storage.slot().currentMaturity[_ccy]];
     }
 
@@ -237,7 +228,7 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         // NOTE: The formula is: genesisValue = featureValue / compoundFactor.
         bool isPlus = _futureValue > 0;
         uint256 absFv = (isPlus ? _futureValue : -_futureValue).toUint256();
-        uint256 absGv = (absFv * 10**decimals(_ccy)).div(compoundFactor);
+        uint256 absGv = (absFv * 10 ** decimals(_ccy)).div(compoundFactor);
         return isPlus ? absGv.toInt256() : -(absGv.toInt256());
     }
 
@@ -260,7 +251,7 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
 
         bool isPlus = _genesisValue > 0;
         uint256 absGv = (isPlus ? _genesisValue : -_genesisValue).toUint256();
-        uint256 absFv = (absGv * compoundFactor).div(10**decimals(_ccy));
+        uint256 absFv = (absGv * compoundFactor).div(10 ** decimals(_ccy));
 
         return isPlus ? absFv.toInt256() : -(absFv.toInt256());
     }
@@ -306,11 +297,10 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
      * @param _ccy Currency name in bytes32
      * @param _unitPrice The unit price used to calculate the compound factor
      */
-    function updateInitialCompoundFactor(bytes32 _ccy, uint256 _unitPrice)
-        external
-        override
-        onlyAcceptedContracts
-    {
+    function updateInitialCompoundFactor(
+        bytes32 _ccy,
+        uint256 _unitPrice
+    ) external override onlyAcceptedContracts {
         uint256 maturity = Storage.slot().currentMaturity[_ccy];
 
         if (Storage.slot().autoRollLogs[_ccy][maturity].prev != 0) {
@@ -488,11 +478,10 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
      * @param _ccy Currency name in bytes32
      * @param _user User's address
      */
-    function executeForcedReset(bytes32 _ccy, address _user)
-        external
-        override
-        onlyAcceptedContracts
-    {
+    function executeForcedReset(
+        bytes32 _ccy,
+        address _user
+    ) external override onlyAcceptedContracts {
         int256 removedAmount = Storage.slot().balances[_ccy][_user];
 
         if (removedAmount != 0) {
@@ -605,11 +594,7 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         emit Transfer(_ccy, address(0), _user, _amount);
     }
 
-    function _updateTotalSupplies(
-        bytes32 _ccy,
-        int256 _amount,
-        int256 _balance
-    ) private {
+    function _updateTotalSupplies(bytes32 _ccy, int256 _amount, int256 _balance) private {
         if (_amount >= 0) {
             uint256 absAmount = _amount.toUint256();
             if (_balance >= 0) {

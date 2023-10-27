@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.19;
 
 import {Ownable} from "../../protocol/utils/Ownable.sol";
 import {IMockERC20} from "./IMockERC20.sol";
@@ -23,11 +23,7 @@ contract TokenFaucet is Ownable {
         return currencies[_ccy];
     }
 
-    function registerCurrency(
-        bytes32 _ccy,
-        address _token,
-        uint256 _amountPerMint
-    ) external {
+    function registerCurrency(bytes32 _ccy, address _token, uint256 _amountPerMint) external {
         currencies[_ccy] = _token;
         amountPerMint[_ccy] = _amountPerMint;
     }

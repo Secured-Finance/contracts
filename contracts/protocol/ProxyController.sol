@@ -1,10 +1,15 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.19;
 
-import {Ownable} from "./utils/Ownable.sol";
+// dependencies
+import {Multicall} from "../dependencies/openzeppelin/utils/Multicall.sol";
+// interfaces
 import {IAddressResolver} from "./interfaces/IAddressResolver.sol";
 import {IProxyController} from "./interfaces/IProxyController.sol";
+// libraries
 import {Contracts} from "./libraries/Contracts.sol";
+// utils
+import {Ownable} from "./utils/Ownable.sol";
 import {UpgradeabilityProxy} from "./utils/UpgradeabilityProxy.sol";
 
 /**
@@ -14,7 +19,7 @@ import {UpgradeabilityProxy} from "./utils/UpgradeabilityProxy.sol";
  * This contract is also used to update the proxy implementation.
  */
 
-contract ProxyController is IProxyController, Ownable {
+contract ProxyController is IProxyController, Ownable, Multicall {
     IAddressResolver private resolver;
     bytes32 private constant ADDRESS_RESOLVER = "AddressResolver";
 
@@ -128,10 +133,10 @@ contract ProxyController is IProxyController, Ownable {
      * @param newImpl The address of implementation contract
      * @param marketBasePeriod The base period for market maturity
      */
-    function setLendingMarketControllerImpl(address newImpl, uint256 marketBasePeriod)
-        external
-        onlyOwner
-    {
+    function setLendingMarketControllerImpl(
+        address newImpl,
+        uint256 marketBasePeriod
+    ) external onlyOwner {
         bytes memory data = abi.encodeWithSignature(
             "initialize(address,address,uint256)",
             msg.sender,
@@ -161,10 +166,10 @@ contract ProxyController is IProxyController, Ownable {
      * @param newAdmin The address of new admin
      * @param destinations The destination contract addresses
      */
-    function changeProxyAdmins(address newAdmin, address[] calldata destinations)
-        external
-        onlyOwner
-    {
+    function changeProxyAdmins(
+        address newAdmin,
+        address[] calldata destinations
+    ) external onlyOwner {
         for (uint256 i; i < destinations.length; i++) {
             UpgradeabilityProxy proxy = UpgradeabilityProxy(payable(destinations[i]));
             proxy.changeAdmin(newAdmin);

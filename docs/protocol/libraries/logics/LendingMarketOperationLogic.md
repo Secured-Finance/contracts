@@ -116,16 +116,16 @@ function rotateOrderBooks(bytes32 _ccy) external returns (uint256 newMaturity)
 function executeEmergencyTermination() external
 ```
 
-### pauseLendingMarkets
+### pauseLendingMarket
 
 ```solidity
-function pauseLendingMarkets(bytes32 _ccy) public
+function pauseLendingMarket(bytes32 _ccy) public
 ```
 
-### unpauseLendingMarkets
+### unpauseLendingMarket
 
 ```solidity
-function unpauseLendingMarkets(bytes32 _ccy) public
+function unpauseLendingMarket(bytes32 _ccy) public
 ```
 
 ### updateOrderLogs
