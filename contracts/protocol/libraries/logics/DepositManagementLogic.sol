@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.19;
 
 // dependencies
 import {EnumerableSet} from "../../../dependencies/openzeppelin/utils/structs/EnumerableSet.sol";
@@ -67,14 +67,12 @@ library DepositManagementLogic {
             funds.workingLendOrdersAmount;
     }
 
-    function getTotalCollateralAmount(address _user)
+    function getTotalCollateralAmount(
+        address _user
+    )
         public
         view
-        returns (
-            uint256 totalCollateral,
-            uint256 totalUsedCollateral,
-            uint256 totalDeposit
-        )
+        returns (uint256 totalCollateral, uint256 totalUsedCollateral, uint256 totalDeposit)
     {
         ILendingMarketController.AdditionalFunds memory _funds;
         (totalCollateral, totalUsedCollateral, totalDeposit, ) = _calculateCollateral(
@@ -83,14 +81,13 @@ library DepositManagementLogic {
         );
     }
 
-    function getCollateralAmount(address _user, bytes32 _ccy)
+    function getCollateralAmount(
+        address _user,
+        bytes32 _ccy
+    )
         public
         view
-        returns (
-            uint256 totalCollateral,
-            uint256 totalUsedCollateral,
-            uint256 totalDeposit
-        )
+        returns (uint256 totalCollateral, uint256 totalUsedCollateral, uint256 totalDeposit)
     {
         ILendingMarketController.CalculatedFunds memory funds = AddressResolverLib
             .lendingMarketController()
@@ -239,11 +236,10 @@ library DepositManagementLogic {
         }
     }
 
-    function getWithdrawableCollateral(bytes32 _ccy, address _user)
-        public
-        view
-        returns (uint256 withdrawableAmount)
-    {
+    function getWithdrawableCollateral(
+        bytes32 _ccy,
+        address _user
+    ) public view returns (uint256 withdrawableAmount) {
         uint256 depositAmount = getDepositAmount(_user, _ccy);
         if (Storage.slot().collateralCurrencies.contains(_ccy)) {
             uint256 maxWithdrawInBaseCurrency = getWithdrawableCollateral(_user);
@@ -258,20 +254,12 @@ library DepositManagementLogic {
         }
     }
 
-    function addDepositAmount(
-        address _user,
-        bytes32 _ccy,
-        uint256 _amount
-    ) public {
+    function addDepositAmount(address _user, bytes32 _ccy, uint256 _amount) public {
         Storage.slot().depositAmounts[_user][_ccy] += _amount;
         _updateUsedCurrencies(_user, _ccy);
     }
 
-    function removeDepositAmount(
-        address _user,
-        bytes32 _ccy,
-        uint256 _amount
-    ) public {
+    function removeDepositAmount(address _user, bytes32 _ccy, uint256 _amount) public {
         if (Storage.slot().depositAmounts[_user][_ccy] < _amount) {
             revert NotEnoughDeposit({ccy: _ccy});
         }
@@ -280,21 +268,17 @@ library DepositManagementLogic {
         _updateUsedCurrencies(_user, _ccy);
     }
 
-    function executeForcedReset(address _user, bytes32 _ccy)
-        external
-        returns (uint256 removedAmount)
-    {
+    function executeForcedReset(
+        address _user,
+        bytes32 _ccy
+    ) external returns (uint256 removedAmount) {
         removedAmount = Storage.slot().depositAmounts[_user][_ccy];
         Storage.slot().depositAmounts[_user][_ccy] = 0;
 
         Storage.slot().usedCurrencies[_user].remove(_ccy);
     }
 
-    function deposit(
-        address _user,
-        bytes32 _ccy,
-        uint256 _amount
-    ) public {
+    function deposit(address _user, bytes32 _ccy, uint256 _amount) public {
         TransferHelper.depositAssets(
             Storage.slot().tokenAddresses[_ccy],
             _user,
@@ -334,15 +318,7 @@ library DepositManagementLogic {
         address _user,
         bytes32 _liquidationCcy,
         uint256 _liquidationAmountMaximum
-    )
-        public
-        view
-        returns (
-            uint256 liquidationAmount,
-            uint256 protocolFee,
-            uint256 liquidatorFee
-        )
-    {
+    ) public view returns (uint256 liquidationAmount, uint256 protocolFee, uint256 liquidatorFee) {
         (
             uint256 totalCollateralInBaseCcy,
             uint256 totalUsedCollateralInBaseCcy,
@@ -396,11 +372,9 @@ library DepositManagementLogic {
         }
     }
 
-    function calculateLiquidationFees(uint256 _amount)
-        public
-        view
-        returns (uint256 protocolFee, uint256 liquidatorFee)
-    {
+    function calculateLiquidationFees(
+        uint256 _amount
+    ) public view returns (uint256 protocolFee, uint256 liquidatorFee) {
         protocolFee = (_amount * Storage.slot().liquidationProtocolFeeRate).div(
             Constants.PCT_DIGIT
         );
@@ -427,11 +401,9 @@ library DepositManagementLogic {
      * @param _user Address of collateral user
      * @return totalDepositAmount The total deposited amount in the base currency
      */
-    function _getTotalInternalDepositAmountInBaseCurrency(address _user)
-        internal
-        view
-        returns (uint256 totalDepositAmount)
-    {
+    function _getTotalInternalDepositAmountInBaseCurrency(
+        address _user
+    ) internal view returns (uint256 totalDepositAmount) {
         EnumerableSet.Bytes32Set storage currencies = Storage.slot().usedCurrencies[_user];
         uint256 length = currencies.length();
 
@@ -440,9 +412,9 @@ library DepositManagementLogic {
             if (Storage.slot().collateralCurrencies.contains(ccy)) {
                 uint256 depositAmount = Storage.slot().depositAmounts[_user][ccy];
                 totalDepositAmount += AddressResolverLib.currencyController().convertToBaseCurrency(
-                        ccy,
-                        depositAmount
-                    );
+                    ccy,
+                    depositAmount
+                );
             }
         }
 

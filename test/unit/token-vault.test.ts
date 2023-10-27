@@ -493,6 +493,27 @@ describe('TokenVault', () => {
       expect(totalDepositAmount).to.equal(depositAmount);
     });
 
+    it('Deposit multiple tokens using multicall', async () => {
+      const inputs = [
+        [targetCurrency, '10000000000000'],
+        [targetCurrency, '20000000000000'],
+      ];
+
+      await tokenVaultProxy
+        .connect(alice)
+        .multicall(
+          inputs.map((input) =>
+            tokenVaultProxy.interface.encodeFunctionData('deposit', input),
+          ),
+        );
+
+      const depositAmount = await tokenVaultProxy.getDepositAmount(
+        alice.address,
+        targetCurrency,
+      );
+      expect(depositAmount).to.equal('30000000000000');
+    });
+
     it('Get the withdrawable amount with the working orders & Withdraw collateral', async () => {
       const value = ethers.BigNumber.from('20000000000000');
       const valueInETH = ethers.BigNumber.from('20000000000000');
@@ -1229,7 +1250,7 @@ describe('TokenVault', () => {
         true,
       );
 
-      await tokenVaultProxy.pauseVault();
+      await tokenVaultProxy.pause();
       await expect(
         tokenVaultProxy.connect(alice).deposit(targetCurrency, arbitraryAmount),
       ).to.be.revertedWith('Pausable: paused');
@@ -1269,7 +1290,7 @@ describe('TokenVault', () => {
     });
 
     it('Unpause token vault', async () => {
-      await tokenVaultProxy.unpauseVault();
+      await tokenVaultProxy.unpause();
 
       await expect(
         tokenVaultProxy.connect(alice).deposit(targetCurrency, arbitraryAmount),
@@ -1312,6 +1333,28 @@ describe('TokenVault', () => {
           arbitraryAmount,
         ),
       ).to.be.not.reverted;
+    });
+
+    it('Change the operator', async () => {
+      await expect(tokenVaultProxy.connect(alice).pause()).to.be.revertedWith(
+        'CallerNotOperator',
+      );
+      await expect(tokenVaultProxy.connect(alice).unpause()).to.be.revertedWith(
+        'CallerNotOperator',
+      );
+
+      await tokenVaultProxy.addOperator(alice.address);
+      await tokenVaultProxy.removeOperator(owner.address);
+
+      await expect(tokenVaultProxy.connect(owner).pause()).to.be.revertedWith(
+        'CallerNotOperator',
+      );
+      await expect(tokenVaultProxy.connect(owner).unpause()).to.be.revertedWith(
+        'CallerNotOperator',
+      );
+
+      await expect(tokenVaultProxy.connect(alice).pause()).to.be.not.reverted;
+      await expect(tokenVaultProxy.connect(alice).unpause()).to.be.not.reverted;
     });
   });
 

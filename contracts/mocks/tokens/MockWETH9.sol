@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.19;
 
 import "../../protocol/interfaces/INativeToken.sol";
 
@@ -41,11 +41,7 @@ contract MockWETH9 is INativeToken {
         return transferFrom(msg.sender, dst, wad);
     }
 
-    function transferFrom(
-        address src,
-        address dst,
-        uint256 wad
-    ) public override returns (bool) {
+    function transferFrom(address src, address dst, uint256 wad) public override returns (bool) {
         require(balanceOf[src] >= wad);
 
         if (src != msg.sender && allowance[src][msg.sender] != type(uint256).max - 1) {

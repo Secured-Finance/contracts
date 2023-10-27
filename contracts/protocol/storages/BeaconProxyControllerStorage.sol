@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.19;
 
 library BeaconProxyControllerStorage {
     bytes32 internal constant STORAGE_SLOT = keccak256("sf.storage.beaconProxyController");
 
     struct Storage {
-        mapping(bytes32 => address) registeredBeaconProxies;
+        mapping(bytes32 contractName => address contractAddress) registeredBeaconProxies;
     }
 
     function slot() internal pure returns (Storage storage r) {

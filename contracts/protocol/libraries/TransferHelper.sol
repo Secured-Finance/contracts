@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.19;
 
 import {INativeToken} from "../interfaces/INativeToken.sol";
 import {TransferHelperStorage as Storage} from "../storages/libraries/TransferHelperStorage.sol";
@@ -31,11 +31,7 @@ library TransferHelper {
         }
     }
 
-    function withdrawAssets(
-        address _token,
-        address _receiver,
-        uint256 _amount
-    ) internal {
+    function withdrawAssets(address _token, address _receiver, uint256 _amount) internal {
         if (address(_token) == Storage.slot().nativeToken) {
             convertFromWrappedToken(_receiver, _amount);
         } else {
@@ -47,7 +43,7 @@ library TransferHelper {
         require(address(this).balance >= _amount, "TransferHelper: Insufficient balance");
 
         INativeToken(Storage.slot().nativeToken).deposit{value: _amount}();
-        INativeToken(Storage.slot().nativeToken).transfer(_receiver, _amount);
+        safeTransfer(Storage.slot().nativeToken, _receiver, _amount);
     }
 
     function convertFromWrappedToken(address _receiver, uint256 _amount) internal {
@@ -61,11 +57,7 @@ library TransferHelper {
     }
 
     /// @dev Transfer helper from UniswapV2 Router
-    function safeApprove(
-        address token,
-        address to,
-        uint256 value
-    ) internal {
+    function safeApprove(address token, address to, uint256 value) internal {
         // bytes4(keccak256(bytes('approve(address,uint256)')));
         (bool success, bytes memory data) = token.call(
             abi.encodeWithSelector(0x095ea7b3, to, value)
@@ -81,11 +73,7 @@ library TransferHelper {
      * Im trying to make it a habit to put external calls last (reentrancy)
      * You can put this in an internal function if you like.
      */
-    function safeTransfer(
-        address token,
-        address to,
-        uint256 amount
-    ) internal {
+    function safeTransfer(address token, address to, uint256 amount) internal {
         // solium-disable-next-line security/no-low-level-calls
         (bool success, bytes memory data) = token.call(
             // 0xa9059cbb = bytes4(keccak256("transfer(address,uint256)"))
@@ -97,12 +85,7 @@ library TransferHelper {
         ); // ERC20 Transfer failed
     }
 
-    function safeTransferFrom(
-        address token,
-        address from,
-        address to,
-        uint256 value
-    ) internal {
+    function safeTransferFrom(address token, address from, address to, uint256 value) internal {
         (bool success, bytes memory data) = token.call(
             abi.encodeWithSelector(0x23b872dd, from, to, value)
         );

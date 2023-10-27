@@ -278,15 +278,15 @@ function updateOrderFeeRate(uint256 orderFeeRate) external
 function updateCircuitBreakerLimitRange(uint256 limitRange) external
 ```
 
-### pauseMarket
+### pause
 
 ```solidity
-function pauseMarket() external
+function pause() external
 ```
 
-### unpauseMarket
+### unpause
 
 ```solidity
-function unpauseMarket() external
+function unpause() external
 ```
 

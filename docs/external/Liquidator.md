@@ -44,6 +44,12 @@ uint24 poolFee
 uint256[] collateralMaturities
 ```
 
+### onlyLendingMarketController
+
+```solidity
+modifier onlyLendingMarketController()
+```
+
 ### constructor
 
 ```solidity

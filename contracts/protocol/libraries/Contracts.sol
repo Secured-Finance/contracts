@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.19;
 
 library Contracts {
     bytes32 internal constant BEACON_PROXY_CONTROLLER = "BeaconProxyController";

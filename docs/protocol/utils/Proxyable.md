@@ -26,6 +26,12 @@ modifier onlyProxy()
 modifier onlyBeacon()
 ```
 
+### getRevision
+
+```solidity
+function getRevision() external pure virtual returns (uint256)
+```
+
 ### _getImplementation
 
 ```solidity

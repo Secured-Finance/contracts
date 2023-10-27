@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.19;
 
 // dependencies
 import {EnumerableSet} from "../../../dependencies/openzeppelin/utils/structs/EnumerableSet.sol";
@@ -228,11 +228,7 @@ library FundManagementLogic {
         }
     }
 
-    function registerCurrencyAndMaturity(
-        bytes32 _ccy,
-        uint256 _maturity,
-        address _user
-    ) public {
+    function registerCurrencyAndMaturity(bytes32 _ccy, uint256 _maturity, address _user) public {
         if (!Storage.slot().usedMaturities[_ccy][_user].contains(_maturity)) {
             Storage.slot().usedMaturities[_ccy][_user].add(_maturity);
 
@@ -246,11 +242,7 @@ library FundManagementLogic {
         }
     }
 
-    function executeRedemption(
-        bytes32 _ccy,
-        uint256 _maturity,
-        address _user
-    ) external {
+    function executeRedemption(bytes32 _ccy, uint256 _maturity, address _user) external {
         if (
             AddressResolverLib.currencyController().currencyExists(_ccy) ||
             block.timestamp < _maturity + 1 weeks
@@ -287,7 +279,8 @@ library FundManagementLogic {
 
         if (resetAmount >= 0) revert NoRepaymentAmount();
 
-        repaymentAmount = (-_resetFundsPerMaturity(_ccy, _maturity, _user, resetAmount)).toUint256();
+        repaymentAmount = (-_resetFundsPerMaturity(_ccy, _maturity, _user, resetAmount))
+            .toUint256();
         AddressResolverLib.tokenVault().removeDepositAmount(_user, _ccy, repaymentAmount);
 
         emit RepaymentExecuted(_user, _ccy, _maturity, repaymentAmount);
@@ -526,11 +519,10 @@ library FundManagementLogic {
         }
     }
 
-    function getCurrentMinDebtUnitPrice(uint256 _maturity, uint256 _minDebtUnitPrice)
-        public
-        view
-        returns (uint256)
-    {
+    function getCurrentMinDebtUnitPrice(
+        uint256 _maturity,
+        uint256 _minDebtUnitPrice
+    ) public view returns (uint256) {
         if (_minDebtUnitPrice == 0) return 0;
 
         return
@@ -677,11 +669,10 @@ library FundManagementLogic {
         }
     }
 
-    function getUsedMaturities(bytes32 _ccy, address _user)
-        public
-        view
-        returns (uint256[] memory maturities)
-    {
+    function getUsedMaturities(
+        bytes32 _ccy,
+        address _user
+    ) public view returns (uint256[] memory maturities) {
         maturities = Storage.slot().usedMaturities[_ccy][_user].values();
         if (maturities.length > 0) {
             maturities = QuickSort.sort(maturities);
@@ -706,10 +697,10 @@ library FundManagementLogic {
         }
     }
 
-    function cleanUpFunds(bytes32 _ccy, address _user)
-        public
-        returns (uint256 totalActiveOrderCount)
-    {
+    function cleanUpFunds(
+        bytes32 _ccy,
+        address _user
+    ) public returns (uint256 totalActiveOrderCount) {
         bool futureValueExists = false;
         uint256[] memory maturities = getUsedMaturities(_ccy, _user);
         ILendingMarket market = ILendingMarket(Storage.slot().lendingMarkets[_ccy]);
@@ -1066,24 +1057,26 @@ library FundManagementLogic {
         futureValue = _calculateFVFromPV(_presentValue, unitPrice);
     }
 
-    function _convertToBaseCurrencyAtMarketTerminationPrice(bytes32 _ccy, int256 _amount)
-        internal
-        view
-        returns (int256)
-    {
+    function _convertToBaseCurrencyAtMarketTerminationPrice(
+        bytes32 _ccy,
+        int256 _amount
+    ) internal view returns (int256) {
         uint8 decimals = AddressResolverLib.currencyController().getDecimals(_ccy);
         return
-            (_amount * Storage.slot().marketTerminationPrices[_ccy]).div((10**decimals).toInt256());
+            (_amount * Storage.slot().marketTerminationPrices[_ccy]).div(
+                (10 ** decimals).toInt256()
+            );
     }
 
-    function _convertFromBaseCurrencyAtMarketTerminationPrice(bytes32 _ccy, uint256 _amount)
-        internal
-        view
-        returns (uint256)
-    {
+    function _convertFromBaseCurrencyAtMarketTerminationPrice(
+        bytes32 _ccy,
+        uint256 _amount
+    ) internal view returns (uint256) {
         uint8 decimals = AddressResolverLib.currencyController().getDecimals(_ccy);
         return
-            (_amount * 10**decimals).div(Storage.slot().marketTerminationPrices[_ccy].toUint256());
+            (_amount * 10 ** decimals).div(
+                Storage.slot().marketTerminationPrices[_ccy].toUint256()
+            );
     }
 
     function _resetFundsPerCurrency(bytes32 _ccy, address _user) internal returns (int256 amount) {
@@ -1137,11 +1130,9 @@ library FundManagementLogic {
         }
     }
 
-    function _getDefaultOrderBookMinDebtUnitPrice(CalculateActualFundsVars memory vars)
-        private
-        view
-        returns (uint256)
-    {
+    function _getDefaultOrderBookMinDebtUnitPrice(
+        CalculateActualFundsVars memory vars
+    ) private view returns (uint256) {
         if (vars.defaultOrderBookMinDebtUnitPrice == 0 && vars.minDebtUnitPrice != 0) {
             vars.defaultOrderBookMinDebtUnitPrice = getCurrentMinDebtUnitPrice(
                 vars.market.getMaturity(vars.defaultOrderBookId),
@@ -1152,11 +1143,9 @@ library FundManagementLogic {
         return vars.defaultOrderBookMinDebtUnitPrice;
     }
 
-    function _getDefaultOrderBookMarketUnitPrice(CalculateActualFundsVars memory vars)
-        private
-        view
-        returns (uint256)
-    {
+    function _getDefaultOrderBookMarketUnitPrice(
+        CalculateActualFundsVars memory vars
+    ) private view returns (uint256) {
         if (vars.defaultOrderBookMarketUnitPrice == 0) {
             vars.defaultOrderBookMarketUnitPrice = vars.market.getMarketUnitPrice(
                 vars.defaultOrderBookId
@@ -1175,31 +1164,28 @@ library FundManagementLogic {
         presentValue = _calculatePVFromFV(_futureValue, unitPrice);
     }
 
-    function _calculatePVFromFV(int256 _futureValue, uint256 _unitPrice)
-        internal
-        pure
-        returns (int256)
-    {
+    function _calculatePVFromFV(
+        int256 _futureValue,
+        uint256 _unitPrice
+    ) internal pure returns (int256) {
         uint256 unitPrice = _unitPrice == 0 ? Constants.PRICE_DIGIT : _unitPrice;
         // NOTE: The formula is: presentValue = futureValue * unitPrice.
         return (_futureValue * unitPrice.toInt256()).div(Constants.PRICE_DIGIT.toInt256());
     }
 
-    function _calculatePVFromFV(uint256 _futureValue, uint256 _unitPrice)
-        internal
-        pure
-        returns (uint256)
-    {
+    function _calculatePVFromFV(
+        uint256 _futureValue,
+        uint256 _unitPrice
+    ) internal pure returns (uint256) {
         uint256 unitPrice = _unitPrice == 0 ? Constants.PRICE_DIGIT : _unitPrice;
         // NOTE: The formula is: presentValue = futureValue * unitPrice.
         return (_futureValue * unitPrice).div(Constants.PRICE_DIGIT);
     }
 
-    function _calculateFVFromPV(int256 _presentValue, uint256 _unitPrice)
-        internal
-        pure
-        returns (int256)
-    {
+    function _calculateFVFromPV(
+        int256 _presentValue,
+        uint256 _unitPrice
+    ) internal pure returns (int256) {
         uint256 unitPrice = _unitPrice == 0 ? Constants.PRICE_DIGIT : _unitPrice;
         // NOTE: The formula is: futureValue = presentValue / unitPrice.
         return (_presentValue * Constants.PRICE_DIGIT.toInt256()).div(unitPrice.toInt256());

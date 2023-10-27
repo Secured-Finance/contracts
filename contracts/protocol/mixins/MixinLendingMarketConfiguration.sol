@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.19;
 
 // interfaces
 import {ILendingMarket} from "../interfaces/ILendingMarket.sol";

@@ -319,16 +319,16 @@ function rotateOrderBooks(bytes32 ccy) external
 function executeEmergencyTermination() external
 ```
 
-### pauseLendingMarkets
+### pauseLendingMarket
 
 ```solidity
-function pauseLendingMarkets(bytes32 ccy) external returns (bool)
+function pauseLendingMarket(bytes32 ccy) external returns (bool)
 ```
 
-### unpauseLendingMarkets
+### unpauseLendingMarket
 
 ```solidity
-function unpauseLendingMarkets(bytes32 ccy) external returns (bool)
+function unpauseLendingMarket(bytes32 ccy) external returns (bool)
 ```
 
 ### cleanUpAllFunds

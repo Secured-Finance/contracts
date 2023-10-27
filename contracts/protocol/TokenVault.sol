@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.19;
 
 // dependencies
 import {EnumerableSet} from "../dependencies/openzeppelin/utils/structs/EnumerableSet.sol";
+import {Multicall} from "../dependencies/openzeppelin/utils/Multicall.sol";
 // libraries
 import {Contracts} from "./libraries/Contracts.sol";
 import {Constants} from "./libraries/Constants.sol";
@@ -12,6 +13,7 @@ import {DepositManagementLogic} from "./libraries/logics/DepositManagementLogic.
 import {ITokenVault} from "./interfaces/ITokenVault.sol";
 import {ILendingMarketController} from "./interfaces/ILendingMarketController.sol";
 // mixins
+import {MixinAccessControl} from "./mixins/MixinAccessControl.sol";
 import {MixinAddressResolver} from "./mixins/MixinAddressResolver.sol";
 import {MixinLiquidationConfiguration} from "./mixins/MixinLiquidationConfiguration.sol";
 // types
@@ -38,9 +40,11 @@ import {TokenVaultStorage as Storage} from "./storages/TokenVaultStorage.sol";
 contract TokenVault is
     ITokenVault,
     MixinLiquidationConfiguration,
+    MixinAccessControl,
     MixinAddressResolver,
     Pausable,
-    Proxyable
+    Proxyable,
+    Multicall
 {
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
@@ -75,6 +79,7 @@ contract TokenVault is
         registerAddressResolver(_resolver);
 
         TransferHelper.initialize(_nativeToken);
+        MixinAccessControl._setupInitialRoles(_owner);
         MixinLiquidationConfiguration._initialize(
             _owner,
             _liquidationThresholdRate,
@@ -127,12 +132,9 @@ contract TokenVault is
      * @param _ccys Currency name list in bytes32
      * @return isCollateralCurrencies Array of the boolean if the currency has been registered or not
      */
-    function isCollateral(bytes32[] calldata _ccys)
-        external
-        view
-        override
-        returns (bool[] memory isCollateralCurrencies)
-    {
+    function isCollateral(
+        bytes32[] calldata _ccys
+    ) external view override returns (bool[] memory isCollateralCurrencies) {
         uint256 length = _ccys.length;
         isCollateralCurrencies = new bool[](length);
         for (uint256 i; i < length; i++) {
@@ -181,12 +183,10 @@ contract TokenVault is
      * @param _user User's address
      * @return Maximum amount of the selected currency that can be withdrawn
      */
-    function getWithdrawableCollateral(bytes32 _ccy, address _user)
-        external
-        view
-        override
-        returns (uint256)
-    {
+    function getWithdrawableCollateral(
+        bytes32 _ccy,
+        address _user
+    ) external view override returns (uint256) {
         return DepositManagementLogic.getWithdrawableCollateral(_ccy, _user);
     }
 
@@ -204,12 +204,9 @@ contract TokenVault is
      * @param _user User's address
      * @return The total amount of unused collateral
      */
-    function getTotalUnusedCollateralAmount(address _user)
-        external
-        view
-        override
-        returns (uint256)
-    {
+    function getTotalUnusedCollateralAmount(
+        address _user
+    ) external view override returns (uint256) {
         return DepositManagementLogic.getTotalUnusedCollateralAmount(_user);
     }
 
@@ -218,12 +215,9 @@ contract TokenVault is
      * @param _user User's address
      * @return totalCollateralAmount The total collateral amount in the base currency
      */
-    function getTotalCollateralAmount(address _user)
-        external
-        view
-        override
-        returns (uint256 totalCollateralAmount)
-    {
+    function getTotalCollateralAmount(
+        address _user
+    ) external view override returns (uint256 totalCollateralAmount) {
         (totalCollateralAmount, , ) = DepositManagementLogic.getTotalCollateralAmount(_user);
     }
 
@@ -233,12 +227,10 @@ contract TokenVault is
      * @param _ccy Currency name in bytes32
      * @return amount The collateral amount
      */
-    function getCollateralAmount(address _user, bytes32 _ccy)
-        external
-        view
-        override
-        returns (uint256 amount)
-    {
+    function getCollateralAmount(
+        address _user,
+        bytes32 _ccy
+    ) external view override returns (uint256 amount) {
         (amount, , ) = DepositManagementLogic.getCollateralAmount(_user, _ccy);
     }
 
@@ -248,12 +240,10 @@ contract TokenVault is
      * @param _ccy Currency name in bytes32
      * @return amount The borrowable amount
      */
-    function getBorrowableAmount(address _user, bytes32 _ccy)
-        external
-        view
-        override
-        returns (uint256)
-    {
+    function getBorrowableAmount(
+        address _user,
+        bytes32 _ccy
+    ) external view override returns (uint256) {
         return DepositManagementLogic.getBorrowableAmount(_user, _ccy);
     }
 
@@ -270,11 +260,7 @@ contract TokenVault is
         external
         view
         override
-        returns (
-            uint256 liquidationAmount,
-            uint256 protocolFee,
-            uint256 liquidatorFee
-        )
+        returns (uint256 liquidationAmount, uint256 protocolFee, uint256 liquidatorFee)
     {
         return
             DepositManagementLogic.getLiquidationAmount(
@@ -299,12 +285,10 @@ contract TokenVault is
      * @param _ccy Currency name in bytes32
      * @return The deposited amount
      */
-    function getDepositAmount(address _user, bytes32 _ccy)
-        external
-        view
-        override
-        returns (uint256)
-    {
+    function getDepositAmount(
+        address _user,
+        bytes32 _ccy
+    ) external view override returns (uint256) {
         return DepositManagementLogic.getDepositAmount(_user, _ccy);
     }
 
@@ -337,12 +321,9 @@ contract TokenVault is
      * @return protocolFee Liquidation fee amount received by protocol
      * @return liquidatorFee Liquidation fee amount received by liquidators
      */
-    function calculateLiquidationFees(uint256 _amount)
-        external
-        view
-        override
-        returns (uint256 protocolFee, uint256 liquidatorFee)
-    {
+    function calculateLiquidationFees(
+        uint256 _amount
+    ) external view override returns (uint256 protocolFee, uint256 liquidatorFee) {
         return DepositManagementLogic.calculateLiquidationFees(_amount);
     }
 
@@ -372,12 +353,10 @@ contract TokenVault is
      * @param _ccy Currency name in bytes32
      * @param _isCollateral Boolean if the selected currency is acceptable as collateral.
      */
-    function updateCurrency(bytes32 _ccy, bool _isCollateral)
-        external
-        override
-        onlyOwner
-        onlyRegisteredCurrency(_ccy)
-    {
+    function updateCurrency(
+        bytes32 _ccy,
+        bool _isCollateral
+    ) external override onlyOwner onlyRegisteredCurrency(_ccy) {
         if (_isCollateral) {
             Storage.slot().collateralCurrencies.add(_ccy);
         } else {
@@ -392,13 +371,10 @@ contract TokenVault is
      * @param _amount Amount of funds to deposit
      * @param _ccy Currency name in bytes32
      */
-    function deposit(bytes32 _ccy, uint256 _amount)
-        external
-        payable
-        override
-        whenNotPaused
-        onlyRegisteredCurrency(_ccy)
-    {
+    function deposit(
+        bytes32 _ccy,
+        uint256 _amount
+    ) external payable override whenNotPaused onlyRegisteredCurrency(_ccy) {
         _deposit(msg.sender, _ccy, _amount);
     }
 
@@ -421,12 +397,10 @@ contract TokenVault is
      * @param _ccy Currency name in bytes32
      * @param _amount Amount of funds to withdraw.
      */
-    function withdraw(bytes32 _ccy, uint256 _amount)
-        external
-        override
-        whenNotPaused
-        onlyRegisteredCurrency(_ccy)
-    {
+    function withdraw(
+        bytes32 _ccy,
+        uint256 _amount
+    ) external override whenNotPaused onlyRegisteredCurrency(_ccy) {
         _withdraw(msg.sender, _ccy, _amount);
     }
 
@@ -463,13 +437,10 @@ contract TokenVault is
      * @param _user User's address
      * @param _ccy Currency name in bytes32
      */
-    function executeForcedReset(address _user, bytes32 _ccy)
-        external
-        override
-        onlyAcceptedContracts
-        onlyRegisteredCurrency(_ccy)
-        returns (uint256)
-    {
+    function executeForcedReset(
+        address _user,
+        bytes32 _ccy
+    ) external override onlyAcceptedContracts onlyRegisteredCurrency(_ccy) returns (uint256) {
         return DepositManagementLogic.executeForcedReset(_user, _ccy);
     }
 
@@ -500,22 +471,18 @@ contract TokenVault is
     /**
      * @notice Pauses the token vault.
      */
-    function pauseVault() external override onlyOwner {
+    function pause() external override onlyOperator {
         _pause();
     }
 
     /**
      * @notice Unpauses the token vault.
      */
-    function unpauseVault() external override onlyOwner {
+    function unpause() external override onlyOperator {
         _unpause();
     }
 
-    function _deposit(
-        address _user,
-        bytes32 _ccy,
-        uint256 _amount
-    ) internal {
+    function _deposit(address _user, bytes32 _ccy, uint256 _amount) internal {
         if (
             _amount == 0 ||
             (TransferHelper.isNative(Storage.slot().tokenAddresses[_ccy]) && _amount != msg.value)
@@ -529,11 +496,7 @@ contract TokenVault is
         emit Deposit(_user, _ccy, _amount);
     }
 
-    function _withdraw(
-        address _user,
-        bytes32 _ccy,
-        uint256 _amount
-    ) internal {
+    function _withdraw(address _user, bytes32 _ccy, uint256 _amount) internal {
         if (_amount == 0) revert InvalidAmount();
         if (lendingMarketController().isRedemptionRequired(_user)) revert RedemptionIsRequired();
 

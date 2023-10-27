@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.19;
 
 import {IAddressResolver} from "./interfaces/IAddressResolver.sol";
 import {Ownable} from "./utils/Ownable.sol";
@@ -31,10 +31,10 @@ contract AddressResolver is IAddressResolver, Ownable, Proxyable {
      * @notice Imports contract addresses.
      * @dev All addresses in the contract are overridden by `_addresses` in the argument.
      */
-    function importAddresses(bytes32[] memory _names, address[] memory _addresses)
-        public
-        onlyOwner
-    {
+    function importAddresses(
+        bytes32[] memory _names,
+        address[] memory _addresses
+    ) public onlyOwner {
         if (_names.length != _addresses.length) revert UnmatchedInputs();
 
         Storage.slot().addressCaches = _addresses;
@@ -51,11 +51,10 @@ contract AddressResolver is IAddressResolver, Ownable, Proxyable {
      * @notice Gets if the addresses are imported.
      * @return The boolean if the addresses are imported or not
      */
-    function areAddressesImported(bytes32[] calldata _names, address[] calldata _addresses)
-        external
-        view
-        returns (bool)
-    {
+    function areAddressesImported(
+        bytes32[] calldata _names,
+        address[] calldata _addresses
+    ) external view returns (bool) {
         for (uint256 i; i < _names.length; i++) {
             if (Storage.slot().addresses[_names[i]] != _addresses[i]) {
                 return false;
@@ -70,12 +69,10 @@ contract AddressResolver is IAddressResolver, Ownable, Proxyable {
      * is not imported.
      * @return The contract address
      */
-    function getAddress(bytes32 _name, string calldata _reason)
-        external
-        view
-        override
-        returns (address)
-    {
+    function getAddress(
+        bytes32 _name,
+        string calldata _reason
+    ) external view override returns (address) {
         address _foundAddress = Storage.slot().addresses[_name];
         if (_foundAddress == address(0)) revert(_reason);
         return _foundAddress;

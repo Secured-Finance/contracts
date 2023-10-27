@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.19;
 
 import {ProtocolTypes} from "../types/ProtocolTypes.sol";
 import {OrderStatisticsTreeLib} from "../libraries/OrderStatisticsTreeLib.sol";
@@ -23,12 +23,9 @@ library LendingMarketStorage {
         uint256 orderFeeRate;
         // Rate limit range of yield for the circuit breaker
         uint256 circuitBreakerLimitRange;
-        // Mapping from order book id to order book
-        mapping(uint8 => OrderBookLib.OrderBook) orderBooks;
-        // Mapping from maturity to boolean if the market is ready or not per maturity
-        mapping(uint256 => bool) isReady;
-        // Mapping from maturity to Itayose log
-        mapping(uint256 => ItayoseLog) itayoseLogs;
+        mapping(uint8 orderBookId => OrderBookLib.OrderBook orderBook) orderBooks;
+        mapping(uint256 maturity => bool isReady) isReady;
+        mapping(uint256 maturity => ItayoseLog log) itayoseLogs;
     }
 
     function slot() internal pure returns (Storage storage r) {
