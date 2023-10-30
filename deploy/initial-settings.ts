@@ -3,7 +3,13 @@ import { BigNumber, Contract } from 'ethers';
 import { DeployFunction, DeploymentsExtension } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import moment from 'moment';
-import { currencyIterator } from '../utils/currencies';
+import {
+  CIRCUIT_BREAKER_LIMIT_RANGE,
+  ORDER_FEE_RATE,
+  currencyIterator,
+  getAggregatedDecimals,
+  mocks,
+} from '../utils/currencies';
 import { getGenesisDate } from '../utils/dates';
 import { DeploymentStorage } from '../utils/deployment';
 import { fromBytes32, toBytes32 } from '../utils/strings';
@@ -57,11 +63,11 @@ const updateCurrencyControllerSettings = async (
     }
 
     const priceFeedAddresses = currency.priceFeed.addresses.filter(Boolean);
+    const mock = mocks[currency.symbol];
     let heartbeat = 0;
-    let decimals = 0;
 
     if (priceFeedAddresses.length === 0) {
-      for (const priceFeed of currency.mockPriceFeed) {
+      for (const priceFeed of mock.priceFeeds) {
         const priceFeedContract = await deploy('MockV3Aggregator', {
           from: signer,
           args: [priceFeed.decimals, currency.key, priceFeed.mockRate],
@@ -81,22 +87,11 @@ const updateCurrencyControllerSettings = async (
       heartbeat = currency.priceFeed.heartbeat;
     }
 
-    const tokenContract = await ethers.getContractAt(
-      currency.mock,
-      currency.env || (await deployments.get(currency.mock)).address,
+    const decimals = getAggregatedDecimals(
+      ethers,
+      currency.tokenAddress || (await deployments.get(mock.tokenName)).address,
+      priceFeedAddresses,
     );
-
-    for (let i = 0; i < priceFeedAddresses.length; i++) {
-      if (i === 0) {
-        decimals += await tokenContract.decimals();
-      } else {
-        const priceFeedContract = await ethers.getContractAt(
-          'MockV3Aggregator',
-          priceFeedAddresses[i - 1],
-        );
-        decimals += await priceFeedContract.decimals();
-      }
-    }
 
     await currencyController
       .addCurrency(
@@ -122,7 +117,8 @@ const updateTokenVaultSettings = async (
       );
     } else {
       const address =
-        currency.env || (await deployments.get(currency.mock)).address;
+        currency.tokenAddress ||
+        (await deployments.get(mocks[currency.symbol].tokenName)).address;
       await tokenVault
         .registerCurrency(currency.key, address, currency.isCollateral)
         .then((tx) => tx.wait());
@@ -158,8 +154,8 @@ const createOrderBooks = async (
           currency.key,
           genesisDate,
           process.env.INITIAL_COMPOUND_FACTOR,
-          currency.orderFeeRate,
-          currency.circuitBreakerLimitRange,
+          ORDER_FEE_RATE,
+          CIRCUIT_BREAKER_LIMIT_RANGE,
           currency.minDebtUnitPrice,
         )
         .then((tx) => tx.wait());
