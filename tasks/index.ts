@@ -1,3 +1,4 @@
+import './add-currency';
 import './change-owners';
 import './fork';
 import './open-markets';
