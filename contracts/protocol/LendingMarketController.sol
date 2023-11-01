@@ -130,6 +130,14 @@ contract LendingMarketController is
     }
 
     /**
+     * @notice Gets the base period for market maturity
+     * @return The base period
+     */
+    function getMarketBasePeriod() external view override returns (uint256) {
+        return Storage.slot().marketBasePeriod;
+    }
+
+    /**
      * @notice Gets the date when the market terminated.
      * @return The termination date
      */
