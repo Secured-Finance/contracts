@@ -73,5 +73,46 @@ task(
     console.log(`Changing owner of ${name} to ${safeAddress}`);
   }
 
-  await Promise.all(txs.map((tx) => tx.wait()));
+  if (txs.length > 0) {
+    await Promise.all(txs.map((tx) => tx.wait()));
+    console.log(`Successfully executed all transactions`);
+  }
+
+  for (const [name, contract] of Object.entries(contracts).filter(
+    ([, contract]) => !!contract.DEFAULT_ADMIN_ROLE,
+  )) {
+    const DEFAULT_ADMIN_ROLE = await contract.DEFAULT_ADMIN_ROLE();
+
+    const isSafeAddressDefaultAdmin = await contract.hasRole(
+      DEFAULT_ADMIN_ROLE,
+      safeAddress,
+    );
+
+    if (!isSafeAddressDefaultAdmin) {
+      await contract
+        .connect(owner)
+        .grantRole(DEFAULT_ADMIN_ROLE, safeAddress)
+        .then((tx) => tx.wait());
+
+      console.log(`Granted DEFAULT_ADMIN_ROLE of ${name} to ${safeAddress}`);
+    }
+
+    const isOwnerDefaultAdmin = await contract.hasRole(
+      DEFAULT_ADMIN_ROLE,
+      owner.address,
+    );
+
+    if (isOwnerDefaultAdmin) {
+      await contract
+        .connect(owner)
+        .revokeRole(DEFAULT_ADMIN_ROLE, owner.address)
+        .then((tx) => tx.wait());
+
+      nonce++;
+
+      console.log(
+        `Revoked DEFAULT_ADMIN_ROLE of ${name} from ${owner.address}`,
+      );
+    }
+  }
 });
