@@ -180,6 +180,19 @@ describe('LendingMarketController - Operations', () => {
       expect(detail.minBorrowUnitPrice).to.equal('1');
       expect(detail.openingUnitPrice).to.equal('0');
       expect(detail.isReady).to.equal(true);
+
+      const minDebtUnitPrice =
+        await lendingMarketControllerProxy.getMinDebtUnitPrice(targetCurrency);
+      const { timestamp } = await ethers.provider.getBlock('latest');
+
+      expect(detail.currentMinDebtUnitPrice).to.equal(
+        BigNumber.from(BASE_MIN_DEBT_UNIT_PRICE).sub(
+          BigNumber.from(BASE_MIN_DEBT_UNIT_PRICE)
+            .sub(minDebtUnitPrice)
+            .mul(maturities[0].sub(timestamp))
+            .div(SECONDS_IN_YEAR),
+        ),
+      );
     });
 
     it('Get the lending market detail with non-empty order book', async () => {
@@ -239,6 +252,19 @@ describe('LendingMarketController - Operations', () => {
       expect(detail.minBorrowUnitPrice).to.equal('7600');
       expect(detail.openingUnitPrice).to.equal('0');
       expect(detail.isReady).to.equal(true);
+
+      const minDebtUnitPrice =
+        await lendingMarketControllerProxy.getMinDebtUnitPrice(targetCurrency);
+      const { timestamp } = await ethers.provider.getBlock('latest');
+
+      expect(detail.currentMinDebtUnitPrice).to.equal(
+        BigNumber.from(BASE_MIN_DEBT_UNIT_PRICE).sub(
+          BigNumber.from(BASE_MIN_DEBT_UNIT_PRICE)
+            .sub(minDebtUnitPrice)
+            .mul(maturities[0].sub(timestamp))
+            .div(SECONDS_IN_YEAR),
+        ),
+      );
     });
 
     it('Get the multiple lending market details', async () => {

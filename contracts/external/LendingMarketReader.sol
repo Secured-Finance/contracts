@@ -25,6 +25,7 @@ contract LendingMarketReader is MixinAddressResolver {
         uint256 openingUnitPrice;
         uint256 openingDate;
         uint256 preOpeningDate;
+        uint256 currentMinDebtUnitPrice;
         bool isReady;
     }
 
@@ -238,6 +239,9 @@ contract LendingMarketReader is MixinAddressResolver {
         } else {
             (orderBookDetail.openingUnitPrice, , , ) = market.getItayoseEstimation(orderBookId);
         }
+
+        orderBookDetail.currentMinDebtUnitPrice = lendingMarketController()
+            .getCurrentMinDebtUnitPrice(_ccy, _maturity);
     }
 
     /**
