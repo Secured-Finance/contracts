@@ -1,27 +1,17 @@
 import { HardhatEthersHelpers } from '@nomiclabs/hardhat-ethers/types';
-import { BigNumber, Contract } from 'ethers';
+import { Contract } from 'ethers';
 import { DeployFunction, DeploymentsExtension } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import moment from 'moment';
 import {
-  CIRCUIT_BREAKER_LIMIT_RANGE,
-  ORDER_FEE_RATE,
   currencyIterator,
   getAggregatedDecimals,
   mocks,
 } from '../utils/currencies';
-import { getGenesisDate } from '../utils/dates';
+import { getAdjustedGenesisDate } from '../utils/dates';
 import { DeploymentStorage } from '../utils/deployment';
+import { getMulticallOrderBookInputs } from '../utils/markets';
 import { fromBytes32, toBytes32 } from '../utils/strings';
-
-// NOTE: Active markets are 8.
-// The last market is a inactive market for Itayose.
-const MARKET_COUNT = Number(process.env.TOTAL_MARKET_COUNT || 8) + 1;
-const INITIAL_MARKET_COUNT = Number(
-  process.env.INITIAL_MARKET_COUNT || MARKET_COUNT,
-);
-const OPENING_DATE_INTERVAL = Number(process.env.OPENING_DATE_INTERVAL || 0);
-const DEFAULT_PRE_ORDER_PERIOD = 604800;
 
 const updateBeaconProxyContracts = async (beaconProxyController: Contract) => {
   const deployment =
@@ -139,48 +129,51 @@ const createOrderBooks = async (
     )
     .then((contract) => contract.attach(lendingMarketController.address));
 
-  const genesisDate =
-    Number(process.env.MARKET_BASE_PERIOD) === 0
-      ? Number(process.env.INITIAL_MARKET_OPENING_DATE || moment().unix())
-      : getGenesisDate();
+  const genesisDate = getAdjustedGenesisDate();
 
   for (const currency of currencyIterator()) {
-    const isInitialized =
-      await lendingMarketController.isInitializedLendingMarket(currency.key);
+    const multicallInputs = (
+      await getMulticallOrderBookInputs(
+        lendingMarketController,
+        currency.key,
+        currency.minDebtUnitPrice,
+        genesisDate,
+        Number(process.env.INITIAL_MARKET_OPENING_DATE || 0),
+        Number(process.env.INITIAL_MARKET_PRE_ORDER_DATE || 0),
+      )
+    ).map(({ callData }) => callData);
 
-    if (!isInitialized) {
-      await lendingMarketController
-        .initializeLendingMarket(
-          currency.key,
-          genesisDate,
-          process.env.INITIAL_COMPOUND_FACTOR,
-          ORDER_FEE_RATE,
-          CIRCUIT_BREAKER_LIMIT_RANGE,
-          currency.minDebtUnitPrice,
-        )
-        .then((tx) => tx.wait());
-    }
+    const receipt = await lendingMarketController
+      .multicall(multicallInputs)
+      .then((tx) => tx.wait());
 
-    const lendingMarket = await lendingMarketController
-      .getLendingMarket(currency.key)
-      .then((address) => ethers.getContractAt('LendingMarket', address));
-    const orderBookIds = await lendingMarketController.getOrderBookIds(
-      currency.key,
+    const lendingMarketInitializedEvent = (
+      await lendingMarketOperationLogic.queryFilter(
+        lendingMarketOperationLogic.filters.LendingMarketInitialized(),
+        receipt.blockNumber,
+      )
+    ).find(({ args }) => args?.ccy === currency.key);
+
+    console.log(
+      `Deployed ${fromBytes32(currency.key)} order books at ${
+        lendingMarketInitializedEvent?.args?.lendingMarket ||
+        (await lendingMarketController.getLendingMarket(currency.key))
+      }`,
     );
 
     const marketLog: Record<string, string | undefined>[] = [];
-
-    if (orderBookIds.length > 0) {
-      console.log(
-        `Skipped deploying ${orderBookIds.length} ${currency.symbol} lending markets`,
-      );
-    }
+    const orderBookIds = await lendingMarketController.getOrderBookIds(
+      currency.key,
+    );
+    const lendingMarket = await lendingMarketController
+      .getLendingMarket(currency.key)
+      .then((address) => ethers.getContractAt('LendingMarket', address));
 
     for (let i = 0; i < orderBookIds.length; i++) {
       const { maturity, preOpeningDate, openingDate } =
         await lendingMarket.getOrderBookDetail(orderBookIds[i]);
       marketLog.push({
-        [`OrderBookID(${currency.symbol})`]: orderBookIds[i],
+        OrderBookID: orderBookIds[i],
         PreOpeningDate: moment
           .unix(preOpeningDate.toString())
           .format('LLL')
@@ -193,69 +186,6 @@ const createOrderBooks = async (
       });
     }
 
-    if (orderBookIds.length < MARKET_COUNT) {
-      const count = MARKET_COUNT - orderBookIds.length;
-      let nearestMaturity: BigNumber = orderBookIds[0]
-        ? await lendingMarket.getMaturity(orderBookIds[0])
-        : undefined;
-
-      for (let i = 0; i < count; i++) {
-        const openingDateDelay =
-          orderBookIds.length + i >= INITIAL_MARKET_COUNT
-            ? (orderBookIds.length + i + 1 - INITIAL_MARKET_COUNT) *
-              OPENING_DATE_INTERVAL
-            : 0;
-
-        const openingDate =
-          i === count - 1
-            ? nearestMaturity.toNumber()
-            : Number(process.env.INITIAL_MARKET_OPENING_DATE || genesisDate) +
-              openingDateDelay;
-
-        const preOpeningDate =
-          openingDateDelay === 0
-            ? Number(
-                process.env.INITIAL_MARKET_PRE_ORDER_DATE ||
-                  openingDate - DEFAULT_PRE_ORDER_PERIOD,
-              )
-            : openingDate - DEFAULT_PRE_ORDER_PERIOD;
-
-        const receipt = await lendingMarketController
-          .createOrderBook(currency.key, openingDate, preOpeningDate)
-          .then((tx) => tx.wait());
-
-        const events = await lendingMarketOperationLogic.queryFilter(
-          lendingMarketOperationLogic.filters.OrderBookCreated(),
-          receipt.blockNumber,
-        );
-
-        const args = events.find(
-          ({ event }) => event === 'OrderBookCreated',
-        )?.args;
-
-        const orderBookId = args?.orderBookId;
-        const maturity = args?.maturity;
-
-        if (!nearestMaturity && i === 0) {
-          nearestMaturity = maturity;
-        }
-
-        marketLog.push({
-          [`OrderBookID`]: orderBookId,
-          PreOpeningDate: moment.unix(preOpeningDate).format('LLL').toString(),
-          OpeningDate: moment
-            .unix(Number(openingDate))
-            .format('LLL')
-            .toString(),
-          Maturity: moment.unix(maturity.toString()).format('LLL').toString(),
-        });
-      }
-      console.log(
-        `Deployed ${fromBytes32(currency.key)} Lending markets at ${
-          lendingMarket.address
-        }`,
-      );
-    }
     console.table(marketLog);
   }
 };

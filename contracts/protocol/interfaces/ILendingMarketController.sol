@@ -57,6 +57,8 @@ interface ILendingMarketController {
 
     function isRedemptionRequired(address _user) external view returns (bool);
 
+    function getMarketBasePeriod() external view returns (uint256);
+
     function getMarketTerminationDate() external view returns (uint256);
 
     function getMarketTerminationPrice(bytes32 _ccy) external view returns (int256);
