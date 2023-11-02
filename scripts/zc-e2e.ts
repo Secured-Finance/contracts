@@ -275,7 +275,7 @@ describe('ZC e2e test', async function () {
       Side.LEND,
       depositAmountInETH,
       orderUnitPrice,
-    );
+    ).then((tx) => tx.wait());
 
     const { futureValue: aliceFVBefore } =
       await lendingMarketController.getPosition(
@@ -487,7 +487,7 @@ describe('ZC e2e test', async function () {
       Side.LEND,
       '100000000000000000',
       orderUnitPrice,
-    );
+    ).then((tx) => tx.wait());
     await executeOrder(
       bobSigner,
       hexETH,
@@ -495,7 +495,7 @@ describe('ZC e2e test', async function () {
       Side.BORROW,
       '100000000000000000',
       orderUnitPrice,
-    );
+    ).then((tx) => tx.wait());
 
     const { futureValue: aliceFVBefore } =
       await lendingMarketController.getPosition(
