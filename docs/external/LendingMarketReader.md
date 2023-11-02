@@ -18,6 +18,7 @@ struct OrderBookDetail {
   uint256 openingUnitPrice;
   uint256 openingDate;
   uint256 preOpeningDate;
+  uint256 currentMinDebtUnitPrice;
   bool isReady;
 }
 ```
