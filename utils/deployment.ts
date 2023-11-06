@@ -1,9 +1,14 @@
+import {
+  DefenderRelayProvider,
+  DefenderRelaySigner,
+} from '@openzeppelin/defender-relay-client/lib/ethers';
 import SafeApiKit from '@safe-global/api-kit';
 import Safe from '@safe-global/protocol-kit';
 import {
   EthAdapter,
   MetaTransactionData,
 } from '@safe-global/safe-core-sdk-types';
+import { utils } from 'ethers';
 import { DeployResult } from 'hardhat-deploy/types';
 
 const executeIfNewlyDeployment = async (
@@ -16,6 +21,17 @@ const executeIfNewlyDeployment = async (
     callback && (await callback());
   } else {
     console.warn(`Skipped deploying ${name}`);
+  }
+};
+
+const getRelaySigner = (): DefenderRelaySigner | undefined => {
+  if (process.env.RELAYER_API_KEY && process.env.RELAYER_API_SECRET) {
+    const credentials = {
+      apiKey: process.env.RELAYER_API_KEY,
+      apiSecret: process.env.RELAYER_API_SECRET,
+    };
+    const provider = new DefenderRelayProvider(credentials);
+    return new DefenderRelaySigner(credentials, provider);
   }
 };
 
@@ -126,7 +142,7 @@ class Proposal {
       safeAddress: this.safeAddress,
       safeTransactionData: safeTransaction.data,
       safeTxHash,
-      senderAddress: sender,
+      senderAddress: utils.getAddress(sender),
       senderSignature: senderSignature.data,
     });
 
@@ -136,4 +152,9 @@ class Proposal {
   }
 }
 
-export { DeploymentStorage, Proposal, executeIfNewlyDeployment };
+export {
+  DeploymentStorage,
+  Proposal,
+  executeIfNewlyDeployment,
+  getRelaySigner,
+};

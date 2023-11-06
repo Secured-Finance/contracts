@@ -1,7 +1,11 @@
 import { EthersAdapter } from '@safe-global/protocol-kit';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { DeploymentStorage, Proposal } from '../utils/deployment';
+import {
+  DeploymentStorage,
+  Proposal,
+  getRelaySigner,
+} from '../utils/deployment';
 
 const func: DeployFunction = async function ({
   getNamedAccounts,
@@ -12,10 +16,13 @@ const func: DeployFunction = async function ({
     return;
   }
 
-  const { deployer } = await getNamedAccounts();
+  const signer =
+    getRelaySigner() ||
+    ethers.provider.getSigner((await getNamedAccounts()).deployer);
+
   const ethersAdapter = new EthersAdapter({
     ethers,
-    signerOrProvider: ethers.provider.getSigner(deployer),
+    signerOrProvider: signer,
   });
   const proposal = new Proposal();
   await proposal.initSdk(ethersAdapter);
@@ -52,7 +59,7 @@ const func: DeployFunction = async function ({
     );
   }
 
-  await proposal.submit(deployer);
+  await proposal.submit(await signer.getAddress());
 };
 
 func.tags = ['Proposal'];
