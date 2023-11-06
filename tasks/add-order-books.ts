@@ -2,7 +2,7 @@ import { EthersAdapter } from '@safe-global/protocol-kit';
 import { Contract } from 'ethers';
 import { task, types } from 'hardhat/config';
 import { getAdjustedGenesisDate } from '../utils/dates';
-import { Proposal } from '../utils/deployment';
+import { Proposal, getRelaySigner } from '../utils/deployment';
 import { getMulticallOrderBookInputs } from '../utils/markets';
 import { toBytes32 } from '../utils/strings';
 
@@ -28,11 +28,11 @@ task('add-order-books', 'Add new order books to the protocol')
       { currency, minDebtUnitPrice, openingDate, preOpeningDate },
       { deployments, ethers },
     ) => {
-      const [owner] = await ethers.getSigners();
+      const signer = getRelaySigner() || (await ethers.getSigners())[0];
 
       const ethersAdapter = new EthersAdapter({
         ethers,
-        signerOrProvider: ethers.provider.getSigner(owner.address),
+        signerOrProvider: signer,
       });
       const proposal = new Proposal();
       await proposal.initSdk(ethersAdapter);
@@ -73,6 +73,6 @@ task('add-order-books', 'Add new order books to the protocol')
         })),
       );
 
-      await proposal.submit(owner.address);
+      await proposal.submit(await signer.getAddress());
     },
   );

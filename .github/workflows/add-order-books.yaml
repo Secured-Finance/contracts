@@ -1,0 +1,61 @@
+name: Add new order books
+
+on:
+  workflow_dispatch:
+    inputs:
+      network:
+        description: 'Network'
+        required: true
+        default: 'development'
+        type: choice
+        options:
+          - development
+          - staging
+          - goerli
+          - mainnet
+      currency:
+        description: 'Currency'
+        required: true
+        type: string
+      minDebtUnitPrice:
+        description: 'MinDebtUnitPrice'
+        required: true
+        type: number
+      openingDate:
+        description: 'OpeningDate'
+        required: true
+        type: number
+      preOpeningDate:
+        description: 'PreOpeningDate'
+        required: true
+        type: number
+
+jobs:
+  deploy:
+    name: Add new order books
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.network }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version-file: '.nvmrc'
+      - name: Install Dependencies
+        run: npm ci
+      - name: Set environment variables
+        run: |
+          echo "RELAYER_API_KEY=${{ vars.RELAYER_API_KEY }}" >> $GITHUB_ENV
+          echo "RELAYER_API_SECRET=${{ secrets.RELAYER_API_SECRET }}" >> $GITHUB_ENV
+          echo "PRIVATE_KEY=${{ secrets.PRIVATE_KEY }}" >> $GITHUB_ENV
+          echo "ALCHEMY_API_KEY=${{ secrets.ALCHEMY_API_KEY }}" >> $GITHUB_ENV
+      - name: Build Smart Contracts
+        run: npm run compile
+      - name: Run task
+        shell: bash
+        run: >
+          npx hardhat add-order-books
+          --network ${{ github.event.inputs.network }}
+          --currency ${{ github.event.inputs.currency }}
+          --min-debt-unit-price ${{ github.event.inputs.minDebtUnitPrice }}
+          --opening-date ${{ github.event.inputs.openingDate }}
+          --pre-opening-date ${{ github.event.inputs.preOpeningDate }}
