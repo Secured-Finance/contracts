@@ -226,7 +226,7 @@ describe('Integration Test: Itayose', async () => {
       expect(await lendingMarket.isOpened(orderBookId)).to.false;
 
       // Itayose
-      await lendingMarketController.executeItayoseCalls([hexETH], maturity);
+      await lendingMarketController.executeItayoseCall(hexETH, maturity);
       const marketInfo = await lendingMarketReader.getOrderBookDetail(
         hexETH,
         maturity,
@@ -365,7 +365,7 @@ describe('Integration Test: Itayose', async () => {
       expect(await lendingMarket.isOpened(orderBookId)).to.false;
 
       // Itayose
-      await lendingMarketController.executeItayoseCalls([hexETH], maturity);
+      await lendingMarketController.executeItayoseCall(hexETH, maturity);
       const marketInfo = await lendingMarketReader.getOrderBookDetail(
         hexETH,
         maturity,
@@ -423,8 +423,8 @@ describe('Integration Test: Itayose', async () => {
         lendingMarketController.connect(owner).rotateOrderBooks(hexETH),
       ).to.emit(lendingMarketOperationLogic, 'OrderBooksRotated');
 
-      await lendingMarketController.executeItayoseCalls(
-        [hexETH],
+      await lendingMarketController.executeItayoseCall(
+        hexETH,
         maturities[maturities.length - 1],
       );
     });
@@ -519,8 +519,8 @@ describe('Integration Test: Itayose', async () => {
         lendingMarketController.connect(owner).rotateOrderBooks(hexETH),
       ).to.emit(lendingMarketOperationLogic, 'OrderBooksRotated');
 
-      await lendingMarketController.executeItayoseCalls(
-        [hexETH],
+      await lendingMarketController.executeItayoseCall(
+        hexETH,
         maturities[maturities.length - 1],
       );
     });

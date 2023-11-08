@@ -646,35 +646,31 @@ contract LendingMarketController is
     }
 
     /**
-     * @notice Executes Itayose calls per selected currencies.
-     * @param _currencies Currency name list in bytes32
+     * @notice Executes the Itayose call per selected currency.
+     * @param _ccy Currency name in bytes32
      * @param _maturity The maturity of the selected order book
      */
-    function executeItayoseCalls(
-        bytes32[] calldata _currencies,
+    function executeItayoseCall(
+        bytes32 _ccy,
         uint256 _maturity
     ) external override nonReentrant ifActive returns (bool) {
-        for (uint256 i; i < _currencies.length; i++) {
-            bytes32 ccy = _currencies[i];
+        (
+            PartiallyFilledOrder memory partiallyFilledLendingOrder,
+            PartiallyFilledOrder memory partiallyFilledBorrowingOrder
+        ) = LendingMarketOperationLogic.executeItayoseCall(_ccy, _maturity);
 
-            (
-                PartiallyFilledOrder memory partiallyFilledLendingOrder,
-                PartiallyFilledOrder memory partiallyFilledBorrowingOrder
-            ) = LendingMarketOperationLogic.executeItayoseCall(ccy, _maturity);
-
-            LendingMarketUserLogic.updateFundsForMaker(
-                ccy,
-                _maturity,
-                ProtocolTypes.Side.LEND,
-                partiallyFilledLendingOrder
-            );
-            LendingMarketUserLogic.updateFundsForMaker(
-                ccy,
-                _maturity,
-                ProtocolTypes.Side.BORROW,
-                partiallyFilledBorrowingOrder
-            );
-        }
+        LendingMarketUserLogic.updateFundsForMaker(
+            _ccy,
+            _maturity,
+            ProtocolTypes.Side.LEND,
+            partiallyFilledLendingOrder
+        );
+        LendingMarketUserLogic.updateFundsForMaker(
+            _ccy,
+            _maturity,
+            ProtocolTypes.Side.BORROW,
+            partiallyFilledBorrowingOrder
+        );
 
         return true;
     }

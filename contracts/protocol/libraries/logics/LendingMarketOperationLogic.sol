@@ -154,44 +154,41 @@ library LendingMarketOperationLogic {
     {
         ILendingMarket market = ILendingMarket(Storage.slot().lendingMarkets[_ccy]);
         uint8 orderBookId = Storage.slot().maturityOrderBookIds[_ccy][_maturity];
+        uint256 openingUnitPrice;
+        uint256 openingDate;
+        uint256 totalOffsetAmount;
 
-        if (market.isItayosePeriod(orderBookId)) {
-            uint256 openingUnitPrice;
-            uint256 openingDate;
-            uint256 totalOffsetAmount;
+        (
+            openingUnitPrice,
+            totalOffsetAmount,
+            openingDate,
+            partiallyFilledLendingOrder,
+            partiallyFilledBorrowingOrder
+        ) = market.executeItayoseCall(orderBookId);
 
-            (
+        if (totalOffsetAmount > 0) {
+            address futureValueVault = Storage.slot().futureValueVaults[_ccy];
+            IFutureValueVault(futureValueVault).setInitialTotalSupply(
+                _maturity,
+                (totalOffsetAmount * Constants.PRICE_DIGIT).div(openingUnitPrice).toInt256()
+            );
+        }
+
+        // Save the openingUnitPrice as first compound factor
+        // if it is a first Itayose call at the nearest market.
+        if (openingUnitPrice > 0 && Storage.slot().orderBookIdLists[_ccy][0] == orderBookId) {
+            // Convert the openingUnitPrice determined by Itayose to the unit price on the Genesis Date.
+            uint256 convertedUnitPrice = _convertUnitPrice(
                 openingUnitPrice,
-                totalOffsetAmount,
+                _maturity,
                 openingDate,
-                partiallyFilledLendingOrder,
-                partiallyFilledBorrowingOrder
-            ) = market.executeItayoseCall(orderBookId);
+                Storage.slot().genesisDates[_ccy]
+            );
 
-            if (totalOffsetAmount > 0) {
-                address futureValueVault = Storage.slot().futureValueVaults[_ccy];
-                IFutureValueVault(futureValueVault).setInitialTotalSupply(
-                    _maturity,
-                    (totalOffsetAmount * Constants.PRICE_DIGIT).div(openingUnitPrice).toInt256()
-                );
-            }
-
-            // Save the openingUnitPrice as first compound factor
-            // if it is a first Itayose call at the nearest market.
-            if (openingUnitPrice > 0 && Storage.slot().orderBookIdLists[_ccy][0] == orderBookId) {
-                // Convert the openingUnitPrice determined by Itayose to the unit price on the Genesis Date.
-                uint256 convertedUnitPrice = _convertUnitPrice(
-                    openingUnitPrice,
-                    _maturity,
-                    openingDate,
-                    Storage.slot().genesisDates[_ccy]
-                );
-
-                AddressResolverLib.genesisValueVault().updateInitialCompoundFactor(
-                    _ccy,
-                    convertedUnitPrice
-                );
-            }
+            AddressResolverLib.genesisValueVault().updateInitialCompoundFactor(
+                _ccy,
+                convertedUnitPrice
+            );
         }
     }
 
