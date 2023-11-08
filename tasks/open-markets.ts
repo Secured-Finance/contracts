@@ -40,7 +40,7 @@ task(
       ]);
 
       if (isItayosePeriod) {
-        await lendingMarketController.executeItayoseCalls([currency], maturity);
+        await lendingMarketController.executeItayoseCall(currency, maturity);
         console.log(
           `Successfully executed ${fromBytes32(
             currency,

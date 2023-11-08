@@ -510,7 +510,7 @@ describe('ZC e2e test', async function () {
 
     await lendingMarketController
       .connect(ownerSigner)
-      .executeItayoseCalls([hexETH], maturities[maturities.length - 1]);
+      .executeItayoseCall(hexETH, maturities[maturities.length - 1]);
 
     const position = await lendingMarketController.getPosition(
       hexETH,

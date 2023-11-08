@@ -86,7 +86,7 @@ describe('Integration Test: Auto-rolls', async () => {
 
     await lendingMarketController
       .connect(owner)
-      .executeItayoseCalls([hexETH], maturities[maturities.length - 1]);
+      .executeItayoseCall(hexETH, maturities[maturities.length - 1]);
   };
 
   const resetContractInstances = async () => {
@@ -845,8 +845,8 @@ describe('Integration Test: Auto-rolls', async () => {
       await time.increaseTo(maturities[0].toString());
       await lendingMarketController.connect(owner).rotateOrderBooks(hexETH);
 
-      await lendingMarketController.executeItayoseCalls(
-        [hexETH],
+      await lendingMarketController.executeItayoseCall(
+        hexETH,
         maturities[maturities.length - 1],
       );
 
@@ -990,8 +990,8 @@ describe('Integration Test: Auto-rolls', async () => {
       await time.increaseTo(maturities[1].toString());
       await lendingMarketController.connect(owner).rotateOrderBooks(hexETH);
 
-      await lendingMarketController.executeItayoseCalls(
-        [hexETH],
+      await lendingMarketController.executeItayoseCall(
+        hexETH,
         maturities[maturities.length - 1],
       );
 

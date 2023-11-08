@@ -188,12 +188,35 @@ describe('Integration Test: Liquidations', async () => {
     await lendingMarketController.connect(owner).rotateOrderBooks(hexWFIL);
     await lendingMarketController.connect(owner).rotateOrderBooks(hexUSDC);
 
-    await lendingMarketController
-      .connect(owner)
-      .executeItayoseCalls(
-        [hexWFIL, hexUSDC],
-        usdcMaturities[usdcMaturities.length - 1],
-      );
+    const filLendingMarket = await lendingMarketController
+      .getLendingMarket(hexWFIL)
+      .then((address) => ethers.getContractAt('LendingMarket', address));
+    const filLastMaturity = filMaturities[filMaturities.length - 1];
+    const filLastOrderBookId = await lendingMarketController.getOrderBookId(
+      hexWFIL,
+      filLastMaturity,
+    );
+
+    if (await filLendingMarket.isItayosePeriod(filLastOrderBookId)) {
+      await lendingMarketController
+        .connect(owner)
+        .executeItayoseCall(hexWFIL, filMaturities[filMaturities.length - 1]);
+    }
+
+    const usdcLendingMarket = await lendingMarketController
+      .getLendingMarket(hexUSDC)
+      .then((address) => ethers.getContractAt('LendingMarket', address));
+    const usdcLastMaturity = usdcMaturities[usdcMaturities.length - 1];
+    const usdcLastOrderBookId = await lendingMarketController.getOrderBookId(
+      hexUSDC,
+      usdcLastMaturity,
+    );
+
+    if (await usdcLendingMarket.isItayosePeriod(usdcLastOrderBookId)) {
+      await lendingMarketController
+        .connect(owner)
+        .executeItayoseCall(hexUSDC, usdcMaturities[usdcMaturities.length - 1]);
+    }
   };
 
   const resetMaturities = async () => {

@@ -200,8 +200,8 @@ describe('LendingMarketController - Terminations', () => {
       ).to.revertedWith('AlreadyTerminated');
 
       await expect(
-        lendingMarketControllerProxy.executeItayoseCalls(
-          [targetCurrency],
+        lendingMarketControllerProxy.executeItayoseCall(
+          targetCurrency,
           maturities[0],
         ),
       ).to.revertedWith('AlreadyTerminated');
