@@ -9,7 +9,6 @@ const AddressResolver = artifacts.require('AddressResolver');
 const BeaconProxyController = artifacts.require('BeaconProxyController');
 const CurrencyController = artifacts.require('CurrencyController');
 const GenesisValueVault = artifacts.require('GenesisValueVault');
-const ReserveFund = artifacts.require('ReserveFund');
 const MockV3Aggregator = artifacts.require('MockV3Aggregator');
 const ProxyController = artifacts.require('ProxyController');
 const UpgradeabilityProxy = artifacts.require('UpgradeabilityProxy');

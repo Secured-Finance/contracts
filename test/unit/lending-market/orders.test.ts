@@ -21,7 +21,6 @@ describe('LendingMarket - Orders', () => {
   let owner: SignerWithAddress;
   let alice: SignerWithAddress;
   let bob: SignerWithAddress;
-  let signers: SignerWithAddress[];
 
   let orderActionLogic: Contract;
   let currentOrderBookId: BigNumber;
@@ -37,7 +36,7 @@ describe('LendingMarket - Orders', () => {
   };
 
   before(async () => {
-    [owner, alice, bob, ...signers] = await ethers.getSigners();
+    [owner, alice, bob] = await ethers.getSigners();
     targetCurrency = ethers.utils.formatBytes32String('Test');
 
     ({

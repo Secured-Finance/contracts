@@ -2,11 +2,10 @@ import { BigNumber, Contract } from 'ethers';
 import { ethers } from 'hardhat';
 import moment from 'moment';
 
-import { Currency, currencyIterator } from '../../utils/currencies';
+import { currencyIterator } from '../../utils/currencies';
 import {
   hexEFIL,
   hexETH,
-  hexWETH,
   hexUSDC,
   hexWBTC,
   hexWFIL,

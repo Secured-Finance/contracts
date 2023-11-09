@@ -1,6 +1,9 @@
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { executeIfNewlyDeployment } from '../utils/deployment';
+import {
+  DeploymentStorage,
+  executeIfNewlyDeployment,
+} from '../utils/deployment';
 
 const func: DeployFunction = async function ({
   getNamedAccounts,
@@ -20,16 +23,16 @@ const func: DeployFunction = async function ({
     // Update AddressResolver implementation address when AddressResolver is update
     // after the second deployment.
     if (prevProxyController) {
-      await ethers
-        .getContractAt('ProxyController', prevProxyController.address)
-        .then(async (contract) =>
-          contract.setAddressResolverImpl(deployResult.address),
-        )
-        .then((tx) => tx.wait());
+      const proxyController = await ethers.getContractAt(
+        'ProxyController',
+        prevProxyController.address,
+      );
 
-      console.log(
-        'Updated the proxy implementation of AddressResolver at',
-        deployResult.address,
+      DeploymentStorage.instance.add(
+        proxyController.address,
+        'ProxyController',
+        'setAddressResolverImpl',
+        [deployResult.address],
       );
     }
   });

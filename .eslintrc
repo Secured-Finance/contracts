@@ -1,13 +1,16 @@
 {
-  "parser": "babel-eslint",
+  "parser": "@typescript-eslint/parser",
   "env": {
     "es6": true,
     "node": true
   },
+  "plugins": ["@typescript-eslint"],
   "extends": ["eslint:recommended", "prettier"],
   "rules": {
     "no-undef": 0,
     "no-console": 0,
-    "eqeqeq": "error"
+    "eqeqeq": "error",
+    "no-unused-vars": "off",
+    "@typescript-eslint/no-unused-vars": ["error"]
   }
 }

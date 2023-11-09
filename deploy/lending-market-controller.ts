@@ -1,6 +1,9 @@
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { executeIfNewlyDeployment } from '../utils/deployment';
+import {
+  DeploymentStorage,
+  executeIfNewlyDeployment,
+} from '../utils/deployment';
 
 const func: DeployFunction = async function ({
   getNamedAccounts,
@@ -39,12 +42,12 @@ const func: DeployFunction = async function ({
           ethers.getContractAt('ProxyController', address),
         );
 
-      await proxyController
-        .setLendingMarketControllerImpl(
-          deployResult.address,
-          process.env.MARKET_BASE_PERIOD,
-        )
-        .then((tx) => tx.wait());
+      DeploymentStorage.instance.add(
+        proxyController.address,
+        'ProxyController',
+        'setLendingMarketControllerImpl',
+        [deployResult.address, process.env.MARKET_BASE_PERIOD],
+      );
     },
   );
 };
