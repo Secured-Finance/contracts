@@ -4,6 +4,8 @@ pragma solidity ^0.8.19;
 // interfaces
 import {ILendingMarket} from "../../protocol/interfaces/ILendingMarket.sol";
 import {ILendingMarketController} from "../../protocol/interfaces/ILendingMarketController.sol";
+// libraries
+import {Contracts} from "../../protocol/libraries/Contracts.sol";
 // mixins
 import {MixinAddressResolver} from "../../protocol/mixins/MixinAddressResolver.sol";
 
@@ -18,15 +20,31 @@ contract ItayoseCallResolver is MixinAddressResolver {
         buildCache();
     }
 
+    // @inheritdoc MixinAddressResolver
+    function requiredContracts() public pure override returns (bytes32[] memory contracts) {
+        contracts = new bytes32[](1);
+        contracts[0] = Contracts.LENDING_MARKET_CONTROLLER;
+    }
+
     function checker(bytes32 _ccy) external view returns (bool canExec, bytes memory execPayload) {
-        uint8[] memory orderBookId = lendingMarketController().getOrderBookIds(_ccy);
-        uint8 lastOrderBookId = orderBookId[orderBookId.length - 1];
+        uint256[] memory maturities = lendingMarketController().getMaturities(_ccy);
         address lendingMarket = lendingMarketController().getLendingMarket(_ccy);
 
-        canExec = ILendingMarket(lendingMarket).isItayosePeriod(lastOrderBookId);
-        execPayload = abi.encodeCall(
-            ILendingMarketController.executeItayoseCall,
-            (_ccy, lastOrderBookId)
-        );
+        for (uint256 i; i < maturities.length; i++) {
+            uint8 orderBookId = lendingMarketController().getOrderBookId(_ccy, maturities[i]);
+            bool isItayosePeriod = ILendingMarket(lendingMarket).isItayosePeriod(orderBookId);
+
+            if (isItayosePeriod) {
+                return (
+                    true,
+                    abi.encodeCall(
+                        ILendingMarketController.executeItayoseCall,
+                        (_ccy, maturities[i])
+                    )
+                );
+            }
+        }
+
+        return (false, bytes("Not Itayose Period"));
     }
 }
