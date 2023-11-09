@@ -52,6 +52,7 @@ library LendingMarketOperationLogic {
         bytes32 indexed ccy,
         uint8 indexed orderBookId,
         uint256 openingDate,
+        uint256 preOpeningDate,
         uint256 maturity
     );
 
@@ -138,7 +139,7 @@ library LendingMarketOperationLogic {
         Storage.slot().orderBookIdLists[_ccy].push(orderBookId);
         Storage.slot().maturityOrderBookIds[_ccy][newMaturity] = orderBookId;
 
-        emit OrderBookCreated(_ccy, orderBookId, _openingDate, newMaturity);
+        emit OrderBookCreated(_ccy, orderBookId, _openingDate, _preOpeningDate, newMaturity);
     }
 
     function executeItayoseCall(
