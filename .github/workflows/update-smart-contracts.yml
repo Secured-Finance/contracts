@@ -25,7 +25,7 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
-          ref: ${{ (github.event.inputs.network == 'staging' && 'main') || 'develop' }}
+          ref: ${{ (github.event.inputs.network == 'development' && 'develop') || 'main' }}
       - uses: actions/setup-node@v3
         with:
           node-version-file: '.nvmrc'
@@ -38,6 +38,7 @@ jobs:
           echo "TOTAL_MARKET_COUNT=${{ vars.TOTAL_MARKET_COUNT }}" >> $GITHUB_ENV
           echo "OPENING_DATE_INTERVAL=${{ vars.OPENING_DATE_INTERVAL }}" >> $GITHUB_ENV
           echo "MARKET_BASE_PERIOD=${{ vars.MARKET_BASE_PERIOD }}" >> $GITHUB_ENV
+          echo "ENABLE_AUTO_UPDATE=${{ vars.ENABLE_AUTO_UPDATE }}" >> $GITHUB_ENV
           echo "NATIVE_CURRENCY_SYMBOL=${{ vars.NATIVE_CURRENCY_SYMBOL }}" >> $GITHUB_ENV
           echo "NATIVE_TOKEN_ADDRESS=${{ vars.NATIVE_TOKEN_ADDRESS }}" >> $GITHUB_ENV
           echo "NATIVE_TOKEN_SYMBOL=${{ vars.NATIVE_TOKEN_SYMBOL }}" >> $GITHUB_ENV
@@ -60,10 +61,11 @@ jobs:
           echo "PRICE_FEED_MOCK_RATE_ETH_TO_USD=${{ vars.PRICE_FEED_MOCK_RATE_ETH_TO_USD }}" >> $GITHUB_ENV
           echo "PRIVATE_KEY=${{ secrets.PRIVATE_KEY }}" >> $GITHUB_ENV
           echo "ALCHEMY_API_KEY=${{ secrets.ALCHEMY_API_KEY }}" >> $GITHUB_ENV
-          echo "ENABLE_FAUCET=true" >> $GITHUB_ENV
+          echo "ENABLE_FAUCET=${{ vars.ENABLE_FAUCET }}" >> $GITHUB_ENV
           echo "TENDERLY_USER=${{ vars.TENDERLY_USER }}" >> $GITHUB_ENV
           echo "TENDERLY_PROJECT=${{ vars.TENDERLY_PROJECT }}" >> $GITHUB_ENV
           echo "TENDERLY_ACCESS_KEY=${{ secrets.TENDERLY_ACCESS_KEY }}" >> $GITHUB_ENV
+          echo "SAFE_WALLET_ADDRESS=${{ vars.SAFE_WALLET_ADDRESS }}" >> $GITHUB_ENV
       - name: Install Dependencies
         run: npm ci
       - name: Build Smart Contracts
@@ -128,6 +130,7 @@ jobs:
           echo "INITIAL_MARKET_OPENING_DATE=${{ vars.INITIAL_MARKET_OPENING_DATE }}" >> $GITHUB_ENV
           echo "INITIAL_MARKET_PRE_ORDER_DATE=${{ vars.INITIAL_MARKET_PRE_ORDER_DATE }}" >> $GITHUB_ENV
           echo "MARKET_BASE_PERIOD=${{ vars.MARKET_BASE_PERIOD }}" >> $GITHUB_ENV
+          echo "ENABLE_AUTO_UPDATE=${{ vars.ENABLE_AUTO_UPDATE }}" >> $GITHUB_ENV
           echo "NATIVE_CURRENCY_SYMBOL=${{ vars.NATIVE_CURRENCY_SYMBOL }}" >> $GITHUB_ENV
           echo "NATIVE_TOKEN_ADDRESS=${{ vars.NATIVE_TOKEN_ADDRESS }}" >> $GITHUB_ENV
           echo "NATIVE_TOKEN_SYMBOL=${{ vars.NATIVE_TOKEN_SYMBOL }}" >> $GITHUB_ENV
@@ -150,7 +153,11 @@ jobs:
           echo "PRICE_FEED_MOCK_RATE_ETH_TO_USD=${{ vars.PRICE_FEED_MOCK_RATE_ETH_TO_USD }}" >> $GITHUB_ENV
           echo "PRIVATE_KEY=${{ secrets.PRIVATE_KEY }}" >> $GITHUB_ENV
           echo "ALCHEMY_API_KEY=${{ secrets.ALCHEMY_API_KEY }}" >> $GITHUB_ENV
-          echo "ENABLE_FAUCET=true" >> $GITHUB_ENV
+          echo "ENABLE_FAUCET=${{ vars.ENABLE_FAUCET }}" >> $GITHUB_ENV
+          echo "SAFE_WALLET_ADDRESS=${{ vars.SAFE_WALLET_ADDRESS }}" >> $GITHUB_ENV
+          echo "SAFE_API_URL=${{ vars.SAFE_API_URL }}" >> $GITHUB_ENV
+          echo "RELAYER_API_KEY=${{ vars.RELAYER_API_KEY }}" >> $GITHUB_ENV
+          echo "RELAYER_API_SECRET=${{ secrets.RELAYER_API_SECRET }}" >> $GITHUB_ENV
       - name: Deploy smart contracts
         run: |
           npm run deploy ${{ github.event.inputs.network }}
@@ -184,7 +191,7 @@ jobs:
           git push
       - name: Merge main into develop
         shell: bash
-        if: ${{ github.event.inputs.network == 'staging' }}
+        if: ${{ github.event.inputs.network != 'development' }}
         run: |
           git switch develop
           git merge main --no-verify
