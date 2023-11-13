@@ -16,6 +16,13 @@ const func: DeployFunction = async function ({
     return;
   }
 
+  if (process.env.FORK_RPC_ENDPOINT) {
+    console.warn(
+      'Skipped proposal creation because the network is a forked chain',
+    );
+    return;
+  }
+
   const signer =
     getRelaySigner() ||
     ethers.provider.getSigner((await getNamedAccounts()).deployer);
