@@ -406,62 +406,69 @@ describe('LendingMarketController - Orders', () => {
       expect(usedCurrenciesAfter.length).to.equal(1);
       expect(usedCurrenciesAfter[0]).to.equal(targetCurrency);
 
-      const borrowUnitPrices = await lendingMarket.getBorrowOrderBook(
+      const borrowOrderBook = await lendingMarket.getBorrowOrderBook(
         orderBookIds[3],
+        0,
         10,
       );
-      expect(borrowUnitPrices.unitPrices[0].toString()).to.equal('9820');
-      expect(borrowUnitPrices.unitPrices[1].toString()).to.equal('9880');
-      expect(borrowUnitPrices.unitPrices[2].toString()).to.equal('0');
-      expect(borrowUnitPrices.unitPrices.length).to.equal(10);
-      expect(borrowUnitPrices.amounts[0].toString()).to.equal(
+
+      expect(borrowOrderBook.unitPrices[0].toString()).to.equal('9820');
+      expect(borrowOrderBook.unitPrices[1].toString()).to.equal('9880');
+      expect(borrowOrderBook.unitPrices[2].toString()).to.equal('0');
+      expect(borrowOrderBook.unitPrices.length).to.equal(10);
+      expect(borrowOrderBook.amounts[0].toString()).to.equal(
         '200000000000000000',
       );
-      expect(borrowUnitPrices.amounts[1].toString()).to.equal(
+      expect(borrowOrderBook.amounts[1].toString()).to.equal(
         '100000000000000000',
       );
-      expect(borrowUnitPrices.amounts[2].toString()).to.equal('0');
-      expect(borrowUnitPrices.amounts.length).to.equal(10);
-      expect(borrowUnitPrices.quantities[0].toString()).to.equal('1');
-      expect(borrowUnitPrices.quantities[1].toString()).to.equal('1');
-      expect(borrowUnitPrices.quantities[2].toString()).to.equal('0');
-      expect(borrowUnitPrices.quantities.length).to.equal(10);
+      expect(borrowOrderBook.amounts[2].toString()).to.equal('0');
+      expect(borrowOrderBook.amounts.length).to.equal(10);
+      expect(borrowOrderBook.quantities[0].toString()).to.equal('1');
+      expect(borrowOrderBook.quantities[1].toString()).to.equal('1');
+      expect(borrowOrderBook.quantities[2].toString()).to.equal('0');
+      expect(borrowOrderBook.quantities.length).to.equal(10);
+      expect(borrowOrderBook.next).to.equal(0);
 
-      const lendUnitPrices = await lendingMarket.getLendOrderBook(
+      const lendOrderBook = await lendingMarket.getLendOrderBook(
         orderBookIds[3],
+        0,
         10,
       );
-      expect(lendUnitPrices.unitPrices[0].toString()).to.equal('9800');
-      expect(lendUnitPrices.unitPrices[1].toString()).to.equal('9780');
-      expect(lendUnitPrices.unitPrices[2].toString()).to.equal('0');
-      expect(lendUnitPrices.unitPrices.length).to.equal(10);
-      expect(lendUnitPrices.amounts[0].toString()).to.equal(
+
+      expect(lendOrderBook.unitPrices[0].toString()).to.equal('9800');
+      expect(lendOrderBook.unitPrices[1].toString()).to.equal('9780');
+      expect(lendOrderBook.unitPrices[2].toString()).to.equal('0');
+      expect(lendOrderBook.unitPrices.length).to.equal(10);
+      expect(lendOrderBook.amounts[0].toString()).to.equal(
         '100000000000000000',
       );
-      expect(lendUnitPrices.amounts[1].toString()).to.equal(
+      expect(lendOrderBook.amounts[1].toString()).to.equal(
         '500000000000000000',
       );
-      expect(lendUnitPrices.amounts[2].toString()).to.equal('0');
-      expect(lendUnitPrices.amounts.length).to.equal(10);
-      expect(lendUnitPrices.quantities[0].toString()).to.equal('1');
-      expect(lendUnitPrices.quantities[1].toString()).to.equal('1');
-      expect(lendUnitPrices.quantities[2].toString()).to.equal('0');
-      expect(lendUnitPrices.quantities.length).to.equal(10);
+      expect(lendOrderBook.amounts[2].toString()).to.equal('0');
+      expect(lendOrderBook.amounts.length).to.equal(10);
+      expect(lendOrderBook.quantities[0].toString()).to.equal('1');
+      expect(lendOrderBook.quantities[1].toString()).to.equal('1');
+      expect(lendOrderBook.quantities[2].toString()).to.equal('0');
+      expect(lendOrderBook.quantities.length).to.equal(10);
+      expect(lendOrderBook.next).to.equal(0);
 
       const borrowOrders = await lendingMarketReader.getBorrowOrderBook(
         targetCurrency,
         maturities[3],
+        0,
         10,
       );
 
       for (let i = 0; i < borrowOrders.unitPrices.length; i++) {
-        expect(borrowUnitPrices.unitPrices[i].toString()).to.equal(
+        expect(borrowOrderBook.unitPrices[i].toString()).to.equal(
           borrowOrders.unitPrices[i],
         );
-        expect(borrowUnitPrices.amounts[i].toString()).to.equal(
+        expect(borrowOrderBook.amounts[i].toString()).to.equal(
           borrowOrders.amounts[i],
         );
-        expect(borrowUnitPrices.quantities[i].toString()).to.equal(
+        expect(borrowOrderBook.quantities[i].toString()).to.equal(
           borrowOrders.quantities[i],
         );
       }
@@ -469,17 +476,18 @@ describe('LendingMarketController - Orders', () => {
       const lendOrders = await lendingMarketReader.getLendOrderBook(
         targetCurrency,
         maturities[3],
+        0,
         10,
       );
 
       for (let i = 0; i < lendOrders.unitPrices.length; i++) {
-        expect(lendUnitPrices.unitPrices[i].toString()).to.equal(
+        expect(lendOrderBook.unitPrices[i].toString()).to.equal(
           lendOrders.unitPrices[i],
         );
-        expect(lendUnitPrices.amounts[i].toString()).to.equal(
+        expect(lendOrderBook.amounts[i].toString()).to.equal(
           lendOrders.amounts[i],
         );
-        expect(lendUnitPrices.quantities[i].toString()).to.equal(
+        expect(lendOrderBook.quantities[i].toString()).to.equal(
           lendOrders.quantities[i],
         );
       }
@@ -3057,6 +3065,114 @@ describe('LendingMarketController - Orders', () => {
             .connect(alice)
             .unwindPosition(targetCurrency, '1'),
         ).to.be.revertedWith('InvalidMaturity');
+      });
+    });
+
+    describe('Order Book', async () => {
+      beforeEach(async () => {
+        const orderCount = 10;
+
+        for (let i = 0; i < orderCount; i++) {
+          await lendingMarketControllerProxy
+            .connect(alice)
+            .executeOrder(
+              targetCurrency,
+              maturities[0],
+              i < orderCount / 2 ? Side.BORROW : Side.LEND,
+              BigNumber.from('100000000000000000'),
+              9950 - i * 2,
+            );
+        }
+      });
+
+      it('Get all borrow orders', async () => {
+        const { unitPrices, next } = await lendingMarket.getBorrowOrderBook(
+          orderBookIds[0],
+          0,
+          5,
+        );
+
+        expect(unitPrices.filter((v) => v.toNumber()).length).to.equal(5);
+        expect(next).to.equal(0);
+      });
+
+      it('Get all lend orders', async () => {
+        const { unitPrices, next } = await lendingMarket.getLendOrderBook(
+          orderBookIds[0],
+          0,
+          5,
+        );
+
+        expect(unitPrices.filter((v) => v.toNumber()).length).to.equal(5);
+        expect(next).to.equal(0);
+      });
+
+      it('Get all borrow orders in multiple calls', async () => {
+        const orderBook1 = await lendingMarket.getBorrowOrderBook(
+          orderBookIds[0],
+          0,
+          3,
+        );
+
+        const orderBook2 = await lendingMarket.getBorrowOrderBook(
+          orderBookIds[0],
+          orderBook1.next,
+          3,
+        );
+
+        expect(
+          orderBook1.unitPrices.filter((v) => v.toNumber()).length,
+        ).to.equal(3);
+        expect(orderBook1.next).to.equal(9948);
+        expect(
+          orderBook2.unitPrices.filter((v) => v.toNumber()).length,
+        ).to.equal(2);
+        expect(orderBook2.next).to.equal(0);
+      });
+
+      it('Get all lend orders in multiple calls', async () => {
+        const orderBook1 = await lendingMarket.getLendOrderBook(
+          orderBookIds[0],
+          0,
+          3,
+        );
+
+        const orderBook2 = await lendingMarket.getLendOrderBook(
+          orderBookIds[0],
+          orderBook1.next,
+          3,
+        );
+
+        expect(
+          orderBook1.unitPrices.filter((v) => v.toNumber()).length,
+        ).to.equal(3);
+        expect(orderBook1.next).to.equal(9934);
+        expect(
+          orderBook2.unitPrices.filter((v) => v.toNumber()).length,
+        ).to.equal(2);
+        expect(orderBook2.next).to.equal(0);
+      });
+
+      it('Get borrow orders starting from a non-existent unit price', async () => {
+        const { unitPrices, next } = await lendingMarket.getBorrowOrderBook(
+          orderBookIds[0],
+          9943,
+          3,
+        );
+
+        expect(unitPrices.filter((v) => v.toNumber()).length).to.equal(3);
+        expect(next).to.equal(9950);
+      });
+
+      it('Get lend orders starting from a non-existent unit price', async () => {
+        const { unitPrices, next } = await lendingMarket.getLendOrderBook(
+          orderBookIds[0],
+          9939,
+          3,
+        );
+
+        expect(unitPrices.filter((v) => v.toNumber()).length).to.equal(3);
+        expect(next).to.equal(9932);
       });
     });
 

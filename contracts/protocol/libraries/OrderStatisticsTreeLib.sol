@@ -102,6 +102,29 @@ library OrderStatisticsTreeLib {
         }
     }
 
+    function search(
+        Tree storage self,
+        uint256 value
+    ) internal view returns (bool valueExists, uint256 parent) {
+        uint256 cursor = self.root;
+
+        while (cursor != EMPTY) {
+            if (value < cursor) {
+                parent = cursor;
+                cursor = self.nodes[cursor].left;
+            } else if (value > cursor) {
+                parent = cursor;
+                cursor = self.nodes[cursor].right;
+            }
+
+            if (value == cursor) {
+                break;
+            }
+        }
+
+        valueExists = cursor != EMPTY;
+    }
+
     function exists(Tree storage self, uint256 value) internal view returns (bool) {
         if (value == self.root) return true;
 
