@@ -3174,6 +3174,28 @@ describe('LendingMarketController - Orders', () => {
         expect(unitPrices.filter((v) => v.toNumber()).length).to.equal(3);
         expect(next).to.equal(9932);
       });
+
+      it('Get borrow orders starting from the minimum unit price', async () => {
+        const { unitPrices, next } = await lendingMarket.getBorrowOrderBook(
+          orderBookIds[0],
+          1,
+          5,
+        );
+
+        expect(unitPrices.filter((v) => v.toNumber()).length).to.equal(5);
+        expect(next).to.equal(0);
+      });
+
+      it('Get borrow orders starting from the maximum unit price', async () => {
+        const { unitPrices, next } = await lendingMarket.getLendOrderBook(
+          orderBookIds[0],
+          10000,
+          5,
+        );
+
+        expect(unitPrices.filter((v) => v.toNumber()).length).to.equal(5);
+        expect(next).to.equal(0);
+      });
     });
 
     describe('Failure', async () => {
