@@ -2,6 +2,7 @@
 pragma solidity 0.8.19;
 
 // dependencies
+import {IERC20Permit} from "../dependencies/openzeppelin/token/ERC20/extensions/IERC20Permit.sol";
 import {EnumerableSet} from "../dependencies/openzeppelin/utils/structs/EnumerableSet.sol";
 import {Multicall} from "../dependencies/openzeppelin/utils/Multicall.sol";
 // libraries
@@ -152,6 +153,11 @@ contract TokenVault is
      */
     function isRegisteredCurrency(bytes32 _ccy) public view override returns (bool) {
         return Storage.slot().tokenAddresses[_ccy] != address(0);
+    }
+
+    // @inheritdoc Proxyable
+    function getRevision() external pure override returns (uint256) {
+        return 0x2;
     }
 
     /**
@@ -389,15 +395,47 @@ contract TokenVault is
 
     /**
      * @dev Deposits funds by the `from` into collateral.
-     * @param _from user's address
-     * @param _amount Amount of funds to deposit
+     * @param _from Address of the user
      * @param _ccy Currency name in bytes32
+     * @param _amount Amount of funds to deposit
      */
     function depositFrom(
         address _from,
         bytes32 _ccy,
         uint256 _amount
     ) external payable override ifActive whenNotPaused onlyLendingMarketController {
+        _deposit(_from, _ccy, _amount);
+    }
+
+    /**
+     * @dev Deposits funds by the caller into collateral with transfer approval of asset via permit function
+     * @param _from Address of the user who will deposit
+     * @param _ccy Currency name in bytes32
+     * @param _amount Amount of funds to deposit
+     * @param _deadline The deadline timestamp that the permit is valid
+     * @param _permitV The V parameter of ERC712 permit sig
+     * @param _permitR The R parameter of ERC712 permit sig
+     * @param _permitS The S parameter of ERC712 permit sig
+     */
+    function depositWithPermit(
+        address _from,
+        bytes32 _ccy,
+        uint256 _amount,
+        uint256 _deadline,
+        uint8 _permitV,
+        bytes32 _permitR,
+        bytes32 _permitS
+    ) external override ifActive whenNotPaused onlyRegisteredCurrency(_ccy) {
+        IERC20Permit(getTokenAddress(_ccy)).permit(
+            _from,
+            address(this),
+            _amount,
+            _deadline,
+            _permitV,
+            _permitR,
+            _permitS
+        );
+
         _deposit(_from, _ccy, _amount);
     }
 

@@ -76,6 +76,16 @@ interface ITokenVault {
 
     function deposit(bytes32 ccy, uint256 amount) external payable;
 
+    function depositWithPermit(
+        address from,
+        bytes32 ccy,
+        uint256 amount,
+        uint256 deadline,
+        uint8 permitV,
+        bytes32 permitR,
+        bytes32 permitS
+    ) external;
+
     function depositFrom(address user, bytes32 ccy, uint256 amount) external payable;
 
     function withdraw(bytes32 ccy, uint256 amount) external;
