@@ -574,13 +574,14 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         if (fluctuation < 0) {
             totalAmount += fluctuation;
             address reserveFundAddr = address(reserveFund());
-            Storage.slot().balances[_ccy][reserveFundAddr] += -fluctuation;
 
             _updateTotalSupplies(
                 _ccy,
                 -fluctuation,
                 Storage.slot().balances[_ccy][reserveFundAddr]
             );
+
+            Storage.slot().balances[_ccy][reserveFundAddr] += -fluctuation;
 
             emit Transfer(_ccy, _user, reserveFundAddr, -fluctuation);
         }
