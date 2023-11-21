@@ -118,7 +118,6 @@ library LendingMarketUserLogic {
             _side,
             filledAmount,
             filledOrder.futureValue,
-            filledOrder.unitPrice,
             feeInFV
         );
 
@@ -184,7 +183,6 @@ library LendingMarketUserLogic {
             side,
             filledOrder.amount,
             filledOrder.futureValue,
-            filledOrder.unitPrice,
             feeInFV
         );
 
@@ -214,7 +212,6 @@ library LendingMarketUserLogic {
         ProtocolTypes.Side _side,
         uint256 _filledAmount,
         uint256 _filledAmountInFV,
-        uint256 _filledUnitPrice,
         uint256 _feeInFV
     ) public {
         if (_filledAmountInFV != 0) {
@@ -232,7 +229,6 @@ library LendingMarketUserLogic {
             LendingMarketOperationLogic.updateOrderLogs(
                 _ccy,
                 _maturity,
-                _filledUnitPrice,
                 _filledAmount,
                 _filledAmountInFV
             );

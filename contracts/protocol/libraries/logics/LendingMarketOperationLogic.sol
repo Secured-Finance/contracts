@@ -8,6 +8,7 @@ import {SafeCast} from "../../../dependencies/openzeppelin/utils/math/SafeCast.s
 import {ILendingMarket} from "../../interfaces/ILendingMarket.sol";
 import {ILendingMarketController} from "../../interfaces/ILendingMarketController.sol";
 import {IFutureValueVault} from "../../interfaces/IFutureValueVault.sol";
+import {AutoRollLog} from "../../interfaces/IGenesisValueVault.sol";
 // libraries
 import {AddressResolverLib} from "../AddressResolverLib.sol";
 import {BokkyPooBahsDateTimeLibrary as TimeLibrary} from "../BokkyPooBahsDateTimeLibrary.sol";
@@ -223,7 +224,13 @@ library LendingMarketOperationLogic {
             orderBookIds[i] = orderBookId;
         }
 
-        uint256 autoRollUnitPrice = _calculateAutoRollUnitPrice(_ccy, destinationOrderBookMaturity);
+        uint256 autoRollUnitPrice = _calculateAutoRollUnitPrice(
+            _ccy,
+            maturities[0],
+            destinationOrderBookMaturity,
+            destinationOrderBookId,
+            market
+        );
 
         market.executeAutoRoll(
             maturedOrderBookId,
@@ -293,7 +300,6 @@ library LendingMarketOperationLogic {
     function updateOrderLogs(
         bytes32 _ccy,
         uint256 _maturity,
-        uint256 _filledUnitPrice,
         uint256 _filledAmount,
         uint256 _filledFutureValue
     ) external {
@@ -302,15 +308,6 @@ library LendingMarketOperationLogic {
         if (Storage.slot().orderBookIdLists[_ccy][1] == orderBookId) {
             uint256 nearestMaturity = ILendingMarket(Storage.slot().lendingMarkets[_ccy])
                 .getMaturity(Storage.slot().orderBookIdLists[_ccy][0]);
-
-            if (Storage.slot().observationPeriodLogs[_ccy][_maturity].totalAmount == 0) {
-                Storage.slot().estimatedAutoRollUnitPrice[_ccy][_maturity] = _convertUnitPrice(
-                    _filledUnitPrice,
-                    _maturity,
-                    block.timestamp,
-                    nearestMaturity
-                );
-            }
 
             if (
                 (block.timestamp < nearestMaturity) &&
@@ -354,19 +351,40 @@ library LendingMarketOperationLogic {
 
     function _calculateAutoRollUnitPrice(
         bytes32 _ccy,
-        uint256 _maturity
+        uint256 _nearestMaturity,
+        uint256 _destinationMaturity,
+        uint8 _destinationOrderBookId,
+        ILendingMarket _market
     ) internal view returns (uint256 autoRollUnitPrice) {
-        ObservationPeriodLog memory log = Storage.slot().observationPeriodLogs[_ccy][_maturity];
+        ObservationPeriodLog memory log = Storage.slot().observationPeriodLogs[_ccy][
+            _destinationMaturity
+        ];
 
+        // The auto-roll unit price is calculated based on the volume-weighted average price of orders that are filled
+        // in the observation period. If there is no order filled in that period, the auto-roll unit price is calculated
+        // using the last block price. If the last block price is older than the last auto-roll date,
+        // the last auto-roll unit price is reused as the current auto-roll unit price.
         if (log.totalFutureValue != 0) {
             autoRollUnitPrice = (log.totalAmount * Constants.PRICE_DIGIT).div(log.totalFutureValue);
-        } else if (Storage.slot().estimatedAutoRollUnitPrice[_ccy][_maturity] != 0) {
-            autoRollUnitPrice = Storage.slot().estimatedAutoRollUnitPrice[_ccy][_maturity];
         } else {
-            autoRollUnitPrice = AddressResolverLib
+            (uint256[] memory unitPrices, uint48 timestamp) = _market.getBlockUnitPriceHistory(
+                _destinationOrderBookId
+            );
+
+            AutoRollLog memory autoRollLog = AddressResolverLib
                 .genesisValueVault()
-                .getLatestAutoRollLog(_ccy)
-                .unitPrice;
+                .getLatestAutoRollLog(_ccy);
+
+            if (unitPrices[0] != 0 && timestamp >= autoRollLog.prev) {
+                autoRollUnitPrice = _convertUnitPrice(
+                    unitPrices[0],
+                    _destinationMaturity,
+                    timestamp,
+                    _nearestMaturity
+                );
+            } else {
+                autoRollUnitPrice = autoRollLog.unitPrice;
+            }
         }
     }
 

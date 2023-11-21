@@ -174,8 +174,8 @@ describe('LendingMarketController - Operations', () => {
       expect(detail.bestLendUnitPrice).to.equal('10000');
       expect(detail.bestBorrowUnitPrice).to.equal('0');
       expect(detail.marketUnitPrice).to.equal('0');
-      expect(detail.lastOrderBlockNumber).to.equal('0');
       expect(detail.blockUnitPriceHistory[0]).to.equal('0');
+      expect(detail.lastBlockUnitPriceTimestamp).to.equal('0');
       expect(detail.maxLendUnitPrice).to.equal('10000');
       expect(detail.minBorrowUnitPrice).to.equal('1');
       expect(detail.openingUnitPrice).to.equal('0');
@@ -236,6 +236,10 @@ describe('LendingMarketController - Operations', () => {
           '8000',
         );
 
+      await tx.wait();
+      const { timestamp: lastBlockUnitPriceTimestamp } =
+        await ethers.provider.getBlock(tx.blockNumber);
+
       await ethers.provider.send('evm_mine', []);
 
       const detail = await lendingMarketReader.getOrderBookDetail(
@@ -246,8 +250,10 @@ describe('LendingMarketController - Operations', () => {
       expect(detail.bestLendUnitPrice).to.equal('9000');
       expect(detail.bestBorrowUnitPrice).to.equal('5000');
       expect(detail.marketUnitPrice).to.equal('8000');
-      expect(detail.lastOrderBlockNumber).to.equal(tx.blockNumber);
       expect(detail.blockUnitPriceHistory[0]).to.equal('8000');
+      expect(detail.lastBlockUnitPriceTimestamp).to.equal(
+        lastBlockUnitPriceTimestamp,
+      );
       expect(detail.maxLendUnitPrice).to.equal('8800');
       expect(detail.minBorrowUnitPrice).to.equal('7600');
       expect(detail.openingUnitPrice).to.equal('0');
@@ -255,13 +261,15 @@ describe('LendingMarketController - Operations', () => {
 
       const minDebtUnitPrice =
         await lendingMarketControllerProxy.getMinDebtUnitPrice(targetCurrency);
-      const { timestamp } = await ethers.provider.getBlock('latest');
+      const { timestamp: latestTimestamp } = await ethers.provider.getBlock(
+        'latest',
+      );
 
       expect(detail.currentMinDebtUnitPrice).to.equal(
         BigNumber.from(BASE_MIN_DEBT_UNIT_PRICE).sub(
           BigNumber.from(BASE_MIN_DEBT_UNIT_PRICE)
             .sub(minDebtUnitPrice)
-            .mul(maturities[0].sub(timestamp))
+            .mul(maturities[0].sub(latestTimestamp))
             .div(SECONDS_IN_YEAR),
         ),
       );

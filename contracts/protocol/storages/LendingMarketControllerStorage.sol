@@ -30,7 +30,6 @@ library LendingMarketControllerStorage {
         mapping(bytes32 ccy => mapping(address user => EnumerableSet.UintSet maturities)) usedMaturities;
         // Observation period logs that is used for auto-rolls
         mapping(bytes32 ccy => mapping(uint256 maturity => ObservationPeriodLog log)) observationPeriodLogs;
-        mapping(bytes32 ccy => mapping(uint256 maturity => uint256 unitPrice)) estimatedAutoRollUnitPrice;
         // List of currency that the user has open orders or positions
         mapping(address user => EnumerableSet.Bytes32Set currency) usedCurrencies;
         mapping(address user => bool isRedeemed) isRedeemed;

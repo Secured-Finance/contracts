@@ -44,10 +44,11 @@ library OrderBookLib {
         uint256 openingDate;
         uint256 preOpeningDate;
         uint48 lastOrderId;
-        uint48 lastOrderBlockNumber;
+        uint48 lastOrderTimestamp;
         bool isReliableBlock;
         // Micro slots for block unit price history
         uint80 blockUnitPriceHistory;
+        uint48 lastBlockUnitPriceTimestamp;
         uint256 blockTotalAmount;
         uint256 blockTotalFutureValue;
         mapping(address user => uint48[] orderIds) activeLendOrderIds;
@@ -71,10 +72,11 @@ library OrderBookLib {
         self.openingDate = _openingDate;
         self.preOpeningDate = _preOpeningDate;
 
-        self.lastOrderBlockNumber = 0;
         self.blockTotalAmount = 0;
         self.blockTotalFutureValue = 0;
         self.blockUnitPriceHistory = 0;
+        self.lastOrderTimestamp = 0;
+        self.lastBlockUnitPriceTimestamp = 0;
         self.isReliableBlock = false;
 
         if (block.timestamp >= (_openingDate - ITAYOSE_PERIOD)) {
@@ -119,14 +121,14 @@ library OrderBookLib {
     function getBlockUnitPriceHistory(
         OrderBook storage self,
         bool _isReadOnly
-    ) internal view returns (uint256[] memory prices) {
+    ) internal view returns (uint256[] memory prices, uint48 timestamp) {
         prices = _unpackBlockUnitPriceHistory(self.blockUnitPriceHistory);
 
         // NOTE: If an order is in the first block of the order book, the block unit price history is empty.
         // In this case, the first history record is calculated from the current block total amount and total future value
         // along with the `getMarketUnitPrice` function logic.
         if (
-            (self.lastOrderBlockNumber != block.number || prices[0] == 0 || _isReadOnly) &&
+            (self.lastOrderTimestamp != block.timestamp || prices[0] == 0 || _isReadOnly) &&
             self.isReliableBlock
         ) {
             for (uint256 i = prices.length - 1; i > 0; i--) {
@@ -136,6 +138,9 @@ library OrderBookLib {
             prices[0] = (self.blockTotalAmount * Constants.PRICE_DIGIT).div(
                 self.blockTotalFutureValue
             );
+            timestamp = self.lastOrderTimestamp;
+        } else {
+            timestamp = self.lastBlockUnitPriceTimestamp;
         }
     }
 
@@ -149,7 +154,7 @@ library OrderBookLib {
         // In this case, the market unit price is calculated from the current block total amount and total future value
         // to avoid unwinding or liquidation the order in the same block using 0 as the market unit price.
         if (
-            (self.lastOrderBlockNumber != block.number || unitPrice == 0 || _isReadOnly) &&
+            (self.lastOrderTimestamp != block.timestamp || unitPrice == 0 || _isReadOnly) &&
             self.isReliableBlock
         ) {
             unitPrice = (self.blockTotalAmount * Constants.PRICE_DIGIT).div(
@@ -168,7 +173,7 @@ library OrderBookLib {
         uint256 sum;
         uint256 count;
 
-        if ((self.lastOrderBlockNumber != block.number || _isReadOnly) && self.isReliableBlock) {
+        if ((self.lastOrderTimestamp != block.timestamp || _isReadOnly) && self.isReliableBlock) {
             sum = (self.blockTotalAmount * Constants.PRICE_DIGIT).div(self.blockTotalFutureValue);
             count = 1;
             maxCount--;
@@ -441,7 +446,8 @@ library OrderBookLib {
 
     function setInitialBlockUnitPrice(OrderBook storage self, uint256 _unitPrice) internal {
         self.blockUnitPriceHistory = uint16(_unitPrice);
-        self.lastOrderBlockNumber = uint48(block.number);
+        self.lastBlockUnitPriceTimestamp = uint48(block.timestamp);
+        self.lastOrderTimestamp = uint48(block.timestamp);
     }
 
     function updateBlockUnitPriceHistory(
@@ -452,7 +458,7 @@ library OrderBookLib {
     ) internal {
         uint256 latestBlockUnitPrice = _unpackBlockUnitPriceHistory(self.blockUnitPriceHistory)[0];
 
-        if (self.lastOrderBlockNumber != block.number) {
+        if (self.lastOrderTimestamp != block.timestamp) {
             if (self.isReliableBlock) {
                 latestBlockUnitPrice = (self.blockTotalAmount * Constants.PRICE_DIGIT).div(
                     self.blockTotalFutureValue
@@ -462,9 +468,10 @@ library OrderBookLib {
                 self.blockUnitPriceHistory =
                     uint16(latestBlockUnitPrice) |
                     (self.blockUnitPriceHistory << 16);
+                self.lastBlockUnitPriceTimestamp = uint48(block.timestamp);
             }
 
-            self.lastOrderBlockNumber = uint48(block.number);
+            self.lastOrderTimestamp = uint48(block.timestamp);
             self.blockTotalAmount = _filledAmount;
             self.blockTotalFutureValue = _filledFutureValue;
             self.isReliableBlock = false;
