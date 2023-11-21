@@ -92,7 +92,7 @@ describe('LendingMarket - Orders', () => {
           unitPrice,
         );
 
-      return tx.blockNumber;
+      return tx;
     };
 
     const checkBlockUnitPrice = async (
@@ -109,28 +109,32 @@ describe('LendingMarket - Orders', () => {
     };
 
     const checkBlockUnitPriceHistory = async (unitPrices: string[]) => {
-      const blockUnitPriceHistory =
-        await lendingMarket.getBlockUnitPriceHistory(currentOrderBookId);
+      const history = await lendingMarket.getBlockUnitPriceHistory(
+        currentOrderBookId,
+      );
 
-      expect(blockUnitPriceHistory.length).to.equal(5);
-      expect(blockUnitPriceHistory[0]).to.equal(unitPrices[0] || '0');
-      expect(blockUnitPriceHistory[1]).to.equal(unitPrices[1] || '0');
-      expect(blockUnitPriceHistory[2]).to.equal(unitPrices[2] || '0');
-      expect(blockUnitPriceHistory[3]).to.equal(unitPrices[3] || '0');
-      expect(blockUnitPriceHistory[4]).to.equal(unitPrices[4] || '0');
+      expect(history.unitPrices.length).to.equal(5);
+      expect(history.unitPrices[0]).to.equal(unitPrices[0] || '0');
+      expect(history.unitPrices[1]).to.equal(unitPrices[1] || '0');
+      expect(history.unitPrices[2]).to.equal(unitPrices[2] || '0');
+      expect(history.unitPrices[3]).to.equal(unitPrices[3] || '0');
+      expect(history.unitPrices[4]).to.equal(unitPrices[4] || '0');
     };
 
     it('Check with a single order', async () => {
-      const blockNumber = await fillOrder('100000000000000', '8000');
+      const tx = await fillOrder('100000000000000', '8000');
 
       await checkBlockUnitPrice('8000', '8000');
       await checkBlockUnitPriceHistory(['8000']);
 
-      const lastOrderBlockNumber = await lendingMarket.getLastOrderBlockNumber(
+      const lastOrderTimestamp = await lendingMarket.getLastOrderTimestamp(
         currentOrderBookId,
       );
 
-      expect(blockNumber).to.equal(lastOrderBlockNumber);
+      await tx.wait();
+      const { timestamp } = await ethers.provider.getBlock(tx.blockNumber);
+
+      expect(timestamp).to.equal(lastOrderTimestamp);
     });
 
     it('Check with multiple orders in the same block', async () => {
