@@ -473,7 +473,6 @@ library OrderActionLogic {
 
         (filledOrder, partiallyFilledOrder, vars.remainingAmount, vars.orderExists) = orderBook
             .fillOrders(_side, _amount, 0, _unitPrice);
-        filledOrder.amount = _amount - vars.remainingAmount;
 
         if (vars.remainingAmount > 0) {
             if (_ignoreRemainingAmount) {
