@@ -224,10 +224,10 @@ library DepositManagementLogic {
             totalUsedCollateral * Storage.slot().liquidationThresholdRate
         ) {
             // NOTE: The formula is:
-            // maxWithdraw = (totalCollateral / liquidationThresholdRate) - totalUsedCollateral.
+            // maxWithdraw = totalCollateral - (totalUsedCollateral * liquidationThresholdRate)
             uint256 maxWithdraw = (totalCollateral *
                 Constants.PRICE_DIGIT -
-                (totalUsedCollateral) *
+                totalUsedCollateral *
                 Storage.slot().liquidationThresholdRate).div(Constants.PRICE_DIGIT);
 
             return maxWithdraw >= totalDeposit ? totalDeposit : maxWithdraw;
