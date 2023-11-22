@@ -193,10 +193,7 @@ library OrderStatisticsTreeLib {
 
         Node storage nValue = self.nodes[value];
         // Update order info as a new one if there is already an old node
-        if (
-            self.root == EMPTY ||
-            (self.nodes[cursor].left != value && self.nodes[cursor].right != value)
-        ) {
+        if (self.root == EMPTY || nValue.orderCounter != 0) {
             nValue.orderCounter = 0;
             nValue.orderTotalAmount = 0;
             _setHead(self, value, 0);
