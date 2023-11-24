@@ -22,13 +22,14 @@ describe('ReserveFund', () => {
   let reserveFundProxy: Contract;
 
   let owner: SignerWithAddress;
+  let alice: SignerWithAddress;
   let signers: SignerWithAddress[];
 
   let targetCurrency: string;
   let currencyIdx = 0;
 
   before(async () => {
-    [owner, ...signers] = await ethers.getSigners();
+    [owner, alice, ...signers] = await ethers.getSigners();
 
     // Set up for the mocks
     mockTokenVault = await deployMockContract(owner, TokenVault.abi);
@@ -124,6 +125,18 @@ describe('ReserveFund', () => {
         'Unpause',
       );
       expect(await reserveFundProxy.isPaused()).to.false;
+    });
+
+    it('Fail to pause due to non-operator caller', async () => {
+      await expect(reserveFundProxy.connect(alice).pause()).to.be.revertedWith(
+        'CallerNotOperator',
+      );
+    });
+
+    it('Fail to unpause due to non-operator caller', async () => {
+      await expect(
+        reserveFundProxy.connect(alice).unpause(),
+      ).to.be.revertedWith('CallerNotOperator');
     });
   });
 
