@@ -708,28 +708,15 @@ library FundManagementLogic {
         for (uint256 i; i < maturities.length; i++) {
             uint8 orderBookId = Storage.slot().maturityOrderBookIds[_ccy][maturities[i]];
             uint256 activeMaturity = market.getMaturity(orderBookId);
+            uint256 activeOrderCount = _cleanUpOrders(_ccy, activeMaturity, _user);
+            totalActiveOrderCount += activeOrderCount;
+
             int256 currentFutureValue = convertFutureValueToGenesisValue(
                 _ccy,
                 orderBookId,
                 activeMaturity,
                 _user
             );
-            (uint256 activeOrderCount, bool isCleaned) = _cleanUpOrders(
-                _ccy,
-                activeMaturity,
-                _user
-            );
-
-            totalActiveOrderCount += activeOrderCount;
-
-            if (isCleaned) {
-                currentFutureValue = convertFutureValueToGenesisValue(
-                    _ccy,
-                    orderBookId,
-                    activeMaturity,
-                    _user
-                );
-            }
 
             if (currentFutureValue != 0) {
                 futureValueExists = true;
@@ -759,7 +746,7 @@ library FundManagementLogic {
         bytes32 _ccy,
         uint256 _maturity,
         address _user
-    ) internal returns (uint256 activeOrderCount, bool isCleaned) {
+    ) internal returns (uint256 activeOrderCount) {
         uint8 orderBookId = Storage.slot().maturityOrderBookIds[_ccy][_maturity];
 
         (
@@ -822,7 +809,6 @@ library FundManagementLogic {
             );
         }
 
-        isCleaned = (removedLendOrderFutureValue + removedBorrowOrderFutureValue) > 0;
         activeOrderCount = activeLendOrderCount + activeBorrowOrderCount;
     }
 
