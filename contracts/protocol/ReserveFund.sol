@@ -6,6 +6,7 @@ import {IReserveFund} from "./interfaces/IReserveFund.sol";
 // libraries
 import {Contracts} from "./libraries/Contracts.sol";
 // mixins
+import {MixinAccessControl} from "./mixins/MixinAccessControl.sol";
 import {MixinAddressResolver} from "./mixins/MixinAddressResolver.sol";
 // utils
 import {Proxyable} from "./utils/Proxyable.sol";
@@ -18,7 +19,13 @@ import {ReserveFundStorage as Storage} from "./storages/ReserveFundStorage.sol";
  *
  * This contract receives the fees from the lending market and uses them to cover to avoid the protocol insolvency.
  */
-contract ReserveFund is IReserveFund, MixinAddressResolver, MixinWallet, Proxyable {
+contract ReserveFund is
+    IReserveFund,
+    MixinAccessControl,
+    MixinAddressResolver,
+    MixinWallet,
+    Proxyable
+{
     receive() external payable {}
 
     /**
@@ -37,6 +44,7 @@ contract ReserveFund is IReserveFund, MixinAddressResolver, MixinWallet, Proxyab
 
         registerAddressResolver(_resolver);
         MixinWallet._initialize(_owner, _nativeToken);
+        MixinAccessControl._setupInitialRoles(_owner);
     }
 
     // @inheritdoc MixinAddressResolver
@@ -57,7 +65,7 @@ contract ReserveFund is IReserveFund, MixinAddressResolver, MixinWallet, Proxyab
     /**
      * @notice Pauses the reserve fund.
      */
-    function pause() public override {
+    function pause() public override onlyOperator {
         Storage.slot().paused = true;
         emit Pause(msg.sender);
     }
@@ -65,7 +73,7 @@ contract ReserveFund is IReserveFund, MixinAddressResolver, MixinWallet, Proxyab
     /**
      * @notice Unpauses the reserve fund.
      */
-    function unpause() public override {
+    function unpause() public override onlyOperator {
         Storage.slot().paused = false;
         emit Unpause(msg.sender);
     }
