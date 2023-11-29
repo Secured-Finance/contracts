@@ -2,11 +2,9 @@ import { BigNumber, Contract } from 'ethers';
 import { ethers } from 'hardhat';
 import moment from 'moment';
 
-import { Currency, currencyIterator } from '../../utils/currencies';
+import { currencyIterator } from '../../utils/currencies';
 import {
-  hexEFIL,
   hexETH,
-  hexWETH,
   hexUSDC,
   hexWBTC,
   hexWFIL,
@@ -319,8 +317,8 @@ const deployContracts = async () => {
   const { timestamp } = await ethers.provider.getBlock('latest');
   const genesisDate = moment(timestamp * 1000).unix();
 
-  for (const currency of [hexWBTC, hexETH, hexWFIL, hexEFIL, hexUSDC]) {
-    lendingMarketControllerProxy.initializeLendingMarket(
+  for (const currency of [hexWBTC, hexETH, hexWFIL, hexUSDC]) {
+    await lendingMarketControllerProxy.initializeLendingMarket(
       currency,
       genesisDate,
       INITIAL_COMPOUND_FACTOR,

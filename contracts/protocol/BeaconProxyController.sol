@@ -144,7 +144,7 @@ contract BeaconProxyController is
 
             Storage.slot().registeredBeaconProxies[name] = beaconProxyAddress = address(beacon);
 
-            emit BeaconProxyCreated(name, beaconProxyAddress, newAddress);
+            emit BeaconProxyUpdated(name, beaconProxyAddress, newAddress, address(0));
         } else {
             beacon = UpgradeableBeacon(beaconProxyAddress);
             address oldAddress = beacon.implementation();

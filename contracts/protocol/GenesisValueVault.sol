@@ -332,6 +332,9 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         uint256 _unitPrice,
         uint256 _orderFeeRate
     ) external override onlyAcceptedContracts {
+        if (_unitPrice == 0) revert UnitPriceIsZero();
+        if (_nextMaturity <= _maturity) revert InvalidMaturity();
+
         _updateCompoundFactor(_ccy, _unitPrice, _orderFeeRate, _nextMaturity - _maturity);
         _updateAutoRollLogs(_ccy, _maturity, _nextMaturity, _unitPrice);
 
@@ -351,9 +354,6 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         uint256 _nextMaturity,
         uint256 _unitPrice
     ) private {
-        if (_unitPrice == 0) revert UnitPriceIsZero();
-        if (_nextMaturity <= _maturity) revert InvalidMaturity();
-
         AutoRollLog memory currentLog = Storage.slot().autoRollLogs[_ccy][_maturity];
         AutoRollLog memory nextLog = Storage.slot().autoRollLogs[_ccy][_nextMaturity];
 

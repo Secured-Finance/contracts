@@ -20,6 +20,10 @@ contract GenesisValueVaultCaller {
         genesisValueVault.initializeCurrencySetting(ccy, decimals, compoundFactor, maturity);
     }
 
+    function updateInitialCompoundFactor(bytes32 _ccy, uint256 _unitPrice) external {
+        genesisValueVault.updateInitialCompoundFactor(_ccy, _unitPrice);
+    }
+
     function updateGenesisValueWithFutureValue(
         bytes32 ccy,
         address user,
@@ -29,8 +33,25 @@ contract GenesisValueVaultCaller {
         genesisValueVault.updateGenesisValueWithFutureValue(ccy, user, basisMaturity, fvAmount);
     }
 
-    function cleanUpBalance(bytes32 ccy, address user, uint256 maturity) external {
-        genesisValueVault.cleanUpBalance(ccy, user, maturity);
+    function updateGenesisValueWithResidualAmount(
+        bytes32 ccy,
+        address user,
+        uint256 basisMaturity
+    ) external {
+        genesisValueVault.updateGenesisValueWithResidualAmount(ccy, user, basisMaturity);
+    }
+
+    function transferFrom(
+        bytes32 _ccy,
+        address _sender,
+        address _receiver,
+        int256 _amount
+    ) external {
+        genesisValueVault.transferFrom(_ccy, _sender, _receiver, _amount);
+    }
+
+    function cleanUpBalance(bytes32 _ccy, address _user, uint256 _maturity) external {
+        genesisValueVault.cleanUpBalance(_ccy, _user, _maturity);
     }
 
     function executeAutoRoll(
@@ -41,5 +62,18 @@ contract GenesisValueVaultCaller {
         uint256 orderFeeRate
     ) external {
         genesisValueVault.executeAutoRoll(ccy, maturity, nextMaturity, unitPrice, orderFeeRate);
+    }
+
+    function executeForcedReset(bytes32 _ccy, address _user) external {
+        genesisValueVault.executeForcedReset(_ccy, _user);
+    }
+
+    function executeForcedReset(
+        bytes32 _ccy,
+        uint256 _maturity,
+        address _user,
+        int256 _amountInFV
+    ) external returns (int256 removedAmountInFV, int256 balance) {
+        return genesisValueVault.executeForcedReset(_ccy, _maturity, _user, _amountInFV);
     }
 }
