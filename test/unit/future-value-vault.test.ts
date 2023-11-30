@@ -55,7 +55,7 @@ describe('FutureValueVault', () => {
       .then((tx) => tx.wait())
       .then(
         ({ events }) =>
-          events.find(({ event }) => event === 'ProxyCreated').args
+          events.find(({ event }) => event === 'ProxyUpdated').args
             .proxyAddress,
       );
 

@@ -184,7 +184,7 @@ const deployContracts = async () => {
     .then((txs) =>
       txs.map(
         ({ events }) =>
-          events.find(({ event }) => event === 'ProxyCreated').args
+          events.find(({ event }) => event === 'ProxyUpdated').args
             .proxyAddress,
       ),
     );

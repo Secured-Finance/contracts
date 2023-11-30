@@ -28,7 +28,7 @@ const func: DeployFunction = async function ({
   );
 
   // Get contracts from proxyController
-  const filter = proxyController.filters.ProxyCreated();
+  const filter = proxyController.filters.ProxyUpdated();
   // NOTE: When the target network is a forked chain, the contract can't return events and
   // the `queryFilter` method throw an error.
   const proxyCreatedEvents = process.env.FORK_RPC_ENDPOINT

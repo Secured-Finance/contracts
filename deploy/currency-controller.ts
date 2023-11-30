@@ -30,9 +30,8 @@ const func: DeployFunction = async function ({
         .setCurrencyControllerImpl(deployResult.address)
         .then((tx) => tx.wait());
 
-      const proxyAddress = events.find(({ event }) =>
-        ['ProxyCreated', 'ProxyUpdated'].includes(event),
-      ).args.proxyAddress;
+      const proxyAddress = events.find(({ event }) => event === 'ProxyUpdated')
+        .args.proxyAddress;
 
       const currencyControllerContract = await ethers.getContractAt(
         'CurrencyController',

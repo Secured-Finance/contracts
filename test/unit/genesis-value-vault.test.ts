@@ -61,7 +61,7 @@ describe('GenesisValueVault', () => {
       .then((tx) => tx.wait())
       .then(
         ({ events }) =>
-          events.find(({ event }) => event === 'ProxyCreated').args
+          events.find(({ event }) => event === 'ProxyUpdated').args
             .proxyAddress,
       );
 
@@ -162,7 +162,7 @@ describe('GenesisValueVault', () => {
       ).revertedWith('Initializable: contract is already initialized');
     });
 
-    it('Fail to call initialization due to execution by non-beacon proxy contract', async () => {
+    it('Fail to call initialization due to execution by non-proxy contract', async () => {
       const genesisValueVault = await ethers
         .getContractFactory('GenesisValueVault')
         .then((factory) => factory.deploy());
