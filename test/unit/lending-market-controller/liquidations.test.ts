@@ -173,6 +173,19 @@ describe('LendingMarketController - Liquidations', () => {
       ).revertedWith('Ownable: caller is not the owner');
     });
 
+    it('Fail to execute liquidation call due to invalid maturity', async () => {
+      await expect(
+        liquidator.executeLiquidationCall(
+          targetCurrency,
+          maturities,
+          targetCurrency,
+          '1',
+          alice.address,
+          10,
+        ),
+      ).revertedWith('InvalidMaturity');
+    });
+
     it('Fail to execute forced repayment due to non-owner', async () => {
       await expect(
         liquidator
@@ -186,6 +199,19 @@ describe('LendingMarketController - Liquidations', () => {
             10,
           ),
       ).revertedWith('Ownable: caller is not the owner');
+    });
+
+    it('Fail to execute forced repayment due to invalid maturity', async () => {
+      await expect(
+        liquidator.executeForcedRepayment(
+          targetCurrency,
+          maturities,
+          targetCurrency,
+          '1',
+          alice.address,
+          10,
+        ),
+      ).revertedWith('InvalidMaturity');
     });
 
     it('Fail to execute operations for collateral due to non lending market controller', async () => {
@@ -1133,6 +1159,18 @@ describe('LendingMarketController - Liquidations', () => {
           maturities[0],
         ),
       ).revertedWith('NotRedemptionPeriod');
+    });
+
+    it('Fail to repay due to invalid maturity', async () => {
+      await expect(
+        lendingMarketControllerProxy.executeRepayment(targetCurrency, '1'),
+      ).to.be.revertedWith('InvalidMaturity');
+    });
+
+    it('Fail to redeem due to invalid maturity', async () => {
+      await expect(
+        lendingMarketControllerProxy.executeRedemption(targetCurrency, '1'),
+      ).to.be.revertedWith('InvalidMaturity');
     });
   });
 });
