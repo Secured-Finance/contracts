@@ -47,6 +47,40 @@ describe('AddressResolver', () => {
     );
   });
 
+  describe('Ownership', async () => {
+    it('Transfer ownership', async () => {
+      await addressResolverProxy.transferOwnership(alice.address);
+      expect(await addressResolverProxy.owner()).to.equal(alice.address);
+    });
+
+    it('Renounce ownership', async () => {
+      await addressResolverProxy.renounceOwnership();
+      expect(await addressResolverProxy.owner()).to.equal(
+        ethers.constants.AddressZero,
+      );
+    });
+
+    it('Fail to renounce ownership due to execution by non-owner', async () => {
+      await expect(
+        addressResolverProxy.connect(alice).renounceOwnership(),
+      ).revertedWith('Ownable: caller is not the owner');
+    });
+
+    it('Fail to transfer ownership due execution by non-owner', async () => {
+      await expect(
+        addressResolverProxy
+          .connect(alice)
+          .transferOwnership(ethers.constants.AddressZero),
+      ).revertedWith('Ownable: caller is not the owner');
+    });
+
+    it('Fail to transfer ownership due to zero address', async () => {
+      await expect(
+        addressResolverProxy.transferOwnership(ethers.constants.AddressZero),
+      ).revertedWith('Ownable: new owner is the zero address');
+    });
+  });
+
   describe('Initialization', async () => {
     it('Fail to call initialization due to duplicate execution', async () => {
       await expect(addressResolverProxy.initialize(owner.address)).revertedWith(

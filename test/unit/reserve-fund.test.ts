@@ -174,6 +174,17 @@ describe('ReserveFund', () => {
       await expect(reserveFundProxy.connect(bob).unpause()).to.be.not.reverted;
     });
 
+    it('Set the role admin of the operator', async () => {
+      const role = await reserveFundProxy.OPERATOR_ROLE();
+
+      expect(await reserveFundProxy.getRoleAdmin(role)).not.to.equal(role);
+      await expect(reserveFundProxy.setRoleAdmin(role, role)).emit(
+        reserveFundProxy,
+        'RoleAdminChanged',
+      );
+      expect(await reserveFundProxy.getRoleAdmin(role)).to.equal(role);
+    });
+
     it('Fail to pause due to non-operator caller', async () => {
       await expect(reserveFundProxy.connect(alice).pause()).to.be.revertedWith(
         'CallerNotOperator',
@@ -247,6 +258,46 @@ describe('ReserveFund', () => {
       await expect(
         reserveFundProxy.executeTransactions(targets, values, data),
       ).to.emit(reserveFundProxy, 'TransactionsExecuted');
+    });
+
+    it('Fail to execute a transaction due to execution by non-owner', async () => {
+      const payload = mockLendingMarketController.interface.encodeFunctionData(
+        'executeEmergencySettlement',
+      );
+      await expect(
+        reserveFundProxy
+          .connect(alice)
+          .executeTransaction(ethers.constants.AddressZero, payload),
+      ).to.be.revertedWith('Ownable: caller is not the owner');
+    });
+
+    it('Fail to execute transactions due to execution by non-owner', async () => {
+      await expect(
+        reserveFundProxy.connect(alice).executeTransactions([], [], []),
+      ).to.be.revertedWith('Ownable: caller is not the owner');
+    });
+
+    it('Fail to execute transactions due to input array length mismatch: _data', async () => {
+      await expect(
+        reserveFundProxy.executeTransactions(
+          [ethers.constants.AddressZero],
+          [1],
+          [],
+        ),
+      ).to.be.revertedWith('WrongArrayLengths');
+    });
+
+    it('Fail to execute transactions due to input array length mismatch: _values', async () => {
+      const payload = mockLendingMarketController.interface.encodeFunctionData(
+        'executeEmergencySettlement',
+      );
+      await expect(
+        reserveFundProxy.executeTransactions(
+          [ethers.constants.AddressZero],
+          [],
+          [payload],
+        ),
+      ).to.be.revertedWith('WrongArrayLengths');
     });
   });
 });
