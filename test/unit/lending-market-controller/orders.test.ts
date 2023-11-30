@@ -3191,7 +3191,7 @@ describe('LendingMarketController - Orders', () => {
         ).to.be.revertedWith('OrderBookNotMatured');
       });
 
-      it('Fail to cancel an order due to invalid user', async () => {
+      it('Fail to cancel an order due to execution by non-maker', async () => {
         await lendingMarketControllerProxy
           .connect(alice)
           .executeOrder(

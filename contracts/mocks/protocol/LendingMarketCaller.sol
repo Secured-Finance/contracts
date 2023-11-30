@@ -111,6 +111,15 @@ contract LendingMarketCaller {
         );
     }
 
+    function cancelOrder(
+        bytes32 _ccy,
+        uint8 _orderBookId,
+        address _user,
+        uint48 _orderId
+    ) external {
+        ILendingMarket(lendingMarkets[_ccy]).cancelOrder(_orderBookId, _user, _orderId);
+    }
+
     function executeItayoseCall(
         bytes32 _ccy,
         uint8 _orderBookId
@@ -129,5 +138,13 @@ contract LendingMarketCaller {
 
     function cleanUpOrders(bytes32 _ccy, uint8 _orderBookId, address _user) external {
         ILendingMarket(lendingMarkets[_ccy]).cleanUpOrders(_orderBookId, _user);
+    }
+
+    function pause(bytes32 _ccy) external {
+        ILendingMarket(lendingMarkets[_ccy]).pause();
+    }
+
+    function unpause(bytes32 _ccy) external {
+        ILendingMarket(lendingMarkets[_ccy]).unpause();
     }
 }

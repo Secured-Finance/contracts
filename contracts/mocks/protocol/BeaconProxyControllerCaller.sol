@@ -5,16 +5,18 @@ import {IBeaconProxyController} from "../../protocol/interfaces/IBeaconProxyCont
 
 contract BeaconProxyControllerCaller {
     IBeaconProxyController public beaconProxyController;
+    address public futureValueVault;
+    address public lendingMarket;
 
     constructor(address _beaconProxyController) {
         beaconProxyController = IBeaconProxyController(_beaconProxyController);
     }
 
     function deployFutureValueVault() external {
-        beaconProxyController.deployFutureValueVault();
+        futureValueVault = beaconProxyController.deployFutureValueVault();
     }
 
     function deployLendingMarket(bytes32 ccy, uint256 orderFeeRate, uint256 cbLimitRange) external {
-        beaconProxyController.deployLendingMarket(ccy, orderFeeRate, cbLimitRange);
+        lendingMarket = beaconProxyController.deployLendingMarket(ccy, orderFeeRate, cbLimitRange);
     }
 }

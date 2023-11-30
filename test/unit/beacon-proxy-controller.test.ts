@@ -14,6 +14,9 @@ const ProxyController = artifacts.require('ProxyController');
 const BeaconProxyControllerCaller = artifacts.require(
   'BeaconProxyControllerCaller',
 );
+const UpgradeabilityBeaconProxy = artifacts.require(
+  'UpgradeabilityBeaconProxy',
+);
 
 const { deployContract } = waffle;
 
@@ -108,6 +111,10 @@ describe('BeaconProxyController', () => {
   });
 
   describe('Initialization', async () => {
+    it('Check if the contract addresses are cached in the resolver', async () => {
+      expect(await beaconProxyControllerProxy.isResolverCached()).to.true;
+    });
+
     it('Fail to call initialization due to duplicate execution', async () => {
       await expect(
         beaconProxyControllerProxy.initialize(
@@ -349,6 +356,42 @@ describe('BeaconProxyController', () => {
           1,
         ),
       ).revertedWith('NoBeaconProxyContract');
+    });
+  });
+
+  describe('Change Admin', async () => {
+    it('Successfully change admins of a beacon proxy contract', async () => {
+      const futureValueVault = await deployContract(owner, FutureValueVault);
+
+      await beaconProxyControllerProxy.setFutureValueVaultImpl(
+        futureValueVault.address,
+      );
+      await beaconProxyControllerCaller.deployFutureValueVault();
+      const futureValueVaultProxyAddress =
+        await beaconProxyControllerCaller.futureValueVault();
+      await beaconProxyControllerProxy.changeBeaconProxyAdmins(alice.address, [
+        futureValueVaultProxyAddress,
+      ]);
+
+      const futureValueVaultProxy = await UpgradeabilityBeaconProxy.at(
+        futureValueVaultProxyAddress,
+      );
+
+      const futureValueVaultAdmin = await futureValueVaultProxy.admin();
+      const implementation = await futureValueVaultProxy.implementation();
+
+      expect(futureValueVaultAdmin).to.equal(alice.address);
+      expect(implementation).to.equal(futureValueVault.address);
+    });
+
+    it('Fail to change admins of a beacon proxy contract due to execution by non-owner', async () => {
+      await expect(
+        beaconProxyControllerProxy
+          .connect(alice)
+          .changeBeaconProxyAdmins(alice.address, [
+            ethers.constants.AddressZero,
+          ]),
+      ).revertedWith('Ownable: caller is not the owner');
     });
   });
 });
