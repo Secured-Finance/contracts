@@ -180,7 +180,7 @@ describe('GenesisValueVault', () => {
           initialCompoundFactor,
           maturity,
         ),
-      ).revertedWith('OnlyAcceptedContracts');
+      ).revertedWith('OnlyAcceptedContract("LendingMarketController")');
     });
 
     it('Fail to update the initial compound factor due to execution by non-accepted contract', async () => {
@@ -189,7 +189,7 @@ describe('GenesisValueVault', () => {
           targetCurrency,
           unitPrice,
         ),
-      ).revertedWith('OnlyAcceptedContracts');
+      ).revertedWith('OnlyAcceptedContract("LendingMarketController")');
     });
 
     it('Fail to initialize the currency setting due to zero compound factor', async () => {
@@ -568,7 +568,7 @@ describe('GenesisValueVault', () => {
             maturity,
             fvAmount,
           ),
-        ).revertedWith('OnlyAcceptedContracts');
+        ).revertedWith('OnlyAcceptedContract("LendingMarketController")');
       });
 
       it('Fail to update the genesis value with residual amount due to execution by non-accepted contract', async () => {
@@ -578,7 +578,7 @@ describe('GenesisValueVault', () => {
             alice.address,
             maturity,
           ),
-        ).revertedWith('OnlyAcceptedContracts');
+        ).revertedWith('OnlyAcceptedContract("LendingMarketController")');
       });
     });
 
@@ -616,7 +616,7 @@ describe('GenesisValueVault', () => {
             bob.address,
             1,
           ),
-        ).revertedWith('OnlyAcceptedContracts');
+        ).revertedWith('OnlyAcceptedContract("LendingMarketController")');
       });
     });
 
@@ -739,7 +739,7 @@ describe('GenesisValueVault', () => {
             targetCurrency,
             alice.address,
           ),
-        ).revertedWith('OnlyAcceptedContracts');
+        ).revertedWith('OnlyAcceptedContract("LendingMarketController")');
       });
 
       it("Fail to force reset a user's balance with amount due to execution by non-accepted contract", async () => {
@@ -747,7 +747,7 @@ describe('GenesisValueVault', () => {
           genesisValueVaultProxy[
             'executeForcedReset(bytes32,uint256,address,int256)'
           ](targetCurrency, maturity, alice.address, fvAmount),
-        ).revertedWith('OnlyAcceptedContracts');
+        ).revertedWith('OnlyAcceptedContract("LendingMarketController")');
       });
     });
 
@@ -801,7 +801,7 @@ describe('GenesisValueVault', () => {
             alice.address,
             maturity,
           ),
-        ).revertedWith('OnlyAcceptedContracts');
+        ).revertedWith('OnlyAcceptedContract("LendingMarketController")');
       });
     });
   });
@@ -1018,7 +1018,7 @@ describe('GenesisValueVault', () => {
           unitPrice,
           4000,
         ),
-      ).revertedWith('OnlyAcceptedContracts');
+      ).revertedWith('OnlyAcceptedContract("LendingMarketController")');
     });
 
     it('Fail to execute auto-roll due to invalid order fee rate', async () => {

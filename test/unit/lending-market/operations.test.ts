@@ -63,13 +63,13 @@ describe('LendingMarket - Operations', () => {
 
   it('Fail to update the order fee rate due to invalid caller', async () => {
     await expect(lendingMarket.updateOrderFeeRate(1)).revertedWith(
-      'OnlyAcceptedContracts',
+      'LendingMarketController',
     );
   });
 
   it('Fail to update the circuit breaker limit range due to invalid caller', async () => {
     await expect(lendingMarket.updateCircuitBreakerLimitRange(1)).revertedWith(
-      'OnlyAcceptedContracts',
+      'LendingMarketController',
     );
   });
 });

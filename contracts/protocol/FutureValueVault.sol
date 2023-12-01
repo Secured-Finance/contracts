@@ -39,12 +39,6 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
         contracts[0] = Contracts.LENDING_MARKET_CONTROLLER;
     }
 
-    // @inheritdoc MixinAddressResolver
-    function acceptedContracts() public pure override returns (bytes32[] memory contracts) {
-        contracts = new bytes32[](1);
-        contracts[0] = Contracts.LENDING_MARKET_CONTROLLER;
-    }
-
     /**
      * @notice Gets the total supply.
      * @param _maturity The maturity of the market
@@ -103,7 +97,7 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
         uint256 _amount,
         uint256 _maturity,
         bool _isTaker
-    ) public override onlyAcceptedContracts {
+    ) public override onlyLendingMarketController {
         if (_user == address(0)) revert UserIsZero();
         if (hasBalanceAtPastMaturity(_orderBookId, _user, _maturity))
             revert PastMaturityBalanceExists({user: _user});
@@ -133,7 +127,7 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
         uint256 _amount,
         uint256 _maturity,
         bool _isTaker
-    ) public override onlyAcceptedContracts {
+    ) public override onlyLendingMarketController {
         if (_user == address(0)) revert UserIsZero();
         if (hasBalanceAtPastMaturity(_orderBookId, _user, _maturity))
             revert PastMaturityBalanceExists({user: _user});
@@ -160,7 +154,7 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
         address _receiver,
         int256 _amount,
         uint256 _maturity
-    ) external override onlyAcceptedContracts {
+    ) external override onlyLendingMarketController {
         if (hasBalanceAtPastMaturity(_orderBookId, _sender, _maturity))
             revert PastMaturityBalanceExists({user: _sender});
         if (hasBalanceAtPastMaturity(_orderBookId, _receiver, _maturity))
@@ -188,7 +182,7 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
     )
         external
         override
-        onlyAcceptedContracts
+        onlyLendingMarketController
         returns (int256 removedAmount, int256 currentAmount, uint256 maturity, bool isAllRemoved)
     {
         currentAmount = Storage.slot().balances[_orderBookId][_user];
@@ -226,7 +220,7 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
     function setInitialTotalSupply(
         uint256 _maturity,
         int256 _amount
-    ) external override onlyAcceptedContracts {
+    ) external override onlyLendingMarketController {
         if (Storage.slot().totalSupply[_maturity] != 0) revert TotalSupplyNotZero();
         _updateTotalSupply(_maturity, 0, _amount, true);
     }
@@ -238,7 +232,7 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
     function executeForcedReset(
         uint8 _orderBookId,
         address _user
-    ) external override onlyAcceptedContracts {
+    ) external override onlyLendingMarketController {
         int256 removedAmount = Storage.slot().balances[_orderBookId][_user];
 
         if (removedAmount != 0) {
@@ -258,7 +252,7 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
         uint8 _orderBookId,
         address _user,
         int256 _amount
-    ) external override onlyAcceptedContracts returns (int256 removedAmount, int256 balance) {
+    ) external override onlyLendingMarketController returns (int256 removedAmount, int256 balance) {
         removedAmount = Storage.slot().balances[_orderBookId][_user];
 
         if ((_amount > 0 && removedAmount < 0) || (_amount < 0 && removedAmount > 0)) {

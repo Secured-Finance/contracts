@@ -96,12 +96,6 @@ contract TokenVault is
         contracts[2] = Contracts.RESERVE_FUND;
     }
 
-    // @inheritdoc MixinAddressResolver
-    function acceptedContracts() public pure override returns (bytes32[] memory contracts) {
-        contracts = new bytes32[](1);
-        contracts[0] = Contracts.LENDING_MARKET_CONTROLLER;
-    }
-
     receive() external payable {
         if (!TransferHelper.isNative(msg.sender)) {
             revert CallerNotBaseCurrency({caller: msg.sender});
@@ -387,7 +381,7 @@ contract TokenVault is
         address _from,
         bytes32 _ccy,
         uint256 _amount
-    ) external payable override whenNotPaused onlyAcceptedContracts {
+    ) external payable override whenNotPaused onlyLendingMarketController {
         _deposit(_from, _ccy, _amount);
     }
 
@@ -413,7 +407,7 @@ contract TokenVault is
         address _user,
         bytes32 _ccy,
         uint256 _amount
-    ) external override whenNotPaused onlyAcceptedContracts onlyRegisteredCurrency(_ccy) {
+    ) external override whenNotPaused onlyLendingMarketController onlyRegisteredCurrency(_ccy) {
         DepositManagementLogic.addDepositAmount(_user, _ccy, _amount);
     }
 
@@ -427,7 +421,7 @@ contract TokenVault is
         address _user,
         bytes32 _ccy,
         uint256 _amount
-    ) external override whenNotPaused onlyAcceptedContracts onlyRegisteredCurrency(_ccy) {
+    ) external override whenNotPaused onlyLendingMarketController onlyRegisteredCurrency(_ccy) {
         DepositManagementLogic.removeDepositAmount(_user, _ccy, _amount);
     }
 
@@ -439,7 +433,7 @@ contract TokenVault is
     function executeForcedReset(
         address _user,
         bytes32 _ccy
-    ) external override onlyAcceptedContracts onlyRegisteredCurrency(_ccy) returns (uint256) {
+    ) external override onlyLendingMarketController onlyRegisteredCurrency(_ccy) returns (uint256) {
         return DepositManagementLogic.executeForcedReset(_user, _ccy);
     }
 
@@ -459,7 +453,7 @@ contract TokenVault is
         external
         override
         whenNotPaused
-        onlyAcceptedContracts
+        onlyLendingMarketController
         onlyRegisteredCurrency(_ccy)
         returns (uint256 untransferredAmount)
     {

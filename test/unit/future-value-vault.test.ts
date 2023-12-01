@@ -139,7 +139,7 @@ describe('FutureValueVault', () => {
     it('Fail to set the initial total supply due to execution by non-accepted contract', async () => {
       await expect(
         futureValueVaultProxy.setInitialTotalSupply(1, 2),
-      ).revertedWith('OnlyAcceptedContracts');
+      ).revertedWith('OnlyAcceptedContract("LendingMarketController")');
     });
   });
 
@@ -217,7 +217,7 @@ describe('FutureValueVault', () => {
           maturity,
           true,
         ),
-      ).revertedWith('OnlyAcceptedContracts');
+      ).revertedWith('OnlyAcceptedContract("LendingMarketController")');
     });
 
     it('Fail to decrease balance due to execution by non-accepted contract', async () => {
@@ -229,7 +229,7 @@ describe('FutureValueVault', () => {
           maturity,
           true,
         ),
-      ).revertedWith('OnlyAcceptedContracts');
+      ).revertedWith('OnlyAcceptedContract("LendingMarketController")');
     });
 
     it('Fail to increase balance due to invalid user address', async () => {
@@ -339,7 +339,7 @@ describe('FutureValueVault', () => {
           amount,
           maturity,
         ),
-      ).revertedWith('OnlyAcceptedContracts');
+      ).revertedWith('OnlyAcceptedContract("LendingMarketController")');
     });
   });
 
@@ -460,7 +460,7 @@ describe('FutureValueVault', () => {
           alice.address,
           amount,
         ),
-      ).revertedWith('OnlyAcceptedContracts');
+      ).revertedWith('OnlyAcceptedContract("LendingMarketController")');
     });
 
     it("Fail to force reset a user's balance without amount due to execution by non-accepted contract", async () => {
@@ -469,7 +469,7 @@ describe('FutureValueVault', () => {
           currentOrderBookId,
           alice.address,
         ),
-      ).revertedWith('OnlyAcceptedContracts');
+      ).revertedWith('OnlyAcceptedContract("LendingMarketController")');
     });
   });
 });

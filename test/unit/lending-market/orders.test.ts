@@ -292,7 +292,7 @@ describe('LendingMarket - Orders', () => {
           '100000000000000',
           '8000',
         ),
-      ).revertedWith('OnlyAcceptedContracts');
+      ).revertedWith('OnlyAcceptedContract("LendingMarketController")');
     });
 
     it('Fail to cancel the order due to invalid caller', async () => {
@@ -302,7 +302,7 @@ describe('LendingMarket - Orders', () => {
           ethers.constants.AddressZero,
           1,
         ),
-      ).revertedWith('OnlyAcceptedContracts');
+      ).revertedWith('OnlyAcceptedContract("LendingMarketController")');
     });
 
     it('Fail to unwind the position due to invalid caller', async () => {
@@ -313,7 +313,7 @@ describe('LendingMarket - Orders', () => {
           ethers.constants.AddressZero,
           '125000000000000',
         ),
-      ).revertedWith('OnlyAcceptedContracts');
+      ).revertedWith('OnlyAcceptedContract("LendingMarketController")');
     });
   });
 
@@ -387,7 +387,7 @@ describe('LendingMarket - Orders', () => {
           '100000000000000',
           '8000',
         ),
-      ).revertedWith('OnlyAcceptedContracts');
+      ).revertedWith('OnlyAcceptedContract("LendingMarketController")');
     });
   });
 
@@ -485,7 +485,7 @@ describe('LendingMarket - Orders', () => {
     it('Fail to clean up orders due to invalid caller', async () => {
       await expect(
         lendingMarket.cleanUpOrders(currentOrderBookId, alice.address),
-      ).revertedWith('OnlyAcceptedContracts');
+      ).revertedWith('OnlyAcceptedContract("LendingMarketController")');
     });
   });
 });

@@ -150,16 +150,6 @@ describe('BeaconProxyController', () => {
       );
     });
 
-    it('Get the accepted contracts', async () => {
-      const acceptedContracts =
-        await beaconProxyControllerProxy.acceptedContracts();
-
-      expect(acceptedContracts.length).to.equal(1);
-      expect(acceptedContracts[0]).to.equal(
-        ethers.utils.formatBytes32String('LendingMarketController'),
-      );
-    });
-
     it('Fail to get the beacon proxy address due to empty address', async () => {
       const contractName = ethers.utils.formatBytes32String('Test');
       await expect(
@@ -236,7 +226,7 @@ describe('BeaconProxyController', () => {
     it('Fail to deploy the contract due to execution by non-accepted contract', async () => {
       await expect(
         beaconProxyControllerProxy.deployFutureValueVault(),
-      ).revertedWith('OnlyAcceptedContracts');
+      ).revertedWith('OnlyAcceptedContract("LendingMarketController")');
     });
 
     it('Fail to deploy the contract due to non-existence of beacon proxy contract', async () => {
@@ -345,7 +335,7 @@ describe('BeaconProxyController', () => {
           1,
           1,
         ),
-      ).revertedWith('OnlyAcceptedContracts');
+      ).revertedWith('OnlyAcceptedContract("LendingMarketController")');
     });
 
     it('Fail to deploy the contract due to non-existence of beacon proxy contract', async () => {
