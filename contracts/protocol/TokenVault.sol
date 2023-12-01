@@ -331,7 +331,9 @@ contract TokenVault is
         address _tokenAddress,
         bool _isCollateral
     ) external override onlyOwner {
-        if (!currencyController().currencyExists(_ccy)) revert InvalidCurrency();
+        if (!currencyController().currencyExists(_ccy) || isRegisteredCurrency(_ccy)) {
+            revert InvalidCurrency();
+        }
 
         Storage.slot().tokenAddresses[_ccy] = _tokenAddress;
         if (_isCollateral) {

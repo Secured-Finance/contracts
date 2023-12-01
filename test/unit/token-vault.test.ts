@@ -370,13 +370,29 @@ describe('TokenVault', () => {
       ).revertedWith('Ownable: caller is not the owner');
     });
 
-    it('Fail to register currency due to invalid currency', async () => {
+    it('Fail to register currency due to nonexistent currency', async () => {
       await mockCurrencyController.mock.currencyExists.returns(false);
 
       await expect(
         tokenVaultProxy.registerCurrency(
           targetCurrency,
           mockERC20.address,
+          true,
+        ),
+      ).revertedWith('InvalidCurrency');
+    });
+
+    it('Fail to register currency due to duplicate registration', async () => {
+      await tokenVaultProxy.registerCurrency(
+        targetCurrency,
+        mockERC20.address,
+        true,
+      );
+
+      await expect(
+        tokenVaultProxy.registerCurrency(
+          targetCurrency,
+          ethers.constants.AddressZero,
           true,
         ),
       ).revertedWith('InvalidCurrency');
