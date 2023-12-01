@@ -81,7 +81,7 @@ describe('LendingMarket - Initialization', () => {
 
   it('Fail to create an order book due to invalid caller', async () => {
     await expect(lendingMarket.createOrderBook(1, 1, 1)).revertedWith(
-      'OnlyAcceptedContracts',
+      'LendingMarketController',
     );
   });
 });

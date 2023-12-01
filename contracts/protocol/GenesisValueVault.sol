@@ -43,12 +43,6 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         contracts[1] = Contracts.RESERVE_FUND;
     }
 
-    // @inheritdoc MixinAddressResolver
-    function acceptedContracts() public pure override returns (bytes32[] memory contracts) {
-        contracts = new bytes32[](1);
-        contracts[0] = Contracts.LENDING_MARKET_CONTROLLER;
-    }
-
     /**
      * @notice Gets if the currency is initialized.
      * @param _ccy Currency name in bytes32
@@ -268,7 +262,7 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         uint8 _decimals,
         uint256 _compoundFactor,
         uint256 _maturity
-    ) external override onlyAcceptedContracts {
+    ) external override onlyLendingMarketController {
         if (_compoundFactor == 0) revert CompoundFactorIsZero();
         if (isInitialized(_ccy)) revert CurrencyAlreadyInitialized();
 
@@ -300,7 +294,7 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
     function updateInitialCompoundFactor(
         bytes32 _ccy,
         uint256 _unitPrice
-    ) external override onlyAcceptedContracts {
+    ) external override onlyLendingMarketController {
         uint256 maturity = Storage.slot().currentMaturity[_ccy];
 
         if (Storage.slot().autoRollLogs[_ccy][maturity].prev != 0) {
@@ -331,7 +325,7 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         uint256 _nextMaturity,
         uint256 _unitPrice,
         uint256 _orderFeeRate
-    ) external override onlyAcceptedContracts {
+    ) external override onlyLendingMarketController {
         if (_unitPrice == 0) revert UnitPriceIsZero();
         if (_nextMaturity <= _maturity) revert InvalidMaturity();
 
@@ -392,7 +386,7 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         address _user,
         uint256 _basisMaturity,
         int256 _fvAmount
-    ) external override onlyAcceptedContracts {
+    ) external override onlyLendingMarketController {
         int256 amount = calculateGVFromFV(_ccy, _basisMaturity, _fvAmount);
 
         _updateBalance(_ccy, _user, _basisMaturity, amount);
@@ -410,7 +404,7 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         bytes32 _ccy,
         address _user,
         uint256 _basisMaturity
-    ) external override onlyAcceptedContracts {
+    ) external override onlyLendingMarketController {
         int256 residualGVAmount = Storage.slot().maturityBalances[_ccy][_basisMaturity];
 
         _updateBalance(_ccy, _user, _basisMaturity, -residualGVAmount);
@@ -432,7 +426,7 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         address _sender,
         address _receiver,
         int256 _amount
-    ) external override onlyAcceptedContracts {
+    ) external override onlyLendingMarketController {
         Storage.slot().balances[_ccy][_sender] -= _amount;
         Storage.slot().balances[_ccy][_receiver] += _amount;
 
@@ -451,7 +445,7 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         bytes32 _ccy,
         address _user,
         uint256 _maturity
-    ) external override onlyAcceptedContracts {
+    ) external override onlyLendingMarketController {
         uint256 maturity = _maturity == 0 ? getCurrentMaturity(_ccy) : _maturity;
         int256 fluctuation = _getBalanceFluctuationByAutoRolls(_ccy, _user, maturity);
 
@@ -481,7 +475,7 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
     function executeForcedReset(
         bytes32 _ccy,
         address _user
-    ) external override onlyAcceptedContracts {
+    ) external override onlyLendingMarketController {
         int256 removedAmount = Storage.slot().balances[_ccy][_user];
 
         if (removedAmount != 0) {
@@ -501,7 +495,12 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         uint256 _maturity,
         address _user,
         int256 _amountInFV
-    ) external override onlyAcceptedContracts returns (int256 removedAmountInFV, int256 balance) {
+    )
+        external
+        override
+        onlyLendingMarketController
+        returns (int256 removedAmountInFV, int256 balance)
+    {
         int256 _amount = calculateGVFromFV(_ccy, _maturity, _amountInFV);
         int256 removedAmount = Storage.slot().balances[_ccy][_user];
 

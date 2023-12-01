@@ -1213,19 +1213,19 @@ describe('TokenVault', () => {
     it('Fail to call addDepositAmount due to invalid caller', async () => {
       await expect(
         tokenVaultProxy.addDepositAmount(alice.address, targetCurrency, '1'),
-      ).to.be.revertedWith('OnlyAcceptedContracts');
+      ).to.be.revertedWith('OnlyAcceptedContract("LendingMarketController")');
     });
 
     it('Fail to call removeDepositAmount due to invalid caller', async () => {
       await expect(
         tokenVaultProxy.removeDepositAmount(alice.address, targetCurrency, '1'),
-      ).to.be.revertedWith('OnlyAcceptedContracts');
+      ).to.be.revertedWith('OnlyAcceptedContract("LendingMarketController")');
     });
 
     it('Fail to call executeForcedReset due to invalid caller', async () => {
       await expect(
         tokenVaultProxy.executeForcedReset(alice.address, targetCurrency),
-      ).to.be.revertedWith('OnlyAcceptedContracts');
+      ).to.be.revertedWith('OnlyAcceptedContract("LendingMarketController")');
     });
 
     it('Fail to call transferFrom due to invalid caller', async () => {
@@ -1236,7 +1236,7 @@ describe('TokenVault', () => {
           bob.address,
           '1',
         ),
-      ).to.be.revertedWith('OnlyAcceptedContracts');
+      ).to.be.revertedWith('OnlyAcceptedContract("LendingMarketController")');
     });
 
     it('Fail to call addDepositAmount due to invalid amount', async () => {
@@ -1426,7 +1426,7 @@ describe('TokenVault', () => {
           bob.address,
           1,
         ),
-      ).to.be.revertedWith('OnlyAcceptedContracts');
+      ).to.be.revertedWith('OnlyAcceptedContract("LendingMarketController")');
     });
   });
 

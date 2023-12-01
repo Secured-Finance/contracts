@@ -115,12 +115,6 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         contracts[1] = Contracts.LENDING_MARKET_CONTROLLER;
     }
 
-    // @inheritdoc MixinAddressResolver
-    function acceptedContracts() public pure override returns (bytes32[] memory contracts) {
-        contracts = new bytes32[](1);
-        contracts[0] = Contracts.LENDING_MARKET_CONTROLLER;
-    }
-
     /**
      * @notice Gets if the market is ready.
      * @param _orderBookId The order book id
@@ -559,7 +553,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         uint256 _maturity,
         uint256 _openingDate,
         uint256 _preOpeningDate
-    ) external override onlyAcceptedContracts returns (uint8 orderBookId) {
+    ) external override onlyLendingMarketController returns (uint8 orderBookId) {
         return OrderBookLogic.createOrderBook(_maturity, _openingDate, _preOpeningDate);
     }
 
@@ -569,7 +563,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         uint256 _newMaturity,
         uint256 _openingDate,
         uint256 _autoRollUnitPrice
-    ) external override onlyAcceptedContracts {
+    ) external override onlyLendingMarketController {
         OrderBookLogic.executeAutoRoll(
             _maturedOrderBookId,
             _newNearestOrderBookId,
@@ -593,7 +587,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         external
         override
         whenNotPaused
-        onlyAcceptedContracts
+        onlyLendingMarketController
         onlyMaker(_orderBookId, _user, _orderId)
     {
         OrderActionLogic.cancelOrder(_orderBookId, _user, _orderId);
@@ -620,6 +614,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     )
         external
         override
+        onlyLendingMarketController
         returns (
             uint256 activeLendOrderCount,
             uint256 activeBorrowOrderCount,
@@ -654,7 +649,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         external
         override
         whenNotPaused
-        onlyAcceptedContracts
+        onlyLendingMarketController
         ifOpened(_orderBookId)
         returns (
             FilledOrder memory filledOrder,
@@ -691,7 +686,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         address _user,
         uint256 _amount,
         uint256 _unitPrice
-    ) external override whenNotPaused onlyAcceptedContracts ifPreOrderPeriod(_orderBookId) {
+    ) external override whenNotPaused onlyLendingMarketController ifPreOrderPeriod(_orderBookId) {
         OrderActionLogic.executePreOrder(_orderBookId, _side, _user, _amount, _unitPrice);
     }
 
@@ -713,7 +708,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         external
         override
         whenNotPaused
-        onlyAcceptedContracts
+        onlyLendingMarketController
         ifOpened(_orderBookId)
         returns (
             FilledOrder memory filledOrder,
@@ -751,7 +746,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         external
         override
         whenNotPaused
-        onlyAcceptedContracts
+        onlyLendingMarketController
         ifItayosePeriod(_orderBookId)
         returns (
             uint256 openingUnitPrice,
@@ -768,7 +763,9 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @notice Updates the order fee rate
      * @param _orderFeeRate The order fee rate received by protocol
      */
-    function updateOrderFeeRate(uint256 _orderFeeRate) external override onlyAcceptedContracts {
+    function updateOrderFeeRate(
+        uint256 _orderFeeRate
+    ) external override onlyLendingMarketController {
         OrderBookLogic.updateOrderFeeRate(_orderFeeRate);
     }
 
@@ -778,21 +775,21 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      */
     function updateCircuitBreakerLimitRange(
         uint256 _cbLimitRange
-    ) external override onlyAcceptedContracts {
+    ) external override onlyLendingMarketController {
         OrderBookLogic.updateCircuitBreakerLimitRange(_cbLimitRange);
     }
 
     /**
      * @notice Pauses the lending market.
      */
-    function pause() external override onlyAcceptedContracts {
+    function pause() external override onlyLendingMarketController {
         _pause();
     }
 
     /**
      * @notice Unpauses the lending market.
      */
-    function unpause() external override onlyAcceptedContracts {
+    function unpause() external override onlyLendingMarketController {
         _unpause();
     }
 }

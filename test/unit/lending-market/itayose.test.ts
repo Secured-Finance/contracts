@@ -349,6 +349,6 @@ describe('LendingMarket - Itayose', () => {
   it('Fail to execute the Itayose call due to invalid caller', async () => {
     await expect(
       lendingMarket.executeItayoseCall(currentOrderBookId),
-    ).to.be.revertedWith('OnlyAcceptedContracts');
+    ).to.be.revertedWith('OnlyAcceptedContract("LendingMarketController")');
   });
 });

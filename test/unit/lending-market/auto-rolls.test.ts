@@ -113,6 +113,6 @@ describe('LendingMarket - Auto-rolls', () => {
         1,
         10000,
       ),
-    ).revertedWith('OnlyAcceptedContracts');
+    ).revertedWith('OnlyAcceptedContract("LendingMarketController")');
   });
 });

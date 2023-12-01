@@ -49,12 +49,6 @@ contract BeaconProxyController is
         contracts[0] = Contracts.LENDING_MARKET_CONTROLLER;
     }
 
-    // @inheritdoc MixinAddressResolver
-    function acceptedContracts() public pure override returns (bytes32[] memory contracts) {
-        contracts = new bytes32[](1);
-        contracts[0] = Contracts.LENDING_MARKET_CONTROLLER;
-    }
-
     /**
      * @notice Gets the beacon proxy address to the selected name.
      * @param beaconName The cache name of the beacon proxy
@@ -96,7 +90,7 @@ contract BeaconProxyController is
     function deployFutureValueVault()
         external
         override
-        onlyAcceptedContracts
+        onlyLendingMarketController
         returns (address futureValue)
     {
         bytes memory data = abi.encodeWithSignature("initialize(address)", address(resolver()));
@@ -114,7 +108,7 @@ contract BeaconProxyController is
         bytes32 _ccy,
         uint256 _orderFeeRate,
         uint256 _cbLimitRange
-    ) external override onlyAcceptedContracts returns (address market) {
+    ) external override onlyLendingMarketController returns (address market) {
         bytes memory data = abi.encodeWithSignature(
             "initialize(address,bytes32,uint256,uint256)",
             address(resolver()),
