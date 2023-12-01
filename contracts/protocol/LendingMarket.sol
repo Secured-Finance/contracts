@@ -620,6 +620,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     )
         external
         override
+        onlyAcceptedContracts
         returns (
             uint256 activeLendOrderCount,
             uint256 activeBorrowOrderCount,

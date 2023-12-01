@@ -481,5 +481,11 @@ describe('LendingMarket - Orders', () => {
           '125000000000000',
         );
     });
+
+    it('Fail to clean up orders due to invalid caller', async () => {
+      await expect(
+        lendingMarket.cleanUpOrders(currentOrderBookId, alice.address),
+      ).revertedWith('OnlyAcceptedContracts');
+    });
   });
 });
