@@ -335,6 +335,10 @@ contract TokenVault is
             revert InvalidCurrency();
         }
 
+        if (_tokenAddress == address(0)) {
+            revert InvalidToken();
+        }
+
         Storage.slot().tokenAddresses[_ccy] = _tokenAddress;
         if (_isCollateral) {
             Storage.slot().collateralCurrencies.add(_ccy);

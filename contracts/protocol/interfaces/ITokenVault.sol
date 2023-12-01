@@ -7,6 +7,7 @@ import {ILendingMarketController} from "../interfaces/ILendingMarketController.s
 interface ITokenVault {
     error UnregisteredCurrency();
     error InvalidCurrency();
+    error InvalidToken();
     error InvalidAmount();
     error CallerNotBaseCurrency(address caller);
     error MarketTerminated();

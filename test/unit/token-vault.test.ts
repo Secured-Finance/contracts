@@ -397,6 +397,16 @@ describe('TokenVault', () => {
         ),
       ).revertedWith('InvalidCurrency');
     });
+
+    it('Fail to register currency due to zero address', async () => {
+      await expect(
+        tokenVaultProxy.registerCurrency(
+          targetCurrency,
+          ethers.constants.AddressZero,
+          true,
+        ),
+      ).revertedWith('InvalidToken');
+    });
   });
 
   describe('Coverage', async () => {
@@ -897,9 +907,7 @@ describe('TokenVault', () => {
         debtAmount,
       });
 
-      const nonCollateralCurrency = ethers.utils.formatBytes32String(
-        `Test${currencyIdx}`,
-      );
+      const nonCollateralCurrency = ethers.utils.formatBytes32String('Dummy1');
       await tokenVaultProxy.registerCurrency(
         nonCollateralCurrency,
         mockERC20.address,
@@ -1458,12 +1466,6 @@ describe('TokenVault', () => {
     });
 
     it('Pause token vault', async () => {
-      await tokenVaultProxy.registerCurrency(
-        targetCurrency,
-        mockERC20.address,
-        true,
-      );
-
       await tokenVaultProxy.pause();
 
       await expect(
