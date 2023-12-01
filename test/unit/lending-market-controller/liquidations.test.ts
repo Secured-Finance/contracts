@@ -118,6 +118,7 @@ describe('LendingMarketController - Liquidations', () => {
     await mockTokenVault.mock.transferFrom.returns(0);
     await mockTokenVault.mock['isCovered(address)'].returns(true);
     await mockTokenVault.mock.isCovered.returns(true);
+    await mockTokenVault.mock.isCollateral.returns(true);
     await mockReserveFund.mock.isPaused.returns(true);
     await mockCurrencyController.mock[
       'convert(bytes32,bytes32,uint256)'
@@ -186,6 +187,22 @@ describe('LendingMarketController - Liquidations', () => {
       ).revertedWith('InvalidMaturity');
     });
 
+    it('Fail to execute liquidation call due to non-collateral currency selected', async () => {
+      await mockCurrencyController.mock.currencyExists.returns(false);
+      await mockTokenVault.mock.isCollateral.returns(false);
+
+      await expect(
+        liquidator.executeLiquidationCall(
+          targetCurrency,
+          maturities,
+          targetCurrency,
+          maturities[0],
+          alice.address,
+          10,
+        ),
+      ).revertedWith(`NotCollateralCurrency("${targetCurrency}")`);
+    });
+
     it('Fail to execute forced repayment due to non-owner', async () => {
       await expect(
         liquidator
@@ -212,6 +229,25 @@ describe('LendingMarketController - Liquidations', () => {
           10,
         ),
       ).revertedWith('InvalidMaturity');
+    });
+
+    it('Fail to execute forced repayment due to non-collateral currency selected', async () => {
+      await mockCurrencyController.mock.currencyExists.returns(false);
+      await mockTokenVault.mock.isCollateral.returns(false);
+
+      // Move to 1 weeks after maturity.
+      await time.increaseTo(maturities[0].add(604800).toString());
+
+      await expect(
+        liquidator.executeForcedRepayment(
+          targetCurrency,
+          maturities,
+          targetCurrency,
+          maturities[0],
+          alice.address,
+          10,
+        ),
+      ).revertedWith(`NotCollateralCurrency("${targetCurrency}")`);
     });
 
     it('Fail to execute operations for collateral due to non lending market controller', async () => {
