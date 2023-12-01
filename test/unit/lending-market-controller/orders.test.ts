@@ -132,6 +132,21 @@ describe('LendingMarketController - Orders', () => {
       ).to.be.revertedWith('InvalidCurrency');
     });
 
+    it('Fail to initialize the lending market due to execution by non-owner', async () => {
+      await expect(
+        lendingMarketControllerProxy
+          .connect(alice)
+          .initializeLendingMarket(
+            targetCurrency,
+            genesisDate,
+            INITIAL_COMPOUND_FACTOR,
+            ORDER_FEE_RATE,
+            CIRCUIT_BREAKER_LIMIT_RANGE,
+            MIN_DEBT_UNIT_PRICE,
+          ),
+      ).revertedWith('Ownable: caller is not the owner');
+    });
+
     it('Get genesisDate', async () => {
       expect(
         await lendingMarketControllerProxy.isInitializedLendingMarket(
@@ -305,6 +320,23 @@ describe('LendingMarketController - Orders', () => {
           genesisDate + 1,
         ),
       ).revertedWith('InvalidPreOpeningDate');
+    });
+
+    it('Fail to create a order book due to execution by non-owner', async () => {
+      await lendingMarketControllerProxy.initializeLendingMarket(
+        targetCurrency,
+        genesisDate,
+        INITIAL_COMPOUND_FACTOR,
+        ORDER_FEE_RATE,
+        CIRCUIT_BREAKER_LIMIT_RANGE,
+        MIN_DEBT_UNIT_PRICE,
+      );
+
+      await expect(
+        lendingMarketControllerProxy
+          .connect(alice)
+          .createOrderBook(targetCurrency, genesisDate, genesisDate + 1),
+      ).revertedWith('Ownable: caller is not the owner');
     });
   });
 
@@ -3091,13 +3123,75 @@ describe('LendingMarketController - Orders', () => {
         ).to.be.revertedWith('NotEnoughCollateral');
       });
 
+      it('Fail to create an order due to too many orders', async () => {
+        for (let i = 0; i < 20; i++) {
+          await lendingMarketControllerProxy
+            .connect(alice)
+            .executeOrder(
+              targetCurrency,
+              maturities[0],
+              Side.LEND,
+              '100000000000000000',
+              '8000',
+            );
+        }
+
+        await expect(
+          lendingMarketControllerProxy
+            .connect(alice)
+            .executeOrder(
+              targetCurrency,
+              maturities[0],
+              Side.LEND,
+              '100000000000000000',
+              '8000',
+            ),
+        ).to.be.revertedWith('TooManyActiveOrders');
+      });
+
+      it('Fail to create an order due to invalid maturity', async () => {
+        await expect(
+          lendingMarketControllerProxy
+            .connect(alice)
+            .executeOrder(
+              targetCurrency,
+              '1',
+              Side.LEND,
+              '100000000000000000',
+              '8000',
+            ),
+        ).to.be.revertedWith('InvalidMaturity');
+      });
+
+      it('Fail to create an order and deposit token due to invalid maturity', async () => {
+        await expect(
+          lendingMarketControllerProxy
+            .connect(alice)
+            .depositAndExecuteOrder(
+              targetCurrency,
+              '1',
+              Side.LEND,
+              '10000000000000000',
+              '0',
+            ),
+        ).to.be.revertedWith('InvalidMaturity');
+      });
+
+      it('Fail to cancel an order due to invalid maturity', async () => {
+        await expect(
+          lendingMarketControllerProxy
+            .connect(bob)
+            .cancelOrder(targetCurrency, '1', '1'),
+        ).to.be.revertedWith('InvalidMaturity');
+      });
+
       it('Fail to rotate lending markets due to pre-maturity', async () => {
         await expect(
           lendingMarketControllerProxy.rotateOrderBooks(targetCurrency),
         ).to.be.revertedWith('OrderBookNotMatured');
       });
 
-      it('Fail to cancel an order due to invalid user', async () => {
+      it('Fail to cancel an order due to execution by non-maker', async () => {
         await lendingMarketControllerProxy
           .connect(alice)
           .executeOrder(

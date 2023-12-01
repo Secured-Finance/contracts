@@ -592,9 +592,9 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     )
         external
         override
-        onlyMaker(_orderBookId, _user, _orderId)
         whenNotPaused
         onlyAcceptedContracts
+        onlyMaker(_orderBookId, _user, _orderId)
     {
         OrderActionLogic.cancelOrder(_orderBookId, _user, _orderId);
     }

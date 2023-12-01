@@ -107,12 +107,6 @@ contract LendingMarketController is
         contracts[4] = Contracts.TOKEN_VAULT;
     }
 
-    // @inheritdoc MixinAddressResolver
-    function acceptedContracts() public pure override returns (bytes32[] memory contracts) {
-        contracts = new bytes32[](1);
-        contracts[0] = Contracts.TOKEN_VAULT;
-    }
-
     /**
      * @notice Gets if the protocol has not been terminated.
      * @return The boolean if the protocol has not been terminated

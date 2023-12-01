@@ -98,9 +98,8 @@ contract TokenVault is
 
     // @inheritdoc MixinAddressResolver
     function acceptedContracts() public pure override returns (bytes32[] memory contracts) {
-        contracts = new bytes32[](2);
+        contracts = new bytes32[](1);
         contracts[0] = Contracts.LENDING_MARKET_CONTROLLER;
-        contracts[1] = Contracts.RESERVE_FUND;
     }
 
     receive() external payable {

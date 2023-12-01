@@ -16,11 +16,12 @@ describe('CurrencyController', () => {
   let mockPriceFeed: MockContract;
 
   let owner: SignerWithAddress;
+  let alice: SignerWithAddress;
 
   let testIdx = 0;
 
   before(async () => {
-    [owner] = await ethers.getSigners();
+    [owner, alice] = await ethers.getSigners();
 
     // Set up for the mocks
     mockPriceFeed = await deployMockContract(owner, MockV3Aggregator.abi);
@@ -40,7 +41,7 @@ describe('CurrencyController', () => {
       .then((tx) => tx.wait())
       .then(
         ({ events }) =>
-          events.find(({ event }) => event === 'ProxyCreated').args
+          events.find(({ event }) => event === 'ProxyUpdated').args
             .proxyAddress,
       );
 
@@ -50,7 +51,7 @@ describe('CurrencyController', () => {
     );
   });
 
-  describe('Initialize', async () => {
+  describe('Initialization', async () => {
     it('Add a currency except for ETH as a supported currency', async () => {
       const currency = ethers.utils.formatBytes32String('WFIL');
 
@@ -70,6 +71,11 @@ describe('CurrencyController', () => {
 
       await currencyControllerProxy.currencyExists(currency).then((exists) => {
         expect(exists).to.true;
+      });
+
+      await currencyControllerProxy.getCurrencies().then((currencies) => {
+        expect(currencies.length).to.equal(1);
+        expect(currencies[0]).to.equal(currency);
       });
 
       await currencyControllerProxy
@@ -135,6 +141,33 @@ describe('CurrencyController', () => {
       await expect(
         currencyControllerProxy.addCurrency(currency, 18, 9000, [], 0),
       ).revertedWith('InvalidPriceFeed');
+    });
+
+    it('Fail to add a currency due to execution by non-owner', async () => {
+      const currency = ethers.utils.formatBytes32String('ETH');
+
+      await expect(
+        currencyControllerProxy
+          .connect(alice)
+          .addCurrency(currency, 18, 9000, [mockPriceFeed.address], 0),
+      ).revertedWith('Ownable: caller is not the owner');
+    });
+
+    it('Fail to call initialization due to duplicate execution', async () => {
+      await expect(
+        currencyControllerProxy.initialize(owner.address),
+      ).revertedWith('Initializable: contract is already initialized');
+    });
+
+    it('Fail to call initialization due to execution by non-proxy contract', async () => {
+      const currencyController = await deployContract(
+        owner,
+        CurrencyController,
+      );
+
+      await expect(currencyController.initialize(owner.address)).revertedWith(
+        'Must be called from proxy contract',
+      );
     });
   });
 
@@ -304,19 +337,72 @@ describe('CurrencyController', () => {
       expect(haircut2).to.equal(8000);
     });
 
-    it('Fail to update a haircut due to overflow', async () => {
+    it('Fail to update the haircut due to overflow', async () => {
       await expect(
         currencyControllerProxy.updateHaircut(currency, 10001),
       ).to.be.revertedWith('InvalidHaircut');
     });
 
-    it('Fail to update a haircut due to invalid currency', async () => {
+    it('Fail to update the haircut due to invalid currency', async () => {
       await expect(
         currencyControllerProxy.updateHaircut(
           ethers.utils.formatBytes32String('TEST'),
           10001,
         ),
       ).to.be.revertedWith('InvalidCurrency');
+    });
+
+    it('Fail to update the price feed due to invalid currency', async () => {
+      await expect(
+        currencyControllerProxy.updatePriceFeed(
+          ethers.utils.formatBytes32String('TEST'),
+          1,
+          [],
+          1,
+        ),
+      ).to.be.revertedWith('InvalidCurrency');
+    });
+
+    it('Fail to remove the price feed due to invalid currency', async () => {
+      await expect(
+        currencyControllerProxy.removePriceFeed(
+          ethers.utils.formatBytes32String('TEST'),
+        ),
+      ).to.be.revertedWith('InvalidCurrency');
+    });
+
+    it('Fail to remove the currency due to execution by non-owner', async () => {
+      await expect(
+        currencyControllerProxy.connect(alice).removeCurrency(currency),
+      ).revertedWith('Ownable: caller is not the owner');
+    });
+
+    it('Fail to update the haircut due to execution by non-owner', async () => {
+      await expect(
+        currencyControllerProxy.connect(alice).updateHaircut(currency, 1),
+      ).revertedWith('Ownable: caller is not the owner');
+    });
+
+    it('Fail to update the price feed due to execution by non-owner', async () => {
+      await expect(
+        currencyControllerProxy
+          .connect(alice)
+          .updatePriceFeed(currency, 1, [], 1),
+      ).revertedWith('Ownable: caller is not the owner');
+    });
+
+    it('Fail to remove the price feed due to execution by non-owner', async () => {
+      await expect(
+        currencyControllerProxy.connect(alice).removePriceFeed(currency),
+      ).revertedWith('Ownable: caller is not the owner');
+    });
+
+    it('Fail to remove the price feed due to empty price feed', async () => {
+      await currencyControllerProxy.removePriceFeed(currency);
+
+      await expect(
+        currencyControllerProxy.removePriceFeed(currency),
+      ).to.be.revertedWith('NoPriceFeedExists');
     });
   });
 
@@ -353,6 +439,12 @@ describe('CurrencyController', () => {
       ](currency, 10000000000);
 
       expect(amount).to.equal('100');
+
+      const zeroAmount = await currencyControllerProxy[
+        'convertToBaseCurrency(bytes32,int256)'
+      ](currency, 0);
+
+      expect(zeroAmount).to.equal('0');
     });
 
     it('Get the converted amount(uint256) in the base currency', async () => {
@@ -361,6 +453,12 @@ describe('CurrencyController', () => {
       ](currency, 10000000000);
 
       expect(amount).to.equal('100');
+
+      const zeroAmount = await currencyControllerProxy[
+        'convertToBaseCurrency(bytes32,uint256)'
+      ](currency, 0);
+
+      expect(zeroAmount).to.equal('0');
     });
 
     it('Get the array of converted amounts(uint256[]) in the base currency', async () => {
@@ -370,6 +468,13 @@ describe('CurrencyController', () => {
 
       expect(amounts.length).to.equal(1);
       expect(amounts[0]).to.equal('100');
+
+      const zeroAmounts = await currencyControllerProxy[
+        'convertToBaseCurrency(bytes32,uint256[])'
+      ](currency, [0]);
+
+      expect(zeroAmounts.length).to.equal(1);
+      expect(zeroAmounts[0]).to.equal('0');
     });
 
     it('Get the converted amount(uint256) in the selected currency', async () => {
@@ -378,6 +483,12 @@ describe('CurrencyController', () => {
       ](currency, 10000000000);
 
       expect(amount).to.equal('1000000000000000000');
+
+      const zeroAmount = await currencyControllerProxy[
+        'convertFromBaseCurrency(bytes32,uint256)'
+      ](currency, 0);
+
+      expect(zeroAmount).to.equal('0');
     });
 
     it('Get the converted amount(uint256) in the selected currency', async () => {
@@ -387,15 +498,37 @@ describe('CurrencyController', () => {
 
       expect(amounts.length).to.equal(1);
       expect(amounts[0]).to.equal('1000000000000000000');
+
+      const zeroAmounts = await currencyControllerProxy[
+        'convertFromBaseCurrency(bytes32,uint256[])'
+      ](currency, [0]);
+
+      expect(zeroAmounts.length).to.equal(1);
+      expect(zeroAmounts[0]).to.equal('0');
     });
 
     it('Get the converted amount in the selected currency from another selected currency', async () => {
       const currency2 = ethers.utils.formatBytes32String(`TestCcy1`);
+      const mockPriceFeed2 = await deployMockContract(
+        owner,
+        MockV3Aggregator.abi,
+      );
+
+      const { timestamp: now } = await ethers.provider.getBlock('latest');
+      await mockPriceFeed2.mock.latestRoundData.returns(
+        0,
+        5000000000,
+        0,
+        now,
+        0,
+      );
+      await mockPriceFeed2.mock.decimals.returns(18);
+
       await currencyControllerProxy.addCurrency(
         currency2,
         18,
         9000,
-        [mockPriceFeed.address],
+        [mockPriceFeed2.address],
         86400,
       );
 
@@ -403,16 +536,43 @@ describe('CurrencyController', () => {
         'convert(bytes32,bytes32,uint256)'
       ](currency, currency2, 10000000000);
 
-      expect(amount).to.equal(10000000000);
+      expect(amount).to.equal(20000000000);
+
+      const amount2 = await currencyControllerProxy[
+        'convert(bytes32,bytes32,uint256)'
+      ](currency, currency, 10000000000);
+
+      expect(amount2).to.equal(10000000000);
+
+      const zeroAmount = await currencyControllerProxy[
+        'convert(bytes32,bytes32,uint256)'
+      ](currency, currency2, 0);
+
+      expect(zeroAmount).to.equal('0');
     });
 
     it('Get the converted amounts in the selected currency from another selected currency', async () => {
       const currency2 = ethers.utils.formatBytes32String(`TestCcy2`);
+      const mockPriceFeed2 = await deployMockContract(
+        owner,
+        MockV3Aggregator.abi,
+      );
+
+      const { timestamp: now } = await ethers.provider.getBlock('latest');
+      await mockPriceFeed2.mock.latestRoundData.returns(
+        0,
+        5000000000,
+        0,
+        now,
+        0,
+      );
+      await mockPriceFeed2.mock.decimals.returns(18);
+
       await currencyControllerProxy.addCurrency(
         currency2,
         18,
         9000,
-        [mockPriceFeed.address],
+        [mockPriceFeed2.address],
         86400,
       );
 
@@ -421,7 +581,39 @@ describe('CurrencyController', () => {
       ](currency, currency2, [10000000000]);
 
       expect(amounts.length).to.equal(1);
-      expect(amounts[0]).to.equal(10000000000);
+      expect(amounts[0]).to.equal(20000000000);
+
+      const amounts2 = await currencyControllerProxy[
+        'convert(bytes32,bytes32,uint256[])'
+      ](currency, currency, [10000000000]);
+
+      expect(amounts2.length).to.equal(1);
+      expect(amounts2[0]).to.equal(10000000000);
+
+      const zeroAmounts = await currencyControllerProxy[
+        'convert(bytes32,bytes32,uint256[])'
+      ](currency, currency2, [0]);
+
+      expect(zeroAmounts.length).to.equal(1);
+      expect(zeroAmounts[0]).to.equal('0');
+    });
+
+    it('Get the converted amounts in the selected currency from another selected currency from 0', async () => {
+      const currency3 = ethers.utils.formatBytes32String(`TestCcy3`);
+      await currencyControllerProxy.addCurrency(
+        currency3,
+        18,
+        9000,
+        [mockPriceFeed.address],
+        86400,
+      );
+
+      const zeroAmounts = await currencyControllerProxy[
+        'convert(bytes32,bytes32,uint256[])'
+      ](currency, currency3, [0]);
+
+      expect(zeroAmounts.length).to.equal(1);
+      expect(zeroAmounts[0]).to.equal(0);
     });
 
     it('Fail to get the converted amount due to stale price feed', async () => {

@@ -1,4 +1,5 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
+import { time } from '@openzeppelin/test-helpers';
 import { expect } from 'chai';
 import { MockContract } from 'ethereum-waffle';
 import { BigNumber, Contract } from 'ethers';
@@ -240,6 +241,82 @@ describe('LendingMarket - Orders', () => {
     });
   });
 
+  describe('Execute orders', async () => {
+    beforeEach(async () => {
+      const { timestamp } = await ethers.provider.getBlock('latest');
+      maturity = moment(timestamp * 1000)
+        .add(1, 'M')
+        .unix();
+      const openingDate = moment(timestamp * 1000).unix();
+
+      currentOrderBookId = await deployOrderBook(maturity, openingDate);
+    });
+
+    it('Fail to create a order due to the matured order book', async () => {
+      await time.increaseTo(maturity);
+
+      expect(await lendingMarket.isMatured(currentOrderBookId)).to.true;
+
+      await expect(
+        lendingMarketCaller.executeOrder(
+          targetCurrency,
+          currentOrderBookId,
+          Side.LEND,
+          '1',
+          '8000',
+        ),
+      ).revertedWith('MarketNotOpened');
+    });
+
+    it('Fail to unwind the position due to the matured order book', async () => {
+      await time.increaseTo(maturity);
+
+      expect(await lendingMarket.isMatured(currentOrderBookId)).to.true;
+
+      await expect(
+        lendingMarketCaller.unwindPosition(
+          targetCurrency,
+          currentOrderBookId,
+          Side.LEND,
+          '125000000000000',
+        ),
+      ).revertedWith('MarketNotOpened');
+    });
+
+    it('Fail to create an order due to invalid caller', async () => {
+      await expect(
+        lendingMarket.executeOrder(
+          currentOrderBookId,
+          Side.LEND,
+          ethers.constants.AddressZero,
+          '100000000000000',
+          '8000',
+        ),
+      ).revertedWith('OnlyAcceptedContracts');
+    });
+
+    it('Fail to cancel the order due to invalid caller', async () => {
+      await expect(
+        lendingMarket.cancelOrder(
+          currentOrderBookId,
+          ethers.constants.AddressZero,
+          1,
+        ),
+      ).revertedWith('OnlyAcceptedContracts');
+    });
+
+    it('Fail to unwind the position due to invalid caller', async () => {
+      await expect(
+        lendingMarket.unwindPosition(
+          currentOrderBookId,
+          Side.LEND,
+          ethers.constants.AddressZero,
+          '125000000000000',
+        ),
+      ).revertedWith('OnlyAcceptedContracts');
+    });
+  });
+
   describe('Execute pre-orders', async () => {
     beforeEach(async () => {
       const { timestamp } = await ethers.provider.getBlock('latest');
@@ -253,7 +330,7 @@ describe('LendingMarket - Orders', () => {
       currentOrderBookId = await deployOrderBook(maturity, openingDate);
     });
 
-    it('Fail to crete a lending pre-order due to opposite order existing', async () => {
+    it('Fail to create a lending pre-order due to opposite order existing', async () => {
       await lendingMarketCaller
         .connect(alice)
         .executePreOrder(
@@ -277,7 +354,7 @@ describe('LendingMarket - Orders', () => {
       ).to.be.revertedWith('OppositeSideOrderExists');
     });
 
-    it('Fail to crete a borrowing pre-order due to opposite order existing', async () => {
+    it('Fail to create a borrowing pre-order due to opposite order existing', async () => {
       await lendingMarketCaller
         .connect(alice)
         .executePreOrder(
@@ -299,6 +376,18 @@ describe('LendingMarket - Orders', () => {
             '8000',
           ),
       ).to.be.revertedWith('OppositeSideOrderExists');
+    });
+
+    it('Fail to create a pre-order due to invalid caller', async () => {
+      await expect(
+        lendingMarket.executePreOrder(
+          currentOrderBookId,
+          Side.LEND,
+          ethers.constants.AddressZero,
+          '100000000000000',
+          '8000',
+        ),
+      ).revertedWith('OnlyAcceptedContracts');
     });
   });
 

@@ -104,7 +104,7 @@ const deployContracts = async (owner: SignerWithAddress) => {
     .then((tx) => tx.wait())
     .then(
       ({ events }) =>
-        events.find(({ event }) => event === 'ProxyCreated').args.proxyAddress,
+        events.find(({ event }) => event === 'ProxyUpdated').args.proxyAddress,
     );
 
   const beaconProxyControllerAddress = await proxyController
@@ -112,7 +112,7 @@ const deployContracts = async (owner: SignerWithAddress) => {
     .then((tx) => tx.wait())
     .then(
       ({ events }) =>
-        events.find(({ event }) => event === 'ProxyCreated').args.proxyAddress,
+        events.find(({ event }) => event === 'ProxyUpdated').args.proxyAddress,
     );
 
   const genesisValueVaultAddress = await proxyController
@@ -120,7 +120,7 @@ const deployContracts = async (owner: SignerWithAddress) => {
     .then((tx) => tx.wait())
     .then(
       ({ events }) =>
-        events.find(({ event }) => event === 'ProxyCreated').args.proxyAddress,
+        events.find(({ event }) => event === 'ProxyUpdated').args.proxyAddress,
     );
 
   // Get the Proxy contracts

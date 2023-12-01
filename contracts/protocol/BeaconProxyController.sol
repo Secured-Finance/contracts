@@ -125,6 +125,21 @@ contract BeaconProxyController is
         market = _createProxy(BeaconContracts.LENDING_MARKET, data);
     }
 
+    /**
+     * @notice Updates admin addresses of beacon proxy contract
+     * @param newAdmin The address of new admin
+     * @param destinations The destination contract addresses
+     */
+    function changeBeaconProxyAdmins(
+        address newAdmin,
+        address[] calldata destinations
+    ) external onlyOwner {
+        for (uint256 i; i < destinations.length; i++) {
+            UpgradeabilityBeaconProxy proxy = UpgradeabilityBeaconProxy(payable(destinations[i]));
+            proxy.changeAdmin(newAdmin);
+        }
+    }
+
     function _createProxy(bytes32 beaconName, bytes memory data) internal returns (address) {
         address beaconProxyAddress = Storage.slot().registeredBeaconProxies[beaconName];
         if (beaconProxyAddress == address(0)) revert NoBeaconProxyContract();
@@ -144,7 +159,7 @@ contract BeaconProxyController is
 
             Storage.slot().registeredBeaconProxies[name] = beaconProxyAddress = address(beacon);
 
-            emit BeaconProxyCreated(name, beaconProxyAddress, newAddress);
+            emit BeaconProxyUpdated(name, beaconProxyAddress, newAddress, address(0));
         } else {
             beacon = UpgradeableBeacon(beaconProxyAddress);
             address oldAddress = beacon.implementation();

@@ -193,6 +193,20 @@ describe('LendingMarketController - Terminations', () => {
       ).to.revertedWith('AlreadyTerminated');
 
       await expect(
+        lendingMarketControllerProxy.executeRedemption(
+          targetCurrency,
+          maturities[0],
+        ),
+      ).to.revertedWith('AlreadyTerminated');
+
+      await expect(
+        lendingMarketControllerProxy.executeRepayment(
+          targetCurrency,
+          maturities[0],
+        ),
+      ).to.revertedWith('AlreadyTerminated');
+
+      await expect(
         lendingMarketControllerProxy.cancelOrder(
           targetCurrency,
           maturities[0],
@@ -213,6 +227,22 @@ describe('LendingMarketController - Terminations', () => {
           targetCurrency,
           maturities[0],
           alice.address,
+        ),
+      ).to.revertedWith('AlreadyTerminated');
+
+      await expect(
+        lendingMarketControllerProxy.executeForcedRepayment(
+          targetCurrency,
+          targetCurrency,
+          maturities[0],
+          alice.address,
+        ),
+      ).to.revertedWith('AlreadyTerminated');
+
+      await expect(
+        lendingMarketControllerProxy.updateMinDebtUnitPrice(
+          targetCurrency,
+          '1',
         ),
       ).to.revertedWith('AlreadyTerminated');
 
@@ -649,6 +679,14 @@ describe('LendingMarketController - Terminations', () => {
       ).to.revertedWith('AlreadyRedeemed');
     });
 
+    it('Fail to execute the emergency termination due to execution by non-owner', async () => {
+      await expect(
+        lendingMarketControllerProxy
+          .connect(alice)
+          .executeEmergencyTermination(),
+      ).revertedWith('Ownable: caller is not the owner');
+    });
+
     it('Fail to initialize the lending market due to the market being already initialized', async () => {
       await expect(
         lendingMarketControllerProxy.initializeLendingMarket(
@@ -662,7 +700,7 @@ describe('LendingMarketController - Terminations', () => {
       ).to.revertedWith('AlreadyInitialized');
     });
 
-    it('Fail to execute an emergency termination due to no markets terminated', async () => {
+    it('Fail to execute the emergency settlement due to no markets terminated', async () => {
       await expect(
         lendingMarketControllerProxy.connect(bob).executeEmergencySettlement(),
       ).to.revertedWith('NotTerminated');

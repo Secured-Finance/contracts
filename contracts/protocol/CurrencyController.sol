@@ -303,6 +303,8 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable, Multical
         bytes32 _ccy,
         uint256 _amount
     ) public view override returns (uint256 amount) {
+        if (_amount == 0) return 0;
+
         amount = (_amount * 10 ** Storage.slot().decimalsCaches[_ccy]).div(
             _getAggregatedLastPrice(_ccy).toUint256()
         );

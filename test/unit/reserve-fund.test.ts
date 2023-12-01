@@ -23,13 +23,14 @@ describe('ReserveFund', () => {
 
   let owner: SignerWithAddress;
   let alice: SignerWithAddress;
+  let bob: SignerWithAddress;
   let signers: SignerWithAddress[];
 
   let targetCurrency: string;
   let currencyIdx = 0;
 
   before(async () => {
-    [owner, alice, ...signers] = await ethers.getSigners();
+    [owner, alice, bob, ...signers] = await ethers.getSigners();
 
     // Set up for the mocks
     mockTokenVault = await deployMockContract(owner, TokenVault.abi);
@@ -68,7 +69,7 @@ describe('ReserveFund', () => {
       .then((tx) => tx.wait())
       .then(
         ({ events }) =>
-          events.find(({ event }) => event === 'ProxyCreated').args
+          events.find(({ event }) => event === 'ProxyUpdated').args
             .proxyAddress,
       );
 
@@ -113,6 +114,30 @@ describe('ReserveFund', () => {
     currencyIdx++;
   });
 
+  describe('Initialize', async () => {
+    it('Fail to call initialization due to duplicate execution', async () => {
+      await expect(
+        reserveFundProxy.initialize(
+          ethers.constants.AddressZero,
+          ethers.constants.AddressZero,
+          ethers.constants.AddressZero,
+        ),
+      ).revertedWith('Initializable: contract is already initialized');
+    });
+
+    it('Fail to call initialization due to execution by non-proxy contract', async () => {
+      const reserveFund = await deployContract(owner, ReserveFund);
+
+      await expect(
+        reserveFund.initialize(
+          ethers.constants.AddressZero,
+          ethers.constants.AddressZero,
+          ethers.constants.AddressZero,
+        ),
+      ).revertedWith('Must be called from proxy contract');
+    });
+  });
+
   describe('Pause', async () => {
     it('Pause and Unpause', async () => {
       expect(await reserveFundProxy.isPaused()).to.false;
@@ -125,6 +150,39 @@ describe('ReserveFund', () => {
         'Unpause',
       );
       expect(await reserveFundProxy.isPaused()).to.false;
+    });
+
+    it('Change the operator', async () => {
+      await expect(reserveFundProxy.connect(bob).pause()).to.be.revertedWith(
+        'CallerNotOperator',
+      );
+      await expect(reserveFundProxy.connect(bob).unpause()).to.be.revertedWith(
+        'CallerNotOperator',
+      );
+
+      await reserveFundProxy.addOperator(bob.address);
+      await reserveFundProxy.removeOperator(owner.address);
+
+      await expect(reserveFundProxy.connect(owner).pause()).to.be.revertedWith(
+        'CallerNotOperator',
+      );
+      await expect(
+        reserveFundProxy.connect(owner).unpause(),
+      ).to.be.revertedWith('CallerNotOperator');
+
+      await expect(reserveFundProxy.connect(bob).pause()).to.be.not.reverted;
+      await expect(reserveFundProxy.connect(bob).unpause()).to.be.not.reverted;
+    });
+
+    it('Set the role admin of the operator', async () => {
+      const role = await reserveFundProxy.OPERATOR_ROLE();
+
+      expect(await reserveFundProxy.getRoleAdmin(role)).not.to.equal(role);
+      await expect(reserveFundProxy.setRoleAdmin(role, role)).emit(
+        reserveFundProxy,
+        'RoleAdminChanged',
+      );
+      expect(await reserveFundProxy.getRoleAdmin(role)).to.equal(role);
     });
 
     it('Fail to pause due to non-operator caller', async () => {
@@ -150,11 +208,23 @@ describe('ReserveFund', () => {
         value: '10000000',
       });
     });
+
+    it('Fail to deposit token due to execution by non-owner', async () => {
+      await expect(
+        reserveFundProxy.connect(alice).deposit(targetCurrency, '10000000'),
+      ).revertedWith('Ownable: caller is not the owner');
+    });
   });
 
   describe('Withdraw', async () => {
     it('Withdraw funds', async () => {
       await reserveFundProxy.withdraw(targetCurrency, '10000000');
+    });
+
+    it('Fail to withdraw token due to execution by non-owner', async () => {
+      await expect(
+        reserveFundProxy.connect(alice).withdraw(targetCurrency, '10000000'),
+      ).revertedWith('Ownable: caller is not the owner');
     });
   });
 
@@ -188,6 +258,46 @@ describe('ReserveFund', () => {
       await expect(
         reserveFundProxy.executeTransactions(targets, values, data),
       ).to.emit(reserveFundProxy, 'TransactionsExecuted');
+    });
+
+    it('Fail to execute a transaction due to execution by non-owner', async () => {
+      const payload = mockLendingMarketController.interface.encodeFunctionData(
+        'executeEmergencySettlement',
+      );
+      await expect(
+        reserveFundProxy
+          .connect(alice)
+          .executeTransaction(ethers.constants.AddressZero, payload),
+      ).to.be.revertedWith('Ownable: caller is not the owner');
+    });
+
+    it('Fail to execute transactions due to execution by non-owner', async () => {
+      await expect(
+        reserveFundProxy.connect(alice).executeTransactions([], [], []),
+      ).to.be.revertedWith('Ownable: caller is not the owner');
+    });
+
+    it('Fail to execute transactions due to input array length mismatch: _data', async () => {
+      await expect(
+        reserveFundProxy.executeTransactions(
+          [ethers.constants.AddressZero],
+          [1],
+          [],
+        ),
+      ).to.be.revertedWith('WrongArrayLengths');
+    });
+
+    it('Fail to execute transactions due to input array length mismatch: _values', async () => {
+      const payload = mockLendingMarketController.interface.encodeFunctionData(
+        'executeEmergencySettlement',
+      );
+      await expect(
+        reserveFundProxy.executeTransactions(
+          [ethers.constants.AddressZero],
+          [],
+          [payload],
+        ),
+      ).to.be.revertedWith('WrongArrayLengths');
     });
   });
 });

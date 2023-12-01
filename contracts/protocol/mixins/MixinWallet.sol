@@ -64,29 +64,29 @@ abstract contract MixinWallet is Ownable {
 
     /**
      * @dev Deposits funds by the caller into the token vault.
-     * @param _tokenvault TokenVault contract instance
+     * @param _tokenVault TokenVault contract instance
      * @param _ccy Currency name in bytes32
      * @param _amount Amount of funds to deposit
      */
-    function _deposit(ITokenVault _tokenvault, bytes32 _ccy, uint256 _amount) internal {
-        address tokenAddress = _tokenvault.getTokenAddress(_ccy);
+    function _deposit(ITokenVault _tokenVault, bytes32 _ccy, uint256 _amount) internal {
+        address tokenAddress = _tokenVault.getTokenAddress(_ccy);
         if (!TransferHelper.isNative(tokenAddress)) {
             TransferHelper.safeTransferFrom(tokenAddress, msg.sender, address(this), _amount);
-            TransferHelper.safeApprove(tokenAddress, address(_tokenvault), _amount);
+            TransferHelper.safeApprove(tokenAddress, address(_tokenVault), _amount);
         }
-        _tokenvault.deposit{value: msg.value}(_ccy, _amount);
+        _tokenVault.deposit{value: msg.value}(_ccy, _amount);
     }
 
     /**
      * @dev Withdraws funds by the caller from the token vault.
-     * @param _tokenvault TokenVault contract instance
+     * @param _tokenVault TokenVault contract instance
      * @param _ccy Currency name in bytes32
      * @param _amount Amount of funds to deposit
      */
-    function _withdraw(ITokenVault _tokenvault, bytes32 _ccy, uint256 _amount) internal {
-        _tokenvault.withdraw(_ccy, _amount);
+    function _withdraw(ITokenVault _tokenVault, bytes32 _ccy, uint256 _amount) internal {
+        _tokenVault.withdraw(_ccy, _amount);
 
-        address tokenAddress = _tokenvault.getTokenAddress(_ccy);
+        address tokenAddress = _tokenVault.getTokenAddress(_ccy);
         if (TransferHelper.isNative(tokenAddress)) {
             TransferHelper.safeTransferETH(msg.sender, _amount);
         } else {
