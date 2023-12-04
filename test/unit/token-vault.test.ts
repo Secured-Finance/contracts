@@ -213,6 +213,7 @@ describe('TokenVault', () => {
     currencyIdx++;
 
     await mockCurrencyController.mock.currencyExists.returns(true);
+    await mockLendingMarketController.mock.isTerminated.returns(false);
   });
 
   describe('Initialize', async () => {
@@ -407,6 +408,26 @@ describe('TokenVault', () => {
         ),
       ).revertedWith('InvalidToken');
     });
+
+    it('Fail to register currency due to market termination', async () => {
+      await mockLendingMarketController.mock.isTerminated.returns(true);
+
+      await expect(
+        tokenVaultProxy.registerCurrency(
+          targetCurrency,
+          ethers.constants.AddressZero,
+          true,
+        ),
+      ).revertedWith('MarketTerminated');
+    });
+
+    it('Fail to update currency due to market termination', async () => {
+      await mockLendingMarketController.mock.isTerminated.returns(true);
+
+      await expect(
+        tokenVaultProxy.updateCurrency(targetCurrency, true),
+      ).revertedWith('MarketTerminated');
+    });
   });
 
   describe('Coverage', async () => {
@@ -420,10 +441,6 @@ describe('TokenVault', () => {
       lentAmount: 0,
       borrowedAmount: 0,
     };
-
-    before(async () => {
-      await mockLendingMarketController.mock.isTerminated.returns(false);
-    });
 
     beforeEach(async () => {
       CALCULATE_COVERAGE_INPUTS.ccy = targetCurrency;
@@ -550,7 +567,6 @@ describe('TokenVault', () => {
     });
 
     beforeEach(async () => {
-      await mockLendingMarketController.mock.isTerminated.returns(false);
       await mockLendingMarketController.mock.isRedemptionRequired.returns(
         false,
       );
@@ -1375,6 +1391,14 @@ describe('TokenVault', () => {
       )
         .to.emit(tokenVaultProxy, 'Withdraw')
         .withArgs(alice.address, targetCurrency, valueInETH);
+    });
+
+    it('Fail to call deposit from Alice due to lending market termination', async () => {
+      await mockLendingMarketController.mock.isTerminated.returns(true);
+
+      await expect(
+        tokenVaultCaller.depositFrom(alice.address, targetCurrency, '1'),
+      ).to.be.revertedWith('MarketTerminated');
     });
   });
 

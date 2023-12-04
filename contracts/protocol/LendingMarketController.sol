@@ -25,7 +25,7 @@ import {ProtocolTypes} from "./types/ProtocolTypes.sol";
 import {Proxyable} from "./utils/Proxyable.sol";
 import {LockAndMsgSender} from "./utils/LockAndMsgSender.sol";
 // storages
-import {LendingMarketControllerStorage as Storage} from "./storages/LendingMarketControllerStorage.sol";
+import {LendingMarketControllerStorage as Storage, TerminationCurrencyCache} from "./storages/LendingMarketControllerStorage.sol";
 
 /**
  * @notice Implements the module to manage separated lending market contracts per currency.
@@ -112,7 +112,7 @@ contract LendingMarketController is
      * @return The boolean if the protocol has not been terminated
      */
     function isTerminated() public view override returns (bool) {
-        return Storage.slot().marketTerminationDate > 0;
+        return Storage.slot().terminationDate > 0;
     }
 
     /**
@@ -124,29 +124,31 @@ contract LendingMarketController is
     }
 
     /**
-     * @notice Gets the date when the market terminated.
+     * @notice Gets the date at the emergency termination.
      * @return The termination date
      */
-    function getMarketTerminationDate() external view override returns (uint256) {
-        return Storage.slot().marketTerminationDate;
+    function getTerminationDate() external view override returns (uint256) {
+        return Storage.slot().terminationDate;
     }
 
     /**
-     * @notice Gets the price cached at the market termination.
+     * @notice Gets the currency information cached at the emergency termination.
      * @param _ccy Currency name in bytes32
      * @return The price cached
      */
-    function getMarketTerminationPrice(bytes32 _ccy) external view override returns (int256) {
-        return Storage.slot().marketTerminationPrices[_ccy];
+    function getTerminationCurrencyCache(
+        bytes32 _ccy
+    ) external view override returns (TerminationCurrencyCache memory) {
+        return Storage.slot().terminationCurrencyCaches[_ccy];
     }
 
     /**
-     * @notice Gets the ratio of each token in TokenVault at the market termination.
+     * @notice Gets the collateral ratio of each token in TokenVault at the emergency termination.
      * @param _ccy Currency name in bytes32
      * @return The ratio
      */
-    function getMarketTerminationRatio(bytes32 _ccy) external view override returns (uint256) {
-        return Storage.slot().marketTerminationRatios[_ccy];
+    function getTerminationCollateralRatio(bytes32 _ccy) external view override returns (uint256) {
+        return Storage.slot().terminationCollateralRatios[_ccy];
     }
 
     /**

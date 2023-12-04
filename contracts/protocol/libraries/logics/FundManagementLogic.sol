@@ -19,7 +19,7 @@ import {RoundingInt256} from "../math/RoundingInt256.sol";
 // types
 import {ProtocolTypes} from "../../types/ProtocolTypes.sol";
 // storages
-import {LendingMarketControllerStorage as Storage} from "../../storages/LendingMarketControllerStorage.sol";
+import {LendingMarketControllerStorage as Storage, TerminationCurrencyCache} from "../../storages/LendingMarketControllerStorage.sol";
 
 library FundManagementLogic {
     using EnumerableSet for EnumerableSet.Bytes32Set;
@@ -322,22 +322,23 @@ library FundManagementLogic {
         }
 
         if (redemptionAmountInBaseCurrency > 0) {
-            uint256[] memory marketTerminationRatios = new uint256[](collateralCurrencies.length);
-            uint256 marketTerminationRatioTotal;
+            uint256[] memory terminationCollateralRatios = new uint256[](
+                collateralCurrencies.length
+            );
+            uint256 terminationRatioTotal;
 
             for (uint256 i; i < collateralCurrencies.length; i++) {
                 bytes32 ccy = collateralCurrencies[i];
-                marketTerminationRatios[i] = Storage.slot().marketTerminationRatios[ccy];
-                marketTerminationRatioTotal += marketTerminationRatios[i];
+                terminationCollateralRatios[i] = Storage.slot().terminationCollateralRatios[ccy];
+                terminationRatioTotal += terminationCollateralRatios[i];
             }
 
             for (uint256 i; i < collateralCurrencies.length; i++) {
                 bytes32 ccy = collateralCurrencies[i];
                 uint256 addedAmount = _convertFromBaseCurrencyAtMarketTerminationPrice(
                     ccy,
-                    (redemptionAmountInBaseCurrency.toUint256() * marketTerminationRatios[i]).div(
-                        marketTerminationRatioTotal
-                    )
+                    (redemptionAmountInBaseCurrency.toUint256() * terminationCollateralRatios[i])
+                        .div(terminationRatioTotal)
                 );
 
                 AddressResolverLib.tokenVault().addDepositAmount(_user, ccy, addedAmount);
@@ -1047,22 +1048,16 @@ library FundManagementLogic {
         bytes32 _ccy,
         int256 _amount
     ) internal view returns (int256) {
-        uint8 decimals = AddressResolverLib.currencyController().getDecimals(_ccy);
-        return
-            (_amount * Storage.slot().marketTerminationPrices[_ccy]).div(
-                (10 ** decimals).toInt256()
-            );
+        TerminationCurrencyCache memory currency = Storage.slot().terminationCurrencyCaches[_ccy];
+        return (_amount * currency.price).div((10 ** currency.decimals).toInt256());
     }
 
     function _convertFromBaseCurrencyAtMarketTerminationPrice(
         bytes32 _ccy,
         uint256 _amount
     ) internal view returns (uint256) {
-        uint8 decimals = AddressResolverLib.currencyController().getDecimals(_ccy);
-        return
-            (_amount * 10 ** decimals).div(
-                Storage.slot().marketTerminationPrices[_ccy].toUint256()
-            );
+        TerminationCurrencyCache memory currency = Storage.slot().terminationCurrencyCaches[_ccy];
+        return (_amount * 10 ** currency.decimals).div(currency.price.toUint256());
     }
 
     function _resetFundsPerCurrency(bytes32 _ccy, address _user) internal returns (int256 amount) {
