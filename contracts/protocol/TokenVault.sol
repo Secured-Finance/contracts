@@ -58,6 +58,14 @@ contract TokenVault is
     }
 
     /**
+     * @notice Modifier to check if the protocol is active.
+     */
+    modifier ifActive() {
+        if (lendingMarketController().isTerminated()) revert MarketTerminated();
+        _;
+    }
+
+    /**
      * @notice Initializes the contract.
      * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController.
      * @param _owner The address of the contract owner
@@ -330,8 +338,14 @@ contract TokenVault is
         bytes32 _ccy,
         address _tokenAddress,
         bool _isCollateral
-    ) external override onlyOwner {
-        if (!currencyController().currencyExists(_ccy)) revert InvalidCurrency();
+    ) external override ifActive onlyOwner {
+        if (!currencyController().currencyExists(_ccy) || isRegisteredCurrency(_ccy)) {
+            revert InvalidCurrency();
+        }
+
+        if (_tokenAddress == address(0)) {
+            revert InvalidToken();
+        }
 
         Storage.slot().tokenAddresses[_ccy] = _tokenAddress;
         if (_isCollateral) {
@@ -349,7 +363,7 @@ contract TokenVault is
     function updateCurrency(
         bytes32 _ccy,
         bool _isCollateral
-    ) external override onlyOwner onlyRegisteredCurrency(_ccy) {
+    ) external override ifActive onlyOwner onlyRegisteredCurrency(_ccy) {
         if (_isCollateral) {
             Storage.slot().collateralCurrencies.add(_ccy);
         } else {
@@ -367,7 +381,7 @@ contract TokenVault is
     function deposit(
         bytes32 _ccy,
         uint256 _amount
-    ) external payable override whenNotPaused onlyRegisteredCurrency(_ccy) {
+    ) external payable override ifActive whenNotPaused onlyRegisteredCurrency(_ccy) {
         _deposit(msg.sender, _ccy, _amount);
     }
 
@@ -381,7 +395,7 @@ contract TokenVault is
         address _from,
         bytes32 _ccy,
         uint256 _amount
-    ) external payable override whenNotPaused onlyLendingMarketController {
+    ) external payable override ifActive whenNotPaused onlyLendingMarketController {
         _deposit(_from, _ccy, _amount);
     }
 
@@ -482,7 +496,6 @@ contract TokenVault is
         ) {
             revert InvalidAmount();
         }
-        if (lendingMarketController().isTerminated()) revert MarketTerminated();
 
         DepositManagementLogic.deposit(_user, _ccy, _amount);
 

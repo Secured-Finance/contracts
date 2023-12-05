@@ -213,6 +213,7 @@ describe('TokenVault', () => {
     currencyIdx++;
 
     await mockCurrencyController.mock.currencyExists.returns(true);
+    await mockLendingMarketController.mock.isTerminated.returns(false);
   });
 
   describe('Initialize', async () => {
@@ -370,7 +371,7 @@ describe('TokenVault', () => {
       ).revertedWith('Ownable: caller is not the owner');
     });
 
-    it('Fail to register currency due to invalid currency', async () => {
+    it('Fail to register currency due to nonexistent currency', async () => {
       await mockCurrencyController.mock.currencyExists.returns(false);
 
       await expect(
@@ -380,6 +381,52 @@ describe('TokenVault', () => {
           true,
         ),
       ).revertedWith('InvalidCurrency');
+    });
+
+    it('Fail to register currency due to duplicate registration', async () => {
+      await tokenVaultProxy.registerCurrency(
+        targetCurrency,
+        mockERC20.address,
+        true,
+      );
+
+      await expect(
+        tokenVaultProxy.registerCurrency(
+          targetCurrency,
+          ethers.constants.AddressZero,
+          true,
+        ),
+      ).revertedWith('InvalidCurrency');
+    });
+
+    it('Fail to register currency due to zero address', async () => {
+      await expect(
+        tokenVaultProxy.registerCurrency(
+          targetCurrency,
+          ethers.constants.AddressZero,
+          true,
+        ),
+      ).revertedWith('InvalidToken');
+    });
+
+    it('Fail to register currency due to market termination', async () => {
+      await mockLendingMarketController.mock.isTerminated.returns(true);
+
+      await expect(
+        tokenVaultProxy.registerCurrency(
+          targetCurrency,
+          ethers.constants.AddressZero,
+          true,
+        ),
+      ).revertedWith('MarketTerminated');
+    });
+
+    it('Fail to update currency due to market termination', async () => {
+      await mockLendingMarketController.mock.isTerminated.returns(true);
+
+      await expect(
+        tokenVaultProxy.updateCurrency(targetCurrency, true),
+      ).revertedWith('MarketTerminated');
     });
   });
 
@@ -394,10 +441,6 @@ describe('TokenVault', () => {
       lentAmount: 0,
       borrowedAmount: 0,
     };
-
-    before(async () => {
-      await mockLendingMarketController.mock.isTerminated.returns(false);
-    });
 
     beforeEach(async () => {
       CALCULATE_COVERAGE_INPUTS.ccy = targetCurrency;
@@ -524,7 +567,6 @@ describe('TokenVault', () => {
     });
 
     beforeEach(async () => {
-      await mockLendingMarketController.mock.isTerminated.returns(false);
       await mockLendingMarketController.mock.isRedemptionRequired.returns(
         false,
       );
@@ -881,9 +923,7 @@ describe('TokenVault', () => {
         debtAmount,
       });
 
-      const nonCollateralCurrency = ethers.utils.formatBytes32String(
-        `Test${currencyIdx}`,
-      );
+      const nonCollateralCurrency = ethers.utils.formatBytes32String('Dummy1');
       await tokenVaultProxy.registerCurrency(
         nonCollateralCurrency,
         mockERC20.address,
@@ -1352,6 +1392,14 @@ describe('TokenVault', () => {
         .to.emit(tokenVaultProxy, 'Withdraw')
         .withArgs(alice.address, targetCurrency, valueInETH);
     });
+
+    it('Fail to call deposit from Alice due to lending market termination', async () => {
+      await mockLendingMarketController.mock.isTerminated.returns(true);
+
+      await expect(
+        tokenVaultCaller.depositFrom(alice.address, targetCurrency, '1'),
+      ).to.be.revertedWith('MarketTerminated');
+    });
   });
 
   describe('Transfer', async () => {
@@ -1442,12 +1490,6 @@ describe('TokenVault', () => {
     });
 
     it('Pause token vault', async () => {
-      await tokenVaultProxy.registerCurrency(
-        targetCurrency,
-        mockERC20.address,
-        true,
-      );
-
       await tokenVaultProxy.pause();
 
       await expect(
@@ -1555,17 +1597,18 @@ describe('TokenVault', () => {
       );
 
       await tokenVaultProxy.addOperator(alice.address);
-      await tokenVaultProxy.removeOperator(owner.address);
-
-      await expect(tokenVaultProxy.connect(owner).pause()).to.be.revertedWith(
-        'CallerNotOperator',
-      );
-      await expect(tokenVaultProxy.connect(owner).unpause()).to.be.revertedWith(
-        'CallerNotOperator',
-      );
 
       await expect(tokenVaultProxy.connect(alice).pause()).to.be.not.reverted;
       await expect(tokenVaultProxy.connect(alice).unpause()).to.be.not.reverted;
+
+      await tokenVaultProxy.removeOperator(alice.address);
+
+      await expect(tokenVaultProxy.connect(alice).pause()).to.be.revertedWith(
+        'CallerNotOperator',
+      );
+      await expect(tokenVaultProxy.connect(alice).unpause()).to.be.revertedWith(
+        'CallerNotOperator',
+      );
     });
   });
 

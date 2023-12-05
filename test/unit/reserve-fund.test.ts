@@ -161,28 +161,24 @@ describe('ReserveFund', () => {
       );
 
       await reserveFundProxy.addOperator(bob.address);
-      await reserveFundProxy.removeOperator(owner.address);
-
-      await expect(reserveFundProxy.connect(owner).pause()).to.be.revertedWith(
-        'CallerNotOperator',
-      );
-      await expect(
-        reserveFundProxy.connect(owner).unpause(),
-      ).to.be.revertedWith('CallerNotOperator');
 
       await expect(reserveFundProxy.connect(bob).pause()).to.be.not.reverted;
       await expect(reserveFundProxy.connect(bob).unpause()).to.be.not.reverted;
+
+      await reserveFundProxy.removeOperator(bob.address);
+
+      await expect(reserveFundProxy.connect(bob).pause()).to.be.revertedWith(
+        'CallerNotOperator',
+      );
+      await expect(reserveFundProxy.connect(bob).unpause()).to.be.revertedWith(
+        'CallerNotOperator',
+      );
     });
 
-    it('Set the role admin of the operator', async () => {
+    it('Remove operator role from another user', async () => {
       const role = await reserveFundProxy.OPERATOR_ROLE();
-
-      expect(await reserveFundProxy.getRoleAdmin(role)).not.to.equal(role);
-      await expect(reserveFundProxy.setRoleAdmin(role, role)).emit(
-        reserveFundProxy,
-        'RoleAdminChanged',
-      );
-      expect(await reserveFundProxy.getRoleAdmin(role)).to.equal(role);
+      await reserveFundProxy.addOperator(alice.address);
+      await reserveFundProxy.revokeRole(role, alice.address);
     });
 
     it('Fail to pause due to non-operator caller', async () => {
@@ -195,6 +191,20 @@ describe('ReserveFund', () => {
       await expect(
         reserveFundProxy.connect(alice).unpause(),
       ).to.be.revertedWith('CallerNotOperator');
+    });
+
+    it('Fail to revoke role due to own role', async () => {
+      const role = await reserveFundProxy.OPERATOR_ROLE();
+      await expect(
+        reserveFundProxy.connect(alice).revokeRole(role, alice.address),
+      ).to.be.revertedWith(`NotAllowedAccess("${role}", "${alice.address}")`);
+    });
+
+    it('Fail to renounce role due to not allowed access', async () => {
+      const role = await reserveFundProxy.DEFAULT_ADMIN_ROLE();
+      await expect(
+        reserveFundProxy.connect(alice).renounceRole(role, alice.address),
+      ).to.be.revertedWith('NotAllowedAccess');
     });
   });
 

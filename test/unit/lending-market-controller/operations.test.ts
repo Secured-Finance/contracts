@@ -341,19 +341,6 @@ describe('LendingMarketController - Operations', () => {
         ).to.be.revertedWith('CallerNotOperator');
 
         await lendingMarketControllerProxy.addOperator(alice.address);
-        await lendingMarketControllerProxy.removeOperator(owner.address);
-
-        await expect(
-          lendingMarketControllerProxy
-            .connect(owner)
-            .pauseLendingMarket(targetCurrency),
-        ).to.be.revertedWith('CallerNotOperator');
-
-        await expect(
-          lendingMarketControllerProxy
-            .connect(owner)
-            .unpauseLendingMarket(targetCurrency),
-        ).to.be.revertedWith('CallerNotOperator');
 
         await expect(
           lendingMarketControllerProxy
@@ -366,6 +353,20 @@ describe('LendingMarketController - Operations', () => {
             .connect(alice)
             .unpauseLendingMarket(targetCurrency),
         ).to.be.not.reverted;
+
+        await lendingMarketControllerProxy.removeOperator(alice.address);
+
+        await expect(
+          lendingMarketControllerProxy
+            .connect(alice)
+            .pauseLendingMarket(targetCurrency),
+        ).to.be.revertedWith('CallerNotOperator');
+
+        await expect(
+          lendingMarketControllerProxy
+            .connect(alice)
+            .unpauseLendingMarket(targetCurrency),
+        ).to.be.revertedWith('CallerNotOperator');
       });
     });
 

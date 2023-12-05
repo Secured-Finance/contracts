@@ -19,7 +19,7 @@ import {RoundingInt256} from "../math/RoundingInt256.sol";
 // types
 import {ProtocolTypes} from "../../types/ProtocolTypes.sol";
 // storages
-import {LendingMarketControllerStorage as Storage, ObservationPeriodLog} from "../../storages/LendingMarketControllerStorage.sol";
+import {LendingMarketControllerStorage as Storage, TerminationCurrencyCache, ObservationPeriodLog} from "../../storages/LendingMarketControllerStorage.sol";
 
 library LendingMarketOperationLogic {
     using SafeCast for uint256;
@@ -257,7 +257,7 @@ library LendingMarketOperationLogic {
     }
 
     function executeEmergencyTermination() external {
-        Storage.slot().marketTerminationDate = block.timestamp;
+        Storage.slot().terminationDate = block.timestamp;
 
         bytes32[] memory currencies = AddressResolverLib.currencyController().getCurrencies();
         bytes32[] memory collateralCurrencies = AddressResolverLib
@@ -267,9 +267,10 @@ library LendingMarketOperationLogic {
         for (uint256 i; i < currencies.length; i++) {
             bytes32 ccy = currencies[i];
 
-            Storage.slot().marketTerminationPrices[ccy] = AddressResolverLib
-                .currencyController()
-                .getAggregatedLastPrice(ccy);
+            Storage.slot().terminationCurrencyCaches[ccy] = TerminationCurrencyCache({
+                price: AddressResolverLib.currencyController().getAggregatedLastPrice(ccy),
+                decimals: AddressResolverLib.currencyController().getDecimals(ccy)
+            });
         }
 
         for (uint256 i; i < collateralCurrencies.length; i++) {
@@ -279,7 +280,7 @@ library LendingMarketOperationLogic {
                 address(AddressResolverLib.tokenVault())
             );
 
-            Storage.slot().marketTerminationRatios[ccy] = AddressResolverLib
+            Storage.slot().terminationCollateralRatios[ccy] = AddressResolverLib
                 .currencyController()
                 .convertToBaseCurrency(ccy, balance);
         }

@@ -8,6 +8,7 @@ import {AccessControl} from "../utils/AccessControl.sol";
  */
 contract MixinAccessControl is AccessControl {
     error CallerNotOperator();
+    error NotAllowedAccess(bytes32 role, address account);
 
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
 
@@ -24,19 +25,8 @@ contract MixinAccessControl is AccessControl {
      * @param _admin The address of the admin role
      */
     function _setupInitialRoles(address _admin) internal {
-        _setupRole(DEFAULT_ADMIN_ROLE, _admin);
-        // _grantRole(PROTOCOL_ADMIN_ROLE, _admin);
+        _grantRole(DEFAULT_ADMIN_ROLE, _admin);
         _grantRole(OPERATOR_ROLE, _admin);
-    }
-
-    /**
-     * @notice Sets the role as admin of a specific role.
-     * @dev By default the admin role for all roles is `DEFAULT_ADMIN_ROLE`.
-     * @param role The role to be managed by the admin role
-     * @param adminRole The admin role
-     */
-    function setRoleAdmin(bytes32 role, bytes32 adminRole) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _setRoleAdmin(role, adminRole);
     }
 
     /**
@@ -44,7 +34,7 @@ contract MixinAccessControl is AccessControl {
      * @param admin The address of the new admin
      */
     function addOperator(address admin) external {
-        grantRole(OPERATOR_ROLE, admin);
+        super.grantRole(OPERATOR_ROLE, admin);
     }
 
     /**
@@ -53,5 +43,25 @@ contract MixinAccessControl is AccessControl {
      */
     function removeOperator(address admin) external {
         revokeRole(OPERATOR_ROLE, admin);
+    }
+
+    /**
+     * @dev Revokes `role` from `account`.
+     * @param role The role to be revoked
+     * @param account The address of the account to revoke the role from
+     */
+    function revokeRole(bytes32 role, address account) public override {
+        if (account == msg.sender) revert NotAllowedAccess(role, account);
+
+        super.revokeRole(role, account);
+    }
+
+    /**
+     * @notice Revokes `role` from the calling account. This function is disabled by overriding it with a revert.
+     * @param role The role to be revoked
+     * @param account The address of the account to revoke the role from
+     */
+    function renounceRole(bytes32 role, address account) public pure override {
+        revert NotAllowedAccess(role, account);
     }
 }

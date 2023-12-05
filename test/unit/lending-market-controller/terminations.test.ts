@@ -117,20 +117,25 @@ describe('LendingMarketController - Terminations', () => {
     it('Get the termination status', async () => {
       const [
         isTerminated,
-        marketTerminationDate,
-        marketTerminationPrice,
-        marketTerminationRatio,
+        terminationDate,
+        terminationCurrencyCache,
+        terminationCollateralRatio,
       ] = await Promise.all([
         lendingMarketControllerProxy.isTerminated(),
-        lendingMarketControllerProxy.getMarketTerminationDate(),
-        lendingMarketControllerProxy.getMarketTerminationPrice(targetCurrency),
-        lendingMarketControllerProxy.getMarketTerminationRatio(targetCurrency),
+        lendingMarketControllerProxy.getTerminationDate(),
+        lendingMarketControllerProxy.getTerminationCurrencyCache(
+          targetCurrency,
+        ),
+        lendingMarketControllerProxy.getTerminationCollateralRatio(
+          targetCurrency,
+        ),
       ]);
 
       expect(isTerminated).to.equal(false);
-      expect(marketTerminationDate).to.equal(0);
-      expect(marketTerminationPrice).to.equal(0);
-      expect(marketTerminationRatio).to.equal(0);
+      expect(terminationDate).to.equal(0);
+      expect(terminationCurrencyCache.price).to.equal(0);
+      expect(terminationCurrencyCache.decimals).to.equal(0);
+      expect(terminationCollateralRatio).to.equal(0);
     });
 
     it('Execute an emergency termination without an order', async () => {
@@ -334,22 +339,27 @@ describe('LendingMarketController - Terminations', () => {
 
       const [
         isTerminated,
-        marketTerminationDate,
-        marketTerminationPrice,
-        marketTerminationRatio,
+        terminationDate,
+        terminationCurrencyCache,
+        terminationCollateralRatio,
       ] = await Promise.all([
         lendingMarketControllerProxy.isTerminated(),
-        lendingMarketControllerProxy.getMarketTerminationDate(),
-        lendingMarketControllerProxy.getMarketTerminationPrice(targetCurrency),
-        lendingMarketControllerProxy.getMarketTerminationRatio(targetCurrency),
+        lendingMarketControllerProxy.getTerminationDate(),
+        lendingMarketControllerProxy.getTerminationCurrencyCache(
+          targetCurrency,
+        ),
+        lendingMarketControllerProxy.getTerminationCollateralRatio(
+          targetCurrency,
+        ),
       ]);
 
       const { timestamp } = await ethers.provider.getBlock(tx.blockNumber);
 
       expect(isTerminated).to.equal(true);
-      expect(marketTerminationDate).to.equal(timestamp);
-      expect(marketTerminationPrice).to.equal('1000000000000000000');
-      expect(marketTerminationRatio).to.equal('20000000000');
+      expect(terminationDate).to.equal(timestamp);
+      expect(terminationCurrencyCache.price).to.equal('1000000000000000000');
+      expect(terminationCurrencyCache.decimals).to.equal(18);
+      expect(terminationCollateralRatio).to.equal('20000000000');
     });
 
     it('Execute an emergency termination with orders of multiple markets', async () => {

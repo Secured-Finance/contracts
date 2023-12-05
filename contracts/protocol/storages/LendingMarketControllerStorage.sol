@@ -8,6 +8,11 @@ struct ObservationPeriodLog {
     uint256 totalFutureValue;
 }
 
+struct TerminationCurrencyCache {
+    int256 price;
+    uint8 decimals;
+}
+
 library LendingMarketControllerStorage {
     using EnumerableSet for EnumerableSet.Bytes32Set;
     using EnumerableSet for EnumerableSet.UintSet;
@@ -16,9 +21,9 @@ library LendingMarketControllerStorage {
 
     struct Storage {
         uint256 marketBasePeriod;
-        uint256 marketTerminationDate;
-        mapping(bytes32 ccy => int256 price) marketTerminationPrices;
-        mapping(bytes32 ccy => uint256 ratio) marketTerminationRatios;
+        uint256 terminationDate;
+        mapping(bytes32 ccy => TerminationCurrencyCache currency) terminationCurrencyCaches;
+        mapping(bytes32 ccy => uint256 ratio) terminationCollateralRatios;
         mapping(bytes32 ccy => uint8[] orderBookIds) orderBookIdLists;
         mapping(bytes32 ccy => address lendingMarket) lendingMarkets;
         mapping(bytes32 ccy => address futureValueVault) futureValueVaults;
