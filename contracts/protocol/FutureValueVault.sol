@@ -40,11 +40,23 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
     }
 
     /**
-     * @notice Gets the total supply.
+     * @notice Gets the total supply of lending orders.
+     * @dev This function returns the total supply of only orders that have been added
+     * through the `increase` of `decrease` function.
      * @param _maturity The maturity of the market
      */
-    function getTotalSupply(uint256 _maturity) external view override returns (uint256) {
-        return Storage.slot().totalSupply[_maturity];
+    function getTotalLendingSupply(uint256 _maturity) external view override returns (uint256) {
+        return Storage.slot().totalLendingSupplies[_maturity];
+    }
+
+    /**
+     * @notice Gets the total supply of borrowing orders.
+     * @dev This function returns the total supply of only orders that have been added
+     * through the `increase` of `decrease` function.
+     * @param _maturity The maturity of the market
+     */
+    function getTotalBorrowingSupply(uint256 _maturity) external view override returns (uint256) {
+        return Storage.slot().totalBorrowingSupplies[_maturity];
     }
 
     /**
@@ -89,14 +101,12 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
      * @param _user User's address
      * @param _amount The amount to add
      * @param _maturity The maturity of the market
-     * @param _isTaker The boolean if the original order is created by a taker
      */
     function increase(
         uint8 _orderBookId,
         address _user,
         uint256 _amount,
-        uint256 _maturity,
-        bool _isTaker
+        uint256 _maturity
     ) public override onlyLendingMarketController {
         if (_user == address(0)) revert UserIsZero();
         if (hasBalanceAtPastMaturity(_orderBookId, _user, _maturity))
@@ -107,8 +117,7 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
         Storage.slot().balances[_orderBookId][_user] += _amount.toInt256();
         emit Transfer(address(0), _user, _orderBookId, _maturity, _amount.toInt256());
 
-        int256 currentBalance = Storage.slot().balances[_orderBookId][_user];
-        _updateTotalSupply(_maturity, previousBalance, currentBalance, _isTaker);
+        _updateTotalSupply(_maturity, _amount.toInt256(), previousBalance);
     }
 
     /**
@@ -119,14 +128,12 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
      * @param _user User's address
      * @param _amount The amount to add
      * @param _maturity The maturity of the market
-     * @param _isTaker The boolean if the original order is created by a taker
      */
     function decrease(
         uint8 _orderBookId,
         address _user,
         uint256 _amount,
-        uint256 _maturity,
-        bool _isTaker
+        uint256 _maturity
     ) public override onlyLendingMarketController {
         if (_user == address(0)) revert UserIsZero();
         if (hasBalanceAtPastMaturity(_orderBookId, _user, _maturity))
@@ -137,8 +144,7 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
         Storage.slot().balances[_orderBookId][_user] -= _amount.toInt256();
         emit Transfer(address(0), _user, _orderBookId, _maturity, -(_amount.toInt256()));
 
-        int256 currentBalance = Storage.slot().balances[_orderBookId][_user];
-        _updateTotalSupply(_maturity, previousBalance, currentBalance, _isTaker);
+        _updateTotalSupply(_maturity, -_amount.toInt256(), previousBalance);
     }
 
     /**
@@ -208,21 +214,10 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
         }
 
         isAllRemoved =
-            Storage.slot().removedLendingSupply[maturity] == Storage.slot().totalSupply[maturity] &&
-            Storage.slot().removedBorrowingSupply[maturity] == Storage.slot().totalSupply[maturity];
-    }
-
-    /**
-     * @notice Sets initial total supply at market opening
-     * @param _maturity The maturity of the market
-     * @param _amount The amount to add
-     */
-    function setInitialTotalSupply(
-        uint256 _maturity,
-        int256 _amount
-    ) external override onlyLendingMarketController {
-        if (Storage.slot().totalSupply[_maturity] != 0) revert TotalSupplyNotZero();
-        _updateTotalSupply(_maturity, 0, _amount, true);
+            (Storage.slot().removedLendingSupply[maturity] ==
+                Storage.slot().totalLendingSupplies[maturity]) &&
+            (Storage.slot().removedBorrowingSupply[maturity] ==
+                Storage.slot().totalBorrowingSupplies[maturity]);
     }
 
     /**
@@ -273,21 +268,33 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
         balance = Storage.slot().balances[_orderBookId][_user];
     }
 
-    function _updateTotalSupply(
-        uint256 _maturity,
-        int256 _previous,
-        int256 _current,
-        bool _isTaker
-    ) private {
-        uint256 absPrevious = _previous >= 0 ? _previous.toUint256() : (-_previous).toUint256();
-        uint256 absCurrent = _current >= 0 ? _current.toUint256() : (-_current).toUint256();
-
-        // Since total supply can be calculated only by taker amount, total supply will not be increased by maker amount.
-        // However, if a maker has an offset volume when cleaning up its own orders, the total supply must be reduced.
-        if (absPrevious > absCurrent) {
-            Storage.slot().totalSupply[_maturity] -= absPrevious - absCurrent;
-        } else if (_isTaker) {
-            Storage.slot().totalSupply[_maturity] += absCurrent - absPrevious;
+    function _updateTotalSupply(uint256 _maturity, int256 _amount, int256 _balance) private {
+        if (_amount >= 0) {
+            uint256 absAmount = _amount.toUint256();
+            if (_balance >= 0) {
+                Storage.slot().totalLendingSupplies[_maturity] += absAmount;
+            } else {
+                int256 diff = _amount + _balance;
+                if (diff >= 0) {
+                    Storage.slot().totalLendingSupplies[_maturity] += diff.toUint256();
+                    Storage.slot().totalBorrowingSupplies[_maturity] -= (-_balance).toUint256();
+                } else {
+                    Storage.slot().totalBorrowingSupplies[_maturity] -= absAmount;
+                }
+            }
+        } else {
+            uint256 absAmount = (-_amount).toUint256();
+            if (_balance <= 0) {
+                Storage.slot().totalBorrowingSupplies[_maturity] += absAmount;
+            } else {
+                int256 diff = _amount + _balance;
+                if (diff <= 0) {
+                    Storage.slot().totalBorrowingSupplies[_maturity] += (-diff).toUint256();
+                    Storage.slot().totalLendingSupplies[_maturity] -= _balance.toUint256();
+                } else {
+                    Storage.slot().totalLendingSupplies[_maturity] -= absAmount;
+                }
+            }
         }
     }
 }

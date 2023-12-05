@@ -452,12 +452,8 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         if (fluctuation < 0) {
             address reserveFundAddr = address(reserveFund());
 
-            _updateTotalSupplies(_ccy, fluctuation, Storage.slot().balances[_ccy][_user]);
-            _updateTotalSupplies(
-                _ccy,
-                -fluctuation,
-                Storage.slot().balances[_ccy][reserveFundAddr]
-            );
+            _updateTotalSupply(_ccy, fluctuation, Storage.slot().balances[_ccy][_user]);
+            _updateTotalSupply(_ccy, -fluctuation, Storage.slot().balances[_ccy][reserveFundAddr]);
 
             Storage.slot().userMaturities[_ccy][_user] = maturity;
             Storage.slot().balances[_ccy][_user] += fluctuation;
@@ -574,18 +570,14 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
             totalAmount += fluctuation;
             address reserveFundAddr = address(reserveFund());
 
-            _updateTotalSupplies(
-                _ccy,
-                -fluctuation,
-                Storage.slot().balances[_ccy][reserveFundAddr]
-            );
+            _updateTotalSupply(_ccy, -fluctuation, Storage.slot().balances[_ccy][reserveFundAddr]);
 
             Storage.slot().balances[_ccy][reserveFundAddr] += -fluctuation;
 
             emit Transfer(_ccy, _user, reserveFundAddr, -fluctuation);
         }
 
-        _updateTotalSupplies(_ccy, totalAmount, balance);
+        _updateTotalSupply(_ccy, totalAmount, balance);
 
         Storage.slot().userMaturities[_ccy][_user] = _maturity;
         Storage.slot().balances[_ccy][_user] += totalAmount;
@@ -594,7 +586,7 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         emit Transfer(_ccy, address(0), _user, _amount);
     }
 
-    function _updateTotalSupplies(bytes32 _ccy, int256 _amount, int256 _balance) private {
+    function _updateTotalSupply(bytes32 _ccy, int256 _amount, int256 _balance) private {
         if (_amount >= 0) {
             uint256 absAmount = _amount.toUint256();
             if (_balance >= 0) {

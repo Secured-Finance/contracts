@@ -81,6 +81,8 @@ interface ILendingMarketController {
 
     function getOrderBookId(bytes32 _ccy, uint256 _maturity) external view returns (uint8);
 
+    function getPendingOrderAmount(bytes32 _ccy, uint256 _maturity) external view returns (uint256);
+
     function getOrderEstimation(
         GetOrderEstimationParams calldata params
     )

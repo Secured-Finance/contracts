@@ -128,6 +128,13 @@ library LendingMarketUserLogic {
             partiallyFilledOrder
         );
 
+        // Updates the pending order amount for marker's orders.
+        // Since the partially filled order is updated with `updateFundsForMaker()`,
+        // its amount is subtracted from `pendingOrderAmounts`.
+        Storage.slot().pendingOrderAmounts[_ccy][_maturity] +=
+            filledAmount -
+            partiallyFilledOrder.amount;
+
         Storage.slot().usedCurrencies[_user].add(_ccy);
 
         if (!AddressResolverLib.tokenVault().isCovered(_user)) revert NotEnoughCollateral();
@@ -193,6 +200,13 @@ library LendingMarketUserLogic {
             partiallyFilledOrder
         );
 
+        // Updates the pending order amount for marker's orders.
+        // Since the partially filled order is updated with `updateFundsForMaker()`,
+        // its amount is subtracted from `pendingOrderAmounts`.
+        Storage.slot().pendingOrderAmounts[_ccy][_maturity] +=
+            filledOrder.amount -
+            partiallyFilledOrder.amount;
+
         // When the market is the nearest market and the user has only GV, a user still has future value after unwinding.
         // For that case, the `registerCurrencyAndMaturity` function needs to be called again.
         (int256 currentFutureValue, ) = IFutureValueVault(Storage.slot().futureValueVaults[_ccy])
@@ -222,8 +236,7 @@ library LendingMarketUserLogic {
                 _side,
                 _filledAmount,
                 _filledAmountInFV,
-                _feeInFV,
-                true
+                _feeInFV
             );
 
             LendingMarketOperationLogic.updateOrderLogs(
@@ -259,8 +272,7 @@ library LendingMarketUserLogic {
                 _side,
                 partiallyFilledOrder.amount,
                 partiallyFilledOrder.futureValue,
-                0,
-                false
+                0
             );
 
             emit FundManagementLogic.OrderPartiallyFilled(

@@ -168,13 +168,13 @@ library LendingMarketOperationLogic {
                 partiallyFilledBorrowingOrder
             ) = market.executeItayoseCall(orderBookId);
 
-            if (totalOffsetAmount > 0) {
-                address futureValueVault = Storage.slot().futureValueVaults[_ccy];
-                IFutureValueVault(futureValueVault).setInitialTotalSupply(
-                    _maturity,
-                    (totalOffsetAmount * Constants.PRICE_DIGIT).div(openingUnitPrice).toInt256()
-                );
-            }
+            // Updates the pending order amount for both side orders.
+            // Since the partially filled orders are updated with `updateFundsForMaker()`,
+            // their amount is subtracted from `pendingOrderAmounts`.
+            Storage.slot().pendingOrderAmounts[_ccy][_maturity] +=
+                (totalOffsetAmount * 2) -
+                partiallyFilledLendingOrder.amount -
+                partiallyFilledBorrowingOrder.amount;
 
             // Save the openingUnitPrice as first compound factor
             // if it is a first Itayose call at the nearest market.
@@ -195,7 +195,7 @@ library LendingMarketOperationLogic {
         }
     }
 
-    function rotateOrderBooks(bytes32 _ccy) external returns (uint256 newMaturity) {
+    function rotateOrderBooks(bytes32 _ccy) external {
         if (!AddressResolverLib.currencyController().currencyExists(_ccy)) {
             revert InvalidCurrency();
         }
@@ -211,7 +211,7 @@ library LendingMarketOperationLogic {
         uint8 destinationOrderBookId = orderBookIds[1];
         uint256 destinationOrderBookMaturity = maturities[1];
 
-        newMaturity = calculateNextMaturity(
+        uint256 newMaturity = calculateNextMaturity(
             maturities[maturities.length - 1],
             Storage.slot().marketBasePeriod
         );

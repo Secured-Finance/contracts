@@ -220,6 +220,19 @@ contract LendingMarketController is
     }
 
     /**
+     * @notice Gets the total amount of pending orders that is not cleaned up yet.
+     * @param _ccy Currency name in bytes32
+     * @param _maturity The maturity of the order book
+     * @return The total amount
+     */
+    function getPendingOrderAmount(
+        bytes32 _ccy,
+        uint256 _maturity
+    ) external view override returns (uint256) {
+        return Storage.slot().pendingOrderAmounts[_ccy][_maturity];
+    }
+
+    /**
      * @notice Gets the estimated order result by the calculation of the amount to be filled when executing an order in the order books.
      * @param _params The parameters to calculate the order estimation <br>
      * - ccy: Currency name in bytes32 of the selected market <br>
@@ -756,19 +769,13 @@ contract LendingMarketController is
      * - Updates the maturity at the beginning of the order book array.
      * - Moves the beginning of the order book array to the end of it (Market rotation).
      * - Update the compound factor in this contract using the next order book unit price. (Auto-rolls)
-     * - Convert the future value held by reserve funds into the genesis value
+     * - Clean up the reserve fund contract
      *
      * @param _ccy Currency name in bytes32 of the selected order book
      */
     function rotateOrderBooks(bytes32 _ccy) external override nonReentrant ifActive {
-        uint256 newMaturity = LendingMarketOperationLogic.rotateOrderBooks(_ccy);
-
-        FundManagementLogic.convertFutureValueToGenesisValue(
-            _ccy,
-            Storage.slot().maturityOrderBookIds[_ccy][newMaturity],
-            newMaturity,
-            address(reserveFund())
-        );
+        LendingMarketOperationLogic.rotateOrderBooks(_ccy);
+        FundManagementLogic.cleanUpFunds(_ccy, address(reserveFund()));
     }
 
     /**
