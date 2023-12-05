@@ -34,6 +34,7 @@ library LendingMarketOperationLogic {
     error InvalidOpeningDate();
     error InvalidPreOpeningDate();
     error InvalidTimestamp();
+    error InvalidMinDebtUnitPrice();
     error LendingMarketNotInitialized();
     error NotEnoughOrderBooks();
 
@@ -107,6 +108,8 @@ library LendingMarketOperationLogic {
     }
 
     function updateMinDebtUnitPrice(bytes32 _ccy, uint256 _minDebtUnitPrice) public {
+        if (_minDebtUnitPrice > Constants.PRICE_DIGIT) revert InvalidMinDebtUnitPrice();
+
         Storage.slot().minDebtUnitPrices[_ccy] = _minDebtUnitPrice;
         emit MinDebtUnitPriceUpdated(_ccy, _minDebtUnitPrice);
     }

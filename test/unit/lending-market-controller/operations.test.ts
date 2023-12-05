@@ -687,6 +687,15 @@ describe('LendingMarketController - Operations', () => {
             .updateMinDebtUnitPrice(targetCurrency, 1),
         ).revertedWith('Ownable: caller is not the owner');
       });
+
+      it('Fail to update the min debt unit price due to invalid value', async () => {
+        await expect(
+          lendingMarketControllerProxy.updateMinDebtUnitPrice(
+            targetCurrency,
+            10001,
+          ),
+        ).revertedWith('InvalidMinDebtUnitPrice');
+      });
     });
 
     describe('Calculation', async () => {
