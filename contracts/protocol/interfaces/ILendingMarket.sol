@@ -9,6 +9,7 @@ interface ILendingMarket {
     error NoOrderExists();
     error CallerNotMaker();
     error MarketNotOpened();
+    error AlreadyItayosePeriod();
     error NotItayosePeriod();
     error NotPreOrderPeriod();
 
