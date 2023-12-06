@@ -287,32 +287,6 @@ describe('CurrencyController', () => {
       );
     });
 
-    it('Remove a price feed', async () => {
-      const { timestamp: now } = await ethers.provider.getBlock('latest');
-
-      // Set up for the mocks
-      const newMockPriceFeed = await deployMockContract(
-        owner,
-        MockV3Aggregator.abi,
-      );
-      await newMockPriceFeed.mock.latestRoundData.returns(0, 200, 0, now, 0);
-      await newMockPriceFeed.mock.getRoundData.returns(0, 300, 0, 1000, 0);
-      await newMockPriceFeed.mock.decimals.returns(18);
-
-      await expect(
-        currencyControllerProxy.updatePriceFeed(
-          currency,
-          18,
-          [newMockPriceFeed.address],
-          86400,
-        ),
-      ).to.emit(currencyControllerProxy, 'PriceFeedUpdated');
-
-      await expect(currencyControllerProxy.removePriceFeed(currency))
-        .to.emit(currencyControllerProxy, 'PriceFeedRemoved')
-        .withArgs(currency);
-    });
-
     it('Update multiple data using multicall', async () => {
       const currency1 = ethers.utils.formatBytes32String('CCY1');
       const currency2 = ethers.utils.formatBytes32String('CCY2');
@@ -364,14 +338,6 @@ describe('CurrencyController', () => {
       ).to.be.revertedWith('InvalidCurrency');
     });
 
-    it('Fail to remove the price feed due to invalid currency', async () => {
-      await expect(
-        currencyControllerProxy.removePriceFeed(
-          ethers.utils.formatBytes32String('TEST'),
-        ),
-      ).to.be.revertedWith('InvalidCurrency');
-    });
-
     it('Fail to remove the currency due to execution by non-owner', async () => {
       await expect(
         currencyControllerProxy.connect(alice).removeCurrency(currency),
@@ -410,20 +376,6 @@ describe('CurrencyController', () => {
           86400,
         ),
       ).to.be.revertedWith('InvalidPriceFeed');
-    });
-
-    it('Fail to remove the price feed due to execution by non-owner', async () => {
-      await expect(
-        currencyControllerProxy.connect(alice).removePriceFeed(currency),
-      ).revertedWith('Ownable: caller is not the owner');
-    });
-
-    it('Fail to remove the price feed due to empty price feed', async () => {
-      await currencyControllerProxy.removePriceFeed(currency);
-
-      await expect(
-        currencyControllerProxy.removePriceFeed(currency),
-      ).to.be.revertedWith('NoPriceFeedExists');
     });
   });
 

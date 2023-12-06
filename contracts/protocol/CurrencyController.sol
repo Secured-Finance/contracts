@@ -152,20 +152,6 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable, Multical
     }
 
     /**
-     * @notice Removes existing Chainlink price feed.
-     * @param _ccy Currency name in bytes32
-     */
-    function removePriceFeed(bytes32 _ccy) external override onlyOwner onlySupportedCurrency(_ccy) {
-        PriceFeed memory priceFeed = Storage.slot().priceFeeds[_ccy];
-
-        if (priceFeed.instances.length == 0) revert NoPriceFeedExists();
-        delete Storage.slot().priceFeeds[_ccy];
-        delete Storage.slot().decimalsCaches[_ccy];
-
-        emit PriceFeedRemoved(_ccy);
-    }
-
-    /**
      * @notice Gets the last price of the selected currency in the base currency.
      * @param _ccy Currency name in bytes32
      * @return price The last price
