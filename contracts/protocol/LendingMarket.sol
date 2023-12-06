@@ -71,6 +71,15 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     }
 
     /**
+     * @notice Modifier to check if the market is not under the Itayose period.
+     * @param _orderBookId The order book id
+     */
+    modifier ifNotItayosePeriod(uint8 _orderBookId) {
+        if (isItayosePeriod(_orderBookId)) revert AlreadyItayosePeriod();
+        _;
+    }
+
+    /**
      * @notice Modifier to check if the market is under the pre-order period.
      * @param _orderBookId The order book id
      */
@@ -589,6 +598,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         whenNotPaused
         onlyLendingMarketController
         onlyMaker(_orderBookId, _user, _orderId)
+        ifNotItayosePeriod(_orderBookId)
     {
         OrderActionLogic.cancelOrder(_orderBookId, _user, _orderId);
     }

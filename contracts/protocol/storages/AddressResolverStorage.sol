@@ -6,7 +6,7 @@ library AddressResolverStorage {
 
     struct Storage {
         mapping(bytes32 contractName => address contractAddress) addresses;
-        // Contract address list
+        bytes32[] nameCaches;
         address[] addressCaches;
     }
 

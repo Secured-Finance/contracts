@@ -2,6 +2,7 @@
 pragma solidity ^0.8.19;
 
 // dependencies
+import {Math} from "../dependencies/openzeppelin/utils/math/Math.sol";
 import {SafeCast} from "../dependencies/openzeppelin/utils/math/SafeCast.sol";
 // interfaces
 import {IGenesisValueVault} from "./interfaces/IGenesisValueVault.sol";
@@ -10,7 +11,6 @@ import {Contracts} from "./libraries/Contracts.sol";
 import {Constants} from "./libraries/Constants.sol";
 import {RoundingUint256} from "./libraries/math/RoundingUint256.sol";
 import {RoundingInt256} from "./libraries/math/RoundingInt256.sol";
-import {FullMath} from "./libraries/math/FullMath.sol";
 // mixins
 import {MixinAddressResolver} from "./mixins/MixinAddressResolver.sol";
 // utils
@@ -682,9 +682,9 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         // Note: The formula is:
         // fluctuation = currentBalance * ((currentBCF / userBCF) * (userLCF / currentLCF) - 1)
         fluctuation =
-            -FullMath
+            -Math
                 .mulDiv(
-                    FullMath.mulDiv(
+                    Math.mulDiv(
                         (-_balance).toUint256(),
                         destinationBorrowingCF,
                         autoRollLog.borrowingCompoundFactor

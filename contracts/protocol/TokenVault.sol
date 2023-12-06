@@ -490,11 +490,14 @@ contract TokenVault is
     }
 
     function _deposit(address _user, bytes32 _ccy, uint256 _amount) internal {
+        if (_amount == 0) revert AmountIsZero();
+
+        address tokenAddress = Storage.slot().tokenAddresses[_ccy];
         if (
-            _amount == 0 ||
-            (TransferHelper.isNative(Storage.slot().tokenAddresses[_ccy]) && _amount != msg.value)
+            (TransferHelper.isNative(tokenAddress) && msg.value != _amount) ||
+            (!TransferHelper.isNative(tokenAddress) && msg.value != 0)
         ) {
-            revert InvalidAmount();
+            revert InvalidAmount(_ccy, _amount, msg.value);
         }
 
         DepositManagementLogic.deposit(_user, _ccy, _amount);
@@ -503,7 +506,7 @@ contract TokenVault is
     }
 
     function _withdraw(address _user, bytes32 _ccy, uint256 _amount) internal {
-        if (_amount == 0) revert InvalidAmount();
+        if (_amount == 0) revert AmountIsZero();
         if (lendingMarketController().isRedemptionRequired(_user)) revert RedemptionIsRequired();
 
         lendingMarketController().cleanUpFunds(_ccy, _user);

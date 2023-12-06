@@ -337,6 +337,26 @@ describe('LendingMarket - Itayose', () => {
     ).to.be.revertedWith('NotPreOrderPeriod');
   });
 
+  it('Fail to cancel a pre-order due to in the Itayose period', async () => {
+    await lendingMarketCaller
+      .connect(alice)
+      .executePreOrder(
+        targetCurrency,
+        currentOrderBookId,
+        Side.BORROW,
+        '100000000000000000',
+        '8720',
+      );
+
+    await time.increaseTo(maturity - 172800);
+
+    await expect(
+      lendingMarketCaller
+        .connect(alice)
+        .cancelOrder(targetCurrency, currentOrderBookId, alice.address, '1'),
+    ).to.be.revertedWith('AlreadyItayosePeriod');
+  });
+
   it('Fail to execute the Itayose call due to not in the Itayose period', async () => {
     await expect(
       lendingMarketCaller.executeItayoseCall(
