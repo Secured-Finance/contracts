@@ -109,6 +109,8 @@ describe('TokenVault', () => {
     await mockERC20.mock.transferFrom.returns(true);
     await mockERC20.mock.transfer.returns(true);
     await mockERC20.mock.approve.returns(true);
+    await mockCurrencyController.mock.currencyExists.returns(true);
+    await mockLendingMarketController.mock.isTerminated.returns(false);
     await mockLendingMarketController.mock.cleanUpFunds.returns(0);
     await mockLendingMarketController.mock.getTotalPresentValueInBaseCurrency.returns(
       0,
@@ -1296,16 +1298,28 @@ describe('TokenVault', () => {
       ).to.be.revertedWith('NotEnoughDeposit');
     });
 
-    it('Fail to call deposit due to invalid amount', async () => {
-      await expect(tokenVaultProxy.deposit(ETH, '100')).to.be.revertedWith(
-        'InvalidAmount',
+    it('Fail to call deposit due to zero amount', async () => {
+      await expect(tokenVaultProxy.deposit(ETH, '0')).to.be.revertedWith(
+        'AmountIsZero',
       );
     });
 
-    it('Fail to call withdraw due to invalid amount', async () => {
+    it('Fail to call withdraw due to zero amount', async () => {
       await expect(tokenVaultProxy.withdraw(ETH, '0')).to.be.revertedWith(
-        'InvalidAmount',
+        'AmountIsZero',
       );
+    });
+
+    it('Fail to call deposit due to no transfer of native token', async () => {
+      await expect(tokenVaultProxy.deposit(ETH, '100')).to.be.revertedWith(
+        `InvalidAmount("${ETH}", 100, 0)`,
+      );
+    });
+
+    it('Fail to deposit token due to transfer of native token', async () => {
+      await expect(
+        tokenVaultProxy.deposit(targetCurrency, '100', { value: 1 }),
+      ).to.be.revertedWith(`InvalidAmount("${targetCurrency}", 100, 1)`);
     });
 
     it('Fail to call deposit due to lending market termination', async () => {

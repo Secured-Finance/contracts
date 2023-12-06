@@ -8,7 +8,8 @@ interface ITokenVault {
     error UnregisteredCurrency();
     error InvalidCurrency();
     error InvalidToken();
-    error InvalidAmount();
+    error InvalidAmount(bytes32 ccy, uint256 amount, uint256 msgValue);
+    error AmountIsZero();
     error CallerNotBaseCurrency(address caller);
     error MarketTerminated();
     error RedemptionIsRequired();

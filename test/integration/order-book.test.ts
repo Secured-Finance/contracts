@@ -1320,9 +1320,7 @@ describe('Integration Test: Order Book', async () => {
           await wFILToken
             .connect(alice)
             .approve(tokenVault.address, collateralAmount);
-          await tokenVault.connect(alice).deposit(hexWFIL, collateralAmount, {
-            value: collateralAmount,
-          });
+          await tokenVault.connect(alice).deposit(hexWFIL, collateralAmount);
 
           await expect(
             lendingMarketController
@@ -1399,9 +1397,7 @@ describe('Integration Test: Order Book', async () => {
           await wFILToken
             .connect(alice)
             .approve(tokenVault.address, collateralAmount);
-          await tokenVault.connect(alice).deposit(hexWFIL, collateralAmount, {
-            value: collateralAmount,
-          });
+          await tokenVault.connect(alice).deposit(hexWFIL, collateralAmount);
 
           await expect(
             lendingMarketController
@@ -1485,9 +1481,7 @@ describe('Integration Test: Order Book', async () => {
             .approve(tokenVault.address, collateralAmount.mul(3));
           await tokenVault
             .connect(alice)
-            .deposit(hexWFIL, collateralAmount.mul(3), {
-              value: collateralAmount.mul(3),
-            });
+            .deposit(hexWFIL, collateralAmount.mul(3));
 
           await expect(
             lendingMarketController
