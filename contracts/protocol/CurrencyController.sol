@@ -21,8 +21,8 @@ import {CurrencyControllerStorage as Storage, PriceFeed} from "./storages/Curren
 /**
  * @notice Implements managing of the supported currencies in the protocol.
  *
- * This contract links new currencies to Chainlink price feeds. To add a new currency to the protocol except for the base currency,
- * the owner needs to also add an existing price feed contract.
+ * This contract stores the currency settings and links the currency to the external price feeds.
+ * It uses those settings and also has the functions to change prices to other currencies.
  */
 contract CurrencyController is ICurrencyController, Ownable, Proxyable, Multicall {
     using EnumerableSet for EnumerableSet.Bytes32Set;

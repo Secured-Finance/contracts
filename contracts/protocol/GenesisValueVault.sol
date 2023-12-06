@@ -700,26 +700,26 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         bytes32 _ccy,
         uint256 _unitPrice,
         uint256 _orderFeeRate,
-        uint256 _currentMaturity
+        uint256 _duration
     ) private {
         if (_orderFeeRate > Constants.PCT_DIGIT) revert InvalidOrderFeeRate();
 
         // Save actual compound factor here due to calculating the genesis value from future value.
         // NOTE: The formula is:
         // autoRollRate = 1 / unitPrice
-        // rollFeeRate = orderFeeRate * (currentMaturity / SECONDS_IN_YEAR)
+        // rollFeeRate = orderFeeRate * (duration / SECONDS_IN_YEAR)
         // newLendingCompoundFactor = currentLendingCompoundFactor * (autoRollRate - rollFeeRate)
         // newBorrowingCompoundFactor = currentBorrowingCompoundFactor * (autoRollRate + rollFeeRate)
         uint256 denominator = (Constants.PCT_DIGIT * Constants.SECONDS_IN_YEAR * _unitPrice);
 
         Storage.slot().lendingCompoundFactors[_ccy] = (Storage.slot().lendingCompoundFactors[_ccy] *
             ((Constants.PRICE_DIGIT * Constants.PCT_DIGIT * Constants.SECONDS_IN_YEAR) -
-                (_orderFeeRate * _currentMaturity * _unitPrice))).div(denominator);
+                (_orderFeeRate * _duration * _unitPrice))).div(denominator);
 
         Storage.slot().borrowingCompoundFactors[_ccy] = (Storage.slot().borrowingCompoundFactors[
             _ccy
         ] *
             ((Constants.PRICE_DIGIT * Constants.PCT_DIGIT * Constants.SECONDS_IN_YEAR) +
-                (_orderFeeRate * _currentMaturity * _unitPrice))).div(denominator);
+                (_orderFeeRate * _duration * _unitPrice))).div(denominator);
     }
 }
