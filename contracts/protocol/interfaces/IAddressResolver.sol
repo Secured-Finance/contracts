@@ -11,4 +11,6 @@ interface IAddressResolver {
     function getAddress(bytes32 name) external view returns (address);
 
     function getAddresses() external view returns (address[] memory);
+
+    function getNames() external view returns (bytes32[] memory);
 }

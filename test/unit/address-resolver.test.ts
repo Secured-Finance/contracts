@@ -152,6 +152,36 @@ describe('AddressResolver', () => {
       expect(areAddressesImported).to.true;
     });
 
+    it('Import an addresses multiple times with different contract', async () => {
+      await expect(
+        addressResolverProxy.importAddresses(
+          [contractName1],
+          [mockContract1.address],
+        ),
+      ).emit(addressResolverProxy, 'AddressImported');
+
+      expect(
+        await addressResolverProxy['getAddress(bytes32)'](contractName1),
+      ).to.equal(mockContract1.address);
+      expect(
+        await addressResolverProxy['getAddress(bytes32)'](contractName2),
+      ).to.equal(ethers.constants.AddressZero);
+
+      await expect(
+        addressResolverProxy.importAddresses(
+          [contractName2],
+          [mockContract2.address],
+        ),
+      ).emit(addressResolverProxy, 'AddressImported');
+
+      expect(
+        await addressResolverProxy['getAddress(bytes32)'](contractName1),
+      ).to.equal(ethers.constants.AddressZero);
+      expect(
+        await addressResolverProxy['getAddress(bytes32)'](contractName2),
+      ).to.equal(mockContract2.address);
+    });
+
     it('Fail to import an addresses due to unmatched inputs', async () => {
       await expect(
         addressResolverProxy.importAddresses(
@@ -175,10 +205,12 @@ describe('AddressResolver', () => {
       const address = await addressResolverProxy['getAddress(bytes32)'](
         contractName1,
       );
-      const addresses = await addressResolverProxy['getAddresses()']();
+      const addresses = await addressResolverProxy.getAddresses();
+      const names = await addressResolverProxy.getNames();
 
       expect(address).to.equal(ethers.constants.AddressZero);
       expect(addresses.length).to.equal(0);
+      expect(names.length).to.equal(0);
     });
 
     it('Get a imported address', async () => {
@@ -205,11 +237,15 @@ describe('AddressResolver', () => {
         [mockContract1.address, mockContract2.address],
       );
 
-      const addresses = await addressResolverProxy['getAddresses()']();
+      const addresses = await addressResolverProxy.getAddresses();
+      const names = await addressResolverProxy.getNames();
 
       expect(addresses.length).to.equal(2);
       expect(addresses[0]).to.equal(mockContract1.address);
       expect(addresses[1]).to.equal(mockContract2.address);
+      expect(names.length).to.equal(2);
+      expect(names[0]).to.equal(contractName1);
+      expect(names[1]).to.equal(contractName2);
     });
 
     it('Fail to get a imported address due to non-exist contract', async () => {
