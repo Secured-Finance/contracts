@@ -210,15 +210,15 @@ library DepositManagementLogic {
         if (totalUsedCollateral == 0) {
             return totalDeposit;
         } else if (
-            totalCollateral * Constants.PRICE_DIGIT >
+            totalCollateral * Constants.PCT_DIGIT >
             totalUsedCollateral * Storage.slot().liquidationThresholdRate
         ) {
             // NOTE: The formula is:
             // maxWithdraw = totalCollateral - (totalUsedCollateral * liquidationThresholdRate)
             uint256 maxWithdraw = (totalCollateral *
-                Constants.PRICE_DIGIT -
+                Constants.PCT_DIGIT -
                 totalUsedCollateral *
-                Storage.slot().liquidationThresholdRate).div(Constants.PRICE_DIGIT);
+                Storage.slot().liquidationThresholdRate).div(Constants.PCT_DIGIT);
 
             return maxWithdraw >= totalDeposit ? totalDeposit : maxWithdraw;
         } else {
