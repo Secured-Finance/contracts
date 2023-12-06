@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity 0.8.19;
 
 import {IBeaconProxyController} from "../../protocol/interfaces/IBeaconProxyController.sol";
 import {ILendingMarket} from "../../protocol/interfaces/ILendingMarket.sol";

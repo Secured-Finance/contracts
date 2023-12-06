@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity 0.8.19;
 
 import "../../dependencies/chainlink/AggregatorV3Interface.sol";
 import "../../dependencies/openzeppelin/utils/structs/EnumerableSet.sol";

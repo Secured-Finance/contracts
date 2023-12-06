@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.19;
+pragma solidity 0.8.19;
 
 import {Ownable} from "../../protocol/utils/Ownable.sol";
 import {IMockERC20} from "./IMockERC20.sol";
