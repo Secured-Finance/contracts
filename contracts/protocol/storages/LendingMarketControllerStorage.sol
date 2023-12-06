@@ -17,7 +17,8 @@ library LendingMarketControllerStorage {
     using EnumerableSet for EnumerableSet.Bytes32Set;
     using EnumerableSet for EnumerableSet.UintSet;
 
-    bytes32 internal constant STORAGE_SLOT = keccak256("sf.storage.lendingMarketController");
+    bytes32 internal constant STORAGE_SLOT =
+        bytes32(uint256(keccak256("sf.storage.lendingMarketController")) - 1);
 
     struct Storage {
         uint256 marketBasePeriod;

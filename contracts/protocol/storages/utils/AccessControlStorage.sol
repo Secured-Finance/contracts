@@ -7,7 +7,8 @@ struct RoleData {
 }
 
 library AccessControlStorage {
-    bytes32 internal constant STORAGE_SLOT = keccak256("sf.storage.accessControl");
+    bytes32 internal constant STORAGE_SLOT =
+        bytes32(uint256(keccak256("sf.storage.accessControl")) - 1);
 
     struct Storage {
         mapping(bytes32 role => RoleData roleData) roles;

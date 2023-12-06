@@ -42,17 +42,7 @@ library DepositManagementLogic {
     }
 
     function getUsedCurrencies(address _user) public view returns (bytes32[] memory) {
-        EnumerableSet.Bytes32Set storage currencySet = Storage.slot().usedCurrencies[_user];
-
-        uint256 length = currencySet.length();
-        bytes32[] memory currencies = new bytes32[](length);
-
-        for (uint256 i; i < length; i++) {
-            bytes32 currency = currencySet.at(i);
-            currencies[i] = currency;
-        }
-
-        return currencies;
+        return Storage.slot().usedCurrencies[_user].values();
     }
 
     function getDepositAmount(address _user, bytes32 _ccy) public view returns (uint256) {

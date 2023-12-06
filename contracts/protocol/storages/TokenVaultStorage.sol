@@ -6,7 +6,8 @@ import {EnumerableSet} from "../../dependencies/openzeppelin/utils/structs/Enume
 library TokenVaultStorage {
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
-    bytes32 internal constant STORAGE_SLOT = keccak256("sf.storage.tokenVault");
+    bytes32 internal constant STORAGE_SLOT =
+        bytes32(uint256(keccak256("sf.storage.tokenVault")) - 1);
 
     struct Storage {
         // Liquidation threshold rate (in basis point)

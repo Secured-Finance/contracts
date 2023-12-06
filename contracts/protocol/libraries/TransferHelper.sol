@@ -81,7 +81,7 @@ library TransferHelper {
         );
         require(
             success && (data.length == 0 || abi.decode(data, (bool))),
-            "TransferHelper: TRANSFER_FROM_FAILED"
+            "TransferHelper: TRANSFER_FAILED"
         ); // ERC20 Transfer failed
     }
 

@@ -2,7 +2,6 @@
 pragma solidity ^0.8.19;
 
 import {ProtocolTypes} from "../types/ProtocolTypes.sol";
-import {OrderStatisticsTreeLib} from "../libraries/OrderStatisticsTreeLib.sol";
 import {OrderBookLib} from "../libraries/OrderBookLib.sol";
 
 struct ItayoseLog {
@@ -12,9 +11,8 @@ struct ItayoseLog {
 }
 
 library LendingMarketStorage {
-    using OrderStatisticsTreeLib for OrderStatisticsTreeLib.Tree;
-
-    bytes32 internal constant STORAGE_SLOT = keccak256("sf.storage.lendingMarket");
+    bytes32 internal constant STORAGE_SLOT =
+        bytes32(uint256(keccak256("sf.storage.lendingMarket")) - 1);
 
     struct Storage {
         bytes32 ccy;

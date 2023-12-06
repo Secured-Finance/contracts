@@ -358,7 +358,7 @@ library OrderActionLogic {
                 _minimumReliableAmount
             );
         } else {
-            isCircuitBreakerTriggered = conditions.orderExists;
+            isCircuitBreakerTriggered = true;
         }
 
         emit PositionUnwound(

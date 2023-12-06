@@ -231,7 +231,7 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
         int256 removedAmount = Storage.slot().balances[_orderBookId][_user];
 
         if (removedAmount != 0) {
-            Storage.slot().balances[_orderBookId][_user] -= removedAmount;
+            Storage.slot().balances[_orderBookId][_user] = 0;
             uint256 maturity = Storage.slot().balanceMaturities[_orderBookId][_user];
 
             emit Transfer(_user, address(0), _orderBookId, maturity, removedAmount);

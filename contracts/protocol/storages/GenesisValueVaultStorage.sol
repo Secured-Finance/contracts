@@ -17,7 +17,8 @@ struct AutoRollLog {
 }
 
 library GenesisValueVaultStorage {
-    bytes32 internal constant STORAGE_SLOT = keccak256("sf.storage.genesisValueVault");
+    bytes32 internal constant STORAGE_SLOT =
+        bytes32(uint256(keccak256("sf.storage.genesisValueVault")) - 1);
 
     struct Storage {
         mapping(bytes32 ccy => bool isInitialized) isInitialized;

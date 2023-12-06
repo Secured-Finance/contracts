@@ -558,7 +558,7 @@ library OrderStatisticsTreeLib {
             self.root = EMPTY;
         } else if (
             droppedValue > self.root ||
-            (droppedValue == self.root && droppedAmount >= totalNodeAmount)
+            (droppedValue == self.root && droppedAmount == totalNodeAmount)
         ) {
             // The case that the root node is dropped
             self.root = cursor;
@@ -653,7 +653,7 @@ library OrderStatisticsTreeLib {
             self.root = EMPTY;
         } else if (
             droppedValue < self.root ||
-            (droppedValue == self.root && droppedAmount >= totalNodeAmount)
+            (droppedValue == self.root && droppedAmount == totalNodeAmount)
         ) {
             // The case that the root node is dropped
             self.root = cursor;
@@ -745,7 +745,7 @@ library OrderStatisticsTreeLib {
         uint256 amount
     ) internal {
         require(amount > 0, "Insufficient amount");
-        require(value <= Constants.PRICE_DIGIT, "Insufficient value");
+        require(value <= Constants.PRICE_DIGIT, "Value too high");
         insert(self, value);
 
         addTail(self, value, orderId, user, amount);
@@ -1007,11 +1007,7 @@ library OrderStatisticsTreeLib {
     /**
      * @dev Remove the OrderItems older than or equal `orderId` from the list
      */
-    function _removeOrders(
-        Tree storage self,
-        uint256 value,
-        uint48 orderId
-    ) internal returns (uint256 amount) {
+    function _removeOrders(Tree storage self, uint256 value, uint48 orderId) internal {
         require(
             isActiveOrderId(self, value, orderId),
             "OrderStatisticsTreeLib: Order does not exist"
@@ -1019,7 +1015,6 @@ library OrderStatisticsTreeLib {
         Node storage gn = self.nodes[value];
 
         OrderItem memory order = gn.orders[orderId];
-        amount = order.amount;
         uint48 cursor = gn.head;
         uint256 removedCount = 1;
         uint256 removedAmount = gn.orders[cursor].amount;
