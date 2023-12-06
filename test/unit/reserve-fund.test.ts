@@ -265,9 +265,18 @@ describe('ReserveFund', () => {
       const values = [0, 0];
       const data = [approveData, depositData];
 
-      await expect(
-        reserveFundProxy.executeTransactions(targets, values, data),
-      ).to.emit(reserveFundProxy, 'TransactionsExecuted');
+      const tx = await reserveFundProxy.executeTransactions(
+        targets,
+        values,
+        data,
+      );
+
+      await expect(tx)
+        .to.emit(reserveFundProxy, 'TransactionExecuted')
+        .withArgs(owner.address, targets[0], values[0], data[0]);
+      await expect(tx)
+        .to.emit(reserveFundProxy, 'TransactionExecuted')
+        .withArgs(owner.address, targets[1], values[1], data[1]);
     });
 
     it('Fail to execute a transaction due to execution by non-owner', async () => {
@@ -287,6 +296,12 @@ describe('ReserveFund', () => {
       ).to.be.revertedWith('Ownable: caller is not the owner');
     });
 
+    it('Fail to execute transactions due to empty inputs', async () => {
+      await expect(
+        reserveFundProxy.executeTransactions([], [], []),
+      ).to.be.revertedWith('InvalidInputs');
+    });
+
     it('Fail to execute transactions due to input array length mismatch: _data', async () => {
       await expect(
         reserveFundProxy.executeTransactions(
@@ -294,7 +309,7 @@ describe('ReserveFund', () => {
           [1],
           [],
         ),
-      ).to.be.revertedWith('WrongArrayLengths');
+      ).to.be.revertedWith('InvalidInputs');
     });
 
     it('Fail to execute transactions due to input array length mismatch: _values', async () => {
@@ -307,7 +322,7 @@ describe('ReserveFund', () => {
           [],
           [payload],
         ),
-      ).to.be.revertedWith('WrongArrayLengths');
+      ).to.be.revertedWith('InvalidInputs');
     });
   });
 });
