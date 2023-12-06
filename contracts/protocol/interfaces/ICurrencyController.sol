@@ -14,7 +14,6 @@ interface ICurrencyController {
     error InvalidCurrency();
     error InvalidHaircut();
     error InvalidPriceFeed();
-    error InvalidPrice();
     error InvalidDecimals();
     error NoPriceFeedExists();
     error StalePriceFeed(

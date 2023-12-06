@@ -30,6 +30,8 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable, Multical
     using RoundingUint256 for uint256;
     using RoundingInt256 for int256;
 
+    uint256 public constant HEARTBEAT_BUFFER = 5 minutes;
+
     /**
      * @notice Modifier to check if the currency is supported.
      * @param _ccy Currency name in bytes32
@@ -338,7 +340,7 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable, Multical
         for (uint256 i; i < priceFeeds.instances.length; i++) {
             (, int256 price, , uint256 updatedAt, ) = priceFeeds.instances[i].latestRoundData();
 
-            if (updatedAt < block.timestamp - priceFeeds.heartbeat - 5 minutes) {
+            if (updatedAt < block.timestamp - priceFeeds.heartbeat - HEARTBEAT_BUFFER) {
                 revert StalePriceFeed(
                     address(priceFeeds.instances[i]),
                     priceFeeds.heartbeat,
@@ -366,15 +368,17 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable, Multical
     ) internal {
         AggregatorV3Interface[] memory priceFeeds = new AggregatorV3Interface[](_priceFeeds.length);
 
-        if (_priceFeeds.length == 0) revert InvalidPriceFeed();
+        if (_priceFeeds.length == 0) revert NoPriceFeedExists();
 
         for (uint256 i; i < _priceFeeds.length; i++) {
             priceFeeds[i] = AggregatorV3Interface(_priceFeeds[i]);
-            (, int256 price, , , ) = priceFeeds[i].latestRoundData();
-            if (price < 0) revert InvalidPrice();
 
             uint8 decimals = priceFeeds[i].decimals();
             if (decimals > 18) revert InvalidDecimals();
+
+            (, int256 price, , uint256 updatedAt, ) = priceFeeds[i].latestRoundData();
+            if (price < 0 || updatedAt < block.timestamp - _heartbeat - HEARTBEAT_BUFFER)
+                revert InvalidPriceFeed();
         }
 
         Storage.slot().priceFeeds[_ccy] = PriceFeed(priceFeeds, _heartbeat);

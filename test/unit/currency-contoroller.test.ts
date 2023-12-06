@@ -54,9 +54,10 @@ describe('CurrencyController', () => {
   describe('Initialization', async () => {
     it('Add a currency except for ETH as a supported currency', async () => {
       const currency = ethers.utils.formatBytes32String('WFIL');
+      const { timestamp: now } = await ethers.provider.getBlock('latest');
 
       // Set up for the mocks
-      await mockPriceFeed.mock.latestRoundData.returns(0, 100, 0, 0, 0);
+      await mockPriceFeed.mock.latestRoundData.returns(0, 100, 0, now, 0);
       await mockPriceFeed.mock.decimals.returns(18);
 
       const tx = await currencyControllerProxy.addCurrency(
@@ -114,7 +115,7 @@ describe('CurrencyController', () => {
           [mockPriceFeed.address],
           86400,
         ),
-      ).to.be.revertedWith('InvalidPrice');
+      ).to.be.revertedWith('InvalidPriceFeed');
     });
 
     it('Fail to add a currency due to the invalid decimals', async () => {
@@ -140,7 +141,7 @@ describe('CurrencyController', () => {
 
       await expect(
         currencyControllerProxy.addCurrency(currency, 18, 9000, [], 0),
-      ).revertedWith('InvalidPriceFeed');
+      ).revertedWith('NoPriceFeedExists');
     });
 
     it('Fail to add a currency due to execution by non-owner', async () => {
@@ -389,6 +390,26 @@ describe('CurrencyController', () => {
           .connect(alice)
           .updatePriceFeed(currency, 1, [], 1),
       ).revertedWith('Ownable: caller is not the owner');
+    });
+
+    it('Fail to update the price feed due to stale price feed', async () => {
+      const { timestamp: now } = await ethers.provider.getBlock('latest');
+      await mockPriceFeed.mock.latestRoundData.returns(
+        0,
+        10000000000,
+        0,
+        now - 86400 - 60 * 5,
+        0,
+      );
+
+      await expect(
+        currencyControllerProxy.updatePriceFeed(
+          currency,
+          1,
+          [mockPriceFeed.address],
+          86400,
+        ),
+      ).to.be.revertedWith('InvalidPriceFeed');
     });
 
     it('Fail to remove the price feed due to execution by non-owner', async () => {
