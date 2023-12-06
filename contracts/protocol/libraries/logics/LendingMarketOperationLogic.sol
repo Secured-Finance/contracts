@@ -28,6 +28,7 @@ library LendingMarketOperationLogic {
     using RoundingInt256 for int256;
 
     uint256 public constant OBSERVATION_PERIOD = 6 hours;
+    uint8 public constant COMPOUND_FACTOR_DECIMALS = 36;
 
     error InvalidCompoundFactor();
     error InvalidCurrency();
@@ -76,7 +77,7 @@ library LendingMarketOperationLogic {
 
         AddressResolverLib.genesisValueVault().initializeCurrencySetting(
             _ccy,
-            36,
+            COMPOUND_FACTOR_DECIMALS,
             _compoundFactor,
             calculateNextMaturity(_genesisDate, Storage.slot().marketBasePeriod)
         );

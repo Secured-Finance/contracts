@@ -9,6 +9,7 @@ import {Multicall} from "../dependencies/openzeppelin/utils/Multicall.sol";
 // interfaces
 import {ICurrencyController} from "./interfaces/ICurrencyController.sol";
 // libraries
+import {Constants} from "./libraries/Constants.sol";
 import {RoundingUint256} from "./libraries/math/RoundingUint256.sol";
 import {RoundingInt256} from "./libraries/math/RoundingInt256.sol";
 // utils
@@ -353,7 +354,7 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable, Multical
     }
 
     function _updateHaircut(bytes32 _ccy, uint256 _haircut) internal {
-        if (_haircut > 10000) revert InvalidHaircut();
+        if (_haircut > Constants.PCT_DIGIT) revert InvalidHaircut();
 
         Storage.slot().haircuts[_ccy] = _haircut;
 
