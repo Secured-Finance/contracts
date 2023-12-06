@@ -1786,21 +1786,53 @@ describe('LendingMarketController - Orders', () => {
           ),
       ).to.emit(fundManagementLogic, 'OrderFilled');
 
-      await lendingMarketControllerProxy.cleanUpFunds(
-        targetCurrency,
-        alice.address,
-      );
-
-      const { futureValue: aliceFV } =
-        await lendingMarketControllerProxy.getPosition(
+      const totalLendingSupplyBefore =
+        await futureValueVault.getTotalLendingSupply(maturities[0]);
+      const totalBorrowingSupplyBefore =
+        await futureValueVault.getTotalBorrowingSupply(maturities[0]);
+      const pendingOrderAmountBefore =
+        await lendingMarketControllerProxy.getPendingOrderAmount(
           targetCurrency,
           maturities[0],
-          alice.address,
         );
 
-      const totalFV = await futureValueVault.getTotalSupply(maturities[0]);
+      expect(totalBorrowingSupplyBefore.sub(totalLendingSupplyBefore)).to.equal(
+        calculateFutureValue('100000000000000000', '8000'),
+      );
+      expect(pendingOrderAmountBefore).to.equal('100000000000000000');
 
-      expect(aliceFV.abs()).to.equal(totalFV);
+      await lendingMarketControllerProxy.cleanUpFunds(
+        targetCurrency,
+        bob.address,
+      );
+
+      const [aliceFV, bobFV, reserveFundFV] = await Promise.all(
+        [alice, bob, mockReserveFund].map(async (user) => {
+          const { futureValue } =
+            await lendingMarketControllerProxy.getPosition(
+              targetCurrency,
+              maturities[0],
+              user.address,
+            );
+          return futureValue;
+        }),
+      );
+
+      const totalLendingSupply = await futureValueVault.getTotalLendingSupply(
+        maturities[0],
+      );
+      const totalBorrowingSupply =
+        await futureValueVault.getTotalBorrowingSupply(maturities[0]);
+      const pendingOrderAmount =
+        await lendingMarketControllerProxy.getPendingOrderAmount(
+          targetCurrency,
+          maturities[0],
+        );
+
+      expect(aliceFV.abs()).to.equal(totalBorrowingSupply);
+      expect(bobFV.add(reserveFundFV)).to.equal(totalLendingSupply);
+      expect(totalBorrowingSupply).to.equal(totalLendingSupply);
+      expect(pendingOrderAmount).to.equal('0');
 
       await expect(
         lendingMarketControllerProxy
@@ -1831,9 +1863,10 @@ describe('LendingMarketController - Orders', () => {
           maturities[0],
           carol.address,
         );
-      const totalFV2 = await futureValueVault.getTotalSupply(maturities[0]);
+      const totalBorrowingSupply2 =
+        await futureValueVault.getTotalBorrowingSupply(maturities[0]);
 
-      expect(aliceFV2.add(carolFV).abs()).to.equal(totalFV2);
+      expect(aliceFV2.add(carolFV).abs()).to.equal(totalBorrowingSupply2);
     });
 
     it('Fill lending orders including own order', async () => {
@@ -1880,9 +1913,10 @@ describe('LendingMarketController - Orders', () => {
           maturities[0],
           alice.address,
         );
-      const totalFV = await futureValueVault.getTotalSupply(maturities[0]);
+      const totalBorrowingSupply =
+        await futureValueVault.getTotalBorrowingSupply(maturities[0]);
 
-      expect(aliceFV.abs()).to.equal(totalFV);
+      expect(aliceFV.abs()).to.equal(totalBorrowingSupply);
     });
 
     it('Fill borrowing orders including own order', async () => {
@@ -1942,11 +1976,13 @@ describe('LendingMarketController - Orders', () => {
           maturities[0],
           mockReserveFund.address,
         );
-      const totalFV = await futureValueVault.getTotalSupply(maturities[0]);
+      const totalLendingSupply = await futureValueVault.getTotalLendingSupply(
+        maturities[0],
+      );
 
       expect(
         aliceFV.abs().add(reserveFundFVAfter).sub(reserveFundFVBefore),
-      ).to.equal(totalFV);
+      ).to.equal(totalLendingSupply);
     });
 
     it("Fill lending orders including another user's order for unwinding", async () => {
@@ -2004,6 +2040,21 @@ describe('LendingMarketController - Orders', () => {
           ),
       ).to.emit(fundManagementLogic, 'OrderFilled');
 
+      const totalLendingSupplyBefore =
+        await futureValueVault.getTotalLendingSupply(maturities[0]);
+      const totalBorrowingSupplyBefore =
+        await futureValueVault.getTotalBorrowingSupply(maturities[0]);
+      const pendingOrderAmountBefore =
+        await lendingMarketControllerProxy.getPendingOrderAmount(
+          targetCurrency,
+          maturities[0],
+        );
+
+      expect(totalLendingSupplyBefore.sub(totalBorrowingSupplyBefore)).to.equal(
+        calculateFutureValue('100000000000000000', '8000'),
+      );
+      expect(pendingOrderAmountBefore).to.equal('100000000000000000');
+
       await lendingMarketControllerProxy.cleanUpFunds(
         targetCurrency,
         alice.address,
@@ -2021,10 +2072,87 @@ describe('LendingMarketController - Orders', () => {
           maturities[0],
           carol.address,
         );
-      const totalFV = await futureValueVault.getTotalSupply(maturities[0]);
+      const totalLendingSupply = await futureValueVault.getTotalLendingSupply(
+        maturities[0],
+      );
+      const totalBorrowingSupply =
+        await futureValueVault.getTotalBorrowingSupply(maturities[0]);
 
       expect(aliceFV.abs()).to.equal(0);
-      expect(carolFV.abs()).to.equal(totalFV);
+      expect(carolFV.abs()).to.equal(totalBorrowingSupply);
+      expect(totalLendingSupply).to.equal(totalBorrowingSupply);
+    });
+
+    it('Fill multiple lending orders without partially filled orders', async () => {
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .executeOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '100000000000000000',
+          '8000',
+        );
+
+      await lendingMarketControllerProxy
+        .connect(bob)
+        .executeOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '50000000000000000',
+          '8000',
+        );
+
+      await expect(
+        lendingMarketControllerProxy
+          .connect(carol)
+          .executeOrder(
+            targetCurrency,
+            maturities[0],
+            Side.BORROW,
+            '150000000000000000',
+            '0',
+          ),
+      ).to.emit(fundManagementLogic, 'OrderFilled');
+
+      const totalLendingSupplyBefore =
+        await futureValueVault.getTotalLendingSupply(maturities[0]);
+      const totalBorrowingSupplyBefore =
+        await futureValueVault.getTotalBorrowingSupply(maturities[0]);
+      const pendingOrderAmountBefore =
+        await lendingMarketControllerProxy.getPendingOrderAmount(
+          targetCurrency,
+          maturities[0],
+        );
+
+      expect(totalBorrowingSupplyBefore.sub(totalLendingSupplyBefore)).to.equal(
+        calculateFutureValue('150000000000000000', '8000'),
+      );
+      expect(pendingOrderAmountBefore).to.equal('150000000000000000');
+
+      await lendingMarketControllerProxy.cleanUpFunds(
+        targetCurrency,
+        alice.address,
+      );
+      await lendingMarketControllerProxy.cleanUpFunds(
+        targetCurrency,
+        bob.address,
+      );
+
+      const totalLendingSupply = await futureValueVault.getTotalLendingSupply(
+        maturities[0],
+      );
+      const totalBorrowingSupply =
+        await futureValueVault.getTotalBorrowingSupply(maturities[0]);
+      const pendingOrderAmount =
+        await lendingMarketControllerProxy.getPendingOrderAmount(
+          targetCurrency,
+          maturities[0],
+        );
+
+      expect(totalLendingSupply).to.equal(totalBorrowingSupply);
+      expect(pendingOrderAmount).to.equal('0');
     });
 
     describe('Limit Order', async () => {

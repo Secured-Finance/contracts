@@ -29,6 +29,7 @@ library LendingMarketControllerStorage {
         mapping(bytes32 ccy => address futureValueVault) futureValueVaults;
         mapping(bytes32 ccy => uint256 unitPrice) minDebtUnitPrices;
         mapping(bytes32 ccy => uint256 genesisDate) genesisDates;
+        mapping(bytes32 ccy => mapping(uint256 maturity => uint256 amount)) pendingOrderAmounts;
         // Order book id history to get order book id from maturity
         mapping(bytes32 ccy => mapping(uint256 maturity => uint8 orderBookIds)) maturityOrderBookIds;
         // List of maturity that the user has open orders or positions

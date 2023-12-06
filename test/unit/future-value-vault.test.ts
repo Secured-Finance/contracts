@@ -135,12 +135,6 @@ describe('FutureValueVault', () => {
         futureValueVault.initialize(ethers.constants.AddressZero),
       ).revertedWith('Must be called from beacon contract');
     });
-
-    it('Fail to set the initial total supply due to execution by non-accepted contract', async () => {
-      await expect(
-        futureValueVaultProxy.setInitialTotalSupply(1, 2),
-      ).revertedWith('OnlyAcceptedContract("LendingMarketController")');
-    });
   });
 
   describe('Update balance', async () => {
@@ -155,7 +149,6 @@ describe('FutureValueVault', () => {
           alice.address,
           amount,
           maturity,
-          true,
         ),
       )
         .emit(futureValueVaultProxy, 'Transfer')
@@ -173,7 +166,6 @@ describe('FutureValueVault', () => {
           alice.address,
           amount,
           oldMaturity,
-          true,
         ),
       ).revertedWith(`PastMaturityBalanceExists("${alice.address}")`);
     });
@@ -185,7 +177,6 @@ describe('FutureValueVault', () => {
           alice.address,
           amount,
           maturity,
-          true,
         ),
       )
         .emit(futureValueVaultProxy, 'Transfer')
@@ -203,7 +194,6 @@ describe('FutureValueVault', () => {
           alice.address,
           amount,
           oldMaturity,
-          true,
         ),
       ).revertedWith(`PastMaturityBalanceExists("${alice.address}")`);
     });
@@ -215,7 +205,6 @@ describe('FutureValueVault', () => {
           alice.address,
           amount,
           maturity,
-          true,
         ),
       ).revertedWith('OnlyAcceptedContract("LendingMarketController")');
     });
@@ -227,7 +216,6 @@ describe('FutureValueVault', () => {
           alice.address,
           amount,
           maturity,
-          true,
         ),
       ).revertedWith('OnlyAcceptedContract("LendingMarketController")');
     });
@@ -239,7 +227,6 @@ describe('FutureValueVault', () => {
           ethers.constants.AddressZero,
           amount,
           maturity,
-          true,
         ),
       ).revertedWith('UserIsZero');
     });
@@ -251,7 +238,6 @@ describe('FutureValueVault', () => {
           ethers.constants.AddressZero,
           amount,
           maturity,
-          true,
         ),
       ).revertedWith('UserIsZero');
     });
@@ -268,7 +254,6 @@ describe('FutureValueVault', () => {
         alice.address,
         amount,
         maturity,
-        true,
       );
 
       await expect(
@@ -296,7 +281,6 @@ describe('FutureValueVault', () => {
         alice.address,
         amount,
         oldMaturity,
-        true,
       );
 
       await expect(
@@ -316,7 +300,6 @@ describe('FutureValueVault', () => {
         bob.address,
         amount,
         oldMaturity,
-        true,
       );
 
       await expect(
@@ -363,7 +346,6 @@ describe('FutureValueVault', () => {
         alice.address,
         amount,
         maturity,
-        true,
       );
 
       await expect(
@@ -398,7 +380,6 @@ describe('FutureValueVault', () => {
         alice.address,
         amount,
         maturity,
-        true,
       );
 
       await expect(
@@ -423,7 +404,6 @@ describe('FutureValueVault', () => {
         alice.address,
         amount,
         maturity,
-        true,
       );
 
       await expect(
@@ -441,7 +421,6 @@ describe('FutureValueVault', () => {
         alice.address,
         amount,
         maturity,
-        true,
       );
 
       await expect(

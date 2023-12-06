@@ -27,15 +27,13 @@ contract FutureValueVaultCaller {
         uint8 _orderBookId,
         address _user,
         uint256 _amount,
-        uint256 _maturity,
-        bool _isTaker
+        uint256 _maturity
     ) external {
         IFutureValueVault(futureValueVaults[_orderBookId]).increase(
             _orderBookId,
             _user,
             _amount,
-            _maturity,
-            _isTaker
+            _maturity
         );
     }
 
@@ -43,15 +41,13 @@ contract FutureValueVaultCaller {
         uint8 _orderBookId,
         address _user,
         uint256 _amount,
-        uint256 _maturity,
-        bool _isTaker
+        uint256 _maturity
     ) external {
         IFutureValueVault(futureValueVaults[_orderBookId]).decrease(
             _orderBookId,
             _user,
             _amount,
-            _maturity,
-            _isTaker
+            _maturity
         );
     }
 
