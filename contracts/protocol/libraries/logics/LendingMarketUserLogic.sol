@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity 0.8.19;
 
 // dependencies
 import {EnumerableSet} from "../../../dependencies/openzeppelin/utils/structs/EnumerableSet.sol";
@@ -118,7 +118,6 @@ library LendingMarketUserLogic {
             _side,
             filledAmount,
             filledOrder.futureValue,
-            filledOrder.unitPrice,
             feeInFV
         );
 
@@ -128,6 +127,13 @@ library LendingMarketUserLogic {
             _side == ProtocolTypes.Side.LEND ? ProtocolTypes.Side.BORROW : ProtocolTypes.Side.LEND,
             partiallyFilledOrder
         );
+
+        // Updates the pending order amount for marker's orders.
+        // Since the partially filled order is updated with `updateFundsForMaker()`,
+        // its amount is subtracted from `pendingOrderAmounts`.
+        Storage.slot().pendingOrderAmounts[_ccy][_maturity] +=
+            filledAmount -
+            partiallyFilledOrder.amount;
 
         Storage.slot().usedCurrencies[_user].add(_ccy);
 
@@ -184,7 +190,6 @@ library LendingMarketUserLogic {
             side,
             filledOrder.amount,
             filledOrder.futureValue,
-            filledOrder.unitPrice,
             feeInFV
         );
 
@@ -194,6 +199,13 @@ library LendingMarketUserLogic {
             side == ProtocolTypes.Side.LEND ? ProtocolTypes.Side.BORROW : ProtocolTypes.Side.LEND,
             partiallyFilledOrder
         );
+
+        // Updates the pending order amount for marker's orders.
+        // Since the partially filled order is updated with `updateFundsForMaker()`,
+        // its amount is subtracted from `pendingOrderAmounts`.
+        Storage.slot().pendingOrderAmounts[_ccy][_maturity] +=
+            filledOrder.amount -
+            partiallyFilledOrder.amount;
 
         // When the market is the nearest market and the user has only GV, a user still has future value after unwinding.
         // For that case, the `registerCurrencyAndMaturity` function needs to be called again.
@@ -214,7 +226,6 @@ library LendingMarketUserLogic {
         ProtocolTypes.Side _side,
         uint256 _filledAmount,
         uint256 _filledAmountInFV,
-        uint256 _filledUnitPrice,
         uint256 _feeInFV
     ) public {
         if (_filledAmountInFV != 0) {
@@ -225,14 +236,12 @@ library LendingMarketUserLogic {
                 _side,
                 _filledAmount,
                 _filledAmountInFV,
-                _feeInFV,
-                true
+                _feeInFV
             );
 
             LendingMarketOperationLogic.updateOrderLogs(
                 _ccy,
                 _maturity,
-                _filledUnitPrice,
                 _filledAmount,
                 _filledAmountInFV
             );
@@ -263,8 +272,7 @@ library LendingMarketUserLogic {
                 _side,
                 partiallyFilledOrder.amount,
                 partiallyFilledOrder.futureValue,
-                0,
-                false
+                0
             );
 
             emit FundManagementLogic.OrderPartiallyFilled(

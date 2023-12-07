@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity 0.8.19;
 
 import "../types/ProtocolTypes.sol";
 import {ItayoseLog} from "../storages/LendingMarketStorage.sol";
@@ -9,6 +9,7 @@ interface ILendingMarket {
     error NoOrderExists();
     error CallerNotMaker();
     error MarketNotOpened();
+    error AlreadyItayosePeriod();
     error NotItayosePeriod();
     error NotPreOrderPeriod();
 
@@ -40,9 +41,11 @@ interface ILendingMarket {
 
     function getMarketUnitPrice(uint8 orderBookId) external view returns (uint256);
 
-    function getLastOrderBlockNumber(uint8 orderBookId) external view returns (uint256);
+    function getLastOrderTimestamp(uint8 orderBookId) external view returns (uint48);
 
-    function getBlockUnitPriceHistory(uint8 orderBookId) external view returns (uint256[] memory);
+    function getBlockUnitPriceHistory(
+        uint8 orderBookId
+    ) external view returns (uint256[] memory unitPrices, uint48 timestamp);
 
     function getBlockUnitPriceAverage(
         uint8 orderBookId,

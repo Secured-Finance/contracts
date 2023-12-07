@@ -1,15 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity 0.8.19;
 
 interface IBeaconProxyController {
     error NoBeaconProxyContract();
     error InvalidProxyContract();
-
-    event BeaconProxyCreated(
-        bytes32 indexed id,
-        address indexed proxyAddress,
-        address indexed implementationAddress
-    );
 
     event BeaconProxyUpdated(
         bytes32 indexed id,

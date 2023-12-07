@@ -1,4 +1,5 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
+import { time } from '@openzeppelin/test-helpers';
 import { expect } from 'chai';
 import { MockContract } from 'ethereum-waffle';
 import { BigNumber, Contract } from 'ethers';
@@ -71,6 +72,25 @@ describe('LendingMarket - Orders', () => {
     });
 
     const fillOrder = async (amount: string, unitPrice: string) => {
+      // Note: In coverage tests, the `executeOrder` function fails due to the `out of gas` error.
+      // To avoid this, we estimate the gas limit and set it to double.
+      const estimations = await Promise.all([
+        lendingMarketCaller.estimateGas.executeOrder(
+          targetCurrency,
+          currentOrderBookId,
+          Side.LEND,
+          amount,
+          unitPrice,
+        ),
+        lendingMarketCaller.estimateGas.executeOrder(
+          targetCurrency,
+          currentOrderBookId,
+          Side.BORROW,
+          amount,
+          unitPrice,
+        ),
+      ]);
+
       await lendingMarketCaller
         .connect(alice)
         .executeOrder(
@@ -79,6 +99,7 @@ describe('LendingMarket - Orders', () => {
           Side.LEND,
           amount,
           unitPrice,
+          { gasLimit: estimations[0].mul(2) },
         );
 
       const tx = await lendingMarketCaller
@@ -89,9 +110,10 @@ describe('LendingMarket - Orders', () => {
           Side.BORROW,
           amount,
           unitPrice,
+          { gasLimit: estimations[1].mul(2) },
         );
 
-      return tx.blockNumber;
+      return tx;
     };
 
     const checkBlockUnitPrice = async (
@@ -108,28 +130,32 @@ describe('LendingMarket - Orders', () => {
     };
 
     const checkBlockUnitPriceHistory = async (unitPrices: string[]) => {
-      const blockUnitPriceHistory =
-        await lendingMarket.getBlockUnitPriceHistory(currentOrderBookId);
+      const history = await lendingMarket.getBlockUnitPriceHistory(
+        currentOrderBookId,
+      );
 
-      expect(blockUnitPriceHistory.length).to.equal(5);
-      expect(blockUnitPriceHistory[0]).to.equal(unitPrices[0] || '0');
-      expect(blockUnitPriceHistory[1]).to.equal(unitPrices[1] || '0');
-      expect(blockUnitPriceHistory[2]).to.equal(unitPrices[2] || '0');
-      expect(blockUnitPriceHistory[3]).to.equal(unitPrices[3] || '0');
-      expect(blockUnitPriceHistory[4]).to.equal(unitPrices[4] || '0');
+      expect(history.unitPrices.length).to.equal(5);
+      expect(history.unitPrices[0]).to.equal(unitPrices[0] || '0');
+      expect(history.unitPrices[1]).to.equal(unitPrices[1] || '0');
+      expect(history.unitPrices[2]).to.equal(unitPrices[2] || '0');
+      expect(history.unitPrices[3]).to.equal(unitPrices[3] || '0');
+      expect(history.unitPrices[4]).to.equal(unitPrices[4] || '0');
     };
 
     it('Check with a single order', async () => {
-      const blockNumber = await fillOrder('100000000000000', '8000');
+      const tx = await fillOrder('100000000000000', '8000');
 
       await checkBlockUnitPrice('8000', '8000');
       await checkBlockUnitPriceHistory(['8000']);
 
-      const lastOrderBlockNumber = await lendingMarket.getLastOrderBlockNumber(
+      const lastOrderTimestamp = await lendingMarket.getLastOrderTimestamp(
         currentOrderBookId,
       );
 
-      expect(blockNumber).to.equal(lastOrderBlockNumber);
+      await tx.wait();
+      const { timestamp } = await ethers.provider.getBlock(tx.blockNumber);
+
+      expect(timestamp).to.equal(lastOrderTimestamp);
     });
 
     it('Check with multiple orders in the same block', async () => {
@@ -235,6 +261,82 @@ describe('LendingMarket - Orders', () => {
     });
   });
 
+  describe('Execute orders', async () => {
+    beforeEach(async () => {
+      const { timestamp } = await ethers.provider.getBlock('latest');
+      maturity = moment(timestamp * 1000)
+        .add(1, 'M')
+        .unix();
+      const openingDate = moment(timestamp * 1000).unix();
+
+      currentOrderBookId = await deployOrderBook(maturity, openingDate);
+    });
+
+    it('Fail to create a order due to the matured order book', async () => {
+      await time.increaseTo(maturity);
+
+      expect(await lendingMarket.isMatured(currentOrderBookId)).to.true;
+
+      await expect(
+        lendingMarketCaller.executeOrder(
+          targetCurrency,
+          currentOrderBookId,
+          Side.LEND,
+          '1',
+          '8000',
+        ),
+      ).revertedWith('MarketNotOpened');
+    });
+
+    it('Fail to unwind the position due to the matured order book', async () => {
+      await time.increaseTo(maturity);
+
+      expect(await lendingMarket.isMatured(currentOrderBookId)).to.true;
+
+      await expect(
+        lendingMarketCaller.unwindPosition(
+          targetCurrency,
+          currentOrderBookId,
+          Side.LEND,
+          '125000000000000',
+        ),
+      ).revertedWith('MarketNotOpened');
+    });
+
+    it('Fail to create an order due to invalid caller', async () => {
+      await expect(
+        lendingMarket.executeOrder(
+          currentOrderBookId,
+          Side.LEND,
+          ethers.constants.AddressZero,
+          '100000000000000',
+          '8000',
+        ),
+      ).revertedWith('OnlyAcceptedContract("LendingMarketController")');
+    });
+
+    it('Fail to cancel the order due to invalid caller', async () => {
+      await expect(
+        lendingMarket.cancelOrder(
+          currentOrderBookId,
+          ethers.constants.AddressZero,
+          1,
+        ),
+      ).revertedWith('OnlyAcceptedContract("LendingMarketController")');
+    });
+
+    it('Fail to unwind the position due to invalid caller', async () => {
+      await expect(
+        lendingMarket.unwindPosition(
+          currentOrderBookId,
+          Side.LEND,
+          ethers.constants.AddressZero,
+          '125000000000000',
+        ),
+      ).revertedWith('OnlyAcceptedContract("LendingMarketController")');
+    });
+  });
+
   describe('Execute pre-orders', async () => {
     beforeEach(async () => {
       const { timestamp } = await ethers.provider.getBlock('latest');
@@ -248,7 +350,7 @@ describe('LendingMarket - Orders', () => {
       currentOrderBookId = await deployOrderBook(maturity, openingDate);
     });
 
-    it('Fail to crete a lending pre-order due to opposite order existing', async () => {
+    it('Fail to create a lending pre-order due to opposite order existing', async () => {
       await lendingMarketCaller
         .connect(alice)
         .executePreOrder(
@@ -272,7 +374,7 @@ describe('LendingMarket - Orders', () => {
       ).to.be.revertedWith('OppositeSideOrderExists');
     });
 
-    it('Fail to crete a borrowing pre-order due to opposite order existing', async () => {
+    it('Fail to create a borrowing pre-order due to opposite order existing', async () => {
       await lendingMarketCaller
         .connect(alice)
         .executePreOrder(
@@ -294,6 +396,18 @@ describe('LendingMarket - Orders', () => {
             '8000',
           ),
       ).to.be.revertedWith('OppositeSideOrderExists');
+    });
+
+    it('Fail to create a pre-order due to invalid caller', async () => {
+      await expect(
+        lendingMarket.executePreOrder(
+          currentOrderBookId,
+          Side.LEND,
+          ethers.constants.AddressZero,
+          '100000000000000',
+          '8000',
+        ),
+      ).revertedWith('OnlyAcceptedContract("LendingMarketController")');
     });
   });
 
@@ -386,6 +500,12 @@ describe('LendingMarket - Orders', () => {
           '100000000000000',
           '125000000000000',
         );
+    });
+
+    it('Fail to clean up orders due to invalid caller', async () => {
+      await expect(
+        lendingMarket.cleanUpOrders(currentOrderBookId, alice.address),
+      ).revertedWith('OnlyAcceptedContract("LendingMarketController")');
     });
   });
 });

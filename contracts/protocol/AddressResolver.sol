@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity 0.8.19;
 
 import {IAddressResolver} from "./interfaces/IAddressResolver.sol";
 import {Ownable} from "./utils/Ownable.sol";
@@ -37,6 +37,13 @@ contract AddressResolver is IAddressResolver, Ownable, Proxyable {
     ) public onlyOwner {
         if (_names.length != _addresses.length) revert UnmatchedInputs();
 
+        bytes32[] memory currentNames = Storage.slot().nameCaches;
+
+        for (uint256 i; i < currentNames.length; i++) {
+            Storage.slot().addresses[currentNames[i]] = address(0);
+        }
+
+        Storage.slot().nameCaches = _names;
         Storage.slot().addressCaches = _addresses;
 
         for (uint256 i; i < _names.length; i++) {
@@ -94,5 +101,13 @@ contract AddressResolver is IAddressResolver, Ownable, Proxyable {
      */
     function getAddresses() external view override returns (address[] memory) {
         return Storage.slot().addressCaches;
+    }
+
+    /**
+     * @notice Gets the all imported contract names.
+     * @return Array with the contract address
+     */
+    function getNames() external view override returns (bytes32[] memory) {
+        return Storage.slot().nameCaches;
     }
 }

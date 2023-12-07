@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity 0.8.19;
 
 library TransferHelperStorage {
-    bytes32 internal constant STORAGE_SLOT = keccak256("sf.storage.transferHelper");
+    bytes32 internal constant STORAGE_SLOT =
+        bytes32(uint256(keccak256("sf.storage.transferHelper")) - 1);
 
     struct Storage {
         address nativeToken;

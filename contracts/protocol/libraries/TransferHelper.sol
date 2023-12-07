@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity 0.8.19;
 
 import {INativeToken} from "../interfaces/INativeToken.sol";
 import {TransferHelperStorage as Storage} from "../storages/libraries/TransferHelperStorage.sol";
@@ -81,7 +81,7 @@ library TransferHelper {
         );
         require(
             success && (data.length == 0 || abi.decode(data, (bool))),
-            "TransferHelper: TRANSFER_FROM_FAILED"
+            "TransferHelper: TRANSFER_FAILED"
         ); // ERC20 Transfer failed
     }
 

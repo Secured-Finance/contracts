@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity 0.8.19;
 
 import {Constants} from "../Constants.sol";
 import {OrderBookLib, PlacedOrder} from "../OrderBookLib.sol";
@@ -134,7 +134,6 @@ library OrderReaderLogic {
                 activeOrderIds[i]
             );
 
-            // activeAmount += presentValue;
             activeAmount += unitPrice >= _minUnitPrice
                 ? presentValue
                 : (futureValue * _minUnitPrice).div(Constants.PRICE_DIGIT);
@@ -143,8 +142,6 @@ library OrderReaderLogic {
                 i++;
             }
         }
-
-        maturity = orderBook.userCurrentMaturities[_user];
 
         for (uint256 i; i < inActiveOrderIds.length; ) {
             // Sum future values in the maturity of orders
@@ -157,9 +154,6 @@ library OrderReaderLogic {
 
             inactiveAmount += presentValue;
             inactiveFutureValue += futureValue;
-            // inactiveAmount += unitPrice >= _minUnitPrice
-            //     ? presentValue
-            //     : (futureValue * _minUnitPrice).div(Constants.PRICE_DIGIT);
 
             unchecked {
                 i++;

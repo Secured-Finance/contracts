@@ -24,6 +24,7 @@ describe('LendingMarket - Itayose', () => {
   let orderActionLogic: Contract;
   let orderBookLogic: Contract;
   let currentOrderBookId: BigNumber;
+  let currentOpeningDate: number;
 
   const deployOrderBook = async (maturity: number, openingDate: number) => {
     await lendingMarketCaller.createOrderBook(
@@ -49,11 +50,11 @@ describe('LendingMarket - Itayose', () => {
       .add(1, 'M')
       .unix();
 
-    const openingDate = moment(timestamp * 1000)
+    currentOpeningDate = moment(timestamp * 1000)
       .add(48, 'h')
       .unix();
 
-    currentOrderBookId = await deployOrderBook(maturity, openingDate);
+    currentOrderBookId = await deployOrderBook(maturity, currentOpeningDate);
   });
 
   const tests = [
@@ -213,6 +214,10 @@ describe('LendingMarket - Itayose', () => {
   }
 
   it('Execute Itayose call without pre-orders', async () => {
+    const openingDate = await lendingMarket.getOpeningDate(currentOrderBookId);
+
+    expect(openingDate).to.equal(currentOpeningDate);
+
     // Increase 47 hours
     await time.increase(169200);
 
@@ -317,7 +322,7 @@ describe('LendingMarket - Itayose', () => {
   });
 
   it('Fail to create a pre-order due to not in the pre-order period', async () => {
-    time.increaseTo(maturity);
+    await time.increaseTo(maturity);
 
     await expect(
       lendingMarketCaller
@@ -332,6 +337,26 @@ describe('LendingMarket - Itayose', () => {
     ).to.be.revertedWith('NotPreOrderPeriod');
   });
 
+  it('Fail to cancel a pre-order due to in the Itayose period', async () => {
+    await lendingMarketCaller
+      .connect(alice)
+      .executePreOrder(
+        targetCurrency,
+        currentOrderBookId,
+        Side.BORROW,
+        '100000000000000000',
+        '8720',
+      );
+
+    await time.increaseTo(maturity - 172800);
+
+    await expect(
+      lendingMarketCaller
+        .connect(alice)
+        .cancelOrder(targetCurrency, currentOrderBookId, alice.address, '1'),
+    ).to.be.revertedWith('AlreadyItayosePeriod');
+  });
+
   it('Fail to execute the Itayose call due to not in the Itayose period', async () => {
     await expect(
       lendingMarketCaller.executeItayoseCall(
@@ -339,5 +364,11 @@ describe('LendingMarket - Itayose', () => {
         currentOrderBookId,
       ),
     ).to.be.revertedWith('NotItayosePeriod');
+  });
+
+  it('Fail to execute the Itayose call due to invalid caller', async () => {
+    await expect(
+      lendingMarket.executeItayoseCall(currentOrderBookId),
+    ).to.be.revertedWith('OnlyAcceptedContract("LendingMarketController")');
   });
 });

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity 0.8.19;
 
 import {Constants} from "../Constants.sol";
 import {OrderBookLib, FilledOrder, PartiallyFilledOrder} from "../OrderBookLib.sol";
@@ -73,11 +73,13 @@ library OrderBookLogic {
         preOpeningDate = orderBook.preOpeningDate;
     }
 
-    function getLastOrderBlockNumber(uint8 _orderBookId) external view returns (uint256) {
-        return _getOrderBook(_orderBookId).lastOrderBlockNumber;
+    function getLastOrderTimestamp(uint8 _orderBookId) external view returns (uint48) {
+        return _getOrderBook(_orderBookId).lastOrderTimestamp;
     }
 
-    function getBlockUnitPriceHistory(uint8 _orderBookId) external view returns (uint256[] memory) {
+    function getBlockUnitPriceHistory(
+        uint8 _orderBookId
+    ) external view returns (uint256[] memory unitPrices, uint48 timestamp) {
         return _getOrderBook(_orderBookId).getBlockUnitPriceHistory(true);
     }
 

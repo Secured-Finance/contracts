@@ -183,7 +183,7 @@ const deployContracts = async () => {
     .then((txs) =>
       txs.map(
         ({ events }) =>
-          events.find(({ event }) => event === 'ProxyCreated').args
+          events.find(({ event }) => event === 'ProxyUpdated').args
             .proxyAddress,
       ),
     );
@@ -318,7 +318,7 @@ const deployContracts = async () => {
   const genesisDate = moment(timestamp * 1000).unix();
 
   for (const currency of [hexWBTC, hexETH, hexWFIL, hexUSDC]) {
-    lendingMarketControllerProxy.initializeLendingMarket(
+    await lendingMarketControllerProxy.initializeLendingMarket(
       currency,
       genesisDate,
       INITIAL_COMPOUND_FACTOR,

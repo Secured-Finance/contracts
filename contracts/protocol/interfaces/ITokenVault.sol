@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity 0.8.19;
 
 import {ProtocolTypes} from "../types/ProtocolTypes.sol";
 import {ILendingMarketController} from "../interfaces/ILendingMarketController.sol";
@@ -7,7 +7,9 @@ import {ILendingMarketController} from "../interfaces/ILendingMarketController.s
 interface ITokenVault {
     error UnregisteredCurrency();
     error InvalidCurrency();
-    error InvalidAmount();
+    error InvalidToken();
+    error InvalidAmount(bytes32 ccy, uint256 amount, uint256 msgValue);
+    error AmountIsZero();
     error CallerNotBaseCurrency(address caller);
     error MarketTerminated();
     error RedemptionIsRequired();

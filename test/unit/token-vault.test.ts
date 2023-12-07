@@ -7,6 +7,7 @@ import {
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATOR_FEE_RATE,
+  PCT_DIGIT,
 } from '../common/constants';
 
 // contracts
@@ -101,7 +102,6 @@ describe('TokenVault', () => {
     mockWETH = await deployMockContract(owner, WETH9.abi);
     mockERC20 = await deployMockContract(owner, MockERC20.abi);
 
-    await mockCurrencyController.mock.currencyExists.returns(true);
     await mockWETH.mock.transferFrom.returns(true);
     await mockWETH.mock.transfer.returns(true);
     await mockWETH.mock.approve.returns(true);
@@ -109,6 +109,8 @@ describe('TokenVault', () => {
     await mockERC20.mock.transferFrom.returns(true);
     await mockERC20.mock.transfer.returns(true);
     await mockERC20.mock.approve.returns(true);
+    await mockCurrencyController.mock.currencyExists.returns(true);
+    await mockLendingMarketController.mock.isTerminated.returns(false);
     await mockLendingMarketController.mock.cleanUpFunds.returns(0);
     await mockLendingMarketController.mock.getTotalPresentValueInBaseCurrency.returns(
       0,
@@ -160,7 +162,7 @@ describe('TokenVault', () => {
       .then((tx) => tx.wait())
       .then(
         ({ events }) =>
-          events.find(({ event }) => event === 'ProxyCreated').args
+          events.find(({ event }) => event === 'ProxyUpdated').args
             .proxyAddress,
       );
 
@@ -211,6 +213,9 @@ describe('TokenVault', () => {
     previousCurrency = targetCurrency;
     targetCurrency = ethers.utils.formatBytes32String(`Test${currencyIdx}`);
     currencyIdx++;
+
+    await mockCurrencyController.mock.currencyExists.returns(true);
+    await mockLendingMarketController.mock.isTerminated.returns(false);
   });
 
   describe('Initialize', async () => {
@@ -234,7 +239,55 @@ describe('TokenVault', () => {
       await updateLiquidationConfiguration(LIQUIDATION_THRESHOLD_RATE);
     });
 
-    it('Register a currency', async () => {
+    it('Fail to call updateLiquidationConfiguration due to invalid rate', async () => {
+      await expect(
+        tokenVaultProxy.updateLiquidationConfiguration('0', '1', '1'),
+      ).to.be.revertedWith('InvalidLiquidationThresholdRate');
+      await expect(
+        tokenVaultProxy.updateLiquidationConfiguration('1', '10001', '1'),
+      ).to.be.revertedWith('InvalidLiquidationProtocolFeeRate');
+      await expect(
+        tokenVaultProxy.updateLiquidationConfiguration('1', '1', '10001'),
+      ).to.be.revertedWith('InvalidLiquidatorFeeRate');
+    });
+
+    it('Fail to call initialization due to duplicate execution', async () => {
+      await expect(
+        tokenVaultProxy.initialize(
+          ethers.constants.AddressZero,
+          ethers.constants.AddressZero,
+          1,
+          1,
+          1,
+          ethers.constants.AddressZero,
+        ),
+      ).revertedWith('Initializable: contract is already initialized');
+    });
+
+    it('Fail to call initialization due to execution by non-proxy contract', async () => {
+      const tokenVault = await ethers
+        .getContractFactory('TokenVault', {
+          libraries: {
+            DepositManagementLogic: depositManagementLogic.address,
+          },
+        })
+        .then((factory) => factory.deploy());
+
+      await expect(
+        tokenVault.initialize(
+          ethers.constants.AddressZero,
+          ethers.constants.AddressZero,
+          1,
+          1,
+          1,
+          ethers.constants.AddressZero,
+        ),
+      ).revertedWith('Must be called from proxy contract');
+    });
+  });
+
+  describe('Currencies', async () => {
+    it('Register currency', async () => {
       expect(await tokenVaultProxy.isRegisteredCurrency(targetCurrency)).to
         .false;
 
@@ -247,6 +300,17 @@ describe('TokenVault', () => {
       ).to.emit(tokenVaultProxy, 'CurrencyRegistered');
 
       expect(await tokenVaultProxy.isRegisteredCurrency(targetCurrency)).true;
+      expect(await tokenVaultProxy.getTokenAddress(targetCurrency)).to.equal(
+        mockERC20.address,
+      );
+      expect(await tokenVaultProxy['isCollateral(bytes32)'](targetCurrency))
+        .true;
+
+      const isCollaterals = await tokenVaultProxy['isCollateral(bytes32[])']([
+        targetCurrency,
+      ]);
+      expect(isCollaterals.length).to.equal(1);
+      expect(isCollaterals[0]).to.true;
 
       const collateralCurrencies =
         await tokenVaultProxy.getCollateralCurrencies();
@@ -254,16 +318,117 @@ describe('TokenVault', () => {
       expect(collateralCurrencies[0]).to.equal(targetCurrency);
     });
 
-    it('Fail to call updateLiquidationConfiguration due to invalid rate', async () => {
+    it('Update collateral currency to non-collateral currency', async () => {
       await expect(
-        tokenVaultProxy.updateLiquidationConfiguration('0', '1', '1'),
-      ).to.be.revertedWith('InvalidLiquidationThresholdRate');
+        tokenVaultProxy.registerCurrency(
+          targetCurrency,
+          mockERC20.address,
+          true,
+        ),
+      ).emit(tokenVaultProxy, 'CurrencyRegistered');
+
+      await expect(tokenVaultProxy.updateCurrency(targetCurrency, false)).emit(
+        tokenVaultProxy,
+        'CurrencyUpdated',
+      );
+    });
+
+    it('Register non-collateral currency to collateral currency', async () => {
       await expect(
-        tokenVaultProxy.updateLiquidationConfiguration('1', '10001', '1'),
-      ).to.be.revertedWith('InvalidLiquidationProtocolFeeRate');
+        tokenVaultProxy.registerCurrency(
+          targetCurrency,
+          mockERC20.address,
+          false,
+        ),
+      ).emit(tokenVaultProxy, 'CurrencyRegistered');
+
+      await expect(tokenVaultProxy.updateCurrency(targetCurrency, true)).emit(
+        tokenVaultProxy,
+        'CurrencyUpdated',
+      );
+    });
+
+    it('Fail to receive ETH due to execution by non-WETH contract', async () => {
+      const tx = {
+        to: tokenVaultProxy.address,
+        value: 1,
+      };
+
+      await expect(owner.sendTransaction(tx)).to.be.revertedWith(
+        'CallerNotBaseCurrency',
+      );
+    });
+
+    it('Fail to register currency due to execution by non-owner', async () => {
       await expect(
-        tokenVaultProxy.updateLiquidationConfiguration('1', '1', '10001'),
-      ).to.be.revertedWith('InvalidLiquidatorFeeRate');
+        tokenVaultProxy
+          .connect(alice)
+          .registerCurrency(targetCurrency, mockERC20.address, true),
+      ).revertedWith('Ownable: caller is not the owner');
+    });
+
+    it('Fail to update currency due to execution by non-owner', async () => {
+      await expect(
+        tokenVaultProxy.connect(alice).updateCurrency(targetCurrency, true),
+      ).revertedWith('Ownable: caller is not the owner');
+    });
+
+    it('Fail to register currency due to nonexistent currency', async () => {
+      await mockCurrencyController.mock.currencyExists.returns(false);
+
+      await expect(
+        tokenVaultProxy.registerCurrency(
+          targetCurrency,
+          mockERC20.address,
+          true,
+        ),
+      ).revertedWith('InvalidCurrency');
+    });
+
+    it('Fail to register currency due to duplicate registration', async () => {
+      await tokenVaultProxy.registerCurrency(
+        targetCurrency,
+        mockERC20.address,
+        true,
+      );
+
+      await expect(
+        tokenVaultProxy.registerCurrency(
+          targetCurrency,
+          ethers.constants.AddressZero,
+          true,
+        ),
+      ).revertedWith('InvalidCurrency');
+    });
+
+    it('Fail to register currency due to zero address', async () => {
+      await expect(
+        tokenVaultProxy.registerCurrency(
+          targetCurrency,
+          ethers.constants.AddressZero,
+          true,
+        ),
+      ).revertedWith('InvalidToken');
+    });
+
+    it('Fail to register currency due to market termination', async () => {
+      await mockLendingMarketController.mock.isTerminated.returns(true);
+
+      await expect(
+        tokenVaultProxy.registerCurrency(
+          targetCurrency,
+          ethers.constants.AddressZero,
+          true,
+        ),
+      ).revertedWith('MarketTerminated');
+    });
+
+    it('Fail to update currency due to market termination', async () => {
+      await mockLendingMarketController.mock.isTerminated.returns(true);
+
+      await expect(
+        tokenVaultProxy.updateCurrency(targetCurrency, true),
+      ).revertedWith('MarketTerminated');
     });
   });
 
@@ -278,10 +443,6 @@ describe('TokenVault', () => {
       lentAmount: 0,
       borrowedAmount: 0,
     };
-
-    before(async () => {
-      await mockLendingMarketController.mock.isTerminated.returns(false);
-    });
 
     beforeEach(async () => {
       CALCULATE_COVERAGE_INPUTS.ccy = targetCurrency;
@@ -408,7 +569,6 @@ describe('TokenVault', () => {
     });
 
     beforeEach(async () => {
-      await mockLendingMarketController.mock.isTerminated.returns(false);
       await mockLendingMarketController.mock.isRedemptionRequired.returns(
         false,
       );
@@ -765,9 +925,7 @@ describe('TokenVault', () => {
         debtAmount,
       });
 
-      const nonCollateralCurrency = ethers.utils.formatBytes32String(
-        `Test${currencyIdx}`,
-      );
+      const nonCollateralCurrency = ethers.utils.formatBytes32String('Dummy1');
       await tokenVaultProxy.registerCurrency(
         nonCollateralCurrency,
         mockERC20.address,
@@ -1027,22 +1185,100 @@ describe('TokenVault', () => {
       expect(liquidationAmounts.liquidationAmount).to.equal(debtAmount);
     });
 
+    it('Get the liquidation fees', async () => {
+      const value = ethers.BigNumber.from('10000000000000');
+      const fees = await tokenVaultProxy.calculateLiquidationFees(value);
+
+      expect(fees.liquidatorFee).to.equal(
+        value.mul(LIQUIDATOR_FEE_RATE).div(PCT_DIGIT),
+      );
+      expect(fees.protocolFee).to.equal(
+        value.mul(LIQUIDATION_PROTOCOL_FEE_RATE).div(PCT_DIGIT),
+      );
+    });
+
+    it('Fail to deposit token due to unregistered currency', async () => {
+      await expect(
+        tokenVaultProxy.deposit(ethers.utils.formatBytes32String('Dummy'), '1'),
+      ).to.be.revertedWith('UnregisteredCurrency');
+    });
+
+    it('Fail to withdraw token due to unregistered currency', async () => {
+      await expect(
+        tokenVaultProxy.withdraw(
+          ethers.utils.formatBytes32String('Dummy'),
+          '1',
+        ),
+      ).to.be.revertedWith('UnregisteredCurrency');
+    });
+
+    it('Fail to call addDepositAmount due to unregistered currency', async () => {
+      await expect(
+        tokenVaultCaller.addDepositAmount(
+          alice.address,
+          ethers.utils.formatBytes32String('Dummy'),
+          '1',
+        ),
+      ).to.be.revertedWith('UnregisteredCurrency');
+    });
+
+    it('Fail to call removeDepositAmount due to unregistered currency', async () => {
+      await expect(
+        tokenVaultCaller.removeDepositAmount(
+          alice.address,
+          ethers.utils.formatBytes32String('Dummy'),
+          '1',
+        ),
+      ).to.be.revertedWith('UnregisteredCurrency');
+    });
+
+    it('Fail to call executeForcedReset due to unregistered currency', async () => {
+      await expect(
+        tokenVaultCaller.executeForcedReset(
+          alice.address,
+          ethers.utils.formatBytes32String('Dummy'),
+        ),
+      ).to.be.revertedWith('UnregisteredCurrency');
+    });
+
+    it('Fail to call transferFrom due to unregistered currency', async () => {
+      await expect(
+        tokenVaultCaller.transferFrom(
+          ethers.utils.formatBytes32String('Dummy'),
+          alice.address,
+          bob.address,
+          '1',
+        ),
+      ).to.be.revertedWith('UnregisteredCurrency');
+    });
+
     it('Fail to call addDepositAmount due to invalid caller', async () => {
       await expect(
         tokenVaultProxy.addDepositAmount(alice.address, targetCurrency, '1'),
-      ).to.be.revertedWith('OnlyAcceptedContracts');
+      ).to.be.revertedWith('OnlyAcceptedContract("LendingMarketController")');
     });
 
     it('Fail to call removeDepositAmount due to invalid caller', async () => {
       await expect(
         tokenVaultProxy.removeDepositAmount(alice.address, targetCurrency, '1'),
-      ).to.be.revertedWith('OnlyAcceptedContracts');
+      ).to.be.revertedWith('OnlyAcceptedContract("LendingMarketController")');
     });
 
     it('Fail to call executeForcedReset due to invalid caller', async () => {
       await expect(
         tokenVaultProxy.executeForcedReset(alice.address, targetCurrency),
-      ).to.be.revertedWith('OnlyAcceptedContracts');
+      ).to.be.revertedWith('OnlyAcceptedContract("LendingMarketController")');
+    });
+
+    it('Fail to call transferFrom due to invalid caller', async () => {
+      await expect(
+        tokenVaultProxy.transferFrom(
+          targetCurrency,
+          alice.address,
+          bob.address,
+          '1',
+        ),
+      ).to.be.revertedWith('OnlyAcceptedContract("LendingMarketController")');
     });
 
     it('Fail to call addDepositAmount due to invalid amount', async () => {
@@ -1062,10 +1298,28 @@ describe('TokenVault', () => {
       ).to.be.revertedWith('NotEnoughDeposit');
     });
 
-    it('Fail to call deposit due to invalid amount', async () => {
-      await expect(tokenVaultProxy.deposit(ETH, '100')).to.be.revertedWith(
-        'InvalidAmount',
+    it('Fail to call deposit due to zero amount', async () => {
+      await expect(tokenVaultProxy.deposit(ETH, '0')).to.be.revertedWith(
+        'AmountIsZero',
       );
+    });
+
+    it('Fail to call withdraw due to zero amount', async () => {
+      await expect(tokenVaultProxy.withdraw(ETH, '0')).to.be.revertedWith(
+        'AmountIsZero',
+      );
+    });
+
+    it('Fail to call deposit due to no transfer of native token', async () => {
+      await expect(tokenVaultProxy.deposit(ETH, '100')).to.be.revertedWith(
+        `InvalidAmount("${ETH}", 100, 0)`,
+      );
+    });
+
+    it('Fail to deposit token due to transfer of native token', async () => {
+      await expect(
+        tokenVaultProxy.deposit(targetCurrency, '100', { value: 1 }),
+      ).to.be.revertedWith(`InvalidAmount("${targetCurrency}", 100, 1)`);
     });
 
     it('Fail to call deposit due to lending market termination', async () => {
@@ -1152,6 +1406,14 @@ describe('TokenVault', () => {
         .to.emit(tokenVaultProxy, 'Withdraw')
         .withArgs(alice.address, targetCurrency, valueInETH);
     });
+
+    it('Fail to call deposit from Alice due to lending market termination', async () => {
+      await mockLendingMarketController.mock.isTerminated.returns(true);
+
+      await expect(
+        tokenVaultCaller.depositFrom(alice.address, targetCurrency, '1'),
+      ).to.be.revertedWith('MarketTerminated');
+    });
   });
 
   describe('Transfer', async () => {
@@ -1226,7 +1488,7 @@ describe('TokenVault', () => {
           bob.address,
           1,
         ),
-      ).to.be.revertedWith('OnlyAcceptedContracts');
+      ).to.be.revertedWith('OnlyAcceptedContract("LendingMarketController")');
     });
   });
 
@@ -1242,15 +1504,16 @@ describe('TokenVault', () => {
     });
 
     it('Pause token vault', async () => {
-      await tokenVaultProxy.registerCurrency(
-        targetCurrency,
-        mockERC20.address,
-        true,
-      );
-
       await tokenVaultProxy.pause();
+
       await expect(
         tokenVaultProxy.connect(alice).deposit(targetCurrency, arbitraryAmount),
+      ).to.be.revertedWith('Pausable: paused');
+
+      await expect(
+        tokenVaultProxy
+          .connect(alice)
+          .withdraw(targetCurrency, arbitraryAmount),
       ).to.be.revertedWith('Pausable: paused');
 
       await expect(
@@ -1292,6 +1555,12 @@ describe('TokenVault', () => {
 
       await expect(
         tokenVaultProxy.connect(alice).deposit(targetCurrency, arbitraryAmount),
+      ).to.be.not.reverted;
+
+      await expect(
+        tokenVaultProxy
+          .connect(alice)
+          .withdraw(targetCurrency, arbitraryAmount),
       ).to.be.not.reverted;
 
       tokenVaultCaller.depositFrom(
@@ -1342,17 +1611,18 @@ describe('TokenVault', () => {
       );
 
       await tokenVaultProxy.addOperator(alice.address);
-      await tokenVaultProxy.removeOperator(owner.address);
-
-      await expect(tokenVaultProxy.connect(owner).pause()).to.be.revertedWith(
-        'CallerNotOperator',
-      );
-      await expect(tokenVaultProxy.connect(owner).unpause()).to.be.revertedWith(
-        'CallerNotOperator',
-      );
 
       await expect(tokenVaultProxy.connect(alice).pause()).to.be.not.reverted;
       await expect(tokenVaultProxy.connect(alice).unpause()).to.be.not.reverted;
+
+      await tokenVaultProxy.removeOperator(alice.address);
+
+      await expect(tokenVaultProxy.connect(alice).pause()).to.be.revertedWith(
+        'CallerNotOperator',
+      );
+      await expect(tokenVaultProxy.connect(alice).unpause()).to.be.revertedWith(
+        'CallerNotOperator',
+      );
     });
   });
 

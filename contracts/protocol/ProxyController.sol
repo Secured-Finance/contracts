@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity 0.8.19;
 
 // dependencies
 import {Multicall} from "../dependencies/openzeppelin/utils/Multicall.sol";
@@ -198,7 +198,7 @@ contract ProxyController is IProxyController, Ownable, Multicall {
             proxy = new UpgradeabilityProxy(payable(newAddress), data);
             proxyAddress = address(proxy);
 
-            emit ProxyCreated(name, proxyAddress, newAddress);
+            emit ProxyUpdated(name, proxyAddress, newAddress, address(0));
         } else {
             proxy = UpgradeabilityProxy(payable(proxyAddress));
             address oldAddress = proxy.implementation();

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity 0.8.19;
 
 // interfaces
 import {ILendingMarket} from "../protocol/interfaces/ILendingMarket.sol";
@@ -18,8 +18,8 @@ contract LendingMarketReader is MixinAddressResolver {
         uint256 bestLendUnitPrice;
         uint256 bestBorrowUnitPrice;
         uint256 marketUnitPrice;
-        uint256 lastOrderBlockNumber;
         uint256[] blockUnitPriceHistory;
+        uint256 lastBlockUnitPriceTimestamp;
         uint256 maxLendUnitPrice;
         uint256 minBorrowUnitPrice;
         uint256 openingUnitPrice;
@@ -243,9 +243,12 @@ contract LendingMarketReader is MixinAddressResolver {
         orderBookDetail.bestLendUnitPrice = market.getBestLendUnitPrice(orderBookId);
         orderBookDetail.bestBorrowUnitPrice = market.getBestBorrowUnitPrice(orderBookId);
         orderBookDetail.marketUnitPrice = market.getMarketUnitPrice(orderBookId);
-        orderBookDetail.lastOrderBlockNumber = market.getLastOrderBlockNumber(orderBookId);
-        orderBookDetail.blockUnitPriceHistory = market.getBlockUnitPriceHistory(orderBookId);
         orderBookDetail.isReady = market.isReady(orderBookId);
+
+        (
+            orderBookDetail.blockUnitPriceHistory,
+            orderBookDetail.lastBlockUnitPriceTimestamp
+        ) = market.getBlockUnitPriceHistory(orderBookId);
 
         (, , orderBookDetail.openingDate, orderBookDetail.preOpeningDate) = market
             .getOrderBookDetail(orderBookId);

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity 0.8.19;
 
 import "../../dependencies/chainlink/AggregatorV3Interface.sol";
 import "../../dependencies/openzeppelin/utils/structs/EnumerableSet.sol";
@@ -12,7 +12,8 @@ struct PriceFeed {
 library CurrencyControllerStorage {
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
-    bytes32 internal constant STORAGE_SLOT = keccak256("sf.storage.currencyController");
+    bytes32 internal constant STORAGE_SLOT =
+        bytes32(uint256(keccak256("sf.storage.currencyController")) - 1);
 
     struct Storage {
         // Protocol currencies

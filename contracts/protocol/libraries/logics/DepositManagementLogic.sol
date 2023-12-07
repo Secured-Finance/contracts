@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity 0.8.19;
 
 // dependencies
 import {EnumerableSet} from "../../../dependencies/openzeppelin/utils/structs/EnumerableSet.sol";
@@ -42,17 +42,7 @@ library DepositManagementLogic {
     }
 
     function getUsedCurrencies(address _user) public view returns (bytes32[] memory) {
-        EnumerableSet.Bytes32Set storage currencySet = Storage.slot().usedCurrencies[_user];
-
-        uint256 length = currencySet.length();
-        bytes32[] memory currencies = new bytes32[](length);
-
-        for (uint256 i; i < length; i++) {
-            bytes32 currency = currencySet.at(i);
-            currencies[i] = currency;
-        }
-
-        return currencies;
+        return Storage.slot().usedCurrencies[_user].values();
     }
 
     function getDepositAmount(address _user, bytes32 _ccy) public view returns (uint256) {
@@ -220,15 +210,15 @@ library DepositManagementLogic {
         if (totalUsedCollateral == 0) {
             return totalDeposit;
         } else if (
-            totalCollateral * Constants.PRICE_DIGIT >
+            totalCollateral * Constants.PCT_DIGIT >
             totalUsedCollateral * Storage.slot().liquidationThresholdRate
         ) {
             // NOTE: The formula is:
-            // maxWithdraw = (totalCollateral / liquidationThresholdRate) - totalUsedCollateral.
+            // maxWithdraw = totalCollateral - (totalUsedCollateral * liquidationThresholdRate)
             uint256 maxWithdraw = (totalCollateral *
-                Constants.PRICE_DIGIT -
-                (totalUsedCollateral) *
-                Storage.slot().liquidationThresholdRate).div(Constants.PRICE_DIGIT);
+                Constants.PCT_DIGIT -
+                totalUsedCollateral *
+                Storage.slot().liquidationThresholdRate).div(Constants.PCT_DIGIT);
 
             return maxWithdraw >= totalDeposit ? totalDeposit : maxWithdraw;
         } else {

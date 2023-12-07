@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity 0.8.19;
 
-import "../types/ProtocolTypes.sol";
+import {ProtocolTypes} from "../types/ProtocolTypes.sol";
+import {TerminationCurrencyCache} from "../storages/LendingMarketControllerStorage.sol";
 
 interface ILendingMarketController {
     error InvalidMaturity();
@@ -59,11 +60,13 @@ interface ILendingMarketController {
 
     function getMarketBasePeriod() external view returns (uint256);
 
-    function getMarketTerminationDate() external view returns (uint256);
+    function getTerminationDate() external view returns (uint256);
 
-    function getMarketTerminationPrice(bytes32 _ccy) external view returns (int256);
+    function getTerminationCurrencyCache(
+        bytes32 _ccy
+    ) external view returns (TerminationCurrencyCache memory);
 
-    function getMarketTerminationRatio(bytes32 _ccy) external view returns (uint256);
+    function getTerminationCollateralRatio(bytes32 _ccy) external view returns (uint256);
 
     function getMinDebtUnitPrice(bytes32 _ccy) external view returns (uint256);
 
@@ -79,6 +82,8 @@ interface ILendingMarketController {
     function getFutureValueVault(bytes32 ccy) external view returns (address);
 
     function getOrderBookId(bytes32 _ccy, uint256 _maturity) external view returns (uint8);
+
+    function getPendingOrderAmount(bytes32 _ccy, uint256 _maturity) external view returns (uint256);
 
     function getOrderEstimation(
         GetOrderEstimationParams calldata params

@@ -5,6 +5,7 @@ import { expect } from 'chai';
 import { MockContract } from 'ethereum-waffle';
 import { BigNumber, Contract } from 'ethers';
 import { ethers } from 'hardhat';
+import moment from 'moment';
 
 import { Side } from '../../../utils/constants';
 import { getGenesisDate } from '../../../utils/dates';
@@ -83,7 +84,7 @@ describe('LendingMarketController - Rotations', () => {
     await mockTokenVault.mock.isCovered.returns(true);
   });
 
-  const initialize = async (currency: string) => {
+  const initialize = async (currency: string, openingDate = genesisDate) => {
     await lendingMarketControllerProxy.initializeLendingMarket(
       currency,
       genesisDate,
@@ -95,23 +96,33 @@ describe('LendingMarketController - Rotations', () => {
     for (let i = 0; i < 5; i++) {
       await lendingMarketControllerProxy.createOrderBook(
         currency,
-        genesisDate,
-        genesisDate,
+        openingDate,
+        openingDate - 604800,
       );
     }
 
     maturities = await lendingMarketControllerProxy.getMaturities(currency);
   };
 
-  beforeEach(async () => {
-    await initialize(targetCurrency);
-  });
+  const getGenesisValues = (accounts: (SignerWithAddress | MockContract)[]) =>
+    Promise.all(
+      accounts.map((account) =>
+        lendingMarketControllerProxy.getGenesisValue(
+          targetCurrency,
+          account.address,
+        ),
+      ),
+    );
 
   afterEach(async () => {
     await mockCurrencyController.mock.currencyExists.returns(true);
   });
 
-  describe('Rotations', async () => {
+  describe('General order books', async () => {
+    beforeEach(async () => {
+      await initialize(targetCurrency);
+    });
+
     it('Rotate markets multiple times under condition without lending position', async () => {
       await lendingMarketControllerProxy
         .connect(alice)
@@ -230,16 +241,6 @@ describe('LendingMarketController - Rotations', () => {
     it('Rotate markets multiple times under condition where users have lending positions that are offset after the auto-rolls every time', async () => {
       const accounts = [alice, bob];
 
-      const getGenesisValues = () =>
-        Promise.all(
-          accounts.map((account) =>
-            lendingMarketControllerProxy.getGenesisValue(
-              targetCurrency,
-              account.address,
-            ),
-          ),
-        );
-
       let unitPrice = BigNumber.from('8000');
       for (let i = 0; i < 4; i++) {
         await expect(
@@ -300,7 +301,7 @@ describe('LendingMarketController - Rotations', () => {
           targetCurrency,
         );
 
-        const genesisValues = await getGenesisValues();
+        const genesisValues = await getGenesisValues(accounts);
         gvLog[`GenesisValue(${maturities[1]})`] = {
           Alice: genesisValues[0].toString(),
           Bob: genesisValues[1].toString(),
@@ -346,11 +347,23 @@ describe('LendingMarketController - Rotations', () => {
         targetCurrency,
         bob.address,
       );
-      const genesisValuesAfter = await getGenesisValues();
+      const genesisValuesAfter = await getGenesisValues(accounts);
 
-      // These values may differ by 2 (number of fee payments) depending on the residual amount calculation logic of the genesis value.
-      expect(lastAliceGV?.sub(genesisValuesAfter[0]).abs()).lte(2);
-      expect(lastBobGV?.sub(genesisValuesAfter[1]).abs()).lte(2);
+      // These values may differ by 3 (number of fee payments) depending on the residual amount calculation logic of the genesis value.
+      expect(lastAliceGV?.sub(genesisValuesAfter[0]).abs()).lte(3);
+      expect(lastBobGV?.sub(genesisValuesAfter[1]).abs()).lte(3);
+
+      await lendingMarketControllerProxy.cleanUpFunds(
+        targetCurrency,
+        carol.address,
+      );
+
+      const totalLendingSupply =
+        await genesisValueVaultProxy.getTotalLendingSupply(targetCurrency);
+      const totalBorrowingSupply =
+        await genesisValueVaultProxy.getTotalBorrowingSupply(targetCurrency);
+
+      expect(totalLendingSupply).to.equal(totalBorrowingSupply);
     });
 
     it('Rotate markets using the unit price average(only one order) during the observation period', async () => {
@@ -698,6 +711,88 @@ describe('LendingMarketController - Rotations', () => {
       expect(autoRollLog.unitPrice).to.equal('8500');
     });
 
+    it('Rotate markets including one market that has orders adjusted by with the residual amount.', async () => {
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .executeOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '1111111111',
+          '8000',
+        );
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .executeOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '1111111111',
+          '8000',
+        );
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .executeOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '1111111111',
+          '8000',
+        );
+      await lendingMarketControllerProxy
+        .connect(bob)
+        .executeOrder(
+          targetCurrency,
+          maturities[0],
+          Side.BORROW,
+          '3333333333',
+          '0',
+        );
+
+      // Move to 6 hours (21600 sec) before maturity.
+      await time.increaseTo(maturities[0].sub('21600').toString());
+
+      await lendingMarketControllerProxy
+        .connect(owner)
+        .executeOrder(
+          targetCurrency,
+          maturities[1],
+          Side.LEND,
+          '100000000000000000',
+          '9998',
+        );
+      await lendingMarketControllerProxy
+        .connect(owner)
+        .executeOrder(
+          targetCurrency,
+          maturities[1],
+          Side.BORROW,
+          '100000000000000000',
+          '9998',
+        );
+
+      await time.increaseTo(maturities[0].toString());
+
+      await lendingMarketControllerProxy.rotateOrderBooks(targetCurrency);
+
+      await lendingMarketControllerProxy.cleanUpFunds(
+        targetCurrency,
+        alice.address,
+      );
+      await lendingMarketControllerProxy.cleanUpFunds(
+        targetCurrency,
+        bob.address,
+      );
+
+      const [aliceGV, bobGV, reserveFundGV] = await getGenesisValues([
+        alice,
+        bob,
+        mockReserveFund,
+      ]);
+
+      expect(aliceGV.add(bobGV).add(reserveFundGV)).to.equal(0);
+    });
+
     it('Fail to rotate order books due to no currency', async () => {
       await mockCurrencyController.mock.currencyExists.returns(false);
 
@@ -712,6 +807,207 @@ describe('LendingMarketController - Rotations', () => {
           ethers.utils.formatBytes32String('Test'),
         ),
       ).revertedWith('NotEnoughOrderBooks');
+    });
+  });
+
+  describe('Pre-open order books', async () => {
+    let openingDate: number;
+
+    beforeEach(async () => {
+      const { timestamp } = await ethers.provider.getBlock('latest');
+      openingDate = moment(timestamp * 1000)
+        .add(2, 'h')
+        .unix();
+
+      await initialize(targetCurrency, openingDate);
+    });
+
+    it('Rotate markets including one market that has pre-orders adjusted by with the residual amount.', async () => {
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .executePreOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '1111111111',
+          '8000',
+        );
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .executePreOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '1111111111',
+          '8000',
+        );
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .executePreOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '1111111111',
+          '8000',
+        );
+      await lendingMarketControllerProxy
+        .connect(bob)
+        .executePreOrder(
+          targetCurrency,
+          maturities[0],
+          Side.BORROW,
+          '3333333333',
+          '8000',
+        );
+
+      await time.increaseTo(openingDate);
+
+      await lendingMarketControllerProxy.executeItayoseCall(
+        targetCurrency,
+        maturities[0],
+      );
+
+      await lendingMarketControllerProxy.executeItayoseCall(
+        targetCurrency,
+        maturities[1],
+      );
+
+      // Move to 6 hours (21600 sec) before maturity.
+      await time.increaseTo(maturities[0].sub('21600').toString());
+
+      await lendingMarketControllerProxy
+        .connect(owner)
+        .executeOrder(
+          targetCurrency,
+          maturities[1],
+          Side.LEND,
+          '100000000000000000',
+          '9998',
+        );
+      await lendingMarketControllerProxy
+        .connect(owner)
+        .executeOrder(
+          targetCurrency,
+          maturities[1],
+          Side.BORROW,
+          '100000000000000000',
+          '9998',
+        );
+
+      await time.increaseTo(maturities[0].toString());
+
+      await lendingMarketControllerProxy.rotateOrderBooks(targetCurrency);
+
+      await lendingMarketControllerProxy.cleanUpFunds(
+        targetCurrency,
+        alice.address,
+      );
+      await lendingMarketControllerProxy.cleanUpFunds(
+        targetCurrency,
+        bob.address,
+      );
+
+      const [aliceGV, bobGV, reserveFundGV] = await getGenesisValues([
+        alice,
+        bob,
+        mockReserveFund,
+      ]);
+
+      expect(aliceGV.add(bobGV).add(reserveFundGV)).to.equal(0);
+    });
+
+    it('Rotate markets including one market that has pre-orders partially filled and  adjusted by with the residual amount.', async () => {
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .executePreOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '1111111111',
+          '8000',
+        );
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .executePreOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '1111111111',
+          '8000',
+        );
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .executePreOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '2000000000',
+          '8000',
+        );
+      await lendingMarketControllerProxy
+        .connect(bob)
+        .executePreOrder(
+          targetCurrency,
+          maturities[0],
+          Side.BORROW,
+          '3333333333',
+          '8000',
+        );
+
+      await time.increaseTo(openingDate);
+
+      await lendingMarketControllerProxy.executeItayoseCall(
+        targetCurrency,
+        maturities[0],
+      );
+
+      await lendingMarketControllerProxy.executeItayoseCall(
+        targetCurrency,
+        maturities[1],
+      );
+
+      // Move to 6 hours (21600 sec) before maturity.
+      await time.increaseTo(maturities[0].sub('21600').toString());
+
+      await lendingMarketControllerProxy
+        .connect(owner)
+        .executeOrder(
+          targetCurrency,
+          maturities[1],
+          Side.LEND,
+          '100000000000000000',
+          '9998',
+        );
+      await lendingMarketControllerProxy
+        .connect(owner)
+        .executeOrder(
+          targetCurrency,
+          maturities[1],
+          Side.BORROW,
+          '100000000000000000',
+          '9998',
+        );
+
+      await time.increaseTo(maturities[0].toString());
+
+      await lendingMarketControllerProxy.rotateOrderBooks(targetCurrency);
+
+      await lendingMarketControllerProxy.cleanUpFunds(
+        targetCurrency,
+        alice.address,
+      );
+      await lendingMarketControllerProxy.cleanUpFunds(
+        targetCurrency,
+        bob.address,
+      );
+
+      const [aliceGV, bobGV, reserveFundGV] = await getGenesisValues([
+        alice,
+        bob,
+        mockReserveFund,
+      ]);
+
+      expect(aliceGV.add(bobGV).add(reserveFundGV)).to.equal(0);
     });
   });
 });

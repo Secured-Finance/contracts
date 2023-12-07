@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity 0.8.19;
 
 interface IFutureValueVault {
     error UserIsZero();
@@ -15,7 +15,9 @@ interface IFutureValueVault {
         int256 value
     );
 
-    function getTotalSupply(uint256 maturity) external view returns (uint256);
+    function getTotalLendingSupply(uint256 maturity) external view returns (uint256);
+
+    function getTotalBorrowingSupply(uint256 maturity) external view returns (uint256);
 
     function getBalance(
         uint8 orderBookId,
@@ -28,21 +30,9 @@ interface IFutureValueVault {
         uint256 maturity
     ) external view returns (bool);
 
-    function increase(
-        uint8 orderBookId,
-        address user,
-        uint256 amount,
-        uint256 maturity,
-        bool isTaker
-    ) external;
+    function increase(uint8 orderBookId, address user, uint256 amount, uint256 maturity) external;
 
-    function decrease(
-        uint8 orderBookId,
-        address user,
-        uint256 amount,
-        uint256 maturity,
-        bool isTaker
-    ) external;
+    function decrease(uint8 orderBookId, address user, uint256 amount, uint256 maturity) external;
 
     function transferFrom(
         uint8 orderBookId,
@@ -59,8 +49,6 @@ interface IFutureValueVault {
     )
         external
         returns (int256 removedAmount, int256 currentAmount, uint256 maturity, bool isAllRemoved);
-
-    function setInitialTotalSupply(uint256 maturity, int256 amount) external;
 
     function executeForcedReset(uint8 orderBookId, address user) external;
 

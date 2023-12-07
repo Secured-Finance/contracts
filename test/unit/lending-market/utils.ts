@@ -64,7 +64,7 @@ const deployContracts = async (owner: SignerWithAddress, currency: string) => {
     .then((tx) => tx.wait())
     .then(
       ({ events }) =>
-        events.find(({ event }) => event === 'ProxyCreated').args.proxyAddress,
+        events.find(({ event }) => event === 'ProxyUpdated').args.proxyAddress,
     );
 
   // Get the Proxy contracts

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity 0.8.19;
 
 // dependencies
 import {IERC20} from "../../../dependencies/openzeppelin/token/ERC20/IERC20.sol";
@@ -8,6 +8,7 @@ import {SafeCast} from "../../../dependencies/openzeppelin/utils/math/SafeCast.s
 import {ILendingMarket} from "../../interfaces/ILendingMarket.sol";
 import {ILendingMarketController} from "../../interfaces/ILendingMarketController.sol";
 import {IFutureValueVault} from "../../interfaces/IFutureValueVault.sol";
+import {AutoRollLog} from "../../interfaces/IGenesisValueVault.sol";
 // libraries
 import {AddressResolverLib} from "../AddressResolverLib.sol";
 import {BokkyPooBahsDateTimeLibrary as TimeLibrary} from "../BokkyPooBahsDateTimeLibrary.sol";
@@ -18,7 +19,7 @@ import {RoundingInt256} from "../math/RoundingInt256.sol";
 // types
 import {ProtocolTypes} from "../../types/ProtocolTypes.sol";
 // storages
-import {LendingMarketControllerStorage as Storage, ObservationPeriodLog} from "../../storages/LendingMarketControllerStorage.sol";
+import {LendingMarketControllerStorage as Storage, TerminationCurrencyCache, ObservationPeriodLog} from "../../storages/LendingMarketControllerStorage.sol";
 
 library LendingMarketOperationLogic {
     using SafeCast for uint256;
@@ -27,12 +28,14 @@ library LendingMarketOperationLogic {
     using RoundingInt256 for int256;
 
     uint256 public constant OBSERVATION_PERIOD = 6 hours;
+    uint8 public constant COMPOUND_FACTOR_DECIMALS = 36;
 
     error InvalidCompoundFactor();
     error InvalidCurrency();
     error InvalidOpeningDate();
     error InvalidPreOpeningDate();
     error InvalidTimestamp();
+    error InvalidMinDebtUnitPrice();
     error LendingMarketNotInitialized();
     error NotEnoughOrderBooks();
 
@@ -75,7 +78,7 @@ library LendingMarketOperationLogic {
 
         AddressResolverLib.genesisValueVault().initializeCurrencySetting(
             _ccy,
-            36,
+            COMPOUND_FACTOR_DECIMALS,
             _compoundFactor,
             calculateNextMaturity(_genesisDate, Storage.slot().marketBasePeriod)
         );
@@ -107,6 +110,8 @@ library LendingMarketOperationLogic {
     }
 
     function updateMinDebtUnitPrice(bytes32 _ccy, uint256 _minDebtUnitPrice) public {
+        if (_minDebtUnitPrice > Constants.PRICE_DIGIT) revert InvalidMinDebtUnitPrice();
+
         Storage.slot().minDebtUnitPrices[_ccy] = _minDebtUnitPrice;
         emit MinDebtUnitPriceUpdated(_ccy, _minDebtUnitPrice);
     }
@@ -166,13 +171,13 @@ library LendingMarketOperationLogic {
             partiallyFilledBorrowingOrder
         ) = market.executeItayoseCall(orderBookId);
 
-        if (totalOffsetAmount > 0) {
-            address futureValueVault = Storage.slot().futureValueVaults[_ccy];
-            IFutureValueVault(futureValueVault).setInitialTotalSupply(
-                _maturity,
-                (totalOffsetAmount * Constants.PRICE_DIGIT).div(openingUnitPrice).toInt256()
-            );
-        }
+        // Updates the pending order amount for both side orders.
+        // Since the partially filled orders are updated with `updateFundsForMaker()`,
+        // their amount is subtracted from `pendingOrderAmounts`.
+        Storage.slot().pendingOrderAmounts[_ccy][_maturity] +=
+            (totalOffsetAmount * 2) -
+            partiallyFilledLendingOrder.amount -
+            partiallyFilledBorrowingOrder.amount;
 
         // Save the openingUnitPrice as first compound factor
         // if it is a first Itayose call at the nearest market.
@@ -192,7 +197,7 @@ library LendingMarketOperationLogic {
         }
     }
 
-    function rotateOrderBooks(bytes32 _ccy) external returns (uint256 newMaturity) {
+    function rotateOrderBooks(bytes32 _ccy) external {
         if (!AddressResolverLib.currencyController().currencyExists(_ccy)) {
             revert InvalidCurrency();
         }
@@ -208,7 +213,7 @@ library LendingMarketOperationLogic {
         uint8 destinationOrderBookId = orderBookIds[1];
         uint256 destinationOrderBookMaturity = maturities[1];
 
-        newMaturity = calculateNextMaturity(
+        uint256 newMaturity = calculateNextMaturity(
             maturities[maturities.length - 1],
             Storage.slot().marketBasePeriod
         );
@@ -221,7 +226,13 @@ library LendingMarketOperationLogic {
             orderBookIds[i] = orderBookId;
         }
 
-        uint256 autoRollUnitPrice = _calculateAutoRollUnitPrice(_ccy, destinationOrderBookMaturity);
+        uint256 autoRollUnitPrice = _calculateAutoRollUnitPrice(
+            _ccy,
+            maturities[0],
+            destinationOrderBookMaturity,
+            destinationOrderBookId,
+            market
+        );
 
         market.executeAutoRoll(
             maturedOrderBookId,
@@ -248,7 +259,7 @@ library LendingMarketOperationLogic {
     }
 
     function executeEmergencyTermination() external {
-        Storage.slot().marketTerminationDate = block.timestamp;
+        Storage.slot().terminationDate = block.timestamp;
 
         bytes32[] memory currencies = AddressResolverLib.currencyController().getCurrencies();
         bytes32[] memory collateralCurrencies = AddressResolverLib
@@ -258,9 +269,10 @@ library LendingMarketOperationLogic {
         for (uint256 i; i < currencies.length; i++) {
             bytes32 ccy = currencies[i];
 
-            Storage.slot().marketTerminationPrices[ccy] = AddressResolverLib
-                .currencyController()
-                .getAggregatedLastPrice(ccy);
+            Storage.slot().terminationCurrencyCaches[ccy] = TerminationCurrencyCache({
+                price: AddressResolverLib.currencyController().getAggregatedLastPrice(ccy),
+                decimals: AddressResolverLib.currencyController().getDecimals(ccy)
+            });
         }
 
         for (uint256 i; i < collateralCurrencies.length; i++) {
@@ -270,7 +282,7 @@ library LendingMarketOperationLogic {
                 address(AddressResolverLib.tokenVault())
             );
 
-            Storage.slot().marketTerminationRatios[ccy] = AddressResolverLib
+            Storage.slot().terminationCollateralRatios[ccy] = AddressResolverLib
                 .currencyController()
                 .convertToBaseCurrency(ccy, balance);
         }
@@ -291,7 +303,6 @@ library LendingMarketOperationLogic {
     function updateOrderLogs(
         bytes32 _ccy,
         uint256 _maturity,
-        uint256 _filledUnitPrice,
         uint256 _filledAmount,
         uint256 _filledFutureValue
     ) external {
@@ -300,15 +311,6 @@ library LendingMarketOperationLogic {
         if (Storage.slot().orderBookIdLists[_ccy][1] == orderBookId) {
             uint256 nearestMaturity = ILendingMarket(Storage.slot().lendingMarkets[_ccy])
                 .getMaturity(Storage.slot().orderBookIdLists[_ccy][0]);
-
-            if (Storage.slot().observationPeriodLogs[_ccy][_maturity].totalAmount == 0) {
-                Storage.slot().estimatedAutoRollUnitPrice[_ccy][_maturity] = _convertUnitPrice(
-                    _filledUnitPrice,
-                    _maturity,
-                    block.timestamp,
-                    nearestMaturity
-                );
-            }
 
             if (
                 (block.timestamp < nearestMaturity) &&
@@ -352,19 +354,40 @@ library LendingMarketOperationLogic {
 
     function _calculateAutoRollUnitPrice(
         bytes32 _ccy,
-        uint256 _maturity
+        uint256 _nearestMaturity,
+        uint256 _destinationMaturity,
+        uint8 _destinationOrderBookId,
+        ILendingMarket _market
     ) internal view returns (uint256 autoRollUnitPrice) {
-        ObservationPeriodLog memory log = Storage.slot().observationPeriodLogs[_ccy][_maturity];
+        ObservationPeriodLog memory log = Storage.slot().observationPeriodLogs[_ccy][
+            _destinationMaturity
+        ];
 
+        // The auto-roll unit price is calculated based on the volume-weighted average price of orders that are filled
+        // in the observation period. If there is no order filled in that period, the auto-roll unit price is calculated
+        // using the last block price. If the last block price is older than the last auto-roll date,
+        // the last auto-roll unit price is reused as the current auto-roll unit price.
         if (log.totalFutureValue != 0) {
             autoRollUnitPrice = (log.totalAmount * Constants.PRICE_DIGIT).div(log.totalFutureValue);
-        } else if (Storage.slot().estimatedAutoRollUnitPrice[_ccy][_maturity] != 0) {
-            autoRollUnitPrice = Storage.slot().estimatedAutoRollUnitPrice[_ccy][_maturity];
         } else {
-            autoRollUnitPrice = AddressResolverLib
+            (uint256[] memory unitPrices, uint48 timestamp) = _market.getBlockUnitPriceHistory(
+                _destinationOrderBookId
+            );
+
+            AutoRollLog memory autoRollLog = AddressResolverLib
                 .genesisValueVault()
-                .getLatestAutoRollLog(_ccy)
-                .unitPrice;
+                .getLatestAutoRollLog(_ccy);
+
+            if (unitPrices[0] != 0 && timestamp >= autoRollLog.prev) {
+                autoRollUnitPrice = _convertUnitPrice(
+                    unitPrices[0],
+                    _destinationMaturity,
+                    timestamp,
+                    _nearestMaturity
+                );
+            } else {
+                autoRollUnitPrice = autoRollLog.unitPrice;
+            }
         }
     }
 

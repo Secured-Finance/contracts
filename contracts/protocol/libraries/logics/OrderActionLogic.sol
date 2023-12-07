@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity 0.8.19;
 
 import {OrderBookLib, FilledOrder, PartiallyFilledOrder} from "../OrderBookLib.sol";
 import {ProtocolTypes} from "../../types/ProtocolTypes.sol";
@@ -358,7 +358,7 @@ library OrderActionLogic {
                 _minimumReliableAmount
             );
         } else {
-            isCircuitBreakerTriggered = conditions.orderExists;
+            isCircuitBreakerTriggered = true;
         }
 
         emit PositionUnwound(
@@ -473,7 +473,6 @@ library OrderActionLogic {
 
         (filledOrder, partiallyFilledOrder, vars.remainingAmount, vars.orderExists) = orderBook
             .fillOrders(_side, _amount, 0, _unitPrice);
-        filledOrder.amount = _amount - vars.remainingAmount;
 
         if (vars.remainingAmount > 0) {
             if (_ignoreRemainingAmount) {

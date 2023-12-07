@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity 0.8.19;
 
 // interfaces
 import {IReserveFund} from "./interfaces/IReserveFund.sol";
 // libraries
 import {Contracts} from "./libraries/Contracts.sol";
 // mixins
+import {MixinAccessControl} from "./mixins/MixinAccessControl.sol";
 import {MixinAddressResolver} from "./mixins/MixinAddressResolver.sol";
 // utils
 import {Proxyable} from "./utils/Proxyable.sol";
@@ -18,7 +19,13 @@ import {ReserveFundStorage as Storage} from "./storages/ReserveFundStorage.sol";
  *
  * This contract receives the fees from the lending market and uses them to cover to avoid the protocol insolvency.
  */
-contract ReserveFund is IReserveFund, MixinAddressResolver, MixinWallet, Proxyable {
+contract ReserveFund is
+    IReserveFund,
+    MixinAccessControl,
+    MixinAddressResolver,
+    MixinWallet,
+    Proxyable
+{
     receive() external payable {}
 
     /**
@@ -37,13 +44,13 @@ contract ReserveFund is IReserveFund, MixinAddressResolver, MixinWallet, Proxyab
 
         registerAddressResolver(_resolver);
         MixinWallet._initialize(_owner, _nativeToken);
+        MixinAccessControl._setupInitialRoles(_owner);
     }
 
     // @inheritdoc MixinAddressResolver
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {
-        contracts = new bytes32[](2);
-        contracts[0] = Contracts.LENDING_MARKET_CONTROLLER;
-        contracts[1] = Contracts.TOKEN_VAULT;
+        contracts = new bytes32[](1);
+        contracts[0] = Contracts.TOKEN_VAULT;
     }
 
     /**
@@ -57,7 +64,7 @@ contract ReserveFund is IReserveFund, MixinAddressResolver, MixinWallet, Proxyab
     /**
      * @notice Pauses the reserve fund.
      */
-    function pause() public override {
+    function pause() public override onlyOperator {
         Storage.slot().paused = true;
         emit Pause(msg.sender);
     }
@@ -65,7 +72,7 @@ contract ReserveFund is IReserveFund, MixinAddressResolver, MixinWallet, Proxyab
     /**
      * @notice Unpauses the reserve fund.
      */
-    function unpause() public override {
+    function unpause() public override onlyOperator {
         Storage.slot().paused = false;
         emit Unpause(msg.sender);
     }

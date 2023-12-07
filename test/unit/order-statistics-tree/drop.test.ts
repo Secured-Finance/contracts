@@ -78,188 +78,234 @@ describe('OrderStatisticsTree - drop values', () => {
     ost = await OrderStatisticsTree.new();
   });
 
-  for (const test of tests) {
-    describe(`${test.label} market orders`, async () => {
-      describe('Drop nodes from the tree by one action', async () => {
-        for (const condition of test.marketOrderConditions) {
-          describe(condition.title, async () => {
-            for (const input of condition.inputs) {
-              it(`${input.title}: Target amount is ${input.targetAmount}`, async () => {
-                for (const order of condition.orders) {
-                  await ost.insertAmountValue(
-                    order.unitPrice,
-                    order.orderId,
-                    constants.AddressZero,
-                    order.amount,
+  describe(`Dropping`, async () => {
+    for (const test of tests) {
+      describe(`${test.label} market orders`, async () => {
+        describe('Drop nodes from the tree by one action', async () => {
+          for (const condition of test.marketOrderConditions) {
+            describe(condition.title, async () => {
+              for (const input of condition.inputs) {
+                it(`${input.title}: Target amount is ${input.targetAmount}`, async () => {
+                  for (const order of condition.orders) {
+                    await ost.insertAmountValue(
+                      order.unitPrice,
+                      order.orderId,
+                      constants.AddressZero,
+                      order.amount,
+                    );
+                  }
+                  const totalAmountBefore = await getTotalAmount('<Before>');
+
+                  await ost[test.method](input.targetAmount, 0, 0);
+                  const totalAmountAfter = await getTotalAmount('<After>');
+
+                  expect(
+                    totalAmountBefore?.sub(totalAmountAfter).toNumber(),
+                  ).equal(input.droppedAmount);
+                });
+              }
+            });
+          }
+        });
+
+        describe('Drop nodes from the tree by multiple actions', async () => {
+          for (const condition of test.marketOrderConditions) {
+            describe(condition.title, async () => {
+              for (const input of condition.inputs) {
+                it(`${input.title}: Target amount is ${input.targetAmount}`, async () => {
+                  for (const order of condition.orders) {
+                    await ost.insertAmountValue(
+                      order.unitPrice,
+                      order.orderId,
+                      constants.AddressZero,
+                      order.amount,
+                    );
+                  }
+                  await getTotalAmount('<Before>');
+
+                  await ost[test.method](input.targetAmount / 2, 0, 0);
+                  await getTotalAmount('<After data is dropped 1>');
+
+                  await ost[test.method](input.targetAmount / 2, 0, 0);
+                  await getTotalAmount('<After data is dropped 2>');
+                });
+              }
+            });
+          }
+        });
+
+        describe('Drop nodes from the tree by repeated inserting and dropping', async () => {
+          for (const condition of test.marketOrderConditions) {
+            describe(condition.title, async () => {
+              for (const input of condition.inputs) {
+                it(`${input.title}: Target amount is ${input.targetAmount}`, async () => {
+                  for (const order of condition.orders) {
+                    await ost.insertAmountValue(
+                      order.unitPrice,
+                      order.orderId,
+                      constants.AddressZero,
+                      order.amount,
+                    );
+                  }
+                  const totalAmountBefore = await getTotalAmount('<Before>');
+
+                  await ost[test.method](input.targetAmount, 0, 0);
+                  const totalAmountAfter1 = await getTotalAmount(
+                    '<After data is dropped>',
                   );
-                }
-                const totalAmountBefore = await getTotalAmount('<Before>');
 
-                await ost[test.method](input.targetAmount, 0, 0);
-                const totalAmountAfter = await getTotalAmount('<After>');
+                  expect(
+                    totalAmountBefore?.sub(totalAmountAfter1).toNumber(),
+                  ).equal(input.droppedAmount);
 
-                expect(
-                  totalAmountBefore?.sub(totalAmountAfter).toNumber(),
-                ).equal(input.droppedAmount);
-              });
-            }
-          });
+                  for (const order of condition.orders) {
+                    await ost.insertAmountValue(
+                      order.unitPrice,
+                      order.orderId + 100,
+                      constants.AddressZero,
+                      order.amount,
+                    );
+                  }
+                  const totalAmountAfter2 = await getTotalAmount(
+                    '<After data is inserted again>',
+                  );
+
+                  await ost[test.method](input.targetAmount, 0, 0);
+                  const totalAmountAfter3 = await getTotalAmount(
+                    '<After data is dropped again>',
+                  );
+
+                  expect(
+                    totalAmountAfter2?.sub(totalAmountAfter3).toNumber(),
+                  ).equal(input.droppedAmount);
+                });
+              }
+            });
+          }
+        });
+      });
+
+      describe(`${test.label} limit orders`, async () => {
+        describe('Drop nodes from the tree', async () => {
+          for (const condition of test.limitOrderConditions) {
+            describe(condition.title, async () => {
+              for (const input of condition.inputs) {
+                const title = `${input.title}: Target amount is ${input.targetAmount}, Limit value ${input?.limitValue}`;
+
+                it(title, async () => {
+                  for (const order of condition.orders) {
+                    await ost.insertAmountValue(
+                      order.unitPrice,
+                      order.orderId,
+                      constants.AddressZero,
+                      order.amount,
+                    );
+                  }
+                  const totalAmountBefore = await getTotalAmount('<Before>');
+
+                  await ost[test.method](
+                    input.targetAmount,
+                    0,
+                    input?.limitValue || 0,
+                  );
+                  const totalAmountAfter = await getTotalAmount('<After>');
+
+                  expect(
+                    totalAmountBefore?.sub(totalAmountAfter).toNumber(),
+                  ).equal(input.droppedAmount);
+                  expect(await ost.valueExists(input.droppedValue)).to.be.false;
+                });
+              }
+            });
+          }
+        });
+      });
+
+      describe(`${test.label} unwind orders`, async () => {
+        describe('Drop nodes from the tree', async () => {
+          for (const condition of test.lendingUnwindOrders) {
+            describe(condition.title, async () => {
+              for (const input of condition.inputs) {
+                const title = `${input.title}: Unwind future value ${input?.droppedAmountInFV}`;
+
+                it(title, async () => {
+                  for (const order of condition.orders) {
+                    await ost.insertAmountValue(
+                      order.unitPrice,
+                      order.orderId,
+                      constants.AddressZero,
+                      order.amount,
+                    );
+                  }
+                  const totalAmountBefore = await getTotalAmount('<Before>');
+
+                  const { droppedAmount, droppedAmountInFV } = await ost[
+                    test.method
+                  ](0, input.droppedAmountInFV, 0).then(
+                    ({ logs }) =>
+                      logs.find(({ event }) => event === 'Drop').args,
+                  );
+
+                  const totalAmountAfter = await getTotalAmount('<After>');
+
+                  expect(droppedAmount.toNumber()).equal(input.filledAmount);
+                  expect(droppedAmountInFV.toNumber()).equal(
+                    input.filledFutureValue,
+                  );
+                  expect(
+                    totalAmountBefore?.sub(totalAmountAfter).toNumber(),
+                  ).equal(input.droppedAmount);
+                });
+              }
+            });
+          }
+        });
+      });
+    }
+
+    describe('Drop and Insert', async () => {
+      const orders = [
+        { unitPrice: 8001, orderId: 2, amount: 300000000 },
+        { unitPrice: 8002, orderId: 3, amount: 500000000 },
+        { unitPrice: 8003, orderId: 4, amount: 300000000 },
+        { unitPrice: 8004, orderId: 51, amount: 50000000 },
+        { unitPrice: 8004, orderId: 52, amount: 50000000 },
+        { unitPrice: 8000, orderId: 11, amount: 50000000 },
+        { unitPrice: 8000, orderId: 12, amount: 50000000 },
+      ];
+
+      beforeEach(async () => {
+        for (const order of orders) {
+          await ost.insertAmountValue(
+            order.unitPrice,
+            order.orderId,
+            constants.AddressZero,
+            order.amount,
+          );
         }
       });
 
-      describe('Drop nodes from the tree by multiple actions', async () => {
-        for (const condition of test.marketOrderConditions) {
-          describe(condition.title, async () => {
-            for (const input of condition.inputs) {
-              it(`${input.title}: Target amount is ${input.targetAmount}`, async () => {
-                for (const order of condition.orders) {
-                  await ost.insertAmountValue(
-                    order.unitPrice,
-                    order.orderId,
-                    constants.AddressZero,
-                    order.amount,
-                  );
-                }
-                await getTotalAmount('<Before>');
+      it('Insert a lend order to the dropped node', async () => {
+        await ost.dropValuesFromLast('400000000', 0, 0);
+        await ost.insertAmountValue(8004, 6, constants.AddressZero, 123456789);
 
-                await ost[test.method](input.targetAmount / 2, 0, 0);
-                await getTotalAmount('<After data is dropped 1>');
+        const { _orderCounter, _orderTotalAmount } = await ost.getNode('8004');
 
-                await ost[test.method](input.targetAmount / 2, 0, 0);
-                await getTotalAmount('<After data is dropped 2>');
-              });
-            }
-          });
-        }
+        expect(_orderCounter.toString()).to.equal('1');
+        expect(_orderTotalAmount.toString()).to.equal('123456789');
       });
 
-      describe('Drop nodes from the tree by repeated inserting and dropping', async () => {
-        for (const condition of test.marketOrderConditions) {
-          describe(condition.title, async () => {
-            for (const input of condition.inputs) {
-              it(`${input.title}: Target amount is ${input.targetAmount}`, async () => {
-                for (const order of condition.orders) {
-                  await ost.insertAmountValue(
-                    order.unitPrice,
-                    order.orderId,
-                    constants.AddressZero,
-                    order.amount,
-                  );
-                }
-                const totalAmountBefore = await getTotalAmount('<Before>');
+      it('Insert a borrow order to the dropped node', async () => {
+        await ost.dropValuesFromFirst('400000000', 0, 0);
+        await ost.insertAmountValue(8000, 6, constants.AddressZero, 123456789);
 
-                await ost[test.method](input.targetAmount, 0, 0);
-                const totalAmountAfter1 = await getTotalAmount(
-                  '<After data is dropped>',
-                );
+        const { _orderCounter, _orderTotalAmount } = await ost.getNode('8000');
 
-                expect(
-                  totalAmountBefore?.sub(totalAmountAfter1).toNumber(),
-                ).equal(input.droppedAmount);
-
-                for (const order of condition.orders) {
-                  await ost.insertAmountValue(
-                    order.unitPrice,
-                    order.orderId + 100,
-                    constants.AddressZero,
-                    order.amount,
-                  );
-                }
-                const totalAmountAfter2 = await getTotalAmount(
-                  '<After data is inserted again>',
-                );
-
-                await ost[test.method](input.targetAmount, 0, 0);
-                const totalAmountAfter3 = await getTotalAmount(
-                  '<After data is dropped again>',
-                );
-
-                expect(
-                  totalAmountAfter2?.sub(totalAmountAfter3).toNumber(),
-                ).equal(input.droppedAmount);
-              });
-            }
-          });
-        }
+        expect(_orderCounter.toString()).to.equal('1');
+        expect(_orderTotalAmount.toString()).to.equal('123456789');
       });
     });
-
-    describe(`${test.label} limit orders`, async () => {
-      describe('Drop nodes from the tree', async () => {
-        for (const condition of test.limitOrderConditions) {
-          describe(condition.title, async () => {
-            for (const input of condition.inputs) {
-              const title = `${input.title}: Target amount is ${input.targetAmount}, Limit value ${input?.limitValue}`;
-
-              it(title, async () => {
-                for (const order of condition.orders) {
-                  await ost.insertAmountValue(
-                    order.unitPrice,
-                    order.orderId,
-                    constants.AddressZero,
-                    order.amount,
-                  );
-                }
-                const totalAmountBefore = await getTotalAmount('<Before>');
-
-                await ost[test.method](
-                  input.targetAmount,
-                  0,
-                  input?.limitValue || 0,
-                );
-                const totalAmountAfter = await getTotalAmount('<After>');
-
-                expect(
-                  totalAmountBefore?.sub(totalAmountAfter).toNumber(),
-                ).equal(input.droppedAmount);
-                expect(await ost.valueExists(input.droppedValue)).to.be.false;
-              });
-            }
-          });
-        }
-      });
-    });
-
-    describe(`${test.label} unwind orders`, async () => {
-      describe('Drop nodes from the tree', async () => {
-        for (const condition of test.lendingUnwindOrders) {
-          describe(condition.title, async () => {
-            for (const input of condition.inputs) {
-              const title = `${input.title}: Unwind future value ${input?.droppedAmountInFV}`;
-
-              it(title, async () => {
-                for (const order of condition.orders) {
-                  await ost.insertAmountValue(
-                    order.unitPrice,
-                    order.orderId,
-                    constants.AddressZero,
-                    order.amount,
-                  );
-                }
-                const totalAmountBefore = await getTotalAmount('<Before>');
-
-                const { droppedAmount, droppedAmountInFV } = await ost[
-                  test.method
-                ](0, input.droppedAmountInFV, 0).then(
-                  ({ logs }) => logs.find(({ event }) => event === 'Drop').args,
-                );
-
-                const totalAmountAfter = await getTotalAmount('<After>');
-
-                expect(droppedAmount.toNumber()).equal(input.filledAmount);
-                expect(droppedAmountInFV.toNumber()).equal(
-                  input.filledFutureValue,
-                );
-                expect(
-                  totalAmountBefore?.sub(totalAmountAfter).toNumber(),
-                ).equal(input.droppedAmount);
-              });
-            }
-          });
-        }
-      });
-    });
-  }
+  });
 
   describe(`Estimation`, async () => {
     describe('Estimate the dropped amount from the lending tree', async () => {

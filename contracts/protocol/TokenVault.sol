@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity 0.8.19;
 
 // dependencies
 import {EnumerableSet} from "../dependencies/openzeppelin/utils/structs/EnumerableSet.sol";
@@ -34,8 +34,6 @@ import {TokenVaultStorage as Storage} from "./storages/TokenVaultStorage.sol";
  *   - Liquidation threshold rate
  *   - Liquidation fee rate received by protocol
  *   - Liquidation fee rate received by liquidators
- *
- * To address a currency as collateral, it must be registered using `registerCurrency` method in this contract.
  */
 contract TokenVault is
     ITokenVault,
@@ -54,6 +52,14 @@ contract TokenVault is
      */
     modifier onlyRegisteredCurrency(bytes32 _ccy) {
         if (!isRegisteredCurrency(_ccy)) revert UnregisteredCurrency();
+        _;
+    }
+
+    /**
+     * @notice Modifier to check if the protocol is active.
+     */
+    modifier ifActive() {
+        if (lendingMarketController().isTerminated()) revert MarketTerminated();
         _;
     }
 
@@ -94,13 +100,6 @@ contract TokenVault is
         contracts[0] = Contracts.CURRENCY_CONTROLLER;
         contracts[1] = Contracts.LENDING_MARKET_CONTROLLER;
         contracts[2] = Contracts.RESERVE_FUND;
-    }
-
-    // @inheritdoc MixinAddressResolver
-    function acceptedContracts() public pure override returns (bytes32[] memory contracts) {
-        contracts = new bytes32[](2);
-        contracts[0] = Contracts.LENDING_MARKET_CONTROLLER;
-        contracts[1] = Contracts.RESERVE_FUND;
     }
 
     receive() external payable {
@@ -171,7 +170,7 @@ contract TokenVault is
     /**
      * @notice Gets the maximum amount of the base currency that can be withdrawn from user collateral.
      * @param _user User's address
-     * @return Maximum amount of ETH that can be withdrawn
+     * @return Maximum amount of the base currency that can be withdrawn
      */
     function getWithdrawableCollateral(address _user) external view override returns (uint256) {
         return DepositManagementLogic.getWithdrawableCollateral(_user);
@@ -337,8 +336,14 @@ contract TokenVault is
         bytes32 _ccy,
         address _tokenAddress,
         bool _isCollateral
-    ) external override onlyOwner {
-        if (!currencyController().currencyExists(_ccy)) revert InvalidCurrency();
+    ) external override ifActive onlyOwner {
+        if (!currencyController().currencyExists(_ccy) || isRegisteredCurrency(_ccy)) {
+            revert InvalidCurrency();
+        }
+
+        if (_tokenAddress == address(0)) {
+            revert InvalidToken();
+        }
 
         Storage.slot().tokenAddresses[_ccy] = _tokenAddress;
         if (_isCollateral) {
@@ -356,7 +361,7 @@ contract TokenVault is
     function updateCurrency(
         bytes32 _ccy,
         bool _isCollateral
-    ) external override onlyOwner onlyRegisteredCurrency(_ccy) {
+    ) external override ifActive onlyOwner onlyRegisteredCurrency(_ccy) {
         if (_isCollateral) {
             Storage.slot().collateralCurrencies.add(_ccy);
         } else {
@@ -374,7 +379,7 @@ contract TokenVault is
     function deposit(
         bytes32 _ccy,
         uint256 _amount
-    ) external payable override whenNotPaused onlyRegisteredCurrency(_ccy) {
+    ) external payable override ifActive whenNotPaused onlyRegisteredCurrency(_ccy) {
         _deposit(msg.sender, _ccy, _amount);
     }
 
@@ -388,7 +393,7 @@ contract TokenVault is
         address _from,
         bytes32 _ccy,
         uint256 _amount
-    ) external payable override whenNotPaused onlyAcceptedContracts {
+    ) external payable override ifActive whenNotPaused onlyLendingMarketController {
         _deposit(_from, _ccy, _amount);
     }
 
@@ -414,7 +419,7 @@ contract TokenVault is
         address _user,
         bytes32 _ccy,
         uint256 _amount
-    ) external override whenNotPaused onlyAcceptedContracts onlyRegisteredCurrency(_ccy) {
+    ) external override whenNotPaused onlyLendingMarketController onlyRegisteredCurrency(_ccy) {
         DepositManagementLogic.addDepositAmount(_user, _ccy, _amount);
     }
 
@@ -428,7 +433,7 @@ contract TokenVault is
         address _user,
         bytes32 _ccy,
         uint256 _amount
-    ) external override whenNotPaused onlyAcceptedContracts onlyRegisteredCurrency(_ccy) {
+    ) external override whenNotPaused onlyLendingMarketController onlyRegisteredCurrency(_ccy) {
         DepositManagementLogic.removeDepositAmount(_user, _ccy, _amount);
     }
 
@@ -440,7 +445,7 @@ contract TokenVault is
     function executeForcedReset(
         address _user,
         bytes32 _ccy
-    ) external override onlyAcceptedContracts onlyRegisteredCurrency(_ccy) returns (uint256) {
+    ) external override onlyLendingMarketController onlyRegisteredCurrency(_ccy) returns (uint256) {
         return DepositManagementLogic.executeForcedReset(_user, _ccy);
     }
 
@@ -460,7 +465,7 @@ contract TokenVault is
         external
         override
         whenNotPaused
-        onlyAcceptedContracts
+        onlyLendingMarketController
         onlyRegisteredCurrency(_ccy)
         returns (uint256 untransferredAmount)
     {
@@ -483,13 +488,15 @@ contract TokenVault is
     }
 
     function _deposit(address _user, bytes32 _ccy, uint256 _amount) internal {
+        if (_amount == 0) revert AmountIsZero();
+
+        address tokenAddress = Storage.slot().tokenAddresses[_ccy];
         if (
-            _amount == 0 ||
-            (TransferHelper.isNative(Storage.slot().tokenAddresses[_ccy]) && _amount != msg.value)
+            (TransferHelper.isNative(tokenAddress) && msg.value != _amount) ||
+            (!TransferHelper.isNative(tokenAddress) && msg.value != 0)
         ) {
-            revert InvalidAmount();
+            revert InvalidAmount(_ccy, _amount, msg.value);
         }
-        if (lendingMarketController().isTerminated()) revert MarketTerminated();
 
         DepositManagementLogic.deposit(_user, _ccy, _amount);
 
@@ -497,7 +504,7 @@ contract TokenVault is
     }
 
     function _withdraw(address _user, bytes32 _ccy, uint256 _amount) internal {
-        if (_amount == 0) revert InvalidAmount();
+        if (_amount == 0) revert AmountIsZero();
         if (lendingMarketController().isRedemptionRequired(_user)) revert RedemptionIsRequired();
 
         lendingMarketController().cleanUpFunds(_ccy, _user);

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity 0.8.19;
 
 library Constants {
     /// @dev Used for price digits in the basis (10000 -> 1)

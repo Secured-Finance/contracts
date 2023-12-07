@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity 0.8.19;
 
 // dependencies
 import {ReentrancyGuard} from "../dependencies/openzeppelin/security/ReentrancyGuard.sol";
@@ -25,7 +25,7 @@ import {ProtocolTypes} from "./types/ProtocolTypes.sol";
 import {Proxyable} from "./utils/Proxyable.sol";
 import {LockAndMsgSender} from "./utils/LockAndMsgSender.sol";
 // storages
-import {LendingMarketControllerStorage as Storage} from "./storages/LendingMarketControllerStorage.sol";
+import {LendingMarketControllerStorage as Storage, TerminationCurrencyCache} from "./storages/LendingMarketControllerStorage.sol";
 
 /**
  * @notice Implements the module to manage separated lending market contracts per currency.
@@ -107,18 +107,12 @@ contract LendingMarketController is
         contracts[4] = Contracts.TOKEN_VAULT;
     }
 
-    // @inheritdoc MixinAddressResolver
-    function acceptedContracts() public pure override returns (bytes32[] memory contracts) {
-        contracts = new bytes32[](1);
-        contracts[0] = Contracts.TOKEN_VAULT;
-    }
-
     /**
      * @notice Gets if the protocol has not been terminated.
      * @return The boolean if the protocol has not been terminated
      */
     function isTerminated() public view override returns (bool) {
-        return Storage.slot().marketTerminationDate > 0;
+        return Storage.slot().terminationDate > 0;
     }
 
     /**
@@ -138,29 +132,31 @@ contract LendingMarketController is
     }
 
     /**
-     * @notice Gets the date when the market terminated.
+     * @notice Gets the date at the emergency termination.
      * @return The termination date
      */
-    function getMarketTerminationDate() external view override returns (uint256) {
-        return Storage.slot().marketTerminationDate;
+    function getTerminationDate() external view override returns (uint256) {
+        return Storage.slot().terminationDate;
     }
 
     /**
-     * @notice Gets the price cached at the market termination.
+     * @notice Gets the currency information cached at the emergency termination.
      * @param _ccy Currency name in bytes32
      * @return The price cached
      */
-    function getMarketTerminationPrice(bytes32 _ccy) external view override returns (int256) {
-        return Storage.slot().marketTerminationPrices[_ccy];
+    function getTerminationCurrencyCache(
+        bytes32 _ccy
+    ) external view override returns (TerminationCurrencyCache memory) {
+        return Storage.slot().terminationCurrencyCaches[_ccy];
     }
 
     /**
-     * @notice Gets the ratio of each token in TokenVault at the market termination.
+     * @notice Gets the collateral ratio of each token in TokenVault at the emergency termination.
      * @param _ccy Currency name in bytes32
      * @return The ratio
      */
-    function getMarketTerminationRatio(bytes32 _ccy) external view override returns (uint256) {
-        return Storage.slot().marketTerminationRatios[_ccy];
+    function getTerminationCollateralRatio(bytes32 _ccy) external view override returns (uint256) {
+        return Storage.slot().terminationCollateralRatios[_ccy];
     }
 
     /**
@@ -229,6 +225,19 @@ contract LendingMarketController is
      */
     function getFutureValueVault(bytes32 _ccy) public view override returns (address) {
         return Storage.slot().futureValueVaults[_ccy];
+    }
+
+    /**
+     * @notice Gets the total amount of pending orders that is not cleaned up yet.
+     * @param _ccy Currency name in bytes32
+     * @param _maturity The maturity of the order book
+     * @return The total amount
+     */
+    function getPendingOrderAmount(
+        bytes32 _ccy,
+        uint256 _maturity
+    ) external view override returns (uint256) {
+        return Storage.slot().pendingOrderAmounts[_ccy][_maturity];
     }
 
     /**
@@ -764,19 +773,13 @@ contract LendingMarketController is
      * - Updates the maturity at the beginning of the order book array.
      * - Moves the beginning of the order book array to the end of it (Market rotation).
      * - Update the compound factor in this contract using the next order book unit price. (Auto-rolls)
-     * - Convert the future value held by reserve funds into the genesis value
+     * - Clean up the reserve fund contract
      *
      * @param _ccy Currency name in bytes32 of the selected order book
      */
     function rotateOrderBooks(bytes32 _ccy) external override nonReentrant ifActive {
-        uint256 newMaturity = LendingMarketOperationLogic.rotateOrderBooks(_ccy);
-
-        FundManagementLogic.convertFutureValueToGenesisValue(
-            _ccy,
-            Storage.slot().maturityOrderBookIds[_ccy][newMaturity],
-            newMaturity,
-            address(reserveFund())
-        );
+        LendingMarketOperationLogic.rotateOrderBooks(_ccy);
+        FundManagementLogic.cleanUpFunds(_ccy, address(reserveFund()));
     }
 
     /**

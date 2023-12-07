@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity 0.8.19;
 
 // dependencies
+import {Math} from "../dependencies/openzeppelin/utils/math/Math.sol";
 import {SafeCast} from "../dependencies/openzeppelin/utils/math/SafeCast.sol";
 // interfaces
 import {IGenesisValueVault} from "./interfaces/IGenesisValueVault.sol";
@@ -10,7 +11,6 @@ import {Contracts} from "./libraries/Contracts.sol";
 import {Constants} from "./libraries/Constants.sol";
 import {RoundingUint256} from "./libraries/math/RoundingUint256.sol";
 import {RoundingInt256} from "./libraries/math/RoundingInt256.sol";
-import {FullMath} from "./libraries/math/FullMath.sol";
 // mixins
 import {MixinAddressResolver} from "./mixins/MixinAddressResolver.sol";
 // utils
@@ -41,12 +41,6 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         contracts = new bytes32[](2);
         contracts[0] = Contracts.LENDING_MARKET_CONTROLLER;
         contracts[1] = Contracts.RESERVE_FUND;
-    }
-
-    // @inheritdoc MixinAddressResolver
-    function acceptedContracts() public pure override returns (bytes32[] memory contracts) {
-        contracts = new bytes32[](1);
-        contracts[0] = Contracts.LENDING_MARKET_CONTROLLER;
     }
 
     /**
@@ -268,7 +262,7 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         uint8 _decimals,
         uint256 _compoundFactor,
         uint256 _maturity
-    ) external override onlyAcceptedContracts {
+    ) external override onlyLendingMarketController {
         if (_compoundFactor == 0) revert CompoundFactorIsZero();
         if (isInitialized(_ccy)) revert CurrencyAlreadyInitialized();
 
@@ -300,7 +294,7 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
     function updateInitialCompoundFactor(
         bytes32 _ccy,
         uint256 _unitPrice
-    ) external override onlyAcceptedContracts {
+    ) external override onlyLendingMarketController {
         uint256 maturity = Storage.slot().currentMaturity[_ccy];
 
         if (Storage.slot().autoRollLogs[_ccy][maturity].prev != 0) {
@@ -331,7 +325,10 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         uint256 _nextMaturity,
         uint256 _unitPrice,
         uint256 _orderFeeRate
-    ) external override onlyAcceptedContracts {
+    ) external override onlyLendingMarketController {
+        if (_unitPrice == 0) revert UnitPriceIsZero();
+        if (_nextMaturity <= _maturity) revert InvalidMaturity();
+
         _updateCompoundFactor(_ccy, _unitPrice, _orderFeeRate, _nextMaturity - _maturity);
         _updateAutoRollLogs(_ccy, _maturity, _nextMaturity, _unitPrice);
 
@@ -351,9 +348,6 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         uint256 _nextMaturity,
         uint256 _unitPrice
     ) private {
-        if (_unitPrice == 0) revert UnitPriceIsZero();
-        if (_nextMaturity <= _maturity) revert InvalidMaturity();
-
         AutoRollLog memory currentLog = Storage.slot().autoRollLogs[_ccy][_maturity];
         AutoRollLog memory nextLog = Storage.slot().autoRollLogs[_ccy][_nextMaturity];
 
@@ -392,7 +386,7 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         address _user,
         uint256 _basisMaturity,
         int256 _fvAmount
-    ) external override onlyAcceptedContracts {
+    ) external override onlyLendingMarketController {
         int256 amount = calculateGVFromFV(_ccy, _basisMaturity, _fvAmount);
 
         _updateBalance(_ccy, _user, _basisMaturity, amount);
@@ -410,7 +404,7 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         bytes32 _ccy,
         address _user,
         uint256 _basisMaturity
-    ) external override onlyAcceptedContracts {
+    ) external override onlyLendingMarketController {
         int256 residualGVAmount = Storage.slot().maturityBalances[_ccy][_basisMaturity];
 
         _updateBalance(_ccy, _user, _basisMaturity, -residualGVAmount);
@@ -432,7 +426,7 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         address _sender,
         address _receiver,
         int256 _amount
-    ) external override onlyAcceptedContracts {
+    ) external override onlyLendingMarketController {
         Storage.slot().balances[_ccy][_sender] -= _amount;
         Storage.slot().balances[_ccy][_receiver] += _amount;
 
@@ -451,19 +445,15 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         bytes32 _ccy,
         address _user,
         uint256 _maturity
-    ) external override onlyAcceptedContracts {
+    ) external override onlyLendingMarketController {
         uint256 maturity = _maturity == 0 ? getCurrentMaturity(_ccy) : _maturity;
         int256 fluctuation = _getBalanceFluctuationByAutoRolls(_ccy, _user, maturity);
 
         if (fluctuation < 0) {
             address reserveFundAddr = address(reserveFund());
 
-            _updateTotalSupplies(_ccy, fluctuation, Storage.slot().balances[_ccy][_user]);
-            _updateTotalSupplies(
-                _ccy,
-                -fluctuation,
-                Storage.slot().balances[_ccy][reserveFundAddr]
-            );
+            _updateTotalSupply(_ccy, fluctuation, Storage.slot().balances[_ccy][_user]);
+            _updateTotalSupply(_ccy, -fluctuation, Storage.slot().balances[_ccy][reserveFundAddr]);
 
             Storage.slot().userMaturities[_ccy][_user] = maturity;
             Storage.slot().balances[_ccy][_user] += fluctuation;
@@ -481,7 +471,7 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
     function executeForcedReset(
         bytes32 _ccy,
         address _user
-    ) external override onlyAcceptedContracts {
+    ) external override onlyLendingMarketController {
         int256 removedAmount = Storage.slot().balances[_ccy][_user];
 
         if (removedAmount != 0) {
@@ -501,7 +491,12 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         uint256 _maturity,
         address _user,
         int256 _amountInFV
-    ) external override onlyAcceptedContracts returns (int256 removedAmountInFV, int256 balance) {
+    )
+        external
+        override
+        onlyLendingMarketController
+        returns (int256 removedAmountInFV, int256 balance)
+    {
         int256 _amount = calculateGVFromFV(_ccy, _maturity, _amountInFV);
         int256 removedAmount = Storage.slot().balances[_ccy][_user];
 
@@ -574,18 +569,15 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         if (fluctuation < 0) {
             totalAmount += fluctuation;
             address reserveFundAddr = address(reserveFund());
-            Storage.slot().balances[_ccy][reserveFundAddr] += -fluctuation;
 
-            _updateTotalSupplies(
-                _ccy,
-                -fluctuation,
-                Storage.slot().balances[_ccy][reserveFundAddr]
-            );
+            _updateTotalSupply(_ccy, -fluctuation, Storage.slot().balances[_ccy][reserveFundAddr]);
+
+            Storage.slot().balances[_ccy][reserveFundAddr] += -fluctuation;
 
             emit Transfer(_ccy, _user, reserveFundAddr, -fluctuation);
         }
 
-        _updateTotalSupplies(_ccy, totalAmount, balance);
+        _updateTotalSupply(_ccy, totalAmount, balance);
 
         Storage.slot().userMaturities[_ccy][_user] = _maturity;
         Storage.slot().balances[_ccy][_user] += totalAmount;
@@ -594,7 +586,7 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         emit Transfer(_ccy, address(0), _user, _amount);
     }
 
-    function _updateTotalSupplies(bytes32 _ccy, int256 _amount, int256 _balance) private {
+    function _updateTotalSupply(bytes32 _ccy, int256 _amount, int256 _balance) private {
         if (_amount >= 0) {
             uint256 absAmount = _amount.toUint256();
             if (_balance >= 0) {
@@ -690,9 +682,9 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         // Note: The formula is:
         // fluctuation = currentBalance * ((currentBCF / userBCF) * (userLCF / currentLCF) - 1)
         fluctuation =
-            -FullMath
+            -Math
                 .mulDiv(
-                    FullMath.mulDiv(
+                    Math.mulDiv(
                         (-_balance).toUint256(),
                         destinationBorrowingCF,
                         autoRollLog.borrowingCompoundFactor
@@ -708,26 +700,26 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         bytes32 _ccy,
         uint256 _unitPrice,
         uint256 _orderFeeRate,
-        uint256 _currentMaturity
+        uint256 _duration
     ) private {
         if (_orderFeeRate > Constants.PCT_DIGIT) revert InvalidOrderFeeRate();
 
         // Save actual compound factor here due to calculating the genesis value from future value.
         // NOTE: The formula is:
         // autoRollRate = 1 / unitPrice
-        // rollFeeRate = orderFeeRate * (currentMaturity / SECONDS_IN_YEAR)
+        // rollFeeRate = orderFeeRate * (duration / SECONDS_IN_YEAR)
         // newLendingCompoundFactor = currentLendingCompoundFactor * (autoRollRate - rollFeeRate)
         // newBorrowingCompoundFactor = currentBorrowingCompoundFactor * (autoRollRate + rollFeeRate)
         uint256 denominator = (Constants.PCT_DIGIT * Constants.SECONDS_IN_YEAR * _unitPrice);
 
         Storage.slot().lendingCompoundFactors[_ccy] = (Storage.slot().lendingCompoundFactors[_ccy] *
             ((Constants.PRICE_DIGIT * Constants.PCT_DIGIT * Constants.SECONDS_IN_YEAR) -
-                (_orderFeeRate * _currentMaturity * _unitPrice))).div(denominator);
+                (_orderFeeRate * _duration * _unitPrice))).div(denominator);
 
         Storage.slot().borrowingCompoundFactors[_ccy] = (Storage.slot().borrowingCompoundFactors[
             _ccy
         ] *
             ((Constants.PRICE_DIGIT * Constants.PCT_DIGIT * Constants.SECONDS_IN_YEAR) +
-                (_orderFeeRate * _currentMaturity * _unitPrice))).div(denominator);
+                (_orderFeeRate * _duration * _unitPrice))).div(denominator);
     }
 }

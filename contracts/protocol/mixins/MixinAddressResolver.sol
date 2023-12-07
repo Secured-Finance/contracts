@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity 0.8.19;
 
 import {AddressResolverLib} from "../libraries/AddressResolverLib.sol";
 import {IAddressResolver} from "../interfaces/IAddressResolver.sol";
@@ -14,11 +14,12 @@ import {MixinAddressResolverStorage as Storage} from "../storages/mixins/MixinAd
 contract MixinAddressResolver {
     event CacheUpdated(bytes32 name, address destination);
 
-    error OnlyAcceptedContracts();
+    error OnlyAcceptedContract(string name);
     error ResolverAlreadyRegistered();
 
-    modifier onlyAcceptedContracts() {
-        if (!isAcceptedContract(msg.sender)) revert OnlyAcceptedContracts();
+    modifier onlyLendingMarketController() {
+        if (msg.sender != address(AddressResolverLib.lendingMarketController()))
+            revert OnlyAcceptedContract("LendingMarketController");
         _;
     }
 
@@ -27,12 +28,6 @@ contract MixinAddressResolver {
      * @dev The contract name list is in `./libraries/Contracts.sol`.
      */
     function requiredContracts() public pure virtual returns (bytes32[] memory contracts) {}
-
-    /**
-     * @notice Returns contract names that can call this contract.
-     * @dev The contact name listed in this method is also needed to be listed `requiredContracts` method.
-     */
-    function acceptedContracts() public pure virtual returns (bytes32[] memory contracts) {}
 
     function buildCache() public {
         // The resolver must call this function whenever it updates its state
@@ -72,17 +67,6 @@ contract MixinAddressResolver {
     function registerAddressResolver(address _resolver) internal {
         if (address(Storage.slot().resolver) != address(0)) revert ResolverAlreadyRegistered();
         Storage.slot().resolver = IAddressResolver(_resolver);
-    }
-
-    function isAcceptedContract(address account) internal view virtual returns (bool) {
-        bytes32[] memory contractNames = acceptedContracts();
-        for (uint256 i; i < contractNames.length; i++) {
-            if (account == getAddress(contractNames[i])) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     function getAddress(bytes32 name) internal view returns (address) {

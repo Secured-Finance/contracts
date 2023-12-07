@@ -15,12 +15,6 @@ const UpgradeabilityProxy = artifacts.require('UpgradeabilityProxy');
 
 const { deployContract } = waffle;
 
-const getNewProxyAddress = async (tx: ContractTransaction) => {
-  const { events } = await tx.wait();
-
-  return events?.find(({ event }) => event === 'ProxyCreated')?.args
-    ?.proxyAddress;
-};
 const getUpdatedProxyAddress = async (tx: ContractTransaction) => {
   const { events } = await tx.wait();
 
@@ -45,6 +39,18 @@ describe('ProxyController', () => {
       .then((address) => ethers.getContractAt('AddressResolver', address));
   });
 
+  describe('Initialize', async () => {
+    it('Deploy a ProxyController contract', async () => {
+      const proxyController = await deployContract(owner, ProxyController, [
+        addressResolver.address,
+      ]);
+
+      const addressResolverAddress =
+        await proxyController.getAddressResolverAddress();
+      expect(addressResolverAddress).to.equal(addressResolver.address);
+    });
+  });
+
   describe('Register contracts', async () => {
     it('Register a CurrencyController contract', async () => {
       const currencyController = await deployContract(
@@ -55,9 +61,9 @@ describe('ProxyController', () => {
         currencyController.address,
       );
 
-      await expect(tx).to.emit(proxyController, 'ProxyCreated');
+      await expect(tx).to.emit(proxyController, 'ProxyUpdated');
 
-      const currencyControllerProxyAddress = await getNewProxyAddress(tx);
+      const currencyControllerProxyAddress = await getUpdatedProxyAddress(tx);
 
       expect(currencyControllerProxyAddress).not.to.equal(
         currencyController.address,
@@ -85,7 +91,7 @@ describe('ProxyController', () => {
       );
       const currencyControllerProxyAddress1 = await proxyController
         .setCurrencyControllerImpl(currencyController1.address)
-        .then(getNewProxyAddress);
+        .then(getUpdatedProxyAddress);
 
       await addressResolver.importAddresses(
         [toBytes32('CurrencyController')],
@@ -147,9 +153,62 @@ describe('ProxyController', () => {
       );
 
       const { events } = await tx.wait();
-      const addresses = events?.filter(({ event }) => event === 'ProxyCreated');
+      const addresses = events?.filter(({ event }) => event === 'ProxyUpdated');
 
       expect(addresses?.length).to.equal(2);
+    });
+
+    it('Fail to register contracts due to execution by non-owner', async () => {
+      await expect(
+        proxyController
+          .connect(alice)
+          .setAddressResolverImpl(ethers.constants.AddressZero),
+      ).revertedWith('Ownable: caller is not the owner');
+
+      await expect(
+        proxyController
+          .connect(alice)
+          .setBeaconProxyControllerImpl(ethers.constants.AddressZero),
+      ).revertedWith('Ownable: caller is not the owner');
+
+      await expect(
+        proxyController
+          .connect(alice)
+          .setTokenVaultImpl(
+            ethers.constants.AddressZero,
+            1,
+            1,
+            1,
+            ethers.constants.AddressZero,
+          ),
+      ).revertedWith('Ownable: caller is not the owner');
+
+      await expect(
+        proxyController
+          .connect(alice)
+          .setCurrencyControllerImpl(ethers.constants.AddressZero),
+      ).revertedWith('Ownable: caller is not the owner');
+
+      await expect(
+        proxyController
+          .connect(alice)
+          .setGenesisValueVaultImpl(ethers.constants.AddressZero),
+      ).revertedWith('Ownable: caller is not the owner');
+
+      await expect(
+        proxyController
+          .connect(alice)
+          .setLendingMarketControllerImpl(ethers.constants.AddressZero, 1),
+      ).revertedWith('Ownable: caller is not the owner');
+
+      await expect(
+        proxyController
+          .connect(alice)
+          .setReserveFundImpl(
+            ethers.constants.AddressZero,
+            ethers.constants.AddressZero,
+          ),
+      ).revertedWith('Ownable: caller is not the owner');
     });
   });
 
@@ -161,7 +220,7 @@ describe('ProxyController', () => {
       );
       const currencyControllerProxyAddress = await proxyController
         .setCurrencyControllerImpl(currencyController.address)
-        .then(getNewProxyAddress);
+        .then(getUpdatedProxyAddress);
 
       const contractName = toBytes32('CurrencyController');
       await addressResolver.importAddresses(
@@ -188,7 +247,7 @@ describe('ProxyController', () => {
 
       const genesisValueVaultProxyAddress = await proxyController
         .setGenesisValueVaultImpl(genesisValueVault.address)
-        .then(getNewProxyAddress);
+        .then(getUpdatedProxyAddress);
 
       const genesisValueVaultProxy = await GenesisValueVault.at(
         genesisValueVaultProxyAddress,
@@ -211,7 +270,7 @@ describe('ProxyController', () => {
       );
       const currencyControllerProxyAddress1 = await proxyController
         .setCurrencyControllerImpl(currencyController1.address)
-        .then(getNewProxyAddress);
+        .then(getUpdatedProxyAddress);
       const currencyControllerProxy1 = await CurrencyController.at(
         currencyControllerProxyAddress1,
       );
@@ -283,7 +342,7 @@ describe('ProxyController', () => {
 
       const currencyControllerProxyAddress = await proxyController
         .setCurrencyControllerImpl(currencyController.address)
-        .then(getNewProxyAddress);
+        .then(getUpdatedProxyAddress);
 
       await addressResolver.importAddresses(
         ['CurrencyController'].map(toBytes32),
@@ -301,6 +360,14 @@ describe('ProxyController', () => {
       const currencyControllerAdmin = await currencyControllerProxy.admin();
 
       expect(currencyControllerAdmin).to.equal(alice.address);
+    });
+
+    it('Fail to change admins of a proxy contract due to execution by non-owner', async () => {
+      await expect(
+        proxyController
+          .connect(alice)
+          .changeProxyAdmins(alice.address, [ethers.constants.AddressZero]),
+      ).revertedWith('Ownable: caller is not the owner');
     });
   });
 });

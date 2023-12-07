@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity 0.8.19;
 
 // dependencies
 import {Multicall} from "../dependencies/openzeppelin/utils/Multicall.sol";
@@ -49,12 +49,6 @@ contract BeaconProxyController is
         contracts[0] = Contracts.LENDING_MARKET_CONTROLLER;
     }
 
-    // @inheritdoc MixinAddressResolver
-    function acceptedContracts() public pure override returns (bytes32[] memory contracts) {
-        contracts = new bytes32[](1);
-        contracts[0] = Contracts.LENDING_MARKET_CONTROLLER;
-    }
-
     /**
      * @notice Gets the beacon proxy address to the selected name.
      * @param beaconName The cache name of the beacon proxy
@@ -96,7 +90,7 @@ contract BeaconProxyController is
     function deployFutureValueVault()
         external
         override
-        onlyAcceptedContracts
+        onlyLendingMarketController
         returns (address futureValue)
     {
         bytes memory data = abi.encodeWithSignature("initialize(address)", address(resolver()));
@@ -114,7 +108,7 @@ contract BeaconProxyController is
         bytes32 _ccy,
         uint256 _orderFeeRate,
         uint256 _cbLimitRange
-    ) external override onlyAcceptedContracts returns (address market) {
+    ) external override onlyLendingMarketController returns (address market) {
         bytes memory data = abi.encodeWithSignature(
             "initialize(address,bytes32,uint256,uint256)",
             address(resolver()),
@@ -123,6 +117,21 @@ contract BeaconProxyController is
             _cbLimitRange
         );
         market = _createProxy(BeaconContracts.LENDING_MARKET, data);
+    }
+
+    /**
+     * @notice Updates admin addresses of beacon proxy contract
+     * @param newAdmin The address of new admin
+     * @param destinations The destination contract addresses
+     */
+    function changeBeaconProxyAdmins(
+        address newAdmin,
+        address[] calldata destinations
+    ) external onlyOwner {
+        for (uint256 i; i < destinations.length; i++) {
+            UpgradeabilityBeaconProxy proxy = UpgradeabilityBeaconProxy(payable(destinations[i]));
+            proxy.changeAdmin(newAdmin);
+        }
     }
 
     function _createProxy(bytes32 beaconName, bytes memory data) internal returns (address) {
@@ -144,7 +153,7 @@ contract BeaconProxyController is
 
             Storage.slot().registeredBeaconProxies[name] = beaconProxyAddress = address(beacon);
 
-            emit BeaconProxyCreated(name, beaconProxyAddress, newAddress);
+            emit BeaconProxyUpdated(name, beaconProxyAddress, newAddress, address(0));
         } else {
             beacon = UpgradeableBeacon(beaconProxyAddress);
             address oldAddress = beacon.implementation();
