@@ -54,6 +54,7 @@ interface ILendingMarket {
 
     function getBorrowOrderBook(
         uint8 orderBookId,
+        uint256 start,
         uint256 limit
     )
         external
@@ -61,11 +62,13 @@ interface ILendingMarket {
         returns (
             uint256[] memory unitPrices,
             uint256[] memory amounts,
-            uint256[] memory quantities
+            uint256[] memory quantities,
+            uint256 next
         );
 
     function getLendOrderBook(
         uint8 orderBookId,
+        uint256 start,
         uint256 limit
     )
         external
@@ -73,7 +76,8 @@ interface ILendingMarket {
         returns (
             uint256[] memory unitPrices,
             uint256[] memory amounts,
-            uint256[] memory quantities
+            uint256[] memory quantities,
+            uint256 next
         );
 
     function getItayoseEstimation(

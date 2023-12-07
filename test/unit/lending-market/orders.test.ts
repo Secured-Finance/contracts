@@ -22,7 +22,6 @@ describe('LendingMarket - Orders', () => {
   let owner: SignerWithAddress;
   let alice: SignerWithAddress;
   let bob: SignerWithAddress;
-  let signers: SignerWithAddress[];
 
   let orderActionLogic: Contract;
   let currentOrderBookId: BigNumber;
@@ -38,7 +37,7 @@ describe('LendingMarket - Orders', () => {
   };
 
   before(async () => {
-    [owner, alice, bob, ...signers] = await ethers.getSigners();
+    [owner, alice, bob] = await ethers.getSigners();
     targetCurrency = ethers.utils.formatBytes32String('Test');
 
     ({
@@ -73,6 +72,25 @@ describe('LendingMarket - Orders', () => {
     });
 
     const fillOrder = async (amount: string, unitPrice: string) => {
+      // Note: In coverage tests, the `executeOrder` function fails due to the `out of gas` error.
+      // To avoid this, we estimate the gas limit and set it to double.
+      const estimations = await Promise.all([
+        lendingMarketCaller.estimateGas.executeOrder(
+          targetCurrency,
+          currentOrderBookId,
+          Side.LEND,
+          amount,
+          unitPrice,
+        ),
+        lendingMarketCaller.estimateGas.executeOrder(
+          targetCurrency,
+          currentOrderBookId,
+          Side.BORROW,
+          amount,
+          unitPrice,
+        ),
+      ]);
+
       await lendingMarketCaller
         .connect(alice)
         .executeOrder(
@@ -81,6 +99,7 @@ describe('LendingMarket - Orders', () => {
           Side.LEND,
           amount,
           unitPrice,
+          { gasLimit: estimations[0].mul(2) },
         );
 
       const tx = await lendingMarketCaller
@@ -91,6 +110,7 @@ describe('LendingMarket - Orders', () => {
           Side.BORROW,
           amount,
           unitPrice,
+          { gasLimit: estimations[1].mul(2) },
         );
 
       return tx;

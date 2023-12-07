@@ -44,8 +44,6 @@ describe('LendingMarketController - Rotations', () => {
   let bob: SignerWithAddress;
   let carol: SignerWithAddress;
   let dave: SignerWithAddress;
-  let ellen: SignerWithAddress;
-  let signers: SignerWithAddress[];
 
   beforeEach(async () => {
     targetCurrency = ethers.utils.formatBytes32String(`Test${currencyIdx}`);
@@ -56,8 +54,7 @@ describe('LendingMarketController - Rotations', () => {
   });
 
   before(async () => {
-    [owner, alice, bob, carol, dave, ellen, ...signers] =
-      await ethers.getSigners();
+    [owner, alice, bob, carol, dave] = await ethers.getSigners();
 
     ({
       mockCurrencyController,
@@ -252,7 +249,7 @@ describe('LendingMarketController - Rotations', () => {
             .executeOrder(
               targetCurrency,
               maturities[i],
-              i % 2 == 0 ? Side.LEND : Side.BORROW,
+              i % 2 === 0 ? Side.LEND : Side.BORROW,
               '100000000000000000',
               unitPrice,
             ),
@@ -264,7 +261,7 @@ describe('LendingMarketController - Rotations', () => {
             .executeOrder(
               targetCurrency,
               maturities[i],
-              i % 2 == 0 ? Side.BORROW : Side.LEND,
+              i % 2 === 0 ? Side.BORROW : Side.LEND,
               '100000000000000000',
               unitPrice,
             ),
@@ -865,13 +862,13 @@ describe('LendingMarketController - Rotations', () => {
 
       await time.increaseTo(openingDate);
 
-      await lendingMarketControllerProxy.executeItayoseCalls(
-        [targetCurrency],
+      await lendingMarketControllerProxy.executeItayoseCall(
+        targetCurrency,
         maturities[0],
       );
 
-      await lendingMarketControllerProxy.executeItayoseCalls(
-        [targetCurrency],
+      await lendingMarketControllerProxy.executeItayoseCall(
+        targetCurrency,
         maturities[1],
       );
 
@@ -959,13 +956,13 @@ describe('LendingMarketController - Rotations', () => {
 
       await time.increaseTo(openingDate);
 
-      await lendingMarketControllerProxy.executeItayoseCalls(
-        [targetCurrency],
+      await lendingMarketControllerProxy.executeItayoseCall(
+        targetCurrency,
         maturities[0],
       );
 
-      await lendingMarketControllerProxy.executeItayoseCalls(
-        [targetCurrency],
+      await lendingMarketControllerProxy.executeItayoseCall(
+        targetCurrency,
         maturities[1],
       );
 

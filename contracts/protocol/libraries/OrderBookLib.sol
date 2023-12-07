@@ -193,17 +193,38 @@ library OrderBookLib {
 
     function getLendOrderBook(
         OrderBook storage self,
+        uint256 _start,
         uint256 _limit
     )
         internal
         view
-        returns (uint256[] memory unitPrices, uint256[] memory amounts, uint256[] memory quantities)
+        returns (
+            uint256[] memory unitPrices,
+            uint256[] memory amounts,
+            uint256[] memory quantities,
+            uint256 next
+        )
     {
         unitPrices = new uint256[](_limit);
         amounts = new uint256[](_limit);
         quantities = new uint256[](_limit);
 
-        uint256 unitPrice = self.lendOrders[self.maturity].last();
+        uint256 unitPrice;
+
+        if (_start == 0) {
+            unitPrice = self.lendOrders[self.maturity].last();
+        } else {
+            (bool exists, uint256 parent) = self.lendOrders[self.maturity].search(_start);
+
+            if (exists) {
+                unitPrice = _start;
+            } else if (parent < _start) {
+                unitPrice = parent;
+            } else {
+                unitPrice = self.lendOrders[self.maturity].prev(parent);
+            }
+        }
+
         unitPrices[0] = unitPrice;
         amounts[0] = self.lendOrders[self.maturity].getNodeTotalAmount(unitPrice);
         quantities[0] = self.lendOrders[self.maturity].getNodeCount(unitPrice);
@@ -218,21 +239,46 @@ library OrderBookLib {
             amounts[i] = self.lendOrders[self.maturity].getNodeTotalAmount(unitPrice);
             quantities[i] = self.lendOrders[self.maturity].getNodeCount(unitPrice);
         }
+
+        if (unitPrice != 0) {
+            next = self.lendOrders[self.maturity].prev(unitPrice);
+        }
     }
 
     function getBorrowOrderBook(
         OrderBook storage self,
+        uint256 _start,
         uint256 _limit
     )
         internal
         view
-        returns (uint256[] memory unitPrices, uint256[] memory amounts, uint256[] memory quantities)
+        returns (
+            uint256[] memory unitPrices,
+            uint256[] memory amounts,
+            uint256[] memory quantities,
+            uint256 next
+        )
     {
         unitPrices = new uint256[](_limit);
         amounts = new uint256[](_limit);
         quantities = new uint256[](_limit);
 
-        uint256 unitPrice = self.borrowOrders[self.maturity].first();
+        uint256 unitPrice;
+
+        if (_start == 0) {
+            unitPrice = self.borrowOrders[self.maturity].first();
+        } else {
+            (bool exists, uint256 parent) = self.borrowOrders[self.maturity].search(_start);
+
+            if (exists) {
+                unitPrice = _start;
+            } else if (parent > _start) {
+                unitPrice = parent;
+            } else {
+                unitPrice = self.borrowOrders[self.maturity].next(parent);
+            }
+        }
+
         unitPrices[0] = unitPrice;
         amounts[0] = self.borrowOrders[self.maturity].getNodeTotalAmount(unitPrice);
         quantities[0] = self.borrowOrders[self.maturity].getNodeCount(unitPrice);
@@ -246,6 +292,10 @@ library OrderBookLib {
             unitPrices[i] = unitPrice;
             amounts[i] = self.borrowOrders[self.maturity].getNodeTotalAmount(unitPrice);
             quantities[i] = self.borrowOrders[self.maturity].getNodeCount(unitPrice);
+        }
+
+        if (unitPrice != 0) {
+            next = self.borrowOrders[self.maturity].next(unitPrice);
         }
     }
 

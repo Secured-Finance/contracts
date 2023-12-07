@@ -83,51 +83,69 @@ contract LendingMarketReader is MixinAddressResolver {
     }
 
     /**
-     * @notice Gets the order book of borrow.
+     * @notice Gets the order book of borrow orders.
      * @param _ccy Currency name in bytes32
      * @param _maturity The maturity of the order book
-     * @param _limit The limit number to get
-     * @return unitPrices The array of borrow unit prices
-     * @return amounts The array of borrow order amounts
-     * @return quantities The array of borrow order quantities
+     * @param _start The starting unit price to get order book
+     * @param _limit The max limit for getting unit prices
+     * @return unitPrices The array of order unit prices
+     * @return amounts The array of order amounts
+     * @return quantities The array of order quantities
+     * @return next The next starting unit price to get order book
      */
     function getBorrowOrderBook(
         bytes32 _ccy,
         uint256 _maturity,
+        uint256 _start,
         uint256 _limit
     )
         external
         view
-        returns (uint256[] memory unitPrices, uint256[] memory amounts, uint256[] memory quantities)
+        returns (
+            uint256[] memory unitPrices,
+            uint256[] memory amounts,
+            uint256[] memory quantities,
+            uint256 next
+        )
     {
         return
             _getLendingMarket(_ccy).getBorrowOrderBook(
                 lendingMarketController().getOrderBookId(_ccy, _maturity),
+                _start,
                 _limit
             );
     }
 
     /**
-     * @notice Gets the order book of lend.
+     * @notice Gets the order book of lend orders.
      * @param _ccy Currency name in bytes32
      * @param _maturity The maturity of the order book
-     * @param _limit The limit number to get
-     * @return unitPrices The array of borrow unit prices
-     * @return amounts The array of lend order amounts
-     * @return quantities The array of lend order quantities
+     * @param _start The starting unit price to get order book
+     * @param _limit The max limit for getting unit prices
+     * @return unitPrices The array of order unit prices
+     * @return amounts The array of order amounts
+     * @return quantities The array of order quantities
+     * @return next The next starting unit price to get order book
      */
     function getLendOrderBook(
         bytes32 _ccy,
         uint256 _maturity,
+        uint256 _start,
         uint256 _limit
     )
         external
         view
-        returns (uint256[] memory unitPrices, uint256[] memory amounts, uint256[] memory quantities)
+        returns (
+            uint256[] memory unitPrices,
+            uint256[] memory amounts,
+            uint256[] memory quantities,
+            uint256 next
+        )
     {
         return
             _getLendingMarket(_ccy).getLendOrderBook(
                 lendingMarketController().getOrderBookId(_ccy, _maturity),
+                _start,
                 _limit
             );
     }

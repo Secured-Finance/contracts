@@ -39,7 +39,6 @@ describe('LendingMarketController - Terminations', () => {
   let bob: SignerWithAddress;
   let carol: SignerWithAddress;
   let dave: SignerWithAddress;
-  let signers: SignerWithAddress[];
 
   const initialize = async (currency: string, openingDate = genesisDate) => {
     await lendingMarketControllerProxy.initializeLendingMarket(
@@ -63,7 +62,7 @@ describe('LendingMarketController - Terminations', () => {
   };
 
   before(async () => {
-    [owner, alice, bob, carol, dave, ...signers] = await ethers.getSigners();
+    [owner, alice, bob, carol, dave] = await ethers.getSigners();
   });
 
   beforeEach(async () => {
@@ -220,8 +219,8 @@ describe('LendingMarketController - Terminations', () => {
       ).to.revertedWith('AlreadyTerminated');
 
       await expect(
-        lendingMarketControllerProxy.executeItayoseCalls(
-          [targetCurrency],
+        lendingMarketControllerProxy.executeItayoseCall(
+          targetCurrency,
           maturities[0],
         ),
       ).to.revertedWith('AlreadyTerminated');

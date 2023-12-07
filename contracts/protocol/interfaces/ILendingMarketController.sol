@@ -58,6 +58,8 @@ interface ILendingMarketController {
 
     function isRedemptionRequired(address _user) external view returns (bool);
 
+    function getMarketBasePeriod() external view returns (uint256);
+
     function getTerminationDate() external view returns (uint256);
 
     function getTerminationCurrencyCache(
@@ -177,10 +179,7 @@ interface ILendingMarketController {
 
     function unwindPosition(bytes32 ccy, uint256 maturity) external returns (bool);
 
-    function executeItayoseCalls(
-        bytes32[] calldata currencies,
-        uint256 maturity
-    ) external returns (bool);
+    function executeItayoseCall(bytes32 ccy, uint256 maturity) external returns (bool);
 
     function executeRedemption(bytes32 _ccy, uint256 _maturity) external returns (bool);
 

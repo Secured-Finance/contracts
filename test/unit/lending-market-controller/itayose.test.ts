@@ -38,7 +38,6 @@ describe('LendingMarketController - Itayose', () => {
   let bob: SignerWithAddress;
   let carol: SignerWithAddress;
   let dave: SignerWithAddress;
-  let signers: SignerWithAddress[];
 
   beforeEach(async () => {
     targetCurrency = ethers.utils.formatBytes32String(`Test${currencyIdx}`);
@@ -51,7 +50,7 @@ describe('LendingMarketController - Itayose', () => {
   });
 
   before(async () => {
-    [owner, alice, bob, carol, dave, ...signers] = await ethers.getSigners();
+    [owner, alice, bob, carol, dave] = await ethers.getSigners();
 
     ({
       mockCurrencyController,
@@ -206,8 +205,8 @@ describe('LendingMarketController - Itayose', () => {
     );
 
     // Execute Itayose call on the first market
-    const tx = await lendingMarketControllerProxy.executeItayoseCalls(
-      [targetCurrency],
+    const tx = await lendingMarketControllerProxy.executeItayoseCall(
+      targetCurrency,
       maturities[0],
     );
     await expect(tx).to.emit(orderBookLogic, 'ItayoseExecuted');
@@ -269,8 +268,8 @@ describe('LendingMarketController - Itayose', () => {
       const isOpenedBefore = await lendingMarketProxy.isOpened(orderBookIds[i]);
       expect(isOpenedBefore).to.false;
 
-      await lendingMarketControllerProxy.executeItayoseCalls(
-        [targetCurrency],
+      await lendingMarketControllerProxy.executeItayoseCall(
+        targetCurrency,
         maturities[i],
       );
 
@@ -369,8 +368,8 @@ describe('LendingMarketController - Itayose', () => {
     );
 
     // Execute Itayose call on the first market
-    const tx = await lendingMarketControllerProxy.executeItayoseCalls(
-      [targetCurrency],
+    const tx = await lendingMarketControllerProxy.executeItayoseCall(
+      targetCurrency,
       maturities[0],
     );
     await expect(tx).to.emit(orderBookLogic, 'ItayoseExecuted');
@@ -464,8 +463,8 @@ describe('LendingMarketController - Itayose', () => {
 
     // Execute Itayose call on the first market
     await expect(
-      lendingMarketControllerProxy.executeItayoseCalls(
-        [targetCurrency],
+      lendingMarketControllerProxy.executeItayoseCall(
+        targetCurrency,
         maturities[0],
       ),
     ).to.emit(orderBookLogic, 'ItayoseExecuted');
@@ -568,8 +567,8 @@ describe('LendingMarketController - Itayose', () => {
 
     // Execute Itayose call on the first market
     await expect(
-      lendingMarketControllerProxy.executeItayoseCalls(
-        [targetCurrency],
+      lendingMarketControllerProxy.executeItayoseCall(
+        targetCurrency,
         maturities[0],
       ),
     ).to.emit(orderBookLogic, 'ItayoseExecuted');
@@ -688,8 +687,8 @@ describe('LendingMarketController - Itayose', () => {
     await time.increaseTo(maturities[maturities.length - 2].toString());
 
     await expect(
-      lendingMarketControllerProxy.executeItayoseCalls(
-        [targetCurrency],
+      lendingMarketControllerProxy.executeItayoseCall(
+        targetCurrency,
         maturities[maturities.length - 1],
       ),
     ).to.emit(orderBookLogic, 'ItayoseExecuted');
@@ -782,10 +781,7 @@ describe('LendingMarketController - Itayose', () => {
     await time.increaseTo(openingDate);
 
     await expect(
-      lendingMarketControllerProxy.executeItayoseCalls(
-        [targetCurrency],
-        maturity,
-      ),
+      lendingMarketControllerProxy.executeItayoseCall(targetCurrency, maturity),
     ).to.emit(orderBookLogic, 'ItayoseExecuted');
 
     const { openingUnitPrice } = await lendingMarketProxy.getItayoseLog(
@@ -872,10 +868,7 @@ describe('LendingMarketController - Itayose', () => {
     await time.increaseTo(openingDate);
 
     await expect(
-      lendingMarketControllerProxy.executeItayoseCalls(
-        [targetCurrency],
-        maturity,
-      ),
+      lendingMarketControllerProxy.executeItayoseCall(targetCurrency, maturity),
     ).to.emit(orderBookLogic, 'ItayoseExecuted');
 
     const { openingUnitPrice } = await lendingMarketProxy.getItayoseLog(
@@ -951,7 +944,6 @@ describe('LendingMarketController - Itayose', () => {
 
     // the matching amount of the above orders
     const expectedOpeningPrice = '8050';
-    const expectedFilledAmount = BigNumber.from('200000000000000');
     const expectedLastLendUnitPrice = '8100';
     const expectedLastBorrowUnitPrice = '8000';
 
@@ -973,8 +965,8 @@ describe('LendingMarketController - Itayose', () => {
 
     // Execute Itayose call on the first market
     await expect(
-      lendingMarketControllerProxy.executeItayoseCalls(
-        [targetCurrency],
+      lendingMarketControllerProxy.executeItayoseCall(
+        targetCurrency,
         maturities[0],
       ),
     ).to.emit(orderBookLogic, 'ItayoseExecuted');

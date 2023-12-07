@@ -1,6 +1,6 @@
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { currencyIterator } from '../utils/currencies';
+import { DeploymentStorage } from '../utils/deployment';
 import { toBytes32 } from '../utils/strings';
 
 const func: DeployFunction = async function ({
@@ -26,6 +26,28 @@ const func: DeployFunction = async function ({
   }).then(({ address }) =>
     ethers.getContractAt('MigrationAddressResolver', address),
   );
+
+  // Update proxy contracts
+  const deployment =
+    DeploymentStorage.instance.deployments[proxyController.address];
+
+  if (process.env.ENABLE_AUTO_UPDATE === 'true' && deployment) {
+    const tx = await proxyController.multicall(
+      deployment.functions.map(({ name, args }) =>
+        proxyController.interface.encodeFunctionData(name, args),
+      ),
+    );
+
+    await tx.wait();
+
+    console.log('Updated proxy contracts');
+    console.table(
+      deployment.functions.map(({ name, args }) => ({
+        FunctionName: name,
+        Args: args.join(', '),
+      })),
+    );
+  }
 
   // Get contracts from proxyController
   const filter = proxyController.filters.ProxyUpdated();
@@ -132,23 +154,6 @@ const func: DeployFunction = async function ({
       .buildCaches(buildCachesAddresses)
       .then((tx) => tx.wait());
     console.log('Built address caches of AddressResolver');
-  }
-
-  // Set up for TokenVault
-  for (const currency of currencyIterator()) {
-    const isRegistered = await tokenVault.isRegisteredCurrency(currency.key);
-    if (isRegistered) {
-      console.log(
-        `Skipped registering ${currency.symbol} as supported currency`,
-      );
-    } else {
-      const address =
-        currency.env || (await deployments.get(currency.mock)).address;
-      await tokenVault
-        .registerCurrency(currency.key, address, currency.isCollateral)
-        .then((tx) => tx.wait());
-      console.log(`Registered ${currency.symbol} as supported currency`);
-    }
   }
 };
 

@@ -15,9 +15,6 @@ describe('LendingMarket - Auto-rolls', () => {
   let maturity: number;
 
   let owner: SignerWithAddress;
-  let alice: SignerWithAddress;
-  let bob: SignerWithAddress;
-  let signers: SignerWithAddress[];
 
   let currentOrderBookId: BigNumber;
   let currentOpeningDate: number;
@@ -33,7 +30,7 @@ describe('LendingMarket - Auto-rolls', () => {
   };
 
   before(async () => {
-    [owner, alice, bob, ...signers] = await ethers.getSigners();
+    [owner] = await ethers.getSigners();
     targetCurrency = ethers.utils.formatBytes32String('Test');
 
     ({ lendingMarketCaller, lendingMarket } = await deployContracts(

@@ -55,6 +55,7 @@ library LendingMarketOperationLogic {
         bytes32 indexed ccy,
         uint8 indexed orderBookId,
         uint256 openingDate,
+        uint256 preOpeningDate,
         uint256 maturity
     );
 
@@ -143,7 +144,7 @@ library LendingMarketOperationLogic {
         Storage.slot().orderBookIdLists[_ccy].push(orderBookId);
         Storage.slot().maturityOrderBookIds[_ccy][newMaturity] = orderBookId;
 
-        emit OrderBookCreated(_ccy, orderBookId, _openingDate, newMaturity);
+        emit OrderBookCreated(_ccy, orderBookId, _openingDate, _preOpeningDate, newMaturity);
     }
 
     function executeItayoseCall(
@@ -158,44 +159,41 @@ library LendingMarketOperationLogic {
     {
         ILendingMarket market = ILendingMarket(Storage.slot().lendingMarkets[_ccy]);
         uint8 orderBookId = Storage.slot().maturityOrderBookIds[_ccy][_maturity];
+        uint256 openingUnitPrice;
+        uint256 openingDate;
+        uint256 totalOffsetAmount;
 
-        if (market.isItayosePeriod(orderBookId)) {
-            uint256 openingUnitPrice;
-            uint256 openingDate;
-            uint256 totalOffsetAmount;
+        (
+            openingUnitPrice,
+            totalOffsetAmount,
+            openingDate,
+            partiallyFilledLendingOrder,
+            partiallyFilledBorrowingOrder
+        ) = market.executeItayoseCall(orderBookId);
 
-            (
+        // Updates the pending order amount for both side orders.
+        // Since the partially filled orders are updated with `updateFundsForMaker()`,
+        // their amount is subtracted from `pendingOrderAmounts`.
+        Storage.slot().pendingOrderAmounts[_ccy][_maturity] +=
+            (totalOffsetAmount * 2) -
+            partiallyFilledLendingOrder.amount -
+            partiallyFilledBorrowingOrder.amount;
+
+        // Save the openingUnitPrice as first compound factor
+        // if it is a first Itayose call at the nearest market.
+        if (openingUnitPrice > 0 && Storage.slot().orderBookIdLists[_ccy][0] == orderBookId) {
+            // Convert the openingUnitPrice determined by Itayose to the unit price on the Genesis Date.
+            uint256 convertedUnitPrice = _convertUnitPrice(
                 openingUnitPrice,
-                totalOffsetAmount,
+                _maturity,
                 openingDate,
-                partiallyFilledLendingOrder,
-                partiallyFilledBorrowingOrder
-            ) = market.executeItayoseCall(orderBookId);
+                Storage.slot().genesisDates[_ccy]
+            );
 
-            // Updates the pending order amount for both side orders.
-            // Since the partially filled orders are updated with `updateFundsForMaker()`,
-            // their amount is subtracted from `pendingOrderAmounts`.
-            Storage.slot().pendingOrderAmounts[_ccy][_maturity] +=
-                (totalOffsetAmount * 2) -
-                partiallyFilledLendingOrder.amount -
-                partiallyFilledBorrowingOrder.amount;
-
-            // Save the openingUnitPrice as first compound factor
-            // if it is a first Itayose call at the nearest market.
-            if (openingUnitPrice > 0 && Storage.slot().orderBookIdLists[_ccy][0] == orderBookId) {
-                // Convert the openingUnitPrice determined by Itayose to the unit price on the Genesis Date.
-                uint256 convertedUnitPrice = _convertUnitPrice(
-                    openingUnitPrice,
-                    _maturity,
-                    openingDate,
-                    Storage.slot().genesisDates[_ccy]
-                );
-
-                AddressResolverLib.genesisValueVault().updateInitialCompoundFactor(
-                    _ccy,
-                    convertedUnitPrice
-                );
-            }
+            AddressResolverLib.genesisValueVault().updateInitialCompoundFactor(
+                _ccy,
+                convertedUnitPrice
+            );
         }
     }
 

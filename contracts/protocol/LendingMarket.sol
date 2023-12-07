@@ -282,39 +282,67 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     }
 
     /**
-     * @notice Gets the order book of borrow.
+     * @notice Gets the order book of borrow orders.
+     * This function supports pagination. If a unit price is specified in `_start`,
+     * the orders are returned for the _limit from there. The unit price that can be
+     * set to `_start` of the next data fetching is set to the return value, `next`.
+     * If `_start` is 0, this function returns from the first order.
      * @param _orderBookId The order book id
-     * @param _limit Max limit to get unit prices
-     * @return unitPrices The array of borrow unit prices
+     * @param _start The starting unit price to get order book
+     * @param _limit The max limit for getting unit prices
+     * @return unitPrices The array of order unit prices
+     * @return amounts The array of order amounts
+     * @return quantities The array of order quantities
+     * @return next The next starting unit price to get order book
      */
     function getBorrowOrderBook(
         uint8 _orderBookId,
+        uint256 _start,
         uint256 _limit
     )
         external
         view
         override
-        returns (uint256[] memory unitPrices, uint256[] memory amounts, uint256[] memory quantities)
+        returns (
+            uint256[] memory unitPrices,
+            uint256[] memory amounts,
+            uint256[] memory quantities,
+            uint256 next
+        )
     {
-        return OrderBookLogic.getBorrowOrderBook(_orderBookId, _limit);
+        return OrderBookLogic.getBorrowOrderBook(_orderBookId, _start, _limit);
     }
 
     /**
-     * @notice Gets the order book of lend.
+     * @notice Gets the order book of lend orders.
+     * This function supports pagination. If a unit price is specified in `_start`,
+     * the orders are returned for the _limit from there. The unit price that can be
+     * set to `_start` of the next data fetching is set to the return value, `next`.
+     * If `_start` is 0, this function returns from the first order.
      * @param _orderBookId The order book id
-     * @param _limit Max limit to get unit prices
-     * @return unitPrices The array of lending unit prices
+     * @param _start The starting unit price to get order book
+     * @param _limit The max limit for getting unit prices
+     * @return unitPrices The array of order unit prices
+     * @return amounts The array of order amounts
+     * @return quantities The array of order quantities
+     * @return next The next starting unit price to get order book
      */
     function getLendOrderBook(
         uint8 _orderBookId,
+        uint256 _start,
         uint256 _limit
     )
         external
         view
         override
-        returns (uint256[] memory unitPrices, uint256[] memory amounts, uint256[] memory quantities)
+        returns (
+            uint256[] memory unitPrices,
+            uint256[] memory amounts,
+            uint256[] memory quantities,
+            uint256 next
+        )
     {
-        return OrderBookLogic.getLendOrderBook(_orderBookId, _limit);
+        return OrderBookLogic.getLendOrderBook(_orderBookId, _start, _limit);
     }
 
     /**

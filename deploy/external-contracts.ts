@@ -18,15 +18,19 @@ const func: DeployFunction = async function ({
     .getAddressResolverAddress()
     .then((address) => ethers.getContractAt('AddressResolver', address));
 
-  const deployResult = await deploy('LendingMarketReader', {
-    from: deployer,
-    args: [addressResolver.address],
-  });
-
-  await executeIfNewlyDeployment('LendingMarketReader', deployResult);
+  for (const contractName of [
+    'LendingMarketReader',
+    'ItayoseCallResolver',
+    'OrderBookRotationResolver',
+  ]) {
+    await deploy(contractName, {
+      from: deployer,
+      args: [addressResolver.address],
+    }).then((result) => executeIfNewlyDeployment(contractName, result));
+  }
 };
 
-func.tags = ['LendingMarketReader'];
+func.tags = ['ExternalContracts'];
 func.dependencies = ['AddressResolver', 'Migration'];
 
 export default func;

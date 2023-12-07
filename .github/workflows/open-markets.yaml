@@ -11,6 +11,8 @@ on:
         options:
           - development
           - staging
+          - goerli
+          - mainnet
 
 jobs:
   deploy:

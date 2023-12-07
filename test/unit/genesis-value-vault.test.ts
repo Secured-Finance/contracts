@@ -24,7 +24,6 @@ describe('GenesisValueVault', () => {
   let owner: SignerWithAddress;
   let alice: SignerWithAddress;
   let bob: SignerWithAddress;
-  let signers: SignerWithAddress[];
 
   let targetCurrency: string;
   let currencyIdx = 0;
@@ -37,7 +36,7 @@ describe('GenesisValueVault', () => {
   const unitPrice = 8000;
 
   before(async () => {
-    [owner, alice, bob, ...signers] = await ethers.getSigners();
+    [owner, alice, bob] = await ethers.getSigners();
 
     // Set up for the mocks
     mockReserveFund = await deployMockContract(owner, ReserveFund.abi);

@@ -1,6 +1,9 @@
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { executeIfNewlyDeployment } from '../utils/deployment';
+import {
+  DeploymentStorage,
+  executeIfNewlyDeployment,
+} from '../utils/deployment';
 
 const LIQUIDATION_THRESHOLD_RATE = 12500;
 const LIQUIDATION_PROTOCOL_FEE_RATE = 200;
@@ -33,15 +36,18 @@ const func: DeployFunction = async function ({
       .get('ProxyController')
       .then(({ address }) => ethers.getContractAt('ProxyController', address));
 
-    await proxyController
-      .setTokenVaultImpl(
+    DeploymentStorage.instance.add(
+      proxyController.address,
+      'ProxyController',
+      'setTokenVaultImpl',
+      [
         deployResult.address,
         LIQUIDATION_THRESHOLD_RATE,
         LIQUIDATION_PROTOCOL_FEE_RATE,
         LIQUIDATOR_FEE_RATE,
         nativeToken,
-      )
-      .then((tx) => tx.wait());
+      ],
+    );
   });
 };
 

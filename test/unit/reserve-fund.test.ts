@@ -24,13 +24,12 @@ describe('ReserveFund', () => {
   let owner: SignerWithAddress;
   let alice: SignerWithAddress;
   let bob: SignerWithAddress;
-  let signers: SignerWithAddress[];
 
   let targetCurrency: string;
   let currencyIdx = 0;
 
   before(async () => {
-    [owner, alice, bob, ...signers] = await ethers.getSigners();
+    [owner, alice, bob] = await ethers.getSigners();
 
     // Set up for the mocks
     mockTokenVault = await deployMockContract(owner, TokenVault.abi);

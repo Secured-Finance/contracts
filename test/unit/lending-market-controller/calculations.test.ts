@@ -32,7 +32,6 @@ describe('LendingMarketController - Calculations', () => {
   let owner: SignerWithAddress;
   let alice: SignerWithAddress;
   let bob: SignerWithAddress;
-  let signers: SignerWithAddress[];
 
   beforeEach(async () => {
     targetCurrency = ethers.utils.formatBytes32String(`Test${currencyIdx}`);
@@ -45,7 +44,7 @@ describe('LendingMarketController - Calculations', () => {
   });
 
   before(async () => {
-    [owner, alice, bob, ...signers] = await ethers.getSigners();
+    [owner, alice, bob] = await ethers.getSigners();
 
     ({
       mockCurrencyController,
@@ -451,7 +450,7 @@ describe('LendingMarketController - Calculations', () => {
         );
         expect(estimation.coverage).to.equal(condition.result.coverage);
 
-        if (condition.orders.length == 1) {
+        if (condition.orders.length === 1) {
           expect(
             estimation.orderFeeInFV
               .sub(

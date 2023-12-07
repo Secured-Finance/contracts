@@ -137,24 +137,36 @@ library OrderBookLogic {
 
     function getBorrowOrderBook(
         uint8 _orderBookId,
+        uint256 _start,
         uint256 _limit
     )
         external
         view
-        returns (uint256[] memory unitPrices, uint256[] memory amounts, uint256[] memory quantities)
+        returns (
+            uint256[] memory unitPrices,
+            uint256[] memory amounts,
+            uint256[] memory quantities,
+            uint256 next
+        )
     {
-        return _getOrderBook(_orderBookId).getBorrowOrderBook(_limit);
+        return _getOrderBook(_orderBookId).getBorrowOrderBook(_start, _limit);
     }
 
     function getLendOrderBook(
         uint8 _orderBookId,
+        uint256 _start,
         uint256 _limit
     )
         external
         view
-        returns (uint256[] memory unitPrices, uint256[] memory amounts, uint256[] memory quantities)
+        returns (
+            uint256[] memory unitPrices,
+            uint256[] memory amounts,
+            uint256[] memory quantities,
+            uint256 next
+        )
     {
-        return _getOrderBook(_orderBookId).getLendOrderBook(_limit);
+        return _getOrderBook(_orderBookId).getLendOrderBook(_start, _limit);
     }
 
     function getItayoseEstimation(

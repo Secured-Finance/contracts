@@ -2,7 +2,7 @@ import { BigNumber, Contract } from 'ethers';
 import { ethers } from 'hardhat';
 import moment from 'moment';
 
-import { currencyIterator } from '../../utils/currencies';
+import { currencyIterator, mocks } from '../../utils/currencies';
 import {
   hexETH,
   hexUSDC,
@@ -131,11 +131,10 @@ const deployContracts = async () => {
     }
 
     tokens[currency.symbol] = await ethers
-      .getContractFactory(currency.mock)
+      .getContractFactory(mocks[currency.symbol].tokenName)
       .then((factory) => factory.deploy(...args));
   }
 
-  const eFILToken = tokens['eFIL'];
   const wFILToken = tokens['wFIL'];
   const usdcToken = tokens['USDC'];
   const wBTCToken = tokens['WBTC'];
@@ -232,11 +231,12 @@ const deployContracts = async () => {
   };
 
   for (const currency of currencyIterator()) {
+    const mock = mocks[currency.symbol];
     const priceFeedAddresses: string[] = [];
     let heartbeat = 0;
     let decimals = 0;
 
-    for (const priceFeed of currency.mockPriceFeed) {
+    for (const priceFeed of mock.priceFeeds) {
       priceFeedContracts[priceFeed.name] = await MockV3Aggregator.deploy(
         priceFeed.decimals,
         currency.key,
@@ -246,7 +246,7 @@ const deployContracts = async () => {
       decimals +=
         priceFeedAddresses.length === 0
           ? await tokens[currency.symbol].decimals()
-          : currency.mockPriceFeed[priceFeedAddresses.length - 1].decimals;
+          : mock.priceFeeds[priceFeedAddresses.length - 1].decimals;
 
       priceFeedAddresses.push(priceFeedContracts[priceFeed.name].address);
 
@@ -344,7 +344,6 @@ const deployContracts = async () => {
     lendingMarketController: lendingMarketControllerProxy,
     proxyController,
     reserveFund: reserveFundProxy,
-    eFILToken,
     wFILToken,
     wETHToken,
     wBTCToken,

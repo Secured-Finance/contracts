@@ -203,8 +203,8 @@ describe('Performance Test: Auto-rolls', async () => {
         await createSampleFILOrders(carol, maturities[1], '9523');
         await time.increaseTo(maturities[0].toString());
         await lendingMarketController.connect(owner).rotateOrderBooks(hexWFIL);
-        await lendingMarketController.executeItayoseCalls(
-          [hexWFIL],
+        await lendingMarketController.executeItayoseCall(
+          hexWFIL,
           maturities[maturities.length - 1],
         );
 
