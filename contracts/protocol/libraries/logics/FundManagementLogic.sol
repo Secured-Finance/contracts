@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity 0.8.19;
 
 // dependencies
 import {EnumerableSet} from "../../../dependencies/openzeppelin/utils/structs/EnumerableSet.sol";
@@ -616,7 +616,7 @@ library FundManagementLogic {
                 additionalFunds = vars.additionalFunds;
             }
 
-            uint256[] memory amounts = new uint256[](8);
+            uint256[] memory amounts = new uint256[](7);
 
             // 0: workingLendOrdersAmount
             // 1: claimableAmount

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity 0.8.19;
 
 import {Constants} from "./Constants.sol";
 import {ProtocolTypes} from "../types/ProtocolTypes.sol";
@@ -531,7 +531,6 @@ library OrderBookLib {
 
         // Return 0 if no orders is filled
         if (borrowUnitPrice > lendUnitPrice || borrowUnitPrice == 0 || lendUnitPrice == 0) {
-            openingUnitPrice = (lendUnitPrice + borrowUnitPrice).div(2);
             return (0, 0, 0, 0);
         }
 

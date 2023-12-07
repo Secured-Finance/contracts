@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity 0.8.19;
 
 library OwnableStorage {
-    bytes32 internal constant STORAGE_SLOT = keccak256("sf.storage.ownable");
+    bytes32 internal constant STORAGE_SLOT = bytes32(uint256(keccak256("sf.storage.ownable")) - 1);
 
     struct Storage {
         address owner;

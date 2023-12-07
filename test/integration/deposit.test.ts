@@ -1391,13 +1391,17 @@ describe('Integration Test: Deposit', async () => {
       const targets = [wFILToken.address, tokenVault.address];
       const values = [0, 0];
       const data = [approveData, depositData];
-      await expect(
-        reserveFund
-          .connect(owner)
-          .executeTransactions(targets, values, data, {}),
-      )
-        .to.emit(reserveFund, 'TransactionsExecuted')
-        .withArgs(owner.address, targets, values, data);
+
+      const tx = await reserveFund
+        .connect(owner)
+        .executeTransactions(targets, values, data, {});
+
+      await expect(tx)
+        .to.emit(reserveFund, 'TransactionExecuted')
+        .withArgs(owner.address, targets[0], values[0], data[0]);
+      await expect(tx)
+        .to.emit(reserveFund, 'TransactionExecuted')
+        .withArgs(owner.address, targets[1], values[1], data[1]);
 
       const depositAmountAfter = await tokenVault.getDepositAmount(
         reserveFund.address,
@@ -1493,18 +1497,22 @@ describe('Integration Test: Deposit', async () => {
       const targets = [wFILToken.address, tokenVault.address];
       const values = [0, 0];
       const data = [approveData, depositData];
-      await expect(
-        liquidator
-          .connect(owner)
-          .executeTransactions(
-            [wFILToken.address, tokenVault.address],
-            [0, 0],
-            [approveData, depositData],
-            {},
-          ),
-      )
-        .to.emit(liquidator, 'TransactionsExecuted')
-        .withArgs(owner.address, targets, values, data);
+
+      const tx = await liquidator
+        .connect(owner)
+        .executeTransactions(
+          [wFILToken.address, tokenVault.address],
+          [0, 0],
+          [approveData, depositData],
+          {},
+        );
+
+      await expect(tx)
+        .to.emit(liquidator, 'TransactionExecuted')
+        .withArgs(owner.address, targets[0], values[0], data[0]);
+      await expect(tx)
+        .to.emit(liquidator, 'TransactionExecuted')
+        .withArgs(owner.address, targets[1], values[1], data[1]);
 
       const depositAmountAfter = await tokenVault.getDepositAmount(
         liquidator.address,

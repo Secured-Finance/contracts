@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity 0.8.19;
 
 // interfaces
 import {ILendingMarketController} from "../interfaces/ILendingMarketController.sol";
@@ -16,11 +16,10 @@ import {Ownable} from "../utils/Ownable.sol";
  *
  */
 abstract contract MixinWallet is Ownable {
-    error TransactionFailed(uint256 index);
-    error WrongArrayLengths();
+    error TransactionFailed(address target, uint256 values, bytes data);
+    error InvalidInputs();
 
     event TransactionExecuted(address from, address target, uint256 value, bytes data);
-    event TransactionsExecuted(address from, address[] targets, uint256[] values, bytes[] data);
 
     function _initialize(address _owner, address _nativeToken) internal {
         _transferOwnership(_owner);
@@ -28,19 +27,16 @@ abstract contract MixinWallet is Ownable {
     }
 
     /**
-     * @dev Executes an arbitrary transaction by Secured Finance admin.
+     * @dev Executes an arbitrary transaction.
      * @param _target Address to be called
      * @param _data Encoded function data to be executed
      */
-    function executeTransaction(address _target, bytes calldata _data) external payable onlyOwner {
-        (bool success, ) = _target.call{value: msg.value}(_data);
-        if (!success) revert TransactionFailed(0);
-
-        emit TransactionExecuted(msg.sender, _target, msg.value, _data);
+    function executeTransaction(address _target, bytes calldata _data) public payable onlyOwner {
+        _executeTransaction(_target, msg.value, _data);
     }
 
     /**
-     * @dev Executes arbitrary transactions by Secured Finance admin.
+     * @dev Executes arbitrary transactions.
      * @param _targets Array of Addresses to be called
      * @param _values Array of values to be sent to _targets addresses
      * @param _data Encoded function data to be executed
@@ -50,20 +46,36 @@ abstract contract MixinWallet is Ownable {
         uint256[] calldata _values,
         bytes[] calldata _data
     ) external onlyOwner {
-        if (_targets.length != _data.length || _targets.length != _values.length) {
-            revert WrongArrayLengths();
+        if (
+            _targets.length == 0 ||
+            _targets.length != _data.length ||
+            _targets.length != _values.length
+        ) {
+            revert InvalidInputs();
         }
 
         for (uint256 i; i < _targets.length; i++) {
-            (bool success, ) = _targets[i].call{value: _values[i]}(_data[i]);
-            if (!success) revert TransactionFailed(i);
+            _executeTransaction(_targets[i], _values[i], _data[i]);
         }
+    }
 
-        emit TransactionsExecuted(msg.sender, _targets, _values, _data);
+    /**
+     * @dev Executes an arbitrary transaction.
+     * Internal function without access restriction.
+     * @param _target Address to be called
+     * @param _value Value to be sent to _targets address
+     * @param _data Encoded function data to be executed
+     */
+    function _executeTransaction(address _target, uint256 _value, bytes memory _data) internal {
+        (bool success, ) = _target.call{value: _value}(_data);
+        if (!success) revert TransactionFailed(_target, _value, _data);
+
+        emit TransactionExecuted(msg.sender, _target, _value, _data);
     }
 
     /**
      * @dev Deposits funds by the caller into the token vault.
+     * Internal function without access restriction.
      * @param _tokenVault TokenVault contract instance
      * @param _ccy Currency name in bytes32
      * @param _amount Amount of funds to deposit
@@ -79,6 +91,7 @@ abstract contract MixinWallet is Ownable {
 
     /**
      * @dev Withdraws funds by the caller from the token vault.
+     * Internal function without access restriction.
      * @param _tokenVault TokenVault contract instance
      * @param _ccy Currency name in bytes32
      * @param _amount Amount of funds to deposit

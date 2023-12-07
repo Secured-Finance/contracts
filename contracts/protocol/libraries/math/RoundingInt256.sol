@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity 0.8.19;
 
 library RoundingInt256 {
     function div(int256 a, int256 b) internal pure returns (int256) {

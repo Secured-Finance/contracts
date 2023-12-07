@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity 0.8.19;
 
 // dependencies
 import {AggregatorV3Interface} from "../dependencies/chainlink/AggregatorV3Interface.sol";
@@ -9,6 +9,7 @@ import {Multicall} from "../dependencies/openzeppelin/utils/Multicall.sol";
 // interfaces
 import {ICurrencyController} from "./interfaces/ICurrencyController.sol";
 // libraries
+import {Constants} from "./libraries/Constants.sol";
 import {RoundingUint256} from "./libraries/math/RoundingUint256.sol";
 import {RoundingInt256} from "./libraries/math/RoundingInt256.sol";
 // utils
@@ -20,8 +21,8 @@ import {CurrencyControllerStorage as Storage, PriceFeed} from "./storages/Curren
 /**
  * @notice Implements managing of the supported currencies in the protocol.
  *
- * This contract links new currencies to Chainlink price feeds. To add a new currency to the protocol except for the base currency,
- * the owner needs to also add an existing price feed contract.
+ * This contract stores the currency settings and links the currency to the external price feeds.
+ * It uses those settings and also has the functions to change prices to other currencies.
  */
 contract CurrencyController is ICurrencyController, Ownable, Proxyable, Multicall {
     using EnumerableSet for EnumerableSet.Bytes32Set;
@@ -148,20 +149,6 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable, Multical
         uint256 _heartbeat
     ) public override onlyOwner onlySupportedCurrency(_ccy) {
         _updatePriceFeed(_ccy, _decimals, _priceFeeds, _heartbeat);
-    }
-
-    /**
-     * @notice Removes existing Chainlink price feed.
-     * @param _ccy Currency name in bytes32
-     */
-    function removePriceFeed(bytes32 _ccy) external override onlyOwner onlySupportedCurrency(_ccy) {
-        PriceFeed memory priceFeed = Storage.slot().priceFeeds[_ccy];
-
-        if (priceFeed.instances.length == 0) revert NoPriceFeedExists();
-        delete Storage.slot().priceFeeds[_ccy];
-        delete Storage.slot().decimalsCaches[_ccy];
-
-        emit PriceFeedRemoved(_ccy);
     }
 
     /**
@@ -353,7 +340,7 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable, Multical
     }
 
     function _updateHaircut(bytes32 _ccy, uint256 _haircut) internal {
-        if (_haircut > 10000) revert InvalidHaircut();
+        if (_haircut > Constants.PCT_DIGIT) revert InvalidHaircut();
 
         Storage.slot().haircuts[_ccy] = _haircut;
 

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity 0.8.19;
 
 // dependencies
 import {EnumerableSet} from "../dependencies/openzeppelin/utils/structs/EnumerableSet.sol";
@@ -34,8 +34,6 @@ import {TokenVaultStorage as Storage} from "./storages/TokenVaultStorage.sol";
  *   - Liquidation threshold rate
  *   - Liquidation fee rate received by protocol
  *   - Liquidation fee rate received by liquidators
- *
- * To address a currency as collateral, it must be registered using `registerCurrency` method in this contract.
  */
 contract TokenVault is
     ITokenVault,
@@ -172,7 +170,7 @@ contract TokenVault is
     /**
      * @notice Gets the maximum amount of the base currency that can be withdrawn from user collateral.
      * @param _user User's address
-     * @return Maximum amount of ETH that can be withdrawn
+     * @return Maximum amount of the base currency that can be withdrawn
      */
     function getWithdrawableCollateral(address _user) external view override returns (uint256) {
         return DepositManagementLogic.getWithdrawableCollateral(_user);

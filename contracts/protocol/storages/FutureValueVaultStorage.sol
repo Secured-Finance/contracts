@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity 0.8.19;
 
 library FutureValueVaultStorage {
-    bytes32 internal constant STORAGE_SLOT = keccak256("sf.storage.futureValueVault");
+    bytes32 internal constant STORAGE_SLOT =
+        bytes32(uint256(keccak256("sf.storage.futureValueVault")) - 1);
 
     struct Storage {
         // Mapping from user to balances per order book id
