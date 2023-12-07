@@ -11,7 +11,8 @@ License: BSL 1.1
 
 Licensor: SFF Holdings S.A.
 
-Licensed Work: [Name] v.1.0. The Licensed Work is (c) 2023 SFF Holdings S.A.
+Licensed Work: Secured Finance Contracts V1.
+               The Licensed Work is (c) 2023 SFF Holdings S.A.
 
 Additional Use Grant:
 
@@ -22,19 +23,19 @@ in connection with the Licensed Work:
       Licensed Work in production use, without incurring any costs. This
       Additional Use Grant is subject to the following conditions:
 
-      •  The Licensee may engage in production use of the Licensed Work,
+      1. The Licensee may engage in production use of the Licensed Work,
          provided that such use does not involve offering the Licensed Work
          to third parties on a hosted or Embedded basis for the purpose of
          competing with the paid version(s) of the Licensed Work provided by
          SFF Holdings S.A.;
 
-      •  Hosting or utilizing the Licensed Work for internal purposes within
+      2. Hosting or utilizing the Licensed Work for internal purposes within
          the Licensee's organization is not deemed a Competitive Offering.
          For the purpose of this Additional Use Grant, an organization
          includes all affiliates under direct or indirect common control with
          the Licensee; and
 
-      •  This entire License, including the Additional Use Grant, shall
+      3. This entire License, including the Additional Use Grant, shall
          remain in full force and effect for any use falling under this
          grant. This provision encompasses the Licensed Work and binds all
          users of the Licensed Work.
