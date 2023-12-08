@@ -12,9 +12,10 @@ import {ILendingMarketController} from "../protocol/interfaces/ILendingMarketCon
 import {ITokenVault} from "../protocol/interfaces/ITokenVault.sol";
 import {ILiquidationReceiver} from "../protocol/interfaces/ILiquidationReceiver.sol";
 // mixins
+import {MixinAccessControl} from "../protocol/mixins/MixinAccessControl.sol";
 import {MixinWallet} from "../protocol/mixins/MixinWallet.sol";
 
-contract Liquidator is ILiquidationReceiver, MixinWallet {
+contract Liquidator is ILiquidationReceiver, MixinAccessControl, MixinWallet {
     bytes32 public immutable nativeToken;
     ILendingMarketController public immutable lendingMarketController;
     ITokenVault public immutable tokenVault;
@@ -40,6 +41,7 @@ contract Liquidator is ILiquidationReceiver, MixinWallet {
         tokenVault = ITokenVault(_tokenVault);
         uniswapRouter = ISwapRouter(_uniswapRouter);
         uniswapQuoter = IQuoter(_uniswapQuoter);
+        MixinAccessControl._setupInitialRoles(msg.sender);
         MixinWallet._initialize(msg.sender, tokenVault.getTokenAddress(_nativeToken));
     }
 
@@ -52,7 +54,7 @@ contract Liquidator is ILiquidationReceiver, MixinWallet {
         uint256 _debtMaturity,
         address _user,
         uint24 _poolFee
-    ) external onlyOwner {
+    ) external onlyOperator {
         collateralMaturities = _collateralMaturities;
         poolFee = _poolFee;
         lendingMarketController.executeLiquidationCall(
@@ -70,7 +72,7 @@ contract Liquidator is ILiquidationReceiver, MixinWallet {
         uint256 _debtMaturity,
         address _user,
         uint24 _poolFee
-    ) external onlyOwner {
+    ) external onlyOperator {
         collateralMaturities = _collateralMaturities;
         poolFee = _poolFee;
         lendingMarketController.executeForcedRepayment(

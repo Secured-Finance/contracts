@@ -159,7 +159,7 @@ describe('LendingMarketController - Liquidations', () => {
         );
     });
 
-    it('Fail to execute liquidation call due to non-owner', async () => {
+    it('Fail to execute liquidation call due to non-operator', async () => {
       await expect(
         liquidator
           .connect(alice)
@@ -171,7 +171,7 @@ describe('LendingMarketController - Liquidations', () => {
             alice.address,
             10,
           ),
-      ).revertedWith('Ownable: caller is not the owner');
+      ).revertedWith('CallerNotOperator');
     });
 
     it('Fail to execute liquidation call due to invalid maturity', async () => {
@@ -203,7 +203,7 @@ describe('LendingMarketController - Liquidations', () => {
       ).revertedWith(`NotCollateralCurrency("${targetCurrency}")`);
     });
 
-    it('Fail to execute forced repayment due to non-owner', async () => {
+    it('Fail to execute forced repayment due to non-operator', async () => {
       await expect(
         liquidator
           .connect(alice)
@@ -215,7 +215,7 @@ describe('LendingMarketController - Liquidations', () => {
             alice.address,
             10,
           ),
-      ).revertedWith('Ownable: caller is not the owner');
+      ).revertedWith('CallerNotOperator');
     });
 
     it('Fail to execute forced repayment due to invalid maturity', async () => {

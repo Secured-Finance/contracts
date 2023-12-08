@@ -139,7 +139,7 @@ const createOrderBooks = async (
         currency.minDebtUnitPrice,
         genesisDate,
         Number(process.env.INITIAL_MARKET_OPENING_DATE || 0),
-        Number(process.env.INITIAL_MARKET_PRE_ORDER_DATE || 0),
+        Number(process.env.INITIAL_MARKET_PRE_OPENING_DATE || 0),
       )
     ).map(({ callData }) => callData);
 
