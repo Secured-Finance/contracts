@@ -103,22 +103,28 @@ function isTerminated() external view returns (bool)
 function isRedemptionRequired(address _user) external view returns (bool)
 ```
 
-### getMarketTerminationDate
+### getMarketBasePeriod
 
 ```solidity
-function getMarketTerminationDate() external view returns (uint256)
+function getMarketBasePeriod() external view returns (uint256)
 ```
 
-### getMarketTerminationPrice
+### getTerminationDate
 
 ```solidity
-function getMarketTerminationPrice(bytes32 _ccy) external view returns (int256)
+function getTerminationDate() external view returns (uint256)
 ```
 
-### getMarketTerminationRatio
+### getTerminationCurrencyCache
 
 ```solidity
-function getMarketTerminationRatio(bytes32 _ccy) external view returns (uint256)
+function getTerminationCurrencyCache(bytes32 _ccy) external view returns (struct TerminationCurrencyCache)
+```
+
+### getTerminationCollateralRatio
+
+```solidity
+function getTerminationCollateralRatio(bytes32 _ccy) external view returns (uint256)
 ```
 
 ### getMinDebtUnitPrice
@@ -155,6 +161,12 @@ function getFutureValueVault(bytes32 ccy) external view returns (address)
 
 ```solidity
 function getOrderBookId(bytes32 _ccy, uint256 _maturity) external view returns (uint8)
+```
+
+### getPendingOrderAmount
+
+```solidity
+function getPendingOrderAmount(bytes32 _ccy, uint256 _maturity) external view returns (uint256)
 ```
 
 ### getOrderEstimation
@@ -265,10 +277,10 @@ function depositAndExecutesPreOrder(bytes32 ccy, uint256 maturity, enum Protocol
 function unwindPosition(bytes32 ccy, uint256 maturity) external returns (bool)
 ```
 
-### executeItayoseCalls
+### executeItayoseCall
 
 ```solidity
-function executeItayoseCalls(bytes32[] currencies, uint256 maturity) external returns (bool)
+function executeItayoseCall(bytes32 ccy, uint256 maturity) external returns (bool)
 ```
 
 ### executeRedemption

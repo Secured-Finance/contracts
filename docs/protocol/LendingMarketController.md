@@ -70,16 +70,6 @@ Returns the contract names used in this contract.
 
 _The contract name list is in `./libraries/Contracts.sol`._
 
-### acceptedContracts
-
-```solidity
-function acceptedContracts() public pure returns (bytes32[] contracts)
-```
-
-Returns contract names that can call this contract.
-
-_The contact name listed in this method is also needed to be listed `requiredContracts` method._
-
 ### isTerminated
 
 ```solidity
@@ -104,25 +94,37 @@ Gets if the user needs to redeem the funds.
 | ---- | ---- | ----------- |
 | [0] | bool | The boolean if the user needs to redeem the funds |
 
-### getMarketTerminationDate
+### getMarketBasePeriod
 
 ```solidity
-function getMarketTerminationDate() external view returns (uint256)
+function getMarketBasePeriod() external view returns (uint256)
 ```
 
-Gets the date when the market terminated.
+Gets the base period for market maturity
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | uint256 | The base period |
+
+### getTerminationDate
+
+```solidity
+function getTerminationDate() external view returns (uint256)
+```
+
+Gets the date at the emergency termination.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | [0] | uint256 | The termination date |
 
-### getMarketTerminationPrice
+### getTerminationCurrencyCache
 
 ```solidity
-function getMarketTerminationPrice(bytes32 _ccy) external view returns (int256)
+function getTerminationCurrencyCache(bytes32 _ccy) external view returns (struct TerminationCurrencyCache)
 ```
 
-Gets the price cached at the market termination.
+Gets the currency information cached at the emergency termination.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -130,15 +132,15 @@ Gets the price cached at the market termination.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| [0] | int256 | The price cached |
+| [0] | struct TerminationCurrencyCache | The price cached |
 
-### getMarketTerminationRatio
+### getTerminationCollateralRatio
 
 ```solidity
-function getMarketTerminationRatio(bytes32 _ccy) external view returns (uint256)
+function getTerminationCollateralRatio(bytes32 _ccy) external view returns (uint256)
 ```
 
-Gets the ratio of each token in TokenVault at the market termination.
+Gets the collateral ratio of each token in TokenVault at the emergency termination.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -247,6 +249,23 @@ Gets the future value contract address for the selected currency and maturity.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | [0] | address | The future value vault address |
+
+### getPendingOrderAmount
+
+```solidity
+function getPendingOrderAmount(bytes32 _ccy, uint256 _maturity) external view returns (uint256)
+```
+
+Gets the total amount of pending orders that is not cleaned up yet.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 |
+| _maturity | uint256 | The maturity of the order book |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | uint256 | The total amount |
 
 ### getOrderEstimation
 
@@ -611,17 +630,17 @@ This function is executed under the present value as of the termination date.
 | ---- | ---- | ----------- |
 | [0] | bool | True if the execution of the operation succeeds |
 
-### executeItayoseCalls
+### executeItayoseCall
 
 ```solidity
-function executeItayoseCalls(bytes32[] _currencies, uint256 _maturity) external returns (bool)
+function executeItayoseCall(bytes32 _ccy, uint256 _maturity) external returns (bool)
 ```
 
-Executes Itayose calls per selected currencies.
+Executes the Itayose call per selected currency.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| _currencies | bytes32[] | Currency name list in bytes32 |
+| _ccy | bytes32 | Currency name in bytes32 |
 | _maturity | uint256 | The maturity of the selected order book |
 
 ### cancelOrder
@@ -686,7 +705,7 @@ Rotates the order books. In this rotation, the following actions are happened.
 - Updates the maturity at the beginning of the order book array.
 - Moves the beginning of the order book array to the end of it (Market rotation).
 - Update the compound factor in this contract using the next order book unit price. (Auto-rolls)
-- Convert the future value held by reserve funds into the genesis value
+- Clean up the reserve fund contract
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |

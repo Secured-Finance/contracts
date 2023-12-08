@@ -4,8 +4,14 @@
 
 Implements managing of the supported currencies in the protocol.
 
-This contract links new currencies to Chainlink price feeds. To add a new currency to the protocol except for the base currency,
-the owner needs to also add an existing price feed contract.
+This contract stores the currency settings and links the currency to the external price feeds.
+It uses those settings and also has the functions to change prices to other currencies.
+
+### HEARTBEAT_BUFFER
+
+```solidity
+uint256 HEARTBEAT_BUFFER
+```
 
 ### onlySupportedCurrency
 
@@ -153,18 +159,6 @@ Update the price feed contract addresses.
 | _decimals | uint8 | Currency decimals |
 | _priceFeeds | address[] | Array with the contract address of price feed |
 | _heartbeat | uint256 |  |
-
-### removePriceFeed
-
-```solidity
-function removePriceFeed(bytes32 _ccy) external
-```
-
-Removes existing Chainlink price feed.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _ccy | bytes32 | Currency name in bytes32 |
 
 ### getLastPrice
 

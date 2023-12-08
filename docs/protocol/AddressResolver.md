@@ -90,3 +90,15 @@ Gets the all imported contract addresses.
 | ---- | ---- | ----------- |
 | [0] | address[] | Array with the contract address |
 
+### getNames
+
+```solidity
+function getNames() external view returns (bytes32[])
+```
+
+Gets the all imported contract names.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | bytes32[] | Array with the contract address |
+

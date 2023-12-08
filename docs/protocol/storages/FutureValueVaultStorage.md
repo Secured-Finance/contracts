@@ -14,7 +14,8 @@ bytes32 STORAGE_SLOT
 struct Storage {
   mapping(uint8 => mapping(address => int256)) balances;
   mapping(uint8 => mapping(address => uint256)) balanceMaturities;
-  mapping(uint256 => uint256) totalSupply;
+  mapping(uint256 => uint256) totalLendingSupplies;
+  mapping(uint256 => uint256) totalBorrowingSupplies;
   mapping(uint256 => uint256) removedLendingSupply;
   mapping(uint256 => uint256) removedBorrowingSupply;
 }

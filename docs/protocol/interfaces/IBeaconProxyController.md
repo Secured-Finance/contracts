@@ -14,12 +14,6 @@ error NoBeaconProxyContract()
 error InvalidProxyContract()
 ```
 
-### BeaconProxyCreated
-
-```solidity
-event BeaconProxyCreated(bytes32 id, address proxyAddress, address implementationAddress)
-```
-
 ### BeaconProxyUpdated
 
 ```solidity

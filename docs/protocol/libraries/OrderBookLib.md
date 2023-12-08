@@ -79,9 +79,10 @@ struct OrderBook {
   uint256 openingDate;
   uint256 preOpeningDate;
   uint48 lastOrderId;
-  uint48 lastOrderBlockNumber;
+  uint48 lastOrderTimestamp;
   bool isReliableBlock;
   uint80 blockUnitPriceHistory;
+  uint48 lastBlockUnitPriceTimestamp;
   uint256 blockTotalAmount;
   uint256 blockTotalFutureValue;
   mapping(address => uint48[]) activeLendOrderIds;
@@ -139,7 +140,7 @@ function getOrder(struct OrderBookLib.OrderBook self, uint48 _orderId) internal 
 ### getBlockUnitPriceHistory
 
 ```solidity
-function getBlockUnitPriceHistory(struct OrderBookLib.OrderBook self, bool _isReadOnly) internal view returns (uint256[] prices)
+function getBlockUnitPriceHistory(struct OrderBookLib.OrderBook self, bool _isReadOnly) internal view returns (uint256[] prices, uint48 timestamp)
 ```
 
 ### getMarketUnitPrice
@@ -157,13 +158,13 @@ function getBlockUnitPriceAverage(struct OrderBookLib.OrderBook self, uint256 ma
 ### getLendOrderBook
 
 ```solidity
-function getLendOrderBook(struct OrderBookLib.OrderBook self, uint256 _limit) internal view returns (uint256[] unitPrices, uint256[] amounts, uint256[] quantities)
+function getLendOrderBook(struct OrderBookLib.OrderBook self, uint256 _start, uint256 _limit) internal view returns (uint256[] unitPrices, uint256[] amounts, uint256[] quantities, uint256 next)
 ```
 
 ### getBorrowOrderBook
 
 ```solidity
-function getBorrowOrderBook(struct OrderBookLib.OrderBook self, uint256 _limit) internal view returns (uint256[] unitPrices, uint256[] amounts, uint256[] quantities)
+function getBorrowOrderBook(struct OrderBookLib.OrderBook self, uint256 _start, uint256 _limit) internal view returns (uint256[] unitPrices, uint256[] amounts, uint256[] quantities, uint256 next)
 ```
 
 ### getLendOrderIds

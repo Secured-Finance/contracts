@@ -13,6 +13,7 @@ bytes32 STORAGE_SLOT
 ```solidity
 struct Storage {
   mapping(bytes32 => address) addresses;
+  bytes32[] nameCaches;
   address[] addressCaches;
 }
 ```

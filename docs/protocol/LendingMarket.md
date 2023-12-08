@@ -55,6 +55,18 @@ Modifier to check if the market is under the Itayose period.
 | ---- | ---- | ----------- |
 | _orderBookId | uint8 | The order book id |
 
+### ifNotItayosePeriod
+
+```solidity
+modifier ifNotItayosePeriod(uint8 _orderBookId)
+```
+
+Modifier to check if the market is not under the Itayose period.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _orderBookId | uint8 | The order book id |
+
 ### ifPreOrderPeriod
 
 ```solidity
@@ -105,16 +117,6 @@ function requiredContracts() public pure returns (bytes32[] contracts)
 Returns the contract names used in this contract.
 
 _The contract name list is in `./libraries/Contracts.sol`._
-
-### acceptedContracts
-
-```solidity
-function acceptedContracts() public pure returns (bytes32[] contracts)
-```
-
-Returns contract names that can call this contract.
-
-_The contact name listed in this method is also needed to be listed `requiredContracts` method._
 
 ### isReady
 
@@ -304,13 +306,13 @@ Gets the market unit price
 | ---- | ---- | ----------- |
 | [0] | uint256 | The market unit price |
 
-### getLastOrderBlockNumber
+### getLastOrderTimestamp
 
 ```solidity
-function getLastOrderBlockNumber(uint8 _orderBookId) external view returns (uint256)
+function getLastOrderTimestamp(uint8 _orderBookId) external view returns (uint48)
 ```
 
-Gets the block number of the last filled order.
+Gets the block timestamp of the last filled order.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -318,12 +320,12 @@ Gets the block number of the last filled order.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| [0] | uint256 | The block number |
+| [0] | uint48 | The block number |
 
 ### getBlockUnitPriceHistory
 
 ```solidity
-function getBlockUnitPriceHistory(uint8 _orderBookId) external view returns (uint256[])
+function getBlockUnitPriceHistory(uint8 _orderBookId) external view returns (uint256[] unitPrices, uint48 timestamp)
 ```
 
 Gets the block unit price history
@@ -334,7 +336,8 @@ Gets the block unit price history
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| [0] | uint256[] | The array of the block unit price |
+| unitPrices | uint256[] | The array of the block unit price |
+| timestamp | uint48 | Timestamp of the last block unit price |
 
 ### getBlockUnitPriceAverage
 
@@ -356,40 +359,52 @@ Gets the block unit price average.
 ### getBorrowOrderBook
 
 ```solidity
-function getBorrowOrderBook(uint8 _orderBookId, uint256 _limit) external view returns (uint256[] unitPrices, uint256[] amounts, uint256[] quantities)
+function getBorrowOrderBook(uint8 _orderBookId, uint256 _start, uint256 _limit) external view returns (uint256[] unitPrices, uint256[] amounts, uint256[] quantities, uint256 next)
 ```
 
-Gets the order book of borrow.
+Gets the order book of borrow orders.
+This function supports pagination. If a unit price is specified in `_start`,
+the orders are returned for the _limit from there. The unit price that can be
+set to `_start` of the next data fetching is set to the return value, `next`.
+If `_start` is 0, this function returns from the first order.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _orderBookId | uint8 | The order book id |
-| _limit | uint256 | Max limit to get unit prices |
+| _start | uint256 | The starting unit price to get order book |
+| _limit | uint256 | The max limit for getting unit prices |
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| unitPrices | uint256[] | The array of borrow unit prices |
-| amounts | uint256[] |  |
-| quantities | uint256[] |  |
+| unitPrices | uint256[] | The array of order unit prices |
+| amounts | uint256[] | The array of order amounts |
+| quantities | uint256[] | The array of order quantities |
+| next | uint256 | The next starting unit price to get order book |
 
 ### getLendOrderBook
 
 ```solidity
-function getLendOrderBook(uint8 _orderBookId, uint256 _limit) external view returns (uint256[] unitPrices, uint256[] amounts, uint256[] quantities)
+function getLendOrderBook(uint8 _orderBookId, uint256 _start, uint256 _limit) external view returns (uint256[] unitPrices, uint256[] amounts, uint256[] quantities, uint256 next)
 ```
 
-Gets the order book of lend.
+Gets the order book of lend orders.
+This function supports pagination. If a unit price is specified in `_start`,
+the orders are returned for the _limit from there. The unit price that can be
+set to `_start` of the next data fetching is set to the return value, `next`.
+If `_start` is 0, this function returns from the first order.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _orderBookId | uint8 | The order book id |
-| _limit | uint256 | Max limit to get unit prices |
+| _start | uint256 | The starting unit price to get order book |
+| _limit | uint256 | The max limit for getting unit prices |
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| unitPrices | uint256[] | The array of lending unit prices |
-| amounts | uint256[] |  |
-| quantities | uint256[] |  |
+| unitPrices | uint256[] | The array of order unit prices |
+| amounts | uint256[] | The array of order amounts |
+| quantities | uint256[] | The array of order quantities |
+| next | uint256 | The next starting unit price to get order book |
 
 ### getItayoseEstimation
 

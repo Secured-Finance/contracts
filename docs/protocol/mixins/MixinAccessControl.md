@@ -10,6 +10,12 @@ Implements functions to add  role-based access control mechanisms.
 error CallerNotOperator()
 ```
 
+### NotAllowedAccess
+
+```solidity
+error NotAllowedAccess(bytes32 role, address account)
+```
+
 ### OPERATOR_ROLE
 
 ```solidity
@@ -36,21 +42,6 @@ _Initializes the roles._
 | ---- | ---- | ----------- |
 | _admin | address | The address of the admin role |
 
-### setRoleAdmin
-
-```solidity
-function setRoleAdmin(bytes32 role, bytes32 adminRole) external
-```
-
-Sets the role as admin of a specific role.
-
-_By default the admin role for all roles is `DEFAULT_ADMIN_ROLE`._
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| role | bytes32 | The role to be managed by the admin role |
-| adminRole | bytes32 | The admin role |
-
 ### addOperator
 
 ```solidity
@@ -74,4 +65,30 @@ Removes an admin as Operator
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | admin | address | The address of the admin to remove |
+
+### revokeRole
+
+```solidity
+function revokeRole(bytes32 role, address account) public
+```
+
+_Revokes `role` from `account`._
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| role | bytes32 | The role to be revoked |
+| account | address | The address of the account to revoke the role from |
+
+### renounceRole
+
+```solidity
+function renounceRole(bytes32 role, address account) public pure
+```
+
+Revokes `role` from the calling account. This function is disabled by overriding it with a revert.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| role | bytes32 | The role to be revoked |
+| account | address | The address of the account to revoke the role from |
 

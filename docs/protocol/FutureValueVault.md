@@ -28,23 +28,31 @@ Returns the contract names used in this contract.
 
 _The contract name list is in `./libraries/Contracts.sol`._
 
-### acceptedContracts
+### getTotalLendingSupply
 
 ```solidity
-function acceptedContracts() public pure returns (bytes32[] contracts)
+function getTotalLendingSupply(uint256 _maturity) external view returns (uint256)
 ```
 
-Returns contract names that can call this contract.
+Gets the total supply of lending orders.
 
-_The contact name listed in this method is also needed to be listed `requiredContracts` method._
+_This function returns the total supply of only orders that have been added
+through the `increase` of `decrease` function._
 
-### getTotalSupply
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _maturity | uint256 | The maturity of the market |
+
+### getTotalBorrowingSupply
 
 ```solidity
-function getTotalSupply(uint256 _maturity) external view returns (uint256)
+function getTotalBorrowingSupply(uint256 _maturity) external view returns (uint256)
 ```
 
-Gets the total supply.
+Gets the total supply of borrowing orders.
+
+_This function returns the total supply of only orders that have been added
+through the `increase` of `decrease` function._
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -89,7 +97,7 @@ Gets if the account has past maturity balance at the selected maturity.
 ### increase
 
 ```solidity
-function increase(uint8 _orderBookId, address _user, uint256 _amount, uint256 _maturity, bool _isTaker) public
+function increase(uint8 _orderBookId, address _user, uint256 _amount, uint256 _maturity) public
 ```
 
 Increases amount for lending deals.
@@ -104,12 +112,11 @@ is the taker._
 | _user | address | User's address |
 | _amount | uint256 | The amount to add |
 | _maturity | uint256 | The maturity of the market |
-| _isTaker | bool | The boolean if the original order is created by a taker |
 
 ### decrease
 
 ```solidity
-function decrease(uint8 _orderBookId, address _user, uint256 _amount, uint256 _maturity, bool _isTaker) public
+function decrease(uint8 _orderBookId, address _user, uint256 _amount, uint256 _maturity) public
 ```
 
 Decreases amount for borrowing deals.
@@ -124,7 +131,6 @@ is the taker._
 | _user | address | User's address |
 | _amount | uint256 | The amount to add |
 | _maturity | uint256 | The maturity of the market |
-| _isTaker | bool | The boolean if the original order is created by a taker |
 
 ### transferFrom
 
@@ -163,19 +169,6 @@ Reset all amount if there is an amount in the past maturity.
 | maturity | uint256 | Maturity of future value |
 | isAllRemoved | bool | The boolean if the all future value amount in the selected maturity is removed |
 
-### setInitialTotalSupply
-
-```solidity
-function setInitialTotalSupply(uint256 _maturity, int256 _amount) external
-```
-
-Sets initial total supply at market opening
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _maturity | uint256 | The maturity of the market |
-| _amount | int256 | The amount to add |
-
 ### executeForcedReset
 
 ```solidity
@@ -206,6 +199,6 @@ Forces a reset of the user's future value.
 ### _updateTotalSupply
 
 ```solidity
-function _updateTotalSupply(uint256 _maturity, int256 _previous, int256 _current, bool _isTaker) private
+function _updateTotalSupply(uint256 _maturity, int256 _amount, int256 _balance) private
 ```
 

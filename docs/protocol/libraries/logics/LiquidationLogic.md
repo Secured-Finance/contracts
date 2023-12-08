@@ -32,6 +32,12 @@ error InvalidRepaymentAmount()
 error NotRepaymentPeriod()
 ```
 
+### NotCollateralCurrency
+
+```solidity
+error NotCollateralCurrency(bytes32 ccy)
+```
+
 ### ExecuteLiquidationVars
 
 ```solidity

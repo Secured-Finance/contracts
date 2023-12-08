@@ -32,10 +32,16 @@ error InvalidResetAmount()
 event Transfer(address from, address to, uint8 orderBookId, uint256 maturity, int256 value)
 ```
 
-### getTotalSupply
+### getTotalLendingSupply
 
 ```solidity
-function getTotalSupply(uint256 maturity) external view returns (uint256)
+function getTotalLendingSupply(uint256 maturity) external view returns (uint256)
+```
+
+### getTotalBorrowingSupply
+
+```solidity
+function getTotalBorrowingSupply(uint256 maturity) external view returns (uint256)
 ```
 
 ### getBalance
@@ -53,13 +59,13 @@ function hasBalanceAtPastMaturity(uint8 orderBookId, address user, uint256 matur
 ### increase
 
 ```solidity
-function increase(uint8 orderBookId, address user, uint256 amount, uint256 maturity, bool isTaker) external
+function increase(uint8 orderBookId, address user, uint256 amount, uint256 maturity) external
 ```
 
 ### decrease
 
 ```solidity
-function decrease(uint8 orderBookId, address user, uint256 amount, uint256 maturity, bool isTaker) external
+function decrease(uint8 orderBookId, address user, uint256 amount, uint256 maturity) external
 ```
 
 ### transferFrom
@@ -72,12 +78,6 @@ function transferFrom(uint8 orderBookId, address sender, address receiver, int25
 
 ```solidity
 function reset(uint8 orderBookId, address user, uint256 activeMaturity) external returns (int256 removedAmount, int256 currentAmount, uint256 maturity, bool isAllRemoved)
-```
-
-### setInitialTotalSupply
-
-```solidity
-function setInitialTotalSupply(uint256 maturity, int256 amount) external
 ```
 
 ### executeForcedReset

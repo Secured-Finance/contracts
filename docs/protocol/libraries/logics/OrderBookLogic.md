@@ -80,16 +80,16 @@ function isPreOrderPeriod(uint8 _orderBookId) public view returns (bool)
 function getOrderBookDetail(uint8 _orderBookId) public view returns (bytes32 ccy, uint256 maturity, uint256 openingDate, uint256 preOpeningDate)
 ```
 
-### getLastOrderBlockNumber
+### getLastOrderTimestamp
 
 ```solidity
-function getLastOrderBlockNumber(uint8 _orderBookId) external view returns (uint256)
+function getLastOrderTimestamp(uint8 _orderBookId) external view returns (uint48)
 ```
 
 ### getBlockUnitPriceHistory
 
 ```solidity
-function getBlockUnitPriceHistory(uint8 _orderBookId) external view returns (uint256[])
+function getBlockUnitPriceHistory(uint8 _orderBookId) external view returns (uint256[] unitPrices, uint48 timestamp)
 ```
 
 ### getMarketUnitPrice
@@ -137,13 +137,13 @@ function getBestBorrowUnitPrices(uint8[] _orderBookIds) external view returns (u
 ### getBorrowOrderBook
 
 ```solidity
-function getBorrowOrderBook(uint8 _orderBookId, uint256 _limit) external view returns (uint256[] unitPrices, uint256[] amounts, uint256[] quantities)
+function getBorrowOrderBook(uint8 _orderBookId, uint256 _start, uint256 _limit) external view returns (uint256[] unitPrices, uint256[] amounts, uint256[] quantities, uint256 next)
 ```
 
 ### getLendOrderBook
 
 ```solidity
-function getLendOrderBook(uint8 _orderBookId, uint256 _limit) external view returns (uint256[] unitPrices, uint256[] amounts, uint256[] quantities)
+function getLendOrderBook(uint8 _orderBookId, uint256 _start, uint256 _limit) external view returns (uint256[] unitPrices, uint256[] amounts, uint256[] quantities, uint256 next)
 ```
 
 ### getItayoseEstimation

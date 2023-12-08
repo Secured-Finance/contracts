@@ -14,10 +14,22 @@ error UnregisteredCurrency()
 error InvalidCurrency()
 ```
 
+### InvalidToken
+
+```solidity
+error InvalidToken()
+```
+
 ### InvalidAmount
 
 ```solidity
-error InvalidAmount()
+error InvalidAmount(bytes32 ccy, uint256 amount, uint256 msgValue)
+```
+
+### AmountIsZero
+
+```solidity
+error AmountIsZero()
 ```
 
 ### CallerNotBaseCurrency

@@ -28,16 +28,6 @@ Returns the contract names used in this contract.
 
 _The contract name list is in `./libraries/Contracts.sol`._
 
-### acceptedContracts
-
-```solidity
-function acceptedContracts() public pure returns (bytes32[] contracts)
-```
-
-Returns contract names that can call this contract.
-
-_The contact name listed in this method is also needed to be listed `requiredContracts` method._
-
 ### isInitialized
 
 ```solidity
@@ -468,10 +458,10 @@ Calculates the fluctuation amount of genesis value caused by auto-rolls at a cer
 function _updateBalance(bytes32 _ccy, address _user, uint256 _maturity, int256 _amount) private
 ```
 
-### _updateTotalSupplies
+### _updateTotalSupply
 
 ```solidity
-function _updateTotalSupplies(bytes32 _ccy, int256 _amount, int256 _balance) private
+function _updateTotalSupply(bytes32 _ccy, int256 _amount, int256 _balance) private
 ```
 
 ### _getActualBalance
@@ -511,6 +501,6 @@ function _calculateBalanceFluctuationByAutoRolls(bytes32 _ccy, int256 _balance, 
 ### _updateCompoundFactor
 
 ```solidity
-function _updateCompoundFactor(bytes32 _ccy, uint256 _unitPrice, uint256 _orderFeeRate, uint256 _currentMaturity) private
+function _updateCompoundFactor(bytes32 _ccy, uint256 _unitPrice, uint256 _orderFeeRate, uint256 _duration) private
 ```
 

@@ -8,12 +8,6 @@
 error InvalidProxyContract()
 ```
 
-### ProxyCreated
-
-```solidity
-event ProxyCreated(bytes32 id, address proxyAddress, address implementationAddress)
-```
-
 ### ProxyUpdated
 
 ```solidity

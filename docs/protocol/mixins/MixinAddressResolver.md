@@ -8,10 +8,10 @@
 event CacheUpdated(bytes32 name, address destination)
 ```
 
-### OnlyAcceptedContracts
+### OnlyAcceptedContract
 
 ```solidity
-error OnlyAcceptedContracts()
+error OnlyAcceptedContract(string name)
 ```
 
 ### ResolverAlreadyRegistered
@@ -20,10 +20,10 @@ error OnlyAcceptedContracts()
 error ResolverAlreadyRegistered()
 ```
 
-### onlyAcceptedContracts
+### onlyLendingMarketController
 
 ```solidity
-modifier onlyAcceptedContracts()
+modifier onlyLendingMarketController()
 ```
 
 ### requiredContracts
@@ -35,16 +35,6 @@ function requiredContracts() public pure virtual returns (bytes32[] contracts)
 Returns the contract names used in this contract.
 
 _The contract name list is in `./libraries/Contracts.sol`._
-
-### acceptedContracts
-
-```solidity
-function acceptedContracts() public pure virtual returns (bytes32[] contracts)
-```
-
-Returns contract names that can call this contract.
-
-_The contact name listed in this method is also needed to be listed `requiredContracts` method._
 
 ### buildCache
 
@@ -69,12 +59,6 @@ _Register the Address Resolver contract_
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _resolver | address | The address of the Address Resolver contract |
-
-### isAcceptedContract
-
-```solidity
-function isAcceptedContract(address account) internal view virtual returns (bool)
-```
 
 ### getAddress
 

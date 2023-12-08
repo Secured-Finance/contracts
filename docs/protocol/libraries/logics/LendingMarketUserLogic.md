@@ -53,7 +53,7 @@ function unwindPosition(bytes32 _ccy, uint256 _maturity, address _user) external
 ### updateFundsForTaker
 
 ```solidity
-function updateFundsForTaker(bytes32 _ccy, uint256 _maturity, address _user, enum ProtocolTypes.Side _side, uint256 _filledAmount, uint256 _filledAmountInFV, uint256 _filledUnitPrice, uint256 _feeInFV) public
+function updateFundsForTaker(bytes32 _ccy, uint256 _maturity, address _user, enum ProtocolTypes.Side _side, uint256 _filledAmount, uint256 _filledAmountInFV, uint256 _feeInFV) public
 ```
 
 ### updateFundsForMaker

@@ -11,8 +11,8 @@ struct OrderBookDetail {
   uint256 bestLendUnitPrice;
   uint256 bestBorrowUnitPrice;
   uint256 marketUnitPrice;
-  uint256 lastOrderBlockNumber;
   uint256[] blockUnitPriceHistory;
+  uint256 lastBlockUnitPriceTimestamp;
   uint256 maxLendUnitPrice;
   uint256 minBorrowUnitPrice;
   uint256 openingUnitPrice;
@@ -100,42 +100,46 @@ Gets the best prices for borrowing in the selected currency.
 ### getBorrowOrderBook
 
 ```solidity
-function getBorrowOrderBook(bytes32 _ccy, uint256 _maturity, uint256 _limit) external view returns (uint256[] unitPrices, uint256[] amounts, uint256[] quantities)
+function getBorrowOrderBook(bytes32 _ccy, uint256 _maturity, uint256 _start, uint256 _limit) external view returns (uint256[] unitPrices, uint256[] amounts, uint256[] quantities, uint256 next)
 ```
 
-Gets the order book of borrow.
+Gets the order book of borrow orders.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _ccy | bytes32 | Currency name in bytes32 |
 | _maturity | uint256 | The maturity of the order book |
-| _limit | uint256 | The limit number to get |
+| _start | uint256 | The starting unit price to get order book |
+| _limit | uint256 | The max limit for getting unit prices |
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| unitPrices | uint256[] | The array of borrow unit prices |
-| amounts | uint256[] | The array of borrow order amounts |
-| quantities | uint256[] | The array of borrow order quantities |
+| unitPrices | uint256[] | The array of order unit prices |
+| amounts | uint256[] | The array of order amounts |
+| quantities | uint256[] | The array of order quantities |
+| next | uint256 | The next starting unit price to get order book |
 
 ### getLendOrderBook
 
 ```solidity
-function getLendOrderBook(bytes32 _ccy, uint256 _maturity, uint256 _limit) external view returns (uint256[] unitPrices, uint256[] amounts, uint256[] quantities)
+function getLendOrderBook(bytes32 _ccy, uint256 _maturity, uint256 _start, uint256 _limit) external view returns (uint256[] unitPrices, uint256[] amounts, uint256[] quantities, uint256 next)
 ```
 
-Gets the order book of lend.
+Gets the order book of lend orders.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _ccy | bytes32 | Currency name in bytes32 |
 | _maturity | uint256 | The maturity of the order book |
-| _limit | uint256 | The limit number to get |
+| _start | uint256 | The starting unit price to get order book |
+| _limit | uint256 | The max limit for getting unit prices |
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| unitPrices | uint256[] | The array of borrow unit prices |
-| amounts | uint256[] | The array of lend order amounts |
-| quantities | uint256[] | The array of lend order quantities |
+| unitPrices | uint256[] | The array of order unit prices |
+| amounts | uint256[] | The array of order amounts |
+| quantities | uint256[] | The array of order quantities |
+| next | uint256 | The next starting unit price to get order book |
 
 ### getItayoseEstimation
 

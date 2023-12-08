@@ -20,6 +20,12 @@ error CallerNotMaker()
 error MarketNotOpened()
 ```
 
+### AlreadyItayosePeriod
+
+```solidity
+error AlreadyItayosePeriod()
+```
+
 ### NotItayosePeriod
 
 ```solidity
@@ -74,16 +80,16 @@ function getBestBorrowUnitPrices(uint8[] orderBookIds) external view returns (ui
 function getMarketUnitPrice(uint8 orderBookId) external view returns (uint256)
 ```
 
-### getLastOrderBlockNumber
+### getLastOrderTimestamp
 
 ```solidity
-function getLastOrderBlockNumber(uint8 orderBookId) external view returns (uint256)
+function getLastOrderTimestamp(uint8 orderBookId) external view returns (uint48)
 ```
 
 ### getBlockUnitPriceHistory
 
 ```solidity
-function getBlockUnitPriceHistory(uint8 orderBookId) external view returns (uint256[])
+function getBlockUnitPriceHistory(uint8 orderBookId) external view returns (uint256[] unitPrices, uint48 timestamp)
 ```
 
 ### getBlockUnitPriceAverage
@@ -95,13 +101,13 @@ function getBlockUnitPriceAverage(uint8 orderBookId, uint256 count) external vie
 ### getBorrowOrderBook
 
 ```solidity
-function getBorrowOrderBook(uint8 orderBookId, uint256 limit) external view returns (uint256[] unitPrices, uint256[] amounts, uint256[] quantities)
+function getBorrowOrderBook(uint8 orderBookId, uint256 start, uint256 limit) external view returns (uint256[] unitPrices, uint256[] amounts, uint256[] quantities, uint256 next)
 ```
 
 ### getLendOrderBook
 
 ```solidity
-function getLendOrderBook(uint8 orderBookId, uint256 limit) external view returns (uint256[] unitPrices, uint256[] amounts, uint256[] quantities)
+function getLendOrderBook(uint8 orderBookId, uint256 start, uint256 limit) external view returns (uint256[] unitPrices, uint256[] amounts, uint256[] quantities, uint256 next)
 ```
 
 ### getItayoseEstimation

@@ -26,12 +26,6 @@ error InvalidHaircut()
 error InvalidPriceFeed()
 ```
 
-### InvalidPrice
-
-```solidity
-error InvalidPrice()
-```
-
 ### InvalidDecimals
 
 ```solidity
@@ -72,12 +66,6 @@ event HaircutUpdated(bytes32 ccy, uint256 haircut)
 
 ```solidity
 event PriceFeedUpdated(bytes32 ccy, uint256 decimals, address[] priceFeeds)
-```
-
-### PriceFeedRemoved
-
-```solidity
-event PriceFeedRemoved(bytes32 ccy)
 ```
 
 ### convert
@@ -168,12 +156,6 @@ function currencyExists(bytes32 _ccy) external view returns (bool)
 
 ```solidity
 function updatePriceFeed(bytes32 _ccy, uint8 _decimals, address[] _priceFeeds, uint256 _heartbeat) external
-```
-
-### removePriceFeed
-
-```solidity
-function removePriceFeed(bytes32 _ccy) external
 ```
 
 ### addCurrency

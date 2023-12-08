@@ -11,8 +11,6 @@ This contract manages the following data related to tokens.
   - Liquidation fee rate received by protocol
   - Liquidation fee rate received by liquidators
 
-To address a currency as collateral, it must be registered using `registerCurrency` method in this contract.
-
 ### onlyRegisteredCurrency
 
 ```solidity
@@ -24,6 +22,14 @@ Modifier to check if currency hasn't been registered yet
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _ccy | bytes32 | Currency name in bytes32 |
+
+### ifActive
+
+```solidity
+modifier ifActive()
+```
+
+Modifier to check if the protocol is active.
 
 ### initialize
 
@@ -53,16 +59,6 @@ function requiredContracts() public pure returns (bytes32[] contracts)
 Returns the contract names used in this contract.
 
 _The contract name list is in `./libraries/Contracts.sol`._
-
-### acceptedContracts
-
-```solidity
-function acceptedContracts() public pure returns (bytes32[] contracts)
-```
-
-Returns contract names that can call this contract.
-
-_The contact name listed in this method is also needed to be listed `requiredContracts` method._
 
 ### receive
 
@@ -176,7 +172,7 @@ Gets the maximum amount of the base currency that can be withdrawn from user col
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| [0] | uint256 | Maximum amount of ETH that can be withdrawn |
+| [0] | uint256 | Maximum amount of the base currency that can be withdrawn |
 
 ### getWithdrawableCollateral
 

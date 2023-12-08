@@ -8,6 +8,12 @@
 uint256 OBSERVATION_PERIOD
 ```
 
+### COMPOUND_FACTOR_DECIMALS
+
+```solidity
+uint8 COMPOUND_FACTOR_DECIMALS
+```
+
 ### InvalidCompoundFactor
 
 ```solidity
@@ -38,6 +44,12 @@ error InvalidPreOpeningDate()
 error InvalidTimestamp()
 ```
 
+### InvalidMinDebtUnitPrice
+
+```solidity
+error InvalidMinDebtUnitPrice()
+```
+
 ### LendingMarketNotInitialized
 
 ```solidity
@@ -65,7 +77,7 @@ event MinDebtUnitPriceUpdated(bytes32 ccy, uint256 minDebtUnitPrice)
 ### OrderBookCreated
 
 ```solidity
-event OrderBookCreated(bytes32 ccy, uint8 orderBookId, uint256 openingDate, uint256 maturity)
+event OrderBookCreated(bytes32 ccy, uint8 orderBookId, uint256 openingDate, uint256 preOpeningDate, uint256 maturity)
 ```
 
 ### OrderBooksRotated
@@ -107,7 +119,7 @@ function executeItayoseCall(bytes32 _ccy, uint256 _maturity) external returns (s
 ### rotateOrderBooks
 
 ```solidity
-function rotateOrderBooks(bytes32 _ccy) external returns (uint256 newMaturity)
+function rotateOrderBooks(bytes32 _ccy) external
 ```
 
 ### executeEmergencyTermination
@@ -131,7 +143,7 @@ function unpauseLendingMarket(bytes32 _ccy) public
 ### updateOrderLogs
 
 ```solidity
-function updateOrderLogs(bytes32 _ccy, uint256 _maturity, uint256 _filledUnitPrice, uint256 _filledAmount, uint256 _filledFutureValue) external
+function updateOrderLogs(bytes32 _ccy, uint256 _maturity, uint256 _filledAmount, uint256 _filledFutureValue) external
 ```
 
 ### calculateNextMaturity
@@ -149,7 +161,7 @@ function _getLastFridayAfterMonths(uint256 _timestamp, uint256 _months) internal
 ### _calculateAutoRollUnitPrice
 
 ```solidity
-function _calculateAutoRollUnitPrice(bytes32 _ccy, uint256 _maturity) internal view returns (uint256 autoRollUnitPrice)
+function _calculateAutoRollUnitPrice(bytes32 _ccy, uint256 _nearestMaturity, uint256 _destinationMaturity, uint8 _destinationOrderBookId, contract ILendingMarket _market) internal view returns (uint256 autoRollUnitPrice)
 ```
 
 ### _convertUnitPrice

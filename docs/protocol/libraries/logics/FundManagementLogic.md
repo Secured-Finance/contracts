@@ -182,7 +182,7 @@ Converts the future value to the genesis value if there is balance in the past m
 ### updateFunds
 
 ```solidity
-function updateFunds(bytes32 _ccy, uint256 _maturity, address _user, enum ProtocolTypes.Side _side, uint256 _filledAmount, uint256 _filledAmountInFV, uint256 _feeInFV, bool _isTaker) external
+function updateFunds(bytes32 _ccy, uint256 _maturity, address _user, enum ProtocolTypes.Side _side, uint256 _filledAmount, uint256 _filledAmountInFV, uint256 _feeInFV) external
 ```
 
 ### registerCurrencyAndMaturity
@@ -266,7 +266,7 @@ function cleanUpFunds(bytes32 _ccy, address _user) public returns (uint256 total
 ### _cleanUpOrders
 
 ```solidity
-function _cleanUpOrders(bytes32 _ccy, uint256 _maturity, address _user) internal returns (uint256 activeOrderCount, bool isCleaned)
+function _cleanUpOrders(bytes32 _ccy, uint256 _maturity, address _user) internal returns (uint256 activeOrderCount)
 ```
 
 ### _getFundsFromFutureValueVault

@@ -32,16 +32,6 @@ Returns the contract names used in this contract.
 
 _The contract name list is in `./libraries/Contracts.sol`._
 
-### acceptedContracts
-
-```solidity
-function acceptedContracts() public pure returns (bytes32[] contracts)
-```
-
-Returns contract names that can call this contract.
-
-_The contact name listed in this method is also needed to be listed `requiredContracts` method._
-
 ### getBeaconProxyAddress
 
 ```solidity
@@ -108,6 +98,19 @@ Deploys new LendingMarket
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | market | address | The proxy contract address of created lending market |
+
+### changeBeaconProxyAdmins
+
+```solidity
+function changeBeaconProxyAdmins(address newAdmin, address[] destinations) external
+```
+
+Updates admin addresses of beacon proxy contract
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| newAdmin | address | The address of new admin |
+| destinations | address[] | The destination contract addresses |
 
 ### _createProxy
 

@@ -102,6 +102,12 @@ function next(struct OrderStatisticsTreeLib.Tree self, uint256 value) internal v
 function prev(struct OrderStatisticsTreeLib.Tree self, uint256 value) internal view returns (uint256 cursor)
 ```
 
+### search
+
+```solidity
+function search(struct OrderStatisticsTreeLib.Tree self, uint256 value) internal view returns (bool valueExists, uint256 parent)
+```
+
 ### exists
 
 ```solidity
@@ -321,7 +327,7 @@ _Remove the OrderItem denoted by `_id` from the list._
 ### _removeOrders
 
 ```solidity
-function _removeOrders(struct OrderStatisticsTreeLib.Tree self, uint256 value, uint48 orderId) internal returns (uint256 amount)
+function _removeOrders(struct OrderStatisticsTreeLib.Tree self, uint256 value, uint48 orderId) internal
 ```
 
 _Remove the OrderItems older than or equal `orderId` from the list_
