@@ -63,34 +63,12 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
      * @notice Gets the user balance.
      * @param _user User's address
      * @return balance The user balance
-     * @return maturity The maturity of the market that the future value was added
      */
     function getBalance(
-        uint8 _orderBookId,
+        uint256 _maturity,
         address _user
-    ) public view override returns (int256 balance, uint256 maturity) {
-        return (
-            Storage.slot().balances[_orderBookId][_user],
-            Storage.slot().balanceMaturities[_orderBookId][_user]
-        );
-    }
-
-    /**
-     * @notice Gets if the account has past maturity balance at the selected maturity.
-     * @param _user User's address
-     * @param _maturity The maturity of the market
-     * @return The boolean if the lending market is initialized or not
-     */
-    function hasBalanceAtPastMaturity(
-        uint8 _orderBookId,
-        address _user,
-        uint256 _maturity
-    ) public view override returns (bool) {
-        if (Storage.slot().balanceMaturities[_orderBookId][_user] == _maturity) {
-            return false;
-        } else {
-            return Storage.slot().balances[_orderBookId][_user] != 0;
-        }
+    ) public view override returns (int256 balance) {
+        return (Storage.slot().balances[_maturity][_user]);
     }
 
     /**
@@ -103,19 +81,15 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
      * @param _maturity The maturity of the market
      */
     function increase(
-        uint8 _orderBookId,
+        uint256 _maturity,
         address _user,
-        uint256 _amount,
-        uint256 _maturity
+        uint256 _amount
     ) public override onlyLendingMarketController {
         if (_user == address(0)) revert UserIsZero();
-        if (hasBalanceAtPastMaturity(_orderBookId, _user, _maturity))
-            revert PastMaturityBalanceExists({user: _user});
 
-        int256 previousBalance = Storage.slot().balances[_orderBookId][_user];
-        Storage.slot().balanceMaturities[_orderBookId][_user] = _maturity;
-        Storage.slot().balances[_orderBookId][_user] += _amount.toInt256();
-        emit Transfer(address(0), _user, _orderBookId, _maturity, _amount.toInt256());
+        int256 previousBalance = Storage.slot().balances[_maturity][_user];
+        Storage.slot().balances[_maturity][_user] += _amount.toInt256();
+        emit Transfer(address(0), _user, _maturity, _amount.toInt256());
 
         _updateTotalSupply(_maturity, _amount.toInt256(), previousBalance);
     }
@@ -130,19 +104,15 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
      * @param _maturity The maturity of the market
      */
     function decrease(
-        uint8 _orderBookId,
+        uint256 _maturity,
         address _user,
-        uint256 _amount,
-        uint256 _maturity
+        uint256 _amount
     ) public override onlyLendingMarketController {
         if (_user == address(0)) revert UserIsZero();
-        if (hasBalanceAtPastMaturity(_orderBookId, _user, _maturity))
-            revert PastMaturityBalanceExists({user: _user});
 
-        int256 previousBalance = Storage.slot().balances[_orderBookId][_user];
-        Storage.slot().balanceMaturities[_orderBookId][_user] = _maturity;
-        Storage.slot().balances[_orderBookId][_user] -= _amount.toInt256();
-        emit Transfer(address(0), _user, _orderBookId, _maturity, -(_amount.toInt256()));
+        int256 previousBalance = Storage.slot().balances[_maturity][_user];
+        Storage.slot().balances[_maturity][_user] -= _amount.toInt256();
+        emit Transfer(address(0), _user, _maturity, -(_amount.toInt256()));
 
         _updateTotalSupply(_maturity, -_amount.toInt256(), previousBalance);
     }
@@ -155,22 +125,15 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
      * @param _maturity The maturity of the market
      */
     function transferFrom(
-        uint8 _orderBookId,
+        uint256 _maturity,
         address _sender,
         address _receiver,
-        int256 _amount,
-        uint256 _maturity
+        int256 _amount
     ) external override onlyLendingMarketController {
-        if (hasBalanceAtPastMaturity(_orderBookId, _sender, _maturity))
-            revert PastMaturityBalanceExists({user: _sender});
-        if (hasBalanceAtPastMaturity(_orderBookId, _receiver, _maturity))
-            revert PastMaturityBalanceExists({user: _receiver});
+        Storage.slot().balances[_maturity][_sender] -= _amount;
+        Storage.slot().balances[_maturity][_receiver] += _amount;
 
-        Storage.slot().balanceMaturities[_orderBookId][_receiver] = _maturity;
-        Storage.slot().balances[_orderBookId][_sender] -= _amount;
-        Storage.slot().balances[_orderBookId][_receiver] += _amount;
-
-        emit Transfer(_sender, _receiver, _orderBookId, _maturity, _amount);
+        emit Transfer(_sender, _receiver, _maturity, _amount);
     }
 
     /**
@@ -178,46 +141,40 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
      * @param _user User's address
      * @return removedAmount Removed future value amount
      * @return currentAmount Current future value amount after update
-     * @return maturity Maturity of future value
      * @return isAllRemoved The boolean if the all future value amount in the selected maturity is removed
      */
     function reset(
-        uint8 _orderBookId,
-        address _user,
-        uint256 _activeMaturity
+        uint256 _maturity,
+        address _user
     )
         external
         override
         onlyLendingMarketController
-        returns (int256 removedAmount, int256 currentAmount, uint256 maturity, bool isAllRemoved)
+        returns (int256 removedAmount, int256 currentAmount, bool isAllRemoved)
     {
-        currentAmount = Storage.slot().balances[_orderBookId][_user];
+        currentAmount = Storage.slot().balances[_maturity][_user];
 
-        if (
-            Storage.slot().balanceMaturities[_orderBookId][_user] != _activeMaturity &&
-            currentAmount != 0
-        ) {
+        if (_maturity < block.timestamp && currentAmount != 0) {
             removedAmount = currentAmount;
-            maturity = Storage.slot().balanceMaturities[_orderBookId][_user];
 
             isAllRemoved = false;
             if (removedAmount >= 0) {
-                Storage.slot().removedLendingSupply[maturity] += removedAmount.toUint256();
+                Storage.slot().removedLendingSupply[_maturity] += removedAmount.toUint256();
             } else {
-                Storage.slot().removedBorrowingSupply[maturity] += (-removedAmount).toUint256();
+                Storage.slot().removedBorrowingSupply[_maturity] += (-removedAmount).toUint256();
             }
 
-            Storage.slot().balances[_orderBookId][_user] = 0;
+            Storage.slot().balances[_maturity][_user] = 0;
             currentAmount = 0;
 
-            emit Transfer(_user, address(0), _orderBookId, maturity, removedAmount);
+            emit Transfer(_user, address(0), _maturity, removedAmount);
         }
 
         isAllRemoved =
-            (Storage.slot().removedLendingSupply[maturity] ==
-                Storage.slot().totalLendingSupplies[maturity]) &&
-            (Storage.slot().removedBorrowingSupply[maturity] ==
-                Storage.slot().totalBorrowingSupplies[maturity]);
+            (Storage.slot().removedLendingSupply[_maturity] ==
+                Storage.slot().totalLendingSupplies[_maturity]) &&
+            (Storage.slot().removedBorrowingSupply[_maturity] ==
+                Storage.slot().totalBorrowingSupplies[_maturity]);
     }
 
     /**
@@ -225,16 +182,14 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
      * @param _user User's address
      */
     function executeForcedReset(
-        uint8 _orderBookId,
+        uint256 _maturity,
         address _user
     ) external override onlyLendingMarketController {
-        int256 removedAmount = Storage.slot().balances[_orderBookId][_user];
+        int256 removedAmount = Storage.slot().balances[_maturity][_user];
 
         if (removedAmount != 0) {
-            Storage.slot().balances[_orderBookId][_user] = 0;
-            uint256 maturity = Storage.slot().balanceMaturities[_orderBookId][_user];
-
-            emit Transfer(_user, address(0), _orderBookId, maturity, removedAmount);
+            Storage.slot().balances[_maturity][_user] = 0;
+            emit Transfer(_user, address(0), _maturity, removedAmount);
         }
     }
 
@@ -244,11 +199,11 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
      * @param _amount The amount to reset
      */
     function executeForcedReset(
-        uint8 _orderBookId,
+        uint256 _maturity,
         address _user,
         int256 _amount
     ) external override onlyLendingMarketController returns (int256 removedAmount, int256 balance) {
-        removedAmount = Storage.slot().balances[_orderBookId][_user];
+        removedAmount = Storage.slot().balances[_maturity][_user];
 
         if ((_amount > 0 && removedAmount < 0) || (_amount < 0 && removedAmount > 0)) {
             revert InvalidResetAmount();
@@ -259,13 +214,11 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
         }
 
         if (removedAmount != 0) {
-            Storage.slot().balances[_orderBookId][_user] -= removedAmount;
-            uint256 maturity = Storage.slot().balanceMaturities[_orderBookId][_user];
-
-            emit Transfer(_user, address(0), _orderBookId, maturity, removedAmount);
+            Storage.slot().balances[_maturity][_user] -= removedAmount;
+            emit Transfer(_user, address(0), _maturity, removedAmount);
         }
 
-        balance = Storage.slot().balances[_orderBookId][_user];
+        balance = Storage.slot().balances[_maturity][_user];
     }
 
     function _updateTotalSupply(uint256 _maturity, int256 _amount, int256 _balance) private {

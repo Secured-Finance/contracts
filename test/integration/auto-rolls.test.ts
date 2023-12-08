@@ -44,7 +44,6 @@ describe('Integration Test: Auto-rolls', async () => {
 
   let genesisDate: number;
   let maturities: BigNumber[];
-  let orderBookIds: BigNumber[];
 
   let signers: Signers;
 
@@ -95,8 +94,6 @@ describe('Integration Test: Auto-rolls', async () => {
     lendingMarket = await lendingMarketController
       .getLendingMarket(hexETH)
       .then((address) => ethers.getContractAt('LendingMarket', address));
-
-    orderBookIds = await lendingMarketController.getOrderBookIds(hexETH);
 
     futureValueVault = await lendingMarketController
       .getFutureValueVault(hexETH)
@@ -213,12 +210,12 @@ describe('Integration Test: Auto-rolls', async () => {
       ).to.emit(fundManagementLogic, 'OrderFilled');
 
       // Check future value
-      const { balance: aliceFVBefore } = await futureValueVault.getBalance(
-        orderBookIds[0],
+      const aliceFVBefore = await futureValueVault.getBalance(
+        maturities[0],
         alice.address,
       );
-      const { balance: bobFV } = await futureValueVault.getBalance(
-        orderBookIds[0],
+      const bobFV = await futureValueVault.getBalance(
+        maturities[0],
         bob.address,
       );
       const { futureValue: aliceActualFV } =
@@ -232,8 +229,8 @@ describe('Integration Test: Auto-rolls', async () => {
       expect(bobFV).not.to.equal('0');
 
       await lendingMarketController.cleanUpFunds(hexETH, alice.address);
-      const { balance: aliceFVAfter } = await futureValueVault.getBalance(
-        orderBookIds[0],
+      const aliceFVAfter = await futureValueVault.getBalance(
+        maturities[0],
         alice.address,
       );
 
@@ -241,7 +238,7 @@ describe('Integration Test: Auto-rolls', async () => {
 
       // Check present value
       const marketUnitPrice = await lendingMarket.getMarketUnitPrice(
-        orderBookIds[0],
+        maturities[0],
       );
       const alicePV = await lendingMarketController.getTotalPresentValue(
         hexETH,
@@ -798,7 +795,7 @@ describe('Integration Test: Auto-rolls', async () => {
         );
 
       const marketUnitPrice = await lendingMarket.getMarketUnitPrice(
-        orderBookIds[0],
+        maturities[0],
       );
       const davePV = await lendingMarketController.getTotalPresentValue(
         hexETH,
@@ -818,9 +815,9 @@ describe('Integration Test: Auto-rolls', async () => {
 
         const fvAmounts = await Promise.all(
           [owner, alice, bob, carol, dave, reserveFund].map(({ address }) =>
-            futureValueVault.getBalance(orderBookIds[0], address),
+            futureValueVault.getBalance(maturities[0], address),
           ),
-        ).then((results) => results.map(({ balance }) => balance));
+        );
 
         expect(
           fvAmounts.reduce(

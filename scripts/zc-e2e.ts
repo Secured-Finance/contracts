@@ -31,7 +31,6 @@ describe('ZC e2e test', async function () {
   let lendingMarketReader: Contract;
 
   let maturities: BigNumber[];
-  let orderBookIds: BigNumber[];
 
   const executeOrder = async (
     user: SignerWithAddress | Wallet,
@@ -162,9 +161,6 @@ describe('ZC e2e test', async function () {
       .then((tx) => tx.wait());
 
     maturities = await lendingMarketController.getMaturities(targetCurrency);
-    orderBookIds = await lendingMarketController.getOrderBookIds(
-      targetCurrency,
-    );
   });
 
   it('Deposit ETH', async function () {
@@ -242,7 +238,7 @@ describe('ZC e2e test', async function () {
       .getLendingMarket(hexETH)
       .then((address) => ethers.getContractAt('LendingMarket', address));
 
-    const isMarketOpened = await lendingMarket.isOpened(orderBookIds[0]);
+    const isMarketOpened = await lendingMarket.isOpened(maturities[0]);
 
     if (!isMarketOpened) {
       console.log('Skip the order step since the market not open');
@@ -304,7 +300,7 @@ describe('ZC e2e test', async function () {
       .getLendingMarket(targetCurrency)
       .then((address) => ethers.getContractAt('LendingMarket', address));
 
-    const isMarketOpened = await lendingMarket.isOpened(orderBookIds[0]);
+    const isMarketOpened = await lendingMarket.isOpened(maturities[0]);
     if (!isMarketOpened) {
       console.log('Skip the order step since the market not open');
       this.skip();
@@ -348,7 +344,7 @@ describe('ZC e2e test', async function () {
       maturities[0],
     );
 
-    const isMarketOpened = await lendingMarket.isOpened(orderBookIds[0]);
+    const isMarketOpened = await lendingMarket.isOpened(maturities[0]);
     if (!isMarketOpened) {
       console.log('Skip the order step since the market not open');
       this.skip();
@@ -416,8 +412,8 @@ describe('ZC e2e test', async function () {
       targetCurrency,
       aliceSigner.address,
     );
-    const [aliceFVInFutureValue] = await futureValueVault.getBalance(
-      orderBookIds[0],
+    const aliceFVInFutureValue = await futureValueVault.getBalance(
+      maturities[0],
       aliceSigner.address,
     );
 
@@ -473,7 +469,7 @@ describe('ZC e2e test', async function () {
       .getLendingMarket(hexETH)
       .then((address) => ethers.getContractAt('LendingMarket', address));
 
-    const isMarketOpened = await lendingMarket.isOpened(orderBookIds[0]);
+    const isMarketOpened = await lendingMarket.isOpened(maturities[0]);
 
     if (!isMarketOpened) {
       console.log('Skip the order step since the market not open');

@@ -81,8 +81,6 @@ interface ILendingMarketController {
 
     function getFutureValueVault(bytes32 ccy) external view returns (address);
 
-    function getOrderBookId(bytes32 _ccy, uint256 _maturity) external view returns (uint8);
-
     function getPendingOrderAmount(bytes32 _ccy, uint256 _maturity) external view returns (uint256);
 
     function getOrderEstimation(
@@ -101,8 +99,6 @@ interface ILendingMarketController {
         );
 
     function getMaturities(bytes32 ccy) external view returns (uint256[] memory);
-
-    function getOrderBookIds(bytes32 ccy) external view returns (uint8[] memory);
 
     function getUsedCurrencies(address user) external view returns (bytes32[] memory);
 

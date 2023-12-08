@@ -59,7 +59,7 @@ contract LendingMarketController is
      * @param _maturity The maturity of the order book
      */
     modifier ifValidMaturity(bytes32 _ccy, uint256 _maturity) {
-        if (Storage.slot().maturityOrderBookIds[_ccy][_maturity] == 0) revert InvalidMaturity();
+        if (!Storage.slot().maturityExists[_ccy][_maturity]) revert InvalidMaturity();
         _;
     }
 
@@ -206,19 +206,6 @@ contract LendingMarketController is
     }
 
     /**
-     * @notice Gets the order book id for the selected currency and maturity.
-     * @param _ccy Currency name in bytes32
-     * @param _maturity The maturity of the order book
-     * @return The order book id
-     */
-    function getOrderBookId(
-        bytes32 _ccy,
-        uint256 _maturity
-    ) external view override returns (uint8) {
-        return Storage.slot().maturityOrderBookIds[_ccy][_maturity];
-    }
-
-    /**
      * @notice Gets the future value contract address for the selected currency and maturity.
      * @param _ccy Currency name in bytes32
      * @return The future value vault address
@@ -284,19 +271,7 @@ contract LendingMarketController is
      * @return Array with the lending market maturity
      */
     function getMaturities(bytes32 _ccy) public view override returns (uint256[] memory) {
-        return
-            ILendingMarket(Storage.slot().lendingMarkets[_ccy]).getMaturities(
-                Storage.slot().orderBookIdLists[_ccy]
-            );
-    }
-
-    /**
-     * @notice Gets the order book ids.
-     * @param _ccy Currency name in bytes32
-     * @return The array of order book id
-     */
-    function getOrderBookIds(bytes32 _ccy) external view override returns (uint8[] memory) {
-        return Storage.slot().orderBookIdLists[_ccy];
+        return Storage.slot().orderBookMaturities[_ccy];
     }
 
     /**
@@ -696,7 +671,7 @@ contract LendingMarketController is
         uint48 _orderId
     ) external override nonReentrant ifValidMaturity(_ccy, _maturity) ifActive returns (bool) {
         ILendingMarket(Storage.slot().lendingMarkets[_ccy]).cancelOrder(
-            Storage.slot().maturityOrderBookIds[_ccy][_maturity],
+            _maturity,
             msg.sender,
             _orderId
         );

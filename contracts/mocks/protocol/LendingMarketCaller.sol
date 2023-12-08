@@ -9,7 +9,7 @@ import {ProtocolTypes} from "../../protocol/types/ProtocolTypes.sol";
 contract LendingMarketCaller {
     IBeaconProxyController public beaconProxyController;
     mapping(bytes32 => address) public lendingMarkets;
-    mapping(bytes32 => uint8) public orderBookIdLists;
+    mapping(bytes32 => uint256) public maturityLists;
 
     constructor(address _beaconProxyController) {
         beaconProxyController = IBeaconProxyController(_beaconProxyController);
@@ -19,8 +19,8 @@ contract LendingMarketCaller {
         return lendingMarkets[_ccy];
     }
 
-    function getOrderBookId(bytes32 _ccy) external view returns (uint8) {
-        return orderBookIdLists[_ccy];
+    function getMaturity(bytes32 _ccy) external view returns (uint256) {
+        return maturityLists[_ccy];
     }
 
     function deployLendingMarket(
@@ -41,7 +41,7 @@ contract LendingMarketCaller {
         uint256 _openingDate,
         uint256 _preOpeningDate
     ) external {
-        orderBookIdLists[_ccy] = ILendingMarket(lendingMarkets[_ccy]).createOrderBook(
+        ILendingMarket(lendingMarkets[_ccy]).createOrderBook(
             _maturity,
             _openingDate,
             _preOpeningDate
@@ -50,30 +50,26 @@ contract LendingMarketCaller {
 
     function executeAutoRoll(
         bytes32 _ccy,
-        uint8 _maturedOrderBookId,
-        uint8 _destinationOrderBookId,
-        uint256 _newMaturity,
-        uint256 _openingDate,
+        uint256 _maturedOrderBookMaturity,
+        uint256 _destinationOrderBookMaturity,
         uint256 _autoRollUnitPrice
     ) external {
         ILendingMarket(lendingMarkets[_ccy]).executeAutoRoll(
-            _maturedOrderBookId,
-            _destinationOrderBookId,
-            _newMaturity,
-            _openingDate,
+            _maturedOrderBookMaturity,
+            _destinationOrderBookMaturity,
             _autoRollUnitPrice
         );
     }
 
     function executeOrder(
         bytes32 _ccy,
-        uint8 _orderBookId,
+        uint256 _maturity,
         ProtocolTypes.Side _side,
         uint256 _amount,
         uint256 _unitPrice
     ) external {
         ILendingMarket(lendingMarkets[_ccy]).executeOrder(
-            _orderBookId,
+            _maturity,
             _side,
             msg.sender,
             _amount,
@@ -83,13 +79,13 @@ contract LendingMarketCaller {
 
     function executePreOrder(
         bytes32 _ccy,
-        uint8 _orderBookId,
+        uint256 _maturity,
         ProtocolTypes.Side _side,
         uint256 _amount,
         uint256 _unitPrice
     ) external {
         ILendingMarket(lendingMarkets[_ccy]).executePreOrder(
-            _orderBookId,
+            _maturity,
             _side,
             msg.sender,
             _amount,
@@ -99,30 +95,25 @@ contract LendingMarketCaller {
 
     function unwindPosition(
         bytes32 _ccy,
-        uint8 _orderBookId,
+        uint256 _maturity,
         ProtocolTypes.Side _side,
         uint256 _futureValue
     ) external {
         ILendingMarket(lendingMarkets[_ccy]).unwindPosition(
-            _orderBookId,
+            _maturity,
             _side,
             msg.sender,
             _futureValue
         );
     }
 
-    function cancelOrder(
-        bytes32 _ccy,
-        uint8 _orderBookId,
-        address _user,
-        uint48 _orderId
-    ) external {
-        ILendingMarket(lendingMarkets[_ccy]).cancelOrder(_orderBookId, _user, _orderId);
+    function cancelOrder(bytes32 _ccy, uint256 _maturity, address _user, uint48 _orderId) external {
+        ILendingMarket(lendingMarkets[_ccy]).cancelOrder(_maturity, _user, _orderId);
     }
 
     function executeItayoseCall(
         bytes32 _ccy,
-        uint8 _orderBookId
+        uint256 _maturity
     )
         external
         returns (
@@ -133,11 +124,11 @@ contract LendingMarketCaller {
             PartiallyFilledOrder memory borrowingOrder
         )
     {
-        return ILendingMarket(lendingMarkets[_ccy]).executeItayoseCall(_orderBookId);
+        return ILendingMarket(lendingMarkets[_ccy]).executeItayoseCall(_maturity);
     }
 
-    function cleanUpOrders(bytes32 _ccy, uint8 _orderBookId, address _user) external {
-        ILendingMarket(lendingMarkets[_ccy]).cleanUpOrders(_orderBookId, _user);
+    function cleanUpOrders(bytes32 _ccy, uint256 _maturity, address _user) external {
+        ILendingMarket(lendingMarkets[_ccy]).cleanUpOrders(_maturity, _user);
     }
 
     function pause(bytes32 _ccy) external {

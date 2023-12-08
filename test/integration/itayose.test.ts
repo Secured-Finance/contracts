@@ -31,7 +31,6 @@ describe('Integration Test: Itayose', async () => {
 
   let genesisDate: number;
   let maturities: BigNumber[];
-  let orderBookIds: BigNumber[];
 
   let signers: Signers;
 
@@ -79,8 +78,6 @@ describe('Integration Test: Itayose', async () => {
     lendingMarket = await lendingMarketController
       .getLendingMarket(hexETH)
       .then((address) => ethers.getContractAt('LendingMarket', address));
-
-    orderBookIds = await lendingMarketController.getOrderBookIds(hexETH);
 
     futureValueVault = await lendingMarketController
       .getFutureValueVault(hexETH)
@@ -162,12 +159,12 @@ describe('Integration Test: Itayose', async () => {
       ).to.emit(fundManagementLogic, 'OrderFilled');
 
       // Check future value
-      const { balance: aliceFVBefore } = await futureValueVault.getBalance(
-        orderBookIds[0],
+      const aliceFVBefore = await futureValueVault.getBalance(
+        maturities[0],
         alice.address,
       );
-      const { balance: bobFV } = await futureValueVault.getBalance(
-        orderBookIds[0],
+      const bobFV = await futureValueVault.getBalance(
+        maturities[0],
         bob.address,
       );
 
@@ -220,10 +217,9 @@ describe('Integration Test: Itayose', async () => {
     });
 
     it('Execute Itayose without pre-order', async () => {
-      const orderBookId = orderBookIds[orderBookIds.length - 1];
       const maturity = maturities[maturities.length - 1];
 
-      expect(await lendingMarket.isOpened(orderBookId)).to.false;
+      expect(await lendingMarket.isOpened(maturity)).to.false;
 
       // Itayose
       await lendingMarketController.executeItayoseCall(hexETH, maturity);
@@ -232,7 +228,7 @@ describe('Integration Test: Itayose', async () => {
         maturity,
       );
 
-      expect(await lendingMarket.isOpened(orderBookId)).to.true;
+      expect(await lendingMarket.isOpened(maturity)).to.true;
       expect(marketInfo.openingDate).to.equal(maturities[0]);
       expect(marketInfo.bestLendUnitPrice).to.equal('10000');
       expect(marketInfo.bestBorrowUnitPrice).to.equal('0');
@@ -281,12 +277,12 @@ describe('Integration Test: Itayose', async () => {
       ).to.emit(fundManagementLogic, 'OrderFilled');
 
       // Check future value
-      const { balance: aliceFVBefore } = await futureValueVault.getBalance(
-        orderBookIds[0],
+      const aliceFVBefore = await futureValueVault.getBalance(
+        maturities[0],
         alice.address,
       );
-      const { balance: bobFV } = await futureValueVault.getBalance(
-        orderBookIds[0],
+      const bobFV = await futureValueVault.getBalance(
+        maturities[0],
         bob.address,
       );
 
@@ -360,9 +356,8 @@ describe('Integration Test: Itayose', async () => {
     });
 
     it('Execute Itayose with pre-order', async () => {
-      const orderBookId = orderBookIds[orderBookIds.length - 1];
       const maturity = maturities[maturities.length - 1];
-      expect(await lendingMarket.isOpened(orderBookId)).to.false;
+      expect(await lendingMarket.isOpened(maturity)).to.false;
 
       // Itayose
       await lendingMarketController.executeItayoseCall(hexETH, maturity);
@@ -372,7 +367,7 @@ describe('Integration Test: Itayose', async () => {
       );
       const { openingUnitPrice } = await lendingMarket.getItayoseLog(maturity);
 
-      expect(await lendingMarket.isOpened(orderBookId)).to.true;
+      expect(await lendingMarket.isOpened(maturity)).to.true;
       expect(marketInfo.openingDate).to.equal(maturities[0]);
       expect(marketInfo.bestLendUnitPrice).to.equal('7300');
       expect(marketInfo.bestBorrowUnitPrice).to.equal('7200');

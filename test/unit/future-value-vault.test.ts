@@ -16,8 +16,6 @@ describe('FutureValueVault', () => {
   let futureValueVaultCaller: Contract;
   let futureValueVaultProxy: Contract;
 
-  let currentOrderBookId = 0;
-
   let owner: SignerWithAddress;
   let alice: SignerWithAddress;
   let bob: SignerWithAddress;
@@ -27,8 +25,6 @@ describe('FutureValueVault', () => {
   });
 
   beforeEach(async () => {
-    currentOrderBookId++;
-
     // Set up for the mocks
     const mockCurrencyController = await deployMockContract(
       owner,
@@ -112,10 +108,10 @@ describe('FutureValueVault', () => {
       futureValueVault.address,
     );
 
-    await futureValueVaultCaller.deployFutureValueVault(currentOrderBookId);
+    await futureValueVaultCaller.deployFutureValueVault();
 
     futureValueVaultProxy = await futureValueVaultCaller
-      .getFutureValueVault(currentOrderBookId)
+      .getFutureValueVault()
       .then((address) => ethers.getContractAt('FutureValueVault', address));
   });
 
@@ -140,93 +136,51 @@ describe('FutureValueVault', () => {
   describe('Update balance', async () => {
     const amount = 1000;
     const maturity = 20;
-    const oldMaturity = 10;
 
     it('Increase user balance', async () => {
       await expect(
-        futureValueVaultCaller.increase(
-          currentOrderBookId,
-          alice.address,
-          amount,
-          maturity,
-        ),
+        futureValueVaultCaller.increase(maturity, alice.address, amount),
       )
         .emit(futureValueVaultProxy, 'Transfer')
         .withArgs(
           ethers.constants.AddressZero,
           alice.address,
-          currentOrderBookId,
           maturity,
           amount,
         );
-
-      await expect(
-        futureValueVaultCaller.increase(
-          currentOrderBookId,
-          alice.address,
-          amount,
-          oldMaturity,
-        ),
-      ).revertedWith(`PastMaturityBalanceExists("${alice.address}")`);
     });
 
     it('Decrease user balance', async () => {
       await expect(
-        futureValueVaultCaller.decrease(
-          currentOrderBookId,
-          alice.address,
-          amount,
-          maturity,
-        ),
+        futureValueVaultCaller.decrease(maturity, alice.address, amount),
       )
         .emit(futureValueVaultProxy, 'Transfer')
         .withArgs(
           ethers.constants.AddressZero,
           alice.address,
-          currentOrderBookId,
           maturity,
           -amount,
         );
-
-      await expect(
-        futureValueVaultCaller.decrease(
-          currentOrderBookId,
-          alice.address,
-          amount,
-          oldMaturity,
-        ),
-      ).revertedWith(`PastMaturityBalanceExists("${alice.address}")`);
     });
 
     it('Fail to increase balance due to execution by non-accepted contract', async () => {
       await expect(
-        futureValueVaultProxy.increase(
-          currentOrderBookId,
-          alice.address,
-          amount,
-          maturity,
-        ),
+        futureValueVaultProxy.increase(maturity, alice.address, amount),
       ).revertedWith('OnlyAcceptedContract("LendingMarketController")');
     });
 
     it('Fail to decrease balance due to execution by non-accepted contract', async () => {
       await expect(
-        futureValueVaultProxy.decrease(
-          currentOrderBookId,
-          alice.address,
-          amount,
-          maturity,
-        ),
+        futureValueVaultProxy.decrease(maturity, alice.address, amount),
       ).revertedWith('OnlyAcceptedContract("LendingMarketController")');
     });
 
     it('Fail to increase balance due to invalid user address', async () => {
       await expect(
         futureValueVaultCaller.increase(
-          currentOrderBookId,
+          maturity,
           ethers.constants.AddressZero,
           amount,
-          maturity,
         ),
       ).revertedWith('UserIsZero');
     });
@@ -234,10 +188,9 @@ describe('FutureValueVault', () => {
     it('Fail to decrease balance due to invalid user address', async () => {
       await expect(
         futureValueVaultCaller.decrease(
-          currentOrderBookId,
+          maturity,
           ethers.constants.AddressZero,
           amount,
-          maturity,
         ),
       ).revertedWith('UserIsZero');
     });
@@ -246,81 +199,29 @@ describe('FutureValueVault', () => {
   describe('Transfer balance', async () => {
     const amount = 1000;
     const maturity = 20;
-    const oldMaturity = 10;
 
     it('Transfer balance to another user', async () => {
-      await futureValueVaultCaller.increase(
-        currentOrderBookId,
-        alice.address,
-        amount,
-        maturity,
-      );
+      await futureValueVaultCaller.increase(maturity, alice.address, amount);
 
       await expect(
         futureValueVaultCaller.transferFrom(
-          currentOrderBookId,
+          maturity,
           alice.address,
           bob.address,
           amount,
-          maturity,
         ),
       )
         .emit(futureValueVaultProxy, 'Transfer')
-        .withArgs(
-          alice.address,
-          bob.address,
-          currentOrderBookId,
-          maturity,
-          amount,
-        );
-    });
-
-    it('Fail to transfer balance because sender has balance in the past maturity', async () => {
-      await futureValueVaultCaller.increase(
-        currentOrderBookId,
-        alice.address,
-        amount,
-        oldMaturity,
-      );
-
-      await expect(
-        futureValueVaultCaller.transferFrom(
-          currentOrderBookId,
-          alice.address,
-          bob.address,
-          amount,
-          maturity,
-        ),
-      ).revertedWith(`PastMaturityBalanceExists("${alice.address}")`);
-    });
-
-    it('Fail to transfer balance because receiver has balance in the past maturity', async () => {
-      await futureValueVaultCaller.increase(
-        currentOrderBookId,
-        bob.address,
-        amount,
-        oldMaturity,
-      );
-
-      await expect(
-        futureValueVaultCaller.transferFrom(
-          currentOrderBookId,
-          alice.address,
-          bob.address,
-          amount,
-          maturity,
-        ),
-      ).revertedWith(`PastMaturityBalanceExists("${bob.address}")`);
+        .withArgs(alice.address, bob.address, maturity, amount);
     });
 
     it('Fail to transfer balance due to execution by non-accepted contract', async () => {
       await expect(
         futureValueVaultProxy.transferFrom(
-          currentOrderBookId,
+          maturity,
           alice.address,
           bob.address,
           amount,
-          maturity,
         ),
       ).revertedWith('OnlyAcceptedContract("LendingMarketController")');
     });
@@ -332,8 +233,8 @@ describe('FutureValueVault', () => {
 
     it("Force reset a user's empty balance with amount", async () => {
       await expect(
-        futureValueVaultCaller['executeForcedReset(uint8,address,int256)'](
-          currentOrderBookId,
+        futureValueVaultCaller['executeForcedReset(uint256,address,int256)'](
+          maturity,
           alice.address,
           amount,
         ),
@@ -341,16 +242,11 @@ describe('FutureValueVault', () => {
     });
 
     it("Force reset a user's balance with amount", async () => {
-      await futureValueVaultCaller.increase(
-        currentOrderBookId,
-        alice.address,
-        amount,
-        maturity,
-      );
+      await futureValueVaultCaller.increase(maturity, alice.address, amount);
 
       await expect(
-        futureValueVaultCaller['executeForcedReset(uint8,address,int256)'](
-          currentOrderBookId,
+        futureValueVaultCaller['executeForcedReset(uint256,address,int256)'](
+          maturity,
           alice.address,
           amount,
         ),
@@ -359,7 +255,6 @@ describe('FutureValueVault', () => {
         .withArgs(
           alice.address,
           ethers.constants.AddressZero,
-          currentOrderBookId,
           maturity,
           amount,
         );
@@ -367,24 +262,19 @@ describe('FutureValueVault', () => {
 
     it("Force reset a user's empty balance without amount", async () => {
       await expect(
-        futureValueVaultCaller['executeForcedReset(uint8,address)'](
-          currentOrderBookId,
+        futureValueVaultCaller['executeForcedReset(uint256,address)'](
+          maturity,
           alice.address,
         ),
       ).not.emit(futureValueVaultProxy, 'Transfer');
     });
 
     it("Force reset a user's balance with amount", async () => {
-      await futureValueVaultCaller.increase(
-        currentOrderBookId,
-        alice.address,
-        amount,
-        maturity,
-      );
+      await futureValueVaultCaller.increase(maturity, alice.address, amount);
 
       await expect(
-        futureValueVaultCaller['executeForcedReset(uint8,address)'](
-          currentOrderBookId,
+        futureValueVaultCaller['executeForcedReset(uint256,address)'](
+          maturity,
           alice.address,
         ),
       )
@@ -392,23 +282,17 @@ describe('FutureValueVault', () => {
         .withArgs(
           alice.address,
           ethers.constants.AddressZero,
-          currentOrderBookId,
           maturity,
           amount,
         );
     });
 
     it("Fail to force reset a user's balance due to lending amount mismatch", async () => {
-      await futureValueVaultCaller.increase(
-        currentOrderBookId,
-        alice.address,
-        amount,
-        maturity,
-      );
+      await futureValueVaultCaller.increase(maturity, alice.address, amount);
 
       await expect(
-        futureValueVaultCaller['executeForcedReset(uint8,address,int256)'](
-          currentOrderBookId,
+        futureValueVaultCaller['executeForcedReset(uint256,address,int256)'](
+          maturity,
           alice.address,
           -amount,
         ),
@@ -416,16 +300,11 @@ describe('FutureValueVault', () => {
     });
 
     it("Fail to force reset a user's balance due to borrowing amount mismatch", async () => {
-      await futureValueVaultCaller.decrease(
-        currentOrderBookId,
-        alice.address,
-        amount,
-        maturity,
-      );
+      await futureValueVaultCaller.decrease(maturity, alice.address, amount);
 
       await expect(
-        futureValueVaultCaller['executeForcedReset(uint8,address,int256)'](
-          currentOrderBookId,
+        futureValueVaultCaller['executeForcedReset(uint256,address,int256)'](
+          maturity,
           alice.address,
           amount,
         ),
@@ -434,8 +313,8 @@ describe('FutureValueVault', () => {
 
     it("Fail to force reset a user's balance with amount due to execution by non-accepted contract", async () => {
       await expect(
-        futureValueVaultProxy['executeForcedReset(uint8,address,int256)'](
-          currentOrderBookId,
+        futureValueVaultProxy['executeForcedReset(uint256,address,int256)'](
+          maturity,
           alice.address,
           amount,
         ),
@@ -444,8 +323,8 @@ describe('FutureValueVault', () => {
 
     it("Fail to force reset a user's balance without amount due to execution by non-accepted contract", async () => {
       await expect(
-        futureValueVaultProxy['executeForcedReset(uint8,address)'](
-          currentOrderBookId,
+        futureValueVaultProxy['executeForcedReset(uint256,address)'](
+          maturity,
           alice.address,
         ),
       ).revertedWith('OnlyAcceptedContract("LendingMarketController")');

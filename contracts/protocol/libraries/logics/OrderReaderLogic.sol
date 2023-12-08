@@ -14,7 +14,7 @@ library OrderReaderLogic {
     using RoundingUint256 for uint256;
 
     function getOrder(
-        uint8 _orderBookId,
+        uint256 _maturity,
         uint48 _orderId
     )
         external
@@ -22,62 +22,48 @@ library OrderReaderLogic {
         returns (
             ProtocolTypes.Side side,
             uint256 unitPrice,
-            uint256 maturity,
             address maker,
             uint256 amount,
             uint256 timestamp,
             bool isPreOrder
         )
     {
-        OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
+        OrderBookLib.OrderBook storage orderBook = _getOrderBook(_maturity);
         PlacedOrder memory order = orderBook.getOrder(_orderId);
 
         if (order.side == ProtocolTypes.Side.LEND) {
-            (maker, amount) = orderBook.lendOrders[order.maturity].getOrderById(
-                order.unitPrice,
-                _orderId
-            );
+            (maker, amount) = orderBook.lendOrders.getOrderById(order.unitPrice, _orderId);
         } else {
-            (maker, amount) = orderBook.borrowOrders[order.maturity].getOrderById(
-                order.unitPrice,
-                _orderId
-            );
+            (maker, amount) = orderBook.borrowOrders.getOrderById(order.unitPrice, _orderId);
         }
 
         if (maker != address(0)) {
             side = order.side;
-            maturity = order.maturity;
             timestamp = order.timestamp;
             isPreOrder = orderBook.isPreOrder[_orderId];
-            unitPrice = _getOrderUnitPrice(side, maturity, order.unitPrice, isPreOrder);
+            unitPrice = _getOrderUnitPrice(side, _maturity, order.unitPrice, isPreOrder);
         }
     }
 
     function getTotalAmountFromLendOrders(
-        uint8 _orderBookId,
+        uint256 _maturity,
         address _user
     )
         external
         view
-        returns (
-            uint256 activeAmount,
-            uint256 inactiveAmount,
-            uint256 inactiveFutureValue,
-            uint256 maturity
-        )
+        returns (uint256 activeAmount, uint256 inactiveAmount, uint256 inactiveFutureValue)
     {
-        OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
+        OrderBookLib.OrderBook storage orderBook = _getOrderBook(_maturity);
 
         (uint48[] memory activeOrderIds, uint48[] memory inActiveOrderIds) = orderBook
             .getLendOrderIds(_user);
-        maturity = orderBook.userCurrentMaturities[_user];
 
         for (uint256 i; i < activeOrderIds.length; ) {
             PlacedOrder memory order = orderBook.getOrder(activeOrderIds[i]);
             // Sum future values in the current maturity.
             // If the market is rotated and maturity is updated, it will be 0 by treating it
             // as an order canceled in the past market.
-            (, uint256 orderAmount) = orderBook.lendOrders[orderBook.maturity].getOrderById(
+            (, uint256 orderAmount) = orderBook.lendOrders.getOrderById(
                 order.unitPrice,
                 activeOrderIds[i]
             );
@@ -106,24 +92,18 @@ library OrderReaderLogic {
     }
 
     function getTotalAmountFromBorrowOrders(
-        uint8 _orderBookId,
+        uint256 _maturity,
         address _user,
         uint256 _minUnitPrice
     )
         external
         view
-        returns (
-            uint256 activeAmount,
-            uint256 inactiveAmount,
-            uint256 inactiveFutureValue,
-            uint256 maturity
-        )
+        returns (uint256 activeAmount, uint256 inactiveAmount, uint256 inactiveFutureValue)
     {
-        OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
+        OrderBookLib.OrderBook storage orderBook = _getOrderBook(_maturity);
 
         (uint48[] memory activeOrderIds, uint48[] memory inActiveOrderIds) = orderBook
             .getBorrowOrderIds(_user);
-        maturity = orderBook.userCurrentMaturities[_user];
 
         for (uint256 i; i < activeOrderIds.length; ) {
             // Sum future values in the current maturity.
@@ -162,21 +142,21 @@ library OrderReaderLogic {
     }
 
     function getLendOrderIds(
-        uint8 _orderBookId,
+        uint256 _maturity,
         address _user
     ) external view returns (uint48[] memory activeOrderIds, uint48[] memory inActiveOrderIds) {
-        (activeOrderIds, inActiveOrderIds) = _getOrderBook(_orderBookId).getLendOrderIds(_user);
+        (activeOrderIds, inActiveOrderIds) = _getOrderBook(_maturity).getLendOrderIds(_user);
     }
 
     function getBorrowOrderIds(
-        uint8 _orderBookId,
+        uint256 _maturity,
         address _user
     ) external view returns (uint48[] memory activeOrderIds, uint48[] memory inActiveOrderIds) {
-        (activeOrderIds, inActiveOrderIds) = _getOrderBook(_orderBookId).getBorrowOrderIds(_user);
+        (activeOrderIds, inActiveOrderIds) = _getOrderBook(_maturity).getBorrowOrderIds(_user);
     }
 
     function calculateFilledAmount(
-        uint8 _orderBookId,
+        uint256 _maturity,
         ProtocolTypes.Side _side,
         uint256 _amount,
         uint256 _unitPrice
@@ -191,7 +171,7 @@ library OrderReaderLogic {
             uint256 placedAmount
         )
     {
-        OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
+        OrderBookLib.OrderBook storage orderBook = _getOrderBook(_maturity);
 
         (bool isFilled, uint256 executedUnitPrice, bool ignoreRemainingAmount, ) = orderBook
             .getOrderExecutionConditions(
@@ -237,10 +217,7 @@ library OrderReaderLogic {
         uint48 _orderId
     ) public view returns (uint256 presentValue, uint256 futureValue) {
         PlacedOrder memory order = orderBook.getOrder(_orderId);
-        (, uint256 orderAmount) = orderBook.lendOrders[order.maturity].getOrderById(
-            order.unitPrice,
-            _orderId
-        );
+        (, uint256 orderAmount) = orderBook.lendOrders.getOrderById(order.unitPrice, _orderId);
 
         uint256 unitPrice = _getOrderUnitPrice(
             order.side,
@@ -258,10 +235,7 @@ library OrderReaderLogic {
         uint48 _orderId
     ) public view returns (uint256 presentValue, uint256 futureValue, uint256 unitPrice) {
         PlacedOrder memory order = orderBook.getOrder(_orderId);
-        (, uint256 orderAmount) = orderBook.borrowOrders[order.maturity].getOrderById(
-            order.unitPrice,
-            _orderId
-        );
+        (, uint256 orderAmount) = orderBook.borrowOrders.getOrderById(order.unitPrice, _orderId);
         unitPrice = _getOrderUnitPrice(
             order.side,
             order.maturity,
@@ -293,8 +267,8 @@ library OrderReaderLogic {
     }
 
     function _getOrderBook(
-        uint8 _orderBookId
+        uint256 _maturity
     ) private view returns (OrderBookLib.OrderBook storage) {
-        return Storage.slot().orderBooks[_orderBookId];
+        return Storage.slot().orderBooks[_maturity];
     }
 }

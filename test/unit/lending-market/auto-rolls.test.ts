@@ -1,6 +1,6 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { time } from '@openzeppelin/test-helpers';
-import { BigNumber, Contract } from 'ethers';
+import { Contract } from 'ethers';
 import { ethers } from 'hardhat';
 import moment from 'moment';
 
@@ -16,7 +16,6 @@ describe('LendingMarket - Auto-rolls', () => {
 
   let owner: SignerWithAddress;
 
-  let currentOrderBookId: BigNumber;
   let currentOpeningDate: number;
 
   const deployOrderBook = async (maturity: number, openingDate: number) => {
@@ -26,7 +25,7 @@ describe('LendingMarket - Auto-rolls', () => {
       openingDate,
       openingDate - 604800,
     );
-    return lendingMarketCaller.getOrderBookId(targetCurrency);
+    return lendingMarketCaller.getMaturity(targetCurrency);
   };
 
   before(async () => {
@@ -49,7 +48,7 @@ describe('LendingMarket - Auto-rolls', () => {
       .add(48, 'h')
       .unix();
 
-    currentOrderBookId = await deployOrderBook(maturity, currentOpeningDate);
+    await deployOrderBook(maturity, currentOpeningDate);
   });
 
   it('Execute an auto-roll', async () => {
@@ -68,48 +67,63 @@ describe('LendingMarket - Auto-rolls', () => {
 
     await time.increaseTo(maturity);
 
-    const { timestamp: newTimestamp } = await ethers.provider.getBlock(
-      'latest',
-    );
-    const newMaturity = moment(newTimestamp * 1000)
-      .add(1, 'M')
-      .unix();
-    const newOpeningDate = moment(newTimestamp * 1000)
-      .add(48, 'h')
-      .unix();
-
     await lendingMarketCaller.executeAutoRoll(
       targetCurrency,
-      currentOrderBookId,
-      currentOrderBookId,
-      newMaturity,
-      newOpeningDate,
+      maturity,
+      maturity,
       10000,
     );
   });
 
-  it('Fail to execute an auto-roll due to invalid caller', async () => {
+  it('Fail to execute an auto-roll due to non-matured order book', async () => {
+    const { timestamp } = await ethers.provider.getBlock('latest');
+    const newMaturity = moment(timestamp * 1000)
+      .add(1, 'M')
+      .unix();
+
+    const newOpeningDate = moment(timestamp * 1000)
+      .add(48, 'h')
+      .unix();
+
+    await deployOrderBook(newMaturity, newOpeningDate);
+
     await expect(
       lendingMarketCaller.executeAutoRoll(
         targetCurrency,
-        currentOrderBookId,
-        currentOrderBookId,
-        1,
-        1,
+        maturity,
+        newMaturity,
         10000,
       ),
     ).revertedWith('OrderBookNotMatured');
   });
 
-  it('Fail to execute an auto-roll due to invalid caller', async () => {
+  it('Fail to execute an auto-roll due to invalid maturity (matured order book)', async () => {
     await expect(
-      lendingMarket.executeAutoRoll(
-        currentOrderBookId,
-        currentOrderBookId,
-        1,
-        1,
+      lendingMarketCaller.executeAutoRoll(targetCurrency, 1, 1, 10000),
+    ).revertedWith('InvalidMaturity(1)');
+  });
+
+  it('Fail to execute an auto-roll due to invalid maturity (destination order book)', async () => {
+    const { timestamp } = await ethers.provider.getBlock('latest');
+    const newMaturity = moment(timestamp * 1000)
+      .add(1, 'M')
+      .unix();
+
+    await time.increaseTo(maturity);
+
+    await expect(
+      lendingMarketCaller.executeAutoRoll(
+        targetCurrency,
+        maturity,
+        newMaturity,
         10000,
       ),
+    ).revertedWith(`InvalidMaturity(${newMaturity})`);
+  });
+
+  it('Fail to execute an auto-roll due to invalid caller', async () => {
+    await expect(
+      lendingMarket.executeAutoRoll(maturity, maturity, 10000),
     ).revertedWith('OnlyAcceptedContract("LendingMarketController")');
   });
 });

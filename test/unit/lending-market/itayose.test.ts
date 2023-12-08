@@ -1,7 +1,7 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { time } from '@openzeppelin/test-helpers';
 import { expect } from 'chai';
-import { BigNumber, Contract } from 'ethers';
+import { Contract } from 'ethers';
 import { ethers } from 'hardhat';
 import moment from 'moment';
 
@@ -13,17 +13,15 @@ describe('LendingMarket - Itayose', () => {
   let lendingMarketCaller: Contract;
 
   let targetCurrency: string;
-  let maturity: number;
 
   let owner: SignerWithAddress;
   let alice: SignerWithAddress;
-  let bob: SignerWithAddress;
   let signers: SignerWithAddress[];
 
   let lendingMarket: Contract;
   let orderActionLogic: Contract;
   let orderBookLogic: Contract;
-  let currentOrderBookId: BigNumber;
+  let currentMaturity: number;
   let currentOpeningDate: number;
 
   const deployOrderBook = async (maturity: number, openingDate: number) => {
@@ -33,11 +31,10 @@ describe('LendingMarket - Itayose', () => {
       openingDate,
       openingDate - 604800,
     );
-    return lendingMarketCaller.getOrderBookId(targetCurrency);
   };
 
   before(async () => {
-    [owner, alice, bob, ...signers] = await ethers.getSigners();
+    [owner, alice, ...signers] = await ethers.getSigners();
     targetCurrency = ethers.utils.formatBytes32String('Test');
 
     ({ lendingMarketCaller, lendingMarket, orderActionLogic, orderBookLogic } =
@@ -46,7 +43,7 @@ describe('LendingMarket - Itayose', () => {
 
   beforeEach(async () => {
     const { timestamp } = await ethers.provider.getBlock('latest');
-    maturity = moment(timestamp * 1000)
+    currentMaturity = moment(timestamp * 1000)
       .add(1, 'M')
       .unix();
 
@@ -54,7 +51,7 @@ describe('LendingMarket - Itayose', () => {
       .add(48, 'h')
       .unix();
 
-    currentOrderBookId = await deployOrderBook(maturity, currentOpeningDate);
+    await deployOrderBook(currentMaturity, currentOpeningDate);
   });
 
   const tests = [
@@ -165,7 +162,7 @@ describe('LendingMarket - Itayose', () => {
             .connect(user)
             .executePreOrder(
               targetCurrency,
-              currentOrderBookId,
+              currentMaturity,
               order.side,
               order.amount,
               order.unitPrice,
@@ -176,7 +173,7 @@ describe('LendingMarket - Itayose', () => {
             user.address,
             order.side,
             targetCurrency,
-            maturity,
+            currentMaturity,
             order.amount,
             order.unitPrice,
             () => true,
@@ -187,7 +184,7 @@ describe('LendingMarket - Itayose', () => {
       await time.increase(169200);
 
       await lendingMarketCaller
-        .executeItayoseCall(targetCurrency, currentOrderBookId)
+        .executeItayoseCall(targetCurrency, currentMaturity)
         .then(async (tx) => {
           if (test.shouldItayoseExecuted) {
             await expect(tx).to.emit(orderBookLogic, 'ItayoseExecuted');
@@ -196,13 +193,15 @@ describe('LendingMarket - Itayose', () => {
           }
         });
 
-      const { openingUnitPrice } = await lendingMarket.getItayoseLog(maturity);
+      const { openingUnitPrice } = await lendingMarket.getItayoseLog(
+        currentMaturity,
+      );
 
       expect(openingUnitPrice).to.equal(test.openingPrice);
 
-      const itayoseLog = await lendingMarket.getItayoseLog(maturity);
+      const itayoseLog = await lendingMarket.getItayoseLog(currentMaturity);
       const marketUnitPrice = await lendingMarket.getMarketUnitPrice(
-        currentOrderBookId,
+        currentMaturity,
       );
 
       expect(itayoseLog.lastLendUnitPrice).to.equal(test.lastLendUnitPrice);
@@ -214,7 +213,7 @@ describe('LendingMarket - Itayose', () => {
   }
 
   it('Execute Itayose call without pre-orders', async () => {
-    const openingDate = await lendingMarket.getOpeningDate(currentOrderBookId);
+    const openingDate = await lendingMarket.getOpeningDate(currentMaturity);
 
     expect(openingDate).to.equal(currentOpeningDate);
 
@@ -222,114 +221,19 @@ describe('LendingMarket - Itayose', () => {
     await time.increase(169200);
 
     await expect(
-      lendingMarketCaller.executeItayoseCall(
-        targetCurrency,
-        currentOrderBookId,
-      ),
+      lendingMarketCaller.executeItayoseCall(targetCurrency, currentMaturity),
     ).to.not.emit(orderBookLogic, 'ItayoseExecuted');
   });
 
-  it('Fail to create a pre-order due to an existing order with a past maturity', async () => {
-    const { timestamp } = await ethers.provider.getBlock('latest');
-    const maturity = moment(timestamp * 1000)
-      .add(2, 'M')
-      .unix();
-
-    const openingDate = moment(timestamp * 1000)
-      .add(48, 'h')
-      .unix();
-
-    await lendingMarketCaller.createOrderBook(
-      targetCurrency,
-      maturity,
-      openingDate,
-      openingDate - 604800,
-    );
-
-    await lendingMarketCaller
-      .connect(alice)
-      .executePreOrder(
-        targetCurrency,
-        currentOrderBookId,
-        Side.BORROW,
-        '100000000000000000',
-        '8000',
-      );
-    await lendingMarketCaller
-      .connect(bob)
-      .executePreOrder(
-        targetCurrency,
-        currentOrderBookId,
-        Side.LEND,
-        '100000000000000000',
-        '8000',
-      );
-
-    // Increase 48 hours
-    await time.increase(172800);
-
-    await lendingMarketCaller
-      .executeItayoseCall(targetCurrency, currentOrderBookId)
-      .then(async (tx) => {
-        await expect(tx).to.emit(orderBookLogic, 'ItayoseExecuted');
-      });
-
-    // Move to 48 hours before maturity of 2nd order book.
-    await time.increaseTo(maturity - 172800);
-
-    const { timestamp: newTimestamp } = await ethers.provider.getBlock(
-      'latest',
-    );
-    const newMaturity = moment(newTimestamp * 1000)
-      .add(1, 'M')
-      .unix();
-    const newOpeningDate = moment(newTimestamp * 1000)
-      .add(48, 'h')
-      .unix();
-
-    await lendingMarketCaller.executeAutoRoll(
-      targetCurrency,
-      currentOrderBookId,
-      currentOrderBookId,
-      newMaturity,
-      newOpeningDate,
-      10000,
-    );
-
-    await expect(
-      lendingMarketCaller
-        .connect(alice)
-        .executePreOrder(
-          targetCurrency,
-          currentOrderBookId,
-          Side.LEND,
-          '100000000000000000',
-          '8000',
-        ),
-    ).to.be.revertedWith('PastMaturityOrderExists');
-
-    await expect(
-      lendingMarketCaller
-        .connect(bob)
-        .executePreOrder(
-          targetCurrency,
-          currentOrderBookId,
-          Side.BORROW,
-          '100000000000000000',
-          '8000',
-        ),
-    ).to.be.revertedWith('PastMaturityOrderExists');
-  });
-
   it('Fail to create a pre-order due to not in the pre-order period', async () => {
-    await time.increaseTo(maturity);
+    await time.increaseTo(currentMaturity);
 
     await expect(
       lendingMarketCaller
         .connect(alice)
         .executePreOrder(
           targetCurrency,
-          currentOrderBookId,
+          currentMaturity,
           Side.BORROW,
           '100000000000000000',
           '8720',
@@ -342,33 +246,30 @@ describe('LendingMarket - Itayose', () => {
       .connect(alice)
       .executePreOrder(
         targetCurrency,
-        currentOrderBookId,
+        currentMaturity,
         Side.BORROW,
         '100000000000000000',
         '8720',
       );
 
-    await time.increaseTo(maturity - 172800);
+    await time.increaseTo(currentMaturity - 172800);
 
     await expect(
       lendingMarketCaller
         .connect(alice)
-        .cancelOrder(targetCurrency, currentOrderBookId, alice.address, '1'),
+        .cancelOrder(targetCurrency, currentMaturity, alice.address, '1'),
     ).to.be.revertedWith('AlreadyItayosePeriod');
   });
 
   it('Fail to execute the Itayose call due to not in the Itayose period', async () => {
     await expect(
-      lendingMarketCaller.executeItayoseCall(
-        targetCurrency,
-        currentOrderBookId,
-      ),
+      lendingMarketCaller.executeItayoseCall(targetCurrency, currentMaturity),
     ).to.be.revertedWith('NotItayosePeriod');
   });
 
   it('Fail to execute the Itayose call due to invalid caller', async () => {
     await expect(
-      lendingMarket.executeItayoseCall(currentOrderBookId),
+      lendingMarket.executeItayoseCall(currentMaturity),
     ).to.be.revertedWith('OnlyAcceptedContract("LendingMarketController")');
   });
 });

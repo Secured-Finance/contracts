@@ -15,7 +15,6 @@ describe('LendingMarket - Circuit Breakers', () => {
   let mockCurrencyController: MockContract;
 
   let targetCurrency: string;
-  let maturity: number;
 
   let owner: SignerWithAddress;
   let alice: SignerWithAddress;
@@ -24,7 +23,7 @@ describe('LendingMarket - Circuit Breakers', () => {
 
   let lendingMarket: Contract;
   let orderActionLogic: Contract;
-  let currentOrderBookId: BigNumber;
+  let currentMaturity: number;
 
   const deployOrderBook = async (maturity: number, openingDate: number) => {
     await lendingMarketCaller.createOrderBook(
@@ -33,7 +32,6 @@ describe('LendingMarket - Circuit Breakers', () => {
       openingDate,
       openingDate,
     );
-    return lendingMarketCaller.getOrderBookId(targetCurrency);
   };
 
   before(async () => {
@@ -54,12 +52,12 @@ describe('LendingMarket - Circuit Breakers', () => {
 
   beforeEach(async () => {
     const { timestamp } = await ethers.provider.getBlock('latest');
-    maturity = moment(timestamp * 1000)
+    currentMaturity = moment(timestamp * 1000)
       .add(1, 'M')
       .unix();
     const openingDate = moment(timestamp * 1000).unix();
 
-    currentOrderBookId = await deployOrderBook(maturity, openingDate);
+    await deployOrderBook(currentMaturity, openingDate);
   });
 
   afterEach(async () => {
@@ -75,7 +73,7 @@ describe('LendingMarket - Circuit Breakers', () => {
       .connect(owner)
       .executeOrder(
         targetCurrency,
-        currentOrderBookId,
+        currentMaturity,
         Side.LEND,
         '100000000000000',
         unitPrice,
@@ -85,7 +83,7 @@ describe('LendingMarket - Circuit Breakers', () => {
       .connect(owner)
       .executeOrder(
         targetCurrency,
-        currentOrderBookId,
+        currentMaturity,
         Side.BORROW,
         '100000000000000',
         unitPrice,
@@ -102,7 +100,7 @@ describe('LendingMarket - Circuit Breakers', () => {
       .connect(alice)
       .executeOrder(
         targetCurrency,
-        currentOrderBookId,
+        currentMaturity,
         side,
         '100000000000000',
         unitPrice,
@@ -112,7 +110,7 @@ describe('LendingMarket - Circuit Breakers', () => {
       .connect(alice)
       .executeOrder(
         targetCurrency,
-        currentOrderBookId,
+        currentMaturity,
         side,
         '100000000000000',
         offsetUnitPrice,
@@ -124,7 +122,7 @@ describe('LendingMarket - Circuit Breakers', () => {
   describe('Get circuit breaker thresholds', async () => {
     it('Get circuit breaker thresholds without the last block price', async () => {
       const { maxLendUnitPrice, minBorrowUnitPrice } =
-        await lendingMarket.getCircuitBreakerThresholds(currentOrderBookId);
+        await lendingMarket.getCircuitBreakerThresholds(currentMaturity);
 
       expect(maxLendUnitPrice).to.equal('10000');
       expect(minBorrowUnitPrice).to.equal('1');
@@ -136,7 +134,7 @@ describe('LendingMarket - Circuit Breakers', () => {
       await ethers.provider.send('evm_mine', []);
 
       const { maxLendUnitPrice, minBorrowUnitPrice } =
-        await lendingMarket.getCircuitBreakerThresholds(currentOrderBookId);
+        await lendingMarket.getCircuitBreakerThresholds(currentMaturity);
 
       expect(maxLendUnitPrice).to.equal('8800');
       expect(minBorrowUnitPrice).to.equal('7600');
@@ -173,7 +171,7 @@ describe('LendingMarket - Circuit Breakers', () => {
               .connect(bob)
               .executeOrder(
                 targetCurrency,
-                currentOrderBookId,
+                currentMaturity,
                 side,
                 '200000000000000',
                 unitPrice,
@@ -184,7 +182,7 @@ describe('LendingMarket - Circuit Breakers', () => {
               bob.address,
               side,
               targetCurrency,
-              maturity,
+              currentMaturity,
               '200000000000000',
               unitPrice,
               '100000000000000',
@@ -208,7 +206,7 @@ describe('LendingMarket - Circuit Breakers', () => {
           .connect(bob)
           .executeOrder(
             targetCurrency,
-            currentOrderBookId,
+            currentMaturity,
             side,
             '50000000000000',
             0,
@@ -218,7 +216,7 @@ describe('LendingMarket - Circuit Breakers', () => {
           .connect(carol)
           .executeOrder(
             targetCurrency,
-            currentOrderBookId,
+            currentMaturity,
             side,
             '150000000000000',
             '0',
@@ -232,7 +230,7 @@ describe('LendingMarket - Circuit Breakers', () => {
             bob.address,
             side,
             targetCurrency,
-            maturity,
+            currentMaturity,
             '50000000000000',
             '0',
             '50000000000000',
@@ -251,7 +249,7 @@ describe('LendingMarket - Circuit Breakers', () => {
             carol.address,
             side,
             targetCurrency,
-            maturity,
+            currentMaturity,
             '150000000000000',
             '0',
             '50000000000000',
@@ -277,7 +275,7 @@ describe('LendingMarket - Circuit Breakers', () => {
           .connect(bob)
           .executeOrder(
             targetCurrency,
-            currentOrderBookId,
+            currentMaturity,
             side,
             '100000000000000',
             '0',
@@ -287,7 +285,7 @@ describe('LendingMarket - Circuit Breakers', () => {
           .connect(carol)
           .executeOrder(
             targetCurrency,
-            currentOrderBookId,
+            currentMaturity,
             side,
             '50000000000000',
             '0',
@@ -301,7 +299,7 @@ describe('LendingMarket - Circuit Breakers', () => {
             bob.address,
             side,
             targetCurrency,
-            maturity,
+            currentMaturity,
             '100000000000000',
             '0',
             '100000000000000',
@@ -320,7 +318,7 @@ describe('LendingMarket - Circuit Breakers', () => {
             carol.address,
             side,
             targetCurrency,
-            maturity,
+            currentMaturity,
             '50000000000000',
             '0',
             0,
@@ -343,7 +341,7 @@ describe('LendingMarket - Circuit Breakers', () => {
             .connect(carol)
             .executeOrder(
               targetCurrency,
-              currentOrderBookId,
+              currentMaturity,
               side,
               '50000000000000',
               '0',
@@ -354,7 +352,7 @@ describe('LendingMarket - Circuit Breakers', () => {
             carol.address,
             side,
             targetCurrency,
-            maturity,
+            currentMaturity,
             '50000000000000',
             '0',
             '50000000000000',
@@ -379,7 +377,7 @@ describe('LendingMarket - Circuit Breakers', () => {
           .connect(bob)
           .executeOrder(
             targetCurrency,
-            currentOrderBookId,
+            currentMaturity,
             side,
             '100000000000000',
             '0',
@@ -389,7 +387,7 @@ describe('LendingMarket - Circuit Breakers', () => {
           .connect(carol)
           .executeOrder(
             targetCurrency,
-            currentOrderBookId,
+            currentMaturity,
             side,
             '50000000000000',
             0,
@@ -399,7 +397,7 @@ describe('LendingMarket - Circuit Breakers', () => {
           .connect(alice)
           .executeOrder(
             targetCurrency,
-            currentOrderBookId,
+            currentMaturity,
             oppositeOrderSide,
             '100000000000000',
             lendingOrderAmount,
@@ -409,7 +407,7 @@ describe('LendingMarket - Circuit Breakers', () => {
           .connect(carol)
           .executeOrder(
             targetCurrency,
-            currentOrderBookId,
+            currentMaturity,
             side,
             '50000000000000',
             0,
@@ -423,7 +421,7 @@ describe('LendingMarket - Circuit Breakers', () => {
             carol.address,
             side,
             targetCurrency,
-            maturity,
+            currentMaturity,
             '50000000000000',
             '0',
             0,
@@ -442,7 +440,7 @@ describe('LendingMarket - Circuit Breakers', () => {
             carol.address,
             side,
             targetCurrency,
-            maturity,
+            currentMaturity,
             '50000000000000',
             '0',
             '50000000000000',
@@ -465,7 +463,7 @@ describe('LendingMarket - Circuit Breakers', () => {
           .connect(bob)
           .executeOrder(
             targetCurrency,
-            currentOrderBookId,
+            currentMaturity,
             side,
             '100000000000000',
             '0',
@@ -475,7 +473,7 @@ describe('LendingMarket - Circuit Breakers', () => {
           .connect(carol)
           .executeOrder(
             targetCurrency,
-            currentOrderBookId,
+            currentMaturity,
             side,
             '50000000000000',
             '0',
@@ -489,7 +487,7 @@ describe('LendingMarket - Circuit Breakers', () => {
             bob.address,
             side,
             targetCurrency,
-            maturity,
+            currentMaturity,
             '100000000000000',
             '0',
             '100000000000000',
@@ -508,7 +506,7 @@ describe('LendingMarket - Circuit Breakers', () => {
             carol.address,
             side,
             targetCurrency,
-            maturity,
+            currentMaturity,
             '50000000000000',
             '0',
             0,
@@ -534,7 +532,7 @@ describe('LendingMarket - Circuit Breakers', () => {
           .connect(bob)
           .executeOrder(
             targetCurrency,
-            currentOrderBookId,
+            currentMaturity,
             side,
             '100000000000000',
             '0',
@@ -544,7 +542,7 @@ describe('LendingMarket - Circuit Breakers', () => {
           .connect(carol)
           .executeOrder(
             targetCurrency,
-            currentOrderBookId,
+            currentMaturity,
             side,
             '50000000000000',
             offsetUnitPrice,
@@ -558,7 +556,7 @@ describe('LendingMarket - Circuit Breakers', () => {
             bob.address,
             side,
             targetCurrency,
-            maturity,
+            currentMaturity,
             '100000000000000',
             '0',
             '100000000000000',
@@ -577,7 +575,7 @@ describe('LendingMarket - Circuit Breakers', () => {
             carol.address,
             side,
             targetCurrency,
-            maturity,
+            currentMaturity,
             '50000000000000',
             offsetUnitPrice,
             0,
@@ -601,7 +599,7 @@ describe('LendingMarket - Circuit Breakers', () => {
           .connect(alice)
           .executeOrder(
             targetCurrency,
-            currentOrderBookId,
+            currentMaturity,
             isBorrow ? Side.LEND : Side.BORROW,
             '100000000000000',
             unitPrice,
@@ -611,7 +609,7 @@ describe('LendingMarket - Circuit Breakers', () => {
           .connect(alice)
           .executeOrder(
             targetCurrency,
-            currentOrderBookId,
+            currentMaturity,
             isBorrow ? Side.LEND : Side.BORROW,
             '100000000000000',
             unitPrice2,
@@ -622,7 +620,7 @@ describe('LendingMarket - Circuit Breakers', () => {
             .connect(bob)
             .executeOrder(
               targetCurrency,
-              currentOrderBookId,
+              currentMaturity,
               side,
               '200000000000000',
               '0',
@@ -633,7 +631,7 @@ describe('LendingMarket - Circuit Breakers', () => {
             bob.address,
             side,
             targetCurrency,
-            maturity,
+            currentMaturity,
             '200000000000000',
             '0',
             '200000000000000',
@@ -657,7 +655,7 @@ describe('LendingMarket - Circuit Breakers', () => {
           .connect(alice)
           .executeOrder(
             targetCurrency,
-            currentOrderBookId,
+            currentMaturity,
             isBorrow ? Side.LEND : Side.BORROW,
             '100000000000000',
             unitPrice,
@@ -667,7 +665,7 @@ describe('LendingMarket - Circuit Breakers', () => {
           .connect(alice)
           .executeOrder(
             targetCurrency,
-            currentOrderBookId,
+            currentMaturity,
             isBorrow ? Side.LEND : Side.BORROW,
             '100000000000000',
             unitPrice2,
@@ -678,7 +676,7 @@ describe('LendingMarket - Circuit Breakers', () => {
             .connect(bob)
             .executeOrder(
               targetCurrency,
-              currentOrderBookId,
+              currentMaturity,
               side,
               '200000000000000',
               '0',
@@ -689,7 +687,7 @@ describe('LendingMarket - Circuit Breakers', () => {
             bob.address,
             side,
             targetCurrency,
-            maturity,
+            currentMaturity,
             '200000000000000',
             '0',
             '100000000000000',
@@ -715,7 +713,7 @@ describe('LendingMarket - Circuit Breakers', () => {
           .connect(alice)
           .executeOrder(
             targetCurrency,
-            currentOrderBookId,
+            currentMaturity,
             isBorrow ? Side.LEND : Side.BORROW,
             '100000000000000',
             unitPrice2,
@@ -726,7 +724,7 @@ describe('LendingMarket - Circuit Breakers', () => {
             .connect(bob)
             .executeOrder(
               targetCurrency,
-              currentOrderBookId,
+              currentMaturity,
               side,
               '100000000000000',
               '0',
@@ -737,7 +735,7 @@ describe('LendingMarket - Circuit Breakers', () => {
             bob.address,
             side,
             targetCurrency,
-            maturity,
+            currentMaturity,
             '100000000000000',
             '0',
             '100000000000000',
@@ -762,7 +760,7 @@ describe('LendingMarket - Circuit Breakers', () => {
           .connect(bob)
           .executeOrder(
             targetCurrency,
-            currentOrderBookId,
+            currentMaturity,
             Side.BORROW,
             '100000000000000',
             0,
@@ -775,7 +773,7 @@ describe('LendingMarket - Circuit Breakers', () => {
         .connect(bob)
         .unwindPosition(
           targetCurrency,
-          currentOrderBookId,
+          currentMaturity,
           Side.LEND,
           '125000000000000',
         );
@@ -788,7 +786,7 @@ describe('LendingMarket - Circuit Breakers', () => {
           bob.address,
           Side.LEND,
           targetCurrency,
-          maturity,
+          currentMaturity,
           calculateFutureValue('100000000000000', 8000),
           '100000000000000',
           '8500',
@@ -796,7 +794,7 @@ describe('LendingMarket - Circuit Breakers', () => {
           calculateOrderFee(
             '100000000000000',
             8500,
-            BigNumber.from(maturity).sub(timestamp),
+            BigNumber.from(currentMaturity).sub(timestamp),
           ),
           true,
         );
@@ -814,7 +812,7 @@ describe('LendingMarket - Circuit Breakers', () => {
           .connect(bob)
           .executeOrder(
             targetCurrency,
-            currentOrderBookId,
+            currentMaturity,
             Side.BORROW,
             '100000000000000',
             0,
@@ -829,7 +827,7 @@ describe('LendingMarket - Circuit Breakers', () => {
         .connect(alice)
         .executeOrder(
           targetCurrency,
-          currentOrderBookId,
+          currentMaturity,
           Side.LEND,
           '100000000000000',
           0,
@@ -839,7 +837,7 @@ describe('LendingMarket - Circuit Breakers', () => {
         .connect(bob)
         .unwindPosition(
           targetCurrency,
-          currentOrderBookId,
+          currentMaturity,
           Side.LEND,
           '125000000000000',
         );
@@ -852,7 +850,7 @@ describe('LendingMarket - Circuit Breakers', () => {
           bob.address,
           Side.LEND,
           targetCurrency,
-          maturity,
+          currentMaturity,
           calculateFutureValue('100000000000000', 8000),
           0,
           0,

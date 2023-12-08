@@ -261,11 +261,8 @@ describe('LendingMarketController - Itayose', () => {
       );
 
     // Execute Itayose calls on all markets except the first and last.
-    const orderBookIds = await lendingMarketControllerProxy.getOrderBookIds(
-      targetCurrency,
-    );
-    for (let i = 1; i < orderBookIds.length - 1; i++) {
-      const isOpenedBefore = await lendingMarketProxy.isOpened(orderBookIds[i]);
+    for (let i = 1; i < maturities.length - 1; i++) {
+      const isOpenedBefore = await lendingMarketProxy.isOpened(maturities[i]);
       expect(isOpenedBefore).to.false;
 
       await lendingMarketControllerProxy.executeItayoseCall(
@@ -273,7 +270,7 @@ describe('LendingMarketController - Itayose', () => {
         maturities[i],
       );
 
-      const isOpenedAfter = await lendingMarketProxy.isOpened(orderBookIds[i]);
+      const isOpenedAfter = await lendingMarketProxy.isOpened(maturities[i]);
       const { lendingCompoundFactor } =
         await genesisValueVaultProxy.getLatestAutoRollLog(targetCurrency);
 

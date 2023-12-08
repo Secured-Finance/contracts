@@ -31,8 +31,7 @@ contract ItayoseCallResolver is MixinAddressResolver {
         address lendingMarket = lendingMarketController().getLendingMarket(_ccy);
 
         for (uint256 i; i < maturities.length; i++) {
-            uint8 orderBookId = lendingMarketController().getOrderBookId(_ccy, maturities[i]);
-            bool isItayosePeriod = ILendingMarket(lendingMarket).isItayosePeriod(orderBookId);
+            bool isItayosePeriod = ILendingMarket(lendingMarket).isItayosePeriod(maturities[i]);
 
             if (isItayosePeriod) {
                 return (

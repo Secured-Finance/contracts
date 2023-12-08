@@ -206,14 +206,8 @@ describe('LendingMarketController - Orders', () => {
       const maturities = await lendingMarketControllerProxy.getMaturities(
         targetCurrency,
       );
-      const orderBookIds = await lendingMarketControllerProxy.getOrderBookIds(
-        targetCurrency,
-      );
 
-      expect(orderBookIds.length).to.equal(1);
       expect(maturities.length).to.equal(1);
-      expect(orderBookIds[0]).to.exist;
-      expect(orderBookIds[0]).to.not.equal(0);
       expect(moment.unix(maturities[0]).day()).to.equal(5);
       expect(moment.unix(maturities[0]).month()).to.equal(
         moment.unix(genesisDate).add(3, 'M').month(),
@@ -241,16 +235,8 @@ describe('LendingMarketController - Orders', () => {
       const maturities = await lendingMarketControllerProxy.getMaturities(
         targetCurrency,
       );
-      const orderBookIds = await lendingMarketControllerProxy.getOrderBookIds(
-        targetCurrency,
-      );
 
-      expect(orderBookIds.length).to.equal(9);
       expect(maturities.length).to.equal(9);
-      orderBookIds.forEach((orderBookId) => {
-        expect(orderBookId).to.not.equal(0);
-        expect(orderBookId).to.exist;
-      });
 
       console.table(
         maturities.map((maturity) => ({
@@ -341,7 +327,6 @@ describe('LendingMarketController - Orders', () => {
   describe('Orders', async () => {
     // let lendingMarketProxies: Contract[];
     let maturities: BigNumber[];
-    let orderBookIds: BigNumber[];
     let lendingMarket: Contract;
 
     const initialize = async (currency: string) => {
@@ -369,9 +354,6 @@ describe('LendingMarketController - Orders', () => {
       orderActionLogic = orderActionLogic.attach(lendingMarket.address);
 
       maturities = await lendingMarketControllerProxy.getMaturities(currency);
-      orderBookIds = await lendingMarketControllerProxy.getOrderBookIds(
-        targetCurrency,
-      );
 
       futureValueVault = await lendingMarketControllerProxy
         .getFutureValueVault(targetCurrency)
@@ -439,7 +421,7 @@ describe('LendingMarketController - Orders', () => {
       expect(usedCurrenciesAfter[0]).to.equal(targetCurrency);
 
       const borrowOrderBook = await lendingMarket.getBorrowOrderBook(
-        orderBookIds[3],
+        maturities[3],
         0,
         10,
       );
@@ -463,7 +445,7 @@ describe('LendingMarketController - Orders', () => {
       expect(borrowOrderBook.next).to.equal(0);
 
       const lendOrderBook = await lendingMarket.getLendOrderBook(
-        orderBookIds[3],
+        maturities[3],
         0,
         10,
       );
@@ -595,19 +577,18 @@ describe('LendingMarketController - Orders', () => {
           ),
       ).to.emit(fundManagementLogic, 'OrderFilled');
 
-      const maturity = await lendingMarket.getMaturity(orderBookIds[0]);
-      expect(moment.unix(maturity).day()).to.equal(5);
-      expect(moment.unix(maturity).month()).to.equal(
+      expect(moment.unix(maturities[0].toNumber()).day()).to.equal(5);
+      expect(moment.unix(maturities[0].toNumber()).month()).to.equal(
         moment.unix(genesisDate).add(3, 'M').month(),
       );
 
       const borrowUnitPrice = await lendingMarket.getBestLendUnitPrice(
-        orderBookIds[0],
+        maturities[0],
       );
       expect(borrowUnitPrice.toString()).to.equal('8880');
 
       const lendUnitPrice = await lendingMarket.getBestBorrowUnitPrice(
-        orderBookIds[0],
+        maturities[0],
       );
       expect(lendUnitPrice.toString()).to.equal('8720');
 
@@ -688,7 +669,7 @@ describe('LendingMarketController - Orders', () => {
         }
       };
 
-      expect(await lendingMarket.isOpened(orderBookIds[0])).to.equal(true);
+      expect(await lendingMarket.isOpened(maturities[0])).to.equal(true);
 
       await expect(
         lendingMarketControllerProxy.cleanUpFunds(
@@ -703,7 +684,7 @@ describe('LendingMarketController - Orders', () => {
       await showLendingInfo();
       await time.increaseTo(maturities[0].toString());
 
-      expect(await lendingMarket.isOpened(orderBookIds[0])).to.equal(false);
+      expect(await lendingMarket.isOpened(maturities[0])).to.equal(false);
 
       await lendingMarketControllerProxy
         .connect(alice)
@@ -770,7 +751,7 @@ describe('LendingMarketController - Orders', () => {
         await lendingMarketControllerProxy.getMaturities(targetCurrency);
       const rotatedMarket = await lendingMarketReader.getOrderBookDetail(
         targetCurrency,
-        maturities[0],
+        newMaturity,
       );
 
       // Check borrow rates
@@ -893,19 +874,17 @@ describe('LendingMarketController - Orders', () => {
           ),
         );
 
-      const order1 = await lendingMarket.getOrder(orderBookIds[0], '1');
-      const order2 = await lendingMarket.getOrder(orderBookIds[1], '1');
+      const order1 = await lendingMarket.getOrder(maturities[0], '1');
+      const order2 = await lendingMarket.getOrder(maturities[1], '1');
 
       expect(order1.side).to.equal(Side.LEND);
       expect(order1.unitPrice).to.equal('9880');
-      expect(order1.maturity).to.equal(maturities[0]);
       expect(order1.maker).to.equal(alice.address);
       expect(order1.amount).to.equal('100000000000000');
       expect(order1.isPreOrder).to.equal(false);
 
       expect(order2.side).to.equal(Side.BORROW);
       expect(order2.unitPrice).to.equal('9800');
-      expect(order2.maturity).to.equal(maturities[1]);
       expect(order2.maker).to.equal(alice.address);
       expect(order2.amount).to.equal('200000000000000');
       expect(order2.isPreOrder).to.equal(false);
@@ -921,11 +900,10 @@ describe('LendingMarketController - Orders', () => {
           '50000000000000000',
           '9880',
         );
-      const order = await lendingMarket.getOrder(orderBookIds[0], '1');
+      const order = await lendingMarket.getOrder(maturities[0], '1');
 
       expect(order.side).to.equal(Side.LEND);
       expect(order.unitPrice).to.equal('9880');
-      expect(order.maturity).to.equal(maturities[0]);
       expect(order.maker).to.equal(alice.address);
       expect(order.amount).to.equal('50000000000000000');
       expect(order.isPreOrder).to.equal(false);
@@ -3247,7 +3225,7 @@ describe('LendingMarketController - Orders', () => {
 
       it('Get all borrow orders', async () => {
         const { unitPrices, next } = await lendingMarket.getBorrowOrderBook(
-          orderBookIds[0],
+          maturities[0],
           0,
           5,
         );
@@ -3258,7 +3236,7 @@ describe('LendingMarketController - Orders', () => {
 
       it('Get all lend orders', async () => {
         const { unitPrices, next } = await lendingMarket.getLendOrderBook(
-          orderBookIds[0],
+          maturities[0],
           0,
           5,
         );
@@ -3269,13 +3247,13 @@ describe('LendingMarketController - Orders', () => {
 
       it('Get all borrow orders in multiple calls', async () => {
         const orderBook1 = await lendingMarket.getBorrowOrderBook(
-          orderBookIds[0],
+          maturities[0],
           0,
           3,
         );
 
         const orderBook2 = await lendingMarket.getBorrowOrderBook(
-          orderBookIds[0],
+          maturities[0],
           orderBook1.next,
           3,
         );
@@ -3292,13 +3270,13 @@ describe('LendingMarketController - Orders', () => {
 
       it('Get all lend orders in multiple calls', async () => {
         const orderBook1 = await lendingMarket.getLendOrderBook(
-          orderBookIds[0],
+          maturities[0],
           0,
           3,
         );
 
         const orderBook2 = await lendingMarket.getLendOrderBook(
-          orderBookIds[0],
+          maturities[0],
           orderBook1.next,
           3,
         );
@@ -3315,7 +3293,7 @@ describe('LendingMarketController - Orders', () => {
 
       it('Get borrow orders starting from a non-existent unit price', async () => {
         const { unitPrices, next } = await lendingMarket.getBorrowOrderBook(
-          orderBookIds[0],
+          maturities[0],
           9943,
           3,
         );
@@ -3326,7 +3304,7 @@ describe('LendingMarketController - Orders', () => {
 
       it('Get lend orders starting from a non-existent unit price', async () => {
         const { unitPrices, next } = await lendingMarket.getLendOrderBook(
-          orderBookIds[0],
+          maturities[0],
           9939,
           3,
         );
@@ -3337,7 +3315,7 @@ describe('LendingMarketController - Orders', () => {
 
       it('Get borrow orders starting from the minimum unit price', async () => {
         const { unitPrices, next } = await lendingMarket.getBorrowOrderBook(
-          orderBookIds[0],
+          maturities[0],
           1,
           5,
         );
@@ -3348,7 +3326,7 @@ describe('LendingMarketController - Orders', () => {
 
       it('Get borrow orders starting from the maximum unit price', async () => {
         const { unitPrices, next } = await lendingMarket.getLendOrderBook(
-          orderBookIds[0],
+          maturities[0],
           10000,
           5,
         );

@@ -6,10 +6,8 @@ library FutureValueVaultStorage {
         bytes32(uint256(keccak256("sf.storage.futureValueVault")) - 1);
 
     struct Storage {
-        // Mapping from user to balances per order book id
-        mapping(uint8 orderBookId => mapping(address user => int256 balance)) balances;
-        // Maturity when the user receives the balance on the target order book
-        mapping(uint8 orderBookId => mapping(address user => uint256 maturity)) balanceMaturities;
+        // Mapping from user to balances per maturity
+        mapping(uint256 maturity => mapping(address user => int256 balance)) balances;
         // Total lending amount supplied per maturity
         mapping(uint256 maturity => uint256 amount) totalLendingSupplies;
         // Total borrowing amount supplied per maturity

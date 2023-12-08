@@ -1,7 +1,7 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { MockContract } from 'ethereum-waffle';
-import { BigNumber, Contract } from 'ethers';
+import { Contract } from 'ethers';
 import { ethers } from 'hardhat';
 import moment from 'moment';
 
@@ -20,7 +20,7 @@ describe('LendingMarket - Calculations', () => {
   let bob: SignerWithAddress;
 
   let lendingMarket: Contract;
-  let currentOrderBookId: BigNumber;
+  let currentMaturity: number;
 
   const deployOrderBook = async (maturity: number, openingDate: number) => {
     await lendingMarketCaller.createOrderBook(
@@ -29,7 +29,6 @@ describe('LendingMarket - Calculations', () => {
       openingDate,
       openingDate,
     );
-    return lendingMarketCaller.getOrderBookId(targetCurrency);
   };
 
   before(async () => {
@@ -46,11 +45,11 @@ describe('LendingMarket - Calculations', () => {
 
   beforeEach(async () => {
     const { timestamp } = await ethers.provider.getBlock('latest');
-    const maturity = moment(timestamp * 1000)
+    currentMaturity = moment(timestamp * 1000)
       .add(1, 'M')
       .unix();
 
-    currentOrderBookId = await deployOrderBook(maturity, timestamp);
+    await deployOrderBook(currentMaturity, timestamp);
   });
 
   it('Calculate the filled amount from one lending order', async () => {
@@ -58,14 +57,14 @@ describe('LendingMarket - Calculations', () => {
       .connect(alice)
       .executeOrder(
         targetCurrency,
-        currentOrderBookId,
+        currentMaturity,
         Side.LEND,
         '100000000000000',
         '8000',
       );
 
     const zeroOrderResult = await lendingMarket.calculateFilledAmount(
-      currentOrderBookId,
+      currentMaturity,
       Side.BORROW,
       0,
       0,
@@ -76,7 +75,7 @@ describe('LendingMarket - Calculations', () => {
     expect(zeroOrderResult.filledAmountInFV).to.equal('0');
 
     const marketOrderResult = await lendingMarket.calculateFilledAmount(
-      currentOrderBookId,
+      currentMaturity,
       Side.BORROW,
       '100000000000000',
       0,
@@ -87,7 +86,7 @@ describe('LendingMarket - Calculations', () => {
     expect(marketOrderResult.filledAmountInFV).to.equal('125000000000000');
 
     const limitOrderResult = await lendingMarket.calculateFilledAmount(
-      currentOrderBookId,
+      currentMaturity,
       Side.BORROW,
       '100000000000000',
       '8000',
@@ -103,21 +102,21 @@ describe('LendingMarket - Calculations', () => {
       .connect(alice)
       .executeOrder(
         targetCurrency,
-        currentOrderBookId,
+        currentMaturity,
         Side.BORROW,
         '200000000000000',
         '8000',
       );
 
     const marketOrderResult = await lendingMarket.calculateFilledAmount(
-      currentOrderBookId,
+      currentMaturity,
       Side.LEND,
       '200000000000000',
       0,
     );
 
     const zeroOrderResult = await lendingMarket.calculateFilledAmount(
-      currentOrderBookId,
+      currentMaturity,
       Side.LEND,
       0,
       0,
@@ -132,7 +131,7 @@ describe('LendingMarket - Calculations', () => {
     expect(marketOrderResult.filledAmountInFV).to.equal('250000000000000');
 
     const limitOrderResult = await lendingMarket.calculateFilledAmount(
-      currentOrderBookId,
+      currentMaturity,
       Side.LEND,
       '200000000000000',
       '8000',
@@ -148,7 +147,7 @@ describe('LendingMarket - Calculations', () => {
       .connect(alice)
       .executeOrder(
         targetCurrency,
-        currentOrderBookId,
+        currentMaturity,
         Side.LEND,
         '100000000000000',
         '8000',
@@ -158,14 +157,14 @@ describe('LendingMarket - Calculations', () => {
       .connect(alice)
       .executeOrder(
         targetCurrency,
-        currentOrderBookId,
+        currentMaturity,
         Side.LEND,
         '100000000000000',
         '7900',
       );
 
     const marketOrderResult = await lendingMarket.calculateFilledAmount(
-      currentOrderBookId,
+      currentMaturity,
       Side.BORROW,
       '150000000000000',
       0,
@@ -176,7 +175,7 @@ describe('LendingMarket - Calculations', () => {
     expect(marketOrderResult.filledAmountInFV).to.equal('188291139240507');
 
     const limitOrderResult1 = await lendingMarket.calculateFilledAmount(
-      currentOrderBookId,
+      currentMaturity,
       Side.BORROW,
       '150000000000000',
       '8000',
@@ -187,7 +186,7 @@ describe('LendingMarket - Calculations', () => {
     expect(limitOrderResult1.filledAmountInFV).to.equal('125000000000000');
 
     const limitOrderResult2 = await lendingMarket.calculateFilledAmount(
-      currentOrderBookId,
+      currentMaturity,
       Side.BORROW,
       '150000000000000',
       '7900',
@@ -203,7 +202,7 @@ describe('LendingMarket - Calculations', () => {
       .connect(alice)
       .executeOrder(
         targetCurrency,
-        currentOrderBookId,
+        currentMaturity,
         Side.BORROW,
         '200000000000000',
         '8000',
@@ -213,14 +212,14 @@ describe('LendingMarket - Calculations', () => {
       .connect(alice)
       .executeOrder(
         targetCurrency,
-        currentOrderBookId,
+        currentMaturity,
         Side.BORROW,
         '100000000000000',
         '8100',
       );
 
     const marketOrderResult = await lendingMarket.calculateFilledAmount(
-      currentOrderBookId,
+      currentMaturity,
       Side.LEND,
       '250000000000000',
       0,
@@ -231,7 +230,7 @@ describe('LendingMarket - Calculations', () => {
     expect(marketOrderResult.filledAmountInFV).to.equal('311728395061729');
 
     const limitOrderResult1 = await lendingMarket.calculateFilledAmount(
-      currentOrderBookId,
+      currentMaturity,
       Side.LEND,
       '250000000000000',
       '8000',
@@ -242,7 +241,7 @@ describe('LendingMarket - Calculations', () => {
     expect(limitOrderResult1.filledAmountInFV).to.equal('250000000000000');
 
     const limitOrderResult2 = await lendingMarket.calculateFilledAmount(
-      currentOrderBookId,
+      currentMaturity,
       Side.LEND,
       '250000000000000',
       '8100',
@@ -258,7 +257,7 @@ describe('LendingMarket - Calculations', () => {
       .connect(alice)
       .executeOrder(
         targetCurrency,
-        currentOrderBookId,
+        currentMaturity,
         Side.LEND,
         '200000000000000',
         '8000',
@@ -268,7 +267,7 @@ describe('LendingMarket - Calculations', () => {
       .connect(bob)
       .executeOrder(
         targetCurrency,
-        currentOrderBookId,
+        currentMaturity,
         Side.BORROW,
         '100000000000000',
         '8000',
@@ -278,14 +277,14 @@ describe('LendingMarket - Calculations', () => {
       .connect(alice)
       .executeOrder(
         targetCurrency,
-        currentOrderBookId,
+        currentMaturity,
         Side.LEND,
         '100000000000000',
         '7000',
       );
 
     const marketOrderResult = await lendingMarket.calculateFilledAmount(
-      currentOrderBookId,
+      currentMaturity,
       Side.BORROW,
       '200000000000000',
       0,
@@ -296,7 +295,7 @@ describe('LendingMarket - Calculations', () => {
     expect(marketOrderResult.filledAmountInFV).to.equal('125000000000000');
 
     const limitOrderResult = await lendingMarket.calculateFilledAmount(
-      currentOrderBookId,
+      currentMaturity,
       Side.BORROW,
       '200000000000000',
       '7000',

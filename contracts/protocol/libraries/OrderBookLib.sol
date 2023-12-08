@@ -53,13 +53,11 @@ library OrderBookLib {
         uint256 blockTotalFutureValue;
         mapping(address user => uint48[] orderIds) activeLendOrderIds;
         mapping(address user => uint48[] orderIds) activeBorrowOrderIds;
-        // Maturity when user last executes order
-        mapping(address user => uint256 maturity) userCurrentMaturities;
         // Micro slots for order
         mapping(uint48 orderId => uint256 slots) orders;
         mapping(uint48 orderId => bool isPreOrder) isPreOrder;
-        mapping(uint256 maturity => OrderStatisticsTreeLib.Tree orders) lendOrders;
-        mapping(uint256 maturity => OrderStatisticsTreeLib.Tree orders) borrowOrders;
+        OrderStatisticsTreeLib.Tree lendOrders;
+        OrderStatisticsTreeLib.Tree borrowOrders;
     }
 
     function initialize(
@@ -89,11 +87,11 @@ library OrderBookLib {
     }
 
     function getBestBorrowUnitPrice(OrderBook storage self) internal view returns (uint256) {
-        return self.lendOrders[self.maturity].last();
+        return self.lendOrders.last();
     }
 
     function getBestLendUnitPrice(OrderBook storage self) internal view returns (uint256) {
-        uint256 unitPrice = self.borrowOrders[self.maturity].first();
+        uint256 unitPrice = self.borrowOrders.first();
         return unitPrice == 0 ? Constants.PRICE_DIGIT : unitPrice;
     }
 
@@ -212,36 +210,36 @@ library OrderBookLib {
         uint256 unitPrice;
 
         if (_start == 0) {
-            unitPrice = self.lendOrders[self.maturity].last();
+            unitPrice = self.lendOrders.last();
         } else {
-            (bool exists, uint256 parent) = self.lendOrders[self.maturity].search(_start);
+            (bool exists, uint256 parent) = self.lendOrders.search(_start);
 
             if (exists) {
                 unitPrice = _start;
             } else if (parent < _start) {
                 unitPrice = parent;
             } else {
-                unitPrice = self.lendOrders[self.maturity].prev(parent);
+                unitPrice = self.lendOrders.prev(parent);
             }
         }
 
         unitPrices[0] = unitPrice;
-        amounts[0] = self.lendOrders[self.maturity].getNodeTotalAmount(unitPrice);
-        quantities[0] = self.lendOrders[self.maturity].getNodeCount(unitPrice);
+        amounts[0] = self.lendOrders.getNodeTotalAmount(unitPrice);
+        quantities[0] = self.lendOrders.getNodeCount(unitPrice);
 
         for (uint256 i = 1; i < unitPrices.length; i++) {
             if (unitPrice == 0) {
                 break;
             }
 
-            unitPrice = self.lendOrders[self.maturity].prev(unitPrice);
+            unitPrice = self.lendOrders.prev(unitPrice);
             unitPrices[i] = unitPrice;
-            amounts[i] = self.lendOrders[self.maturity].getNodeTotalAmount(unitPrice);
-            quantities[i] = self.lendOrders[self.maturity].getNodeCount(unitPrice);
+            amounts[i] = self.lendOrders.getNodeTotalAmount(unitPrice);
+            quantities[i] = self.lendOrders.getNodeCount(unitPrice);
         }
 
         if (unitPrice != 0) {
-            next = self.lendOrders[self.maturity].prev(unitPrice);
+            next = self.lendOrders.prev(unitPrice);
         }
     }
 
@@ -266,36 +264,36 @@ library OrderBookLib {
         uint256 unitPrice;
 
         if (_start == 0) {
-            unitPrice = self.borrowOrders[self.maturity].first();
+            unitPrice = self.borrowOrders.first();
         } else {
-            (bool exists, uint256 parent) = self.borrowOrders[self.maturity].search(_start);
+            (bool exists, uint256 parent) = self.borrowOrders.search(_start);
 
             if (exists) {
                 unitPrice = _start;
             } else if (parent > _start) {
                 unitPrice = parent;
             } else {
-                unitPrice = self.borrowOrders[self.maturity].next(parent);
+                unitPrice = self.borrowOrders.next(parent);
             }
         }
 
         unitPrices[0] = unitPrice;
-        amounts[0] = self.borrowOrders[self.maturity].getNodeTotalAmount(unitPrice);
-        quantities[0] = self.borrowOrders[self.maturity].getNodeCount(unitPrice);
+        amounts[0] = self.borrowOrders.getNodeTotalAmount(unitPrice);
+        quantities[0] = self.borrowOrders.getNodeCount(unitPrice);
 
         for (uint256 i = 1; i < unitPrices.length; i++) {
             if (unitPrice == 0) {
                 break;
             }
 
-            unitPrice = self.borrowOrders[self.maturity].next(unitPrice);
+            unitPrice = self.borrowOrders.next(unitPrice);
             unitPrices[i] = unitPrice;
-            amounts[i] = self.borrowOrders[self.maturity].getNodeTotalAmount(unitPrice);
-            quantities[i] = self.borrowOrders[self.maturity].getNodeCount(unitPrice);
+            amounts[i] = self.borrowOrders.getNodeTotalAmount(unitPrice);
+            quantities[i] = self.borrowOrders.getNodeCount(unitPrice);
         }
 
         if (unitPrice != 0) {
-            next = self.borrowOrders[self.maturity].next(unitPrice);
+            next = self.borrowOrders.next(unitPrice);
         }
     }
 
@@ -305,8 +303,7 @@ library OrderBookLib {
     ) internal view returns (uint48[] memory activeOrderIds, uint48[] memory inActiveOrderIds) {
         uint256 activeOrderCount = 0;
         uint256 inActiveOrderCount = 0;
-        uint256 userMaturity = self.userCurrentMaturities[_user];
-        bool isPastMaturity = userMaturity != self.maturity;
+        bool isPastMaturity = block.timestamp >= self.maturity;
 
         uint48[] memory orderIds = self.activeLendOrderIds[_user];
         uint256 orderIdLength = orderIds.length;
@@ -317,7 +314,7 @@ library OrderBookLib {
             uint48 orderId = orderIds[i];
             (, uint256 unitPrice, , ) = _unpackOrder(self.orders[orderId]);
 
-            if (!self.lendOrders[userMaturity].isActiveOrderId(unitPrice, orderId)) {
+            if (!self.lendOrders.isActiveOrderId(unitPrice, orderId)) {
                 unchecked {
                     inActiveOrderCount += 1;
                 }
@@ -328,10 +325,10 @@ library OrderBookLib {
                     }
                 }
             } else {
+                unchecked {
+                    activeOrderCount += 1;
+                }
                 if (!isPastMaturity) {
-                    unchecked {
-                        activeOrderCount += 1;
-                    }
                     activeOrderIds[i - inActiveOrderCount] = orderId;
                 }
                 assembly {
@@ -347,8 +344,7 @@ library OrderBookLib {
     ) internal view returns (uint48[] memory activeOrderIds, uint48[] memory inActiveOrderIds) {
         uint256 activeOrderCount = 0;
         uint256 inActiveOrderCount = 0;
-        uint256 userMaturity = self.userCurrentMaturities[_user];
-        bool isPastMaturity = userMaturity != self.maturity;
+        bool isPastMaturity = block.timestamp >= self.maturity;
 
         uint48[] memory orderIds = self.activeBorrowOrderIds[_user];
         uint256 orderIdLength = orderIds.length;
@@ -359,7 +355,7 @@ library OrderBookLib {
             uint48 orderId = orderIds[i];
             (, uint256 unitPrice, , ) = _unpackOrder(self.orders[orderId]);
 
-            if (!self.borrowOrders[userMaturity].isActiveOrderId(unitPrice, orderId)) {
+            if (!self.borrowOrders.isActiveOrderId(unitPrice, orderId)) {
                 unchecked {
                     inActiveOrderCount += 1;
                 }
@@ -396,35 +392,9 @@ library OrderBookLib {
         if (_amount == 0) return (0, 0, 0);
 
         if (_side == ProtocolTypes.Side.LEND) {
-            return
-                self.borrowOrders[self.maturity].calculateDroppedAmountFromLeft(
-                    _amount,
-                    0,
-                    _unitPrice
-                );
+            return self.borrowOrders.calculateDroppedAmountFromLeft(_amount, 0, _unitPrice);
         } else {
-            return
-                self.lendOrders[self.maturity].calculateDroppedAmountFromRight(
-                    _amount,
-                    0,
-                    _unitPrice
-                );
-        }
-    }
-
-    function updateUserMaturity(OrderBook storage self, address _user) internal {
-        uint256 userMaturity = self.userCurrentMaturities[_user];
-        uint256 orderBookMaturity = self.maturity;
-
-        if (userMaturity != orderBookMaturity) {
-            if (
-                self.activeLendOrderIds[_user].length > 0 ||
-                self.activeBorrowOrderIds[_user].length > 0
-            ) {
-                revert PastMaturityOrderExists();
-            }
-
-            self.userCurrentMaturities[_user] = orderBookMaturity;
+            return self.lendOrders.calculateDroppedAmountFromRight(_amount, 0, _unitPrice);
         }
     }
 
@@ -439,10 +409,10 @@ library OrderBookLib {
         self.orders[orderId] = _packOrder(_side, _unitPrice, self.maturity, block.timestamp);
 
         if (_side == ProtocolTypes.Side.LEND) {
-            self.lendOrders[self.maturity].insertOrder(_unitPrice, orderId, _user, _amount);
+            self.lendOrders.insertOrder(_unitPrice, orderId, _user, _amount);
             self.activeLendOrderIds[_user].push(orderId);
         } else if (_side == ProtocolTypes.Side.BORROW) {
-            self.borrowOrders[self.maturity].insertOrder(_unitPrice, orderId, _user, _amount);
+            self.borrowOrders.insertOrder(_unitPrice, orderId, _user, _amount);
             self.activeBorrowOrderIds[_user].push(orderId);
         }
     }
@@ -465,7 +435,7 @@ library OrderBookLib {
         PartiallyRemovedOrder memory partiallyRemovedOrder;
 
         if (_side == ProtocolTypes.Side.BORROW) {
-            OrderStatisticsTreeLib.Tree storage orders = self.lendOrders[self.maturity];
+            OrderStatisticsTreeLib.Tree storage orders = self.lendOrders;
             (
                 filledOrder.unitPrice,
                 filledOrder.amount,
@@ -475,7 +445,7 @@ library OrderBookLib {
             ) = orders.dropRight(_amount, _amountInFV, _unitPrice);
             orderExists = orders.hasOrders();
         } else if (_side == ProtocolTypes.Side.LEND) {
-            OrderStatisticsTreeLib.Tree storage orders = self.borrowOrders[self.maturity];
+            OrderStatisticsTreeLib.Tree storage orders = self.borrowOrders;
             (
                 filledOrder.unitPrice,
                 filledOrder.amount,
@@ -547,10 +517,10 @@ library OrderBookLib {
         uint256 removedAmount;
 
         if (side == ProtocolTypes.Side.LEND) {
-            removedAmount = self.lendOrders[self.maturity].removeOrder(unitPrice, _orderId);
+            removedAmount = self.lendOrders.removeOrder(unitPrice, _orderId);
             _removeOrderIdFromOrders(self.activeLendOrderIds[_user], _orderId);
         } else if (side == ProtocolTypes.Side.BORROW) {
-            removedAmount = self.borrowOrders[self.maturity].removeOrder(unitPrice, _orderId);
+            removedAmount = self.borrowOrders.removeOrder(unitPrice, _orderId);
             _removeOrderIdFromOrders(self.activeBorrowOrderIds[_user], _orderId);
         }
 
@@ -571,13 +541,13 @@ library OrderBookLib {
             uint256 totalOffsetAmount
         )
     {
-        uint256 lendUnitPrice = self.lendOrders[self.maturity].last();
-        uint256 borrowUnitPrice = self.borrowOrders[self.maturity].first();
-        uint256 lendAmount = self.lendOrders[self.maturity].getNodeTotalAmount(lendUnitPrice);
-        uint256 borrowAmount = self.borrowOrders[self.maturity].getNodeTotalAmount(borrowUnitPrice);
+        uint256 lendUnitPrice = self.lendOrders.last();
+        uint256 borrowUnitPrice = self.borrowOrders.first();
+        uint256 lendAmount = self.lendOrders.getNodeTotalAmount(lendUnitPrice);
+        uint256 borrowAmount = self.borrowOrders.getNodeTotalAmount(borrowUnitPrice);
 
-        OrderStatisticsTreeLib.Tree storage borrowOrders = self.borrowOrders[self.maturity];
-        OrderStatisticsTreeLib.Tree storage lendOrders = self.lendOrders[self.maturity];
+        OrderStatisticsTreeLib.Tree storage borrowOrders = self.borrowOrders;
+        OrderStatisticsTreeLib.Tree storage lendOrders = self.lendOrders;
 
         // Return 0 if no orders is filled
         if (borrowUnitPrice > lendUnitPrice || borrowUnitPrice == 0 || lendUnitPrice == 0) {
@@ -632,14 +602,14 @@ library OrderBookLib {
         uint256 bestUnitPrice;
 
         if (isLend) {
-            bestUnitPrice = self.borrowOrders[self.maturity].first();
+            bestUnitPrice = self.borrowOrders.first();
             cbThresholdUnitPrice = getLendCircuitBreakerThreshold(
                 self,
                 _circuitBreakerLimitRange,
                 _isReadOnly
             );
         } else {
-            bestUnitPrice = self.lendOrders[self.maturity].last();
+            bestUnitPrice = self.lendOrders.last();
             cbThresholdUnitPrice = getBorrowCircuitBreakerThreshold(
                 self,
                 _circuitBreakerLimitRange,

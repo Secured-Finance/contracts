@@ -25,14 +25,13 @@ library LendingMarketControllerStorage {
         uint256 terminationDate;
         mapping(bytes32 ccy => TerminationCurrencyCache currency) terminationCurrencyCaches;
         mapping(bytes32 ccy => uint256 ratio) terminationCollateralRatios;
-        mapping(bytes32 ccy => uint8[] orderBookIds) orderBookIdLists;
+        mapping(bytes32 ccy => uint256[] maturities) orderBookMaturities;
         mapping(bytes32 ccy => address lendingMarket) lendingMarkets;
         mapping(bytes32 ccy => address futureValueVault) futureValueVaults;
         mapping(bytes32 ccy => uint256 unitPrice) minDebtUnitPrices;
         mapping(bytes32 ccy => uint256 genesisDate) genesisDates;
         mapping(bytes32 ccy => mapping(uint256 maturity => uint256 amount)) pendingOrderAmounts;
-        // Order book id history to get order book id from maturity
-        mapping(bytes32 ccy => mapping(uint256 maturity => uint8 orderBookIds)) maturityOrderBookIds;
+        mapping(bytes32 ccy => mapping(uint256 maturity => bool exists)) maturityExists;
         // List of maturity that the user has open orders or positions
         mapping(bytes32 ccy => mapping(address user => EnumerableSet.UintSet maturities)) usedMaturities;
         // Observation period logs that is used for auto-rolls

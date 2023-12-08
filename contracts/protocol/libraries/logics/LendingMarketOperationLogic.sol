@@ -28,6 +28,7 @@ library LendingMarketOperationLogic {
     using RoundingInt256 for int256;
 
     uint256 public constant OBSERVATION_PERIOD = 6 hours;
+    uint256 public constant PRE_ORDER_BASE_PERIOD = 7 days;
     uint8 public constant COMPOUND_FACTOR_DECIMALS = 36;
 
     error InvalidCompoundFactor();
@@ -53,10 +54,9 @@ library LendingMarketOperationLogic {
 
     event OrderBookCreated(
         bytes32 indexed ccy,
-        uint8 indexed orderBookId,
+        uint256 indexed maturity,
         uint256 openingDate,
-        uint256 preOpeningDate,
-        uint256 maturity
+        uint256 preOpeningDate
     );
 
     event OrderBooksRotated(bytes32 ccy, uint256 oldMaturity, uint256 newMaturity);
@@ -116,7 +116,7 @@ library LendingMarketOperationLogic {
         emit MinDebtUnitPriceUpdated(_ccy, _minDebtUnitPrice);
     }
 
-    function createOrderBook(bytes32 _ccy, uint256 _openingDate, uint256 _preOpeningDate) external {
+    function createOrderBook(bytes32 _ccy, uint256 _openingDate, uint256 _preOpeningDate) public {
         if (!AddressResolverLib.genesisValueVault().isInitialized(_ccy)) {
             revert LendingMarketNotInitialized();
         }
@@ -127,7 +127,7 @@ library LendingMarketOperationLogic {
 
         ILendingMarket market = ILendingMarket(Storage.slot().lendingMarkets[_ccy]);
 
-        uint256[] memory maturities = market.getMaturities(Storage.slot().orderBookIdLists[_ccy]);
+        uint256[] memory maturities = Storage.slot().orderBookMaturities[_ccy];
         uint256 newMaturity;
 
         if (maturities.length == 0) {
@@ -139,12 +139,12 @@ library LendingMarketOperationLogic {
 
         if (_openingDate >= newMaturity) revert InvalidOpeningDate();
 
-        uint8 orderBookId = market.createOrderBook(newMaturity, _openingDate, _preOpeningDate);
+        market.createOrderBook(newMaturity, _openingDate, _preOpeningDate);
 
-        Storage.slot().orderBookIdLists[_ccy].push(orderBookId);
-        Storage.slot().maturityOrderBookIds[_ccy][newMaturity] = orderBookId;
+        Storage.slot().orderBookMaturities[_ccy].push(newMaturity);
+        Storage.slot().maturityExists[_ccy][newMaturity] = true;
 
-        emit OrderBookCreated(_ccy, orderBookId, _openingDate, _preOpeningDate, newMaturity);
+        emit OrderBookCreated(_ccy, newMaturity, _openingDate, _preOpeningDate);
     }
 
     function executeItayoseCall(
@@ -158,7 +158,6 @@ library LendingMarketOperationLogic {
         )
     {
         ILendingMarket market = ILendingMarket(Storage.slot().lendingMarkets[_ccy]);
-        uint8 orderBookId = Storage.slot().maturityOrderBookIds[_ccy][_maturity];
         uint256 openingUnitPrice;
         uint256 openingDate;
         uint256 totalOffsetAmount;
@@ -169,7 +168,7 @@ library LendingMarketOperationLogic {
             openingDate,
             partiallyFilledLendingOrder,
             partiallyFilledBorrowingOrder
-        ) = market.executeItayoseCall(orderBookId);
+        ) = market.executeItayoseCall(_maturity);
 
         // Updates the pending order amount for both side orders.
         // Since the partially filled orders are updated with `updateFundsForMaker()`,
@@ -181,7 +180,7 @@ library LendingMarketOperationLogic {
 
         // Save the openingUnitPrice as first compound factor
         // if it is a first Itayose call at the nearest market.
-        if (openingUnitPrice > 0 && Storage.slot().orderBookIdLists[_ccy][0] == orderBookId) {
+        if (openingUnitPrice > 0 && Storage.slot().orderBookMaturities[_ccy][0] == _maturity) {
             // Convert the openingUnitPrice determined by Itayose to the unit price on the Genesis Date.
             uint256 convertedUnitPrice = _convertUnitPrice(
                 openingUnitPrice,
@@ -202,15 +201,13 @@ library LendingMarketOperationLogic {
             revert InvalidCurrency();
         }
 
-        uint8[] storage orderBookIds = Storage.slot().orderBookIdLists[_ccy];
+        uint256[] storage maturities = Storage.slot().orderBookMaturities[_ccy];
 
-        if (orderBookIds.length < 2) revert NotEnoughOrderBooks();
+        if (maturities.length < 2) revert NotEnoughOrderBooks();
 
         ILendingMarket market = ILendingMarket(Storage.slot().lendingMarkets[_ccy]);
-        uint256[] memory maturities = market.getMaturities(orderBookIds);
 
-        uint8 maturedOrderBookId = orderBookIds[0];
-        uint8 destinationOrderBookId = orderBookIds[1];
+        uint256 maturedOrderBookMaturity = maturities[0];
         uint256 destinationOrderBookMaturity = maturities[1];
 
         uint256 newMaturity = calculateNextMaturity(
@@ -218,44 +215,42 @@ library LendingMarketOperationLogic {
             Storage.slot().marketBasePeriod
         );
 
-        // Rotate the order of the market
-        for (uint256 i; i < orderBookIds.length; i++) {
-            uint8 orderBookId = (orderBookIds.length - 1) == i
-                ? maturedOrderBookId
-                : orderBookIds[i + 1];
-            orderBookIds[i] = orderBookId;
+        // Delete the matured order book from the list
+        for (uint256 i; i < maturities.length - 1; i++) {
+            maturities[i] = maturities[i + 1];
         }
+        maturities.pop();
 
         uint256 autoRollUnitPrice = _calculateAutoRollUnitPrice(
             _ccy,
-            maturities[0],
+            maturedOrderBookMaturity,
             destinationOrderBookMaturity,
-            destinationOrderBookId,
             market
         );
 
         market.executeAutoRoll(
-            maturedOrderBookId,
-            destinationOrderBookId,
-            newMaturity,
+            maturedOrderBookMaturity,
             destinationOrderBookMaturity,
             autoRollUnitPrice
         );
 
+        createOrderBook(
+            _ccy,
+            destinationOrderBookMaturity,
+            destinationOrderBookMaturity - PRE_ORDER_BASE_PERIOD
+        );
+
         AddressResolverLib.genesisValueVault().executeAutoRoll(
             _ccy,
-            maturities[0],
-            maturities[1],
+            maturedOrderBookMaturity,
+            destinationOrderBookMaturity,
             autoRollUnitPrice,
             market.getOrderFeeRate()
         );
 
-        uint256 maturedMaturity = maturities[0];
-        Storage.slot().maturityOrderBookIds[_ccy][newMaturity] = Storage
-            .slot()
-            .maturityOrderBookIds[_ccy][maturedMaturity];
+        Storage.slot().maturityExists[_ccy][newMaturity] = true;
 
-        emit OrderBooksRotated(_ccy, maturedMaturity, newMaturity);
+        emit OrderBooksRotated(_ccy, maturedOrderBookMaturity, newMaturity);
     }
 
     function executeEmergencyTermination() external {
@@ -306,11 +301,8 @@ library LendingMarketOperationLogic {
         uint256 _filledAmount,
         uint256 _filledFutureValue
     ) external {
-        uint8 orderBookId = Storage.slot().maturityOrderBookIds[_ccy][_maturity];
-
-        if (Storage.slot().orderBookIdLists[_ccy][1] == orderBookId) {
-            uint256 nearestMaturity = ILendingMarket(Storage.slot().lendingMarkets[_ccy])
-                .getMaturity(Storage.slot().orderBookIdLists[_ccy][0]);
+        if (Storage.slot().orderBookMaturities[_ccy][1] == _maturity) {
+            uint256 nearestMaturity = Storage.slot().orderBookMaturities[_ccy][0];
 
             if (
                 (block.timestamp < nearestMaturity) &&
@@ -356,7 +348,6 @@ library LendingMarketOperationLogic {
         bytes32 _ccy,
         uint256 _nearestMaturity,
         uint256 _destinationMaturity,
-        uint8 _destinationOrderBookId,
         ILendingMarket _market
     ) internal view returns (uint256 autoRollUnitPrice) {
         ObservationPeriodLog memory log = Storage.slot().observationPeriodLogs[_ccy][
@@ -371,7 +362,7 @@ library LendingMarketOperationLogic {
             autoRollUnitPrice = (log.totalAmount * Constants.PRICE_DIGIT).div(log.totalFutureValue);
         } else {
             (uint256[] memory unitPrices, uint48 timestamp) = _market.getBlockUnitPriceHistory(
-                _destinationOrderBookId
+                _destinationMaturity
             );
 
             AutoRollLog memory autoRollLog = AddressResolverLib

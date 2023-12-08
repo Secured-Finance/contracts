@@ -27,10 +27,10 @@ contract OrderBookRotationResolver is MixinAddressResolver {
     }
 
     function checker(bytes32 _ccy) external view returns (bool canExec, bytes memory execPayload) {
-        uint8 firstOrderBookId = lendingMarketController().getOrderBookIds(_ccy)[0];
+        uint256 firstOrderBookMaturity = lendingMarketController().getMaturities(_ccy)[0];
         address lendingMarket = lendingMarketController().getLendingMarket(_ccy);
 
-        canExec = ILendingMarket(lendingMarket).isMatured(firstOrderBookId);
+        canExec = ILendingMarket(lendingMarket).isMatured(firstOrderBookMaturity);
         execPayload = canExec
             ? abi.encodeCall(ILendingMarketController.rotateOrderBooks, (_ccy))
             : bytes("No Order Book Matured");

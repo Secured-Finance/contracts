@@ -8,74 +8,42 @@ import {ProtocolTypes} from "../../protocol/types/ProtocolTypes.sol";
 
 contract FutureValueVaultCaller {
     IBeaconProxyController public beaconProxyController;
-    mapping(uint8 => address) public futureValueVaults;
-    mapping(bytes32 => uint8) public orderBookIdLists;
+    address futureValueVault;
 
     constructor(address _beaconProxyController) {
         beaconProxyController = IBeaconProxyController(_beaconProxyController);
     }
 
-    function getFutureValueVault(uint8 _orderBookId) external view returns (address) {
-        return futureValueVaults[_orderBookId];
+    function getFutureValueVault() external view returns (address) {
+        return futureValueVault;
     }
 
-    function deployFutureValueVault(uint8 _orderBookId) external {
-        futureValueVaults[_orderBookId] = beaconProxyController.deployFutureValueVault();
+    function deployFutureValueVault() external {
+        futureValueVault = beaconProxyController.deployFutureValueVault();
     }
 
-    function increase(
-        uint8 _orderBookId,
-        address _user,
-        uint256 _amount,
-        uint256 _maturity
-    ) external {
-        IFutureValueVault(futureValueVaults[_orderBookId]).increase(
-            _orderBookId,
-            _user,
-            _amount,
-            _maturity
-        );
+    function increase(uint256 _maturity, address _user, uint256 _amount) external {
+        IFutureValueVault(futureValueVault).increase(_maturity, _user, _amount);
     }
 
-    function decrease(
-        uint8 _orderBookId,
-        address _user,
-        uint256 _amount,
-        uint256 _maturity
-    ) external {
-        IFutureValueVault(futureValueVaults[_orderBookId]).decrease(
-            _orderBookId,
-            _user,
-            _amount,
-            _maturity
-        );
+    function decrease(uint256 _maturity, address _user, uint256 _amount) external {
+        IFutureValueVault(futureValueVault).decrease(_maturity, _user, _amount);
     }
 
     function transferFrom(
-        uint8 _orderBookId,
+        uint256 _maturity,
         address _sender,
         address _receiver,
-        int256 _amount,
-        uint256 _maturity
+        int256 _amount
     ) external {
-        IFutureValueVault(futureValueVaults[_orderBookId]).transferFrom(
-            _orderBookId,
-            _sender,
-            _receiver,
-            _amount,
-            _maturity
-        );
+        IFutureValueVault(futureValueVault).transferFrom(_maturity, _sender, _receiver, _amount);
     }
 
-    function executeForcedReset(uint8 _orderBookId, address _user, int256 _amount) external {
-        IFutureValueVault(futureValueVaults[_orderBookId]).executeForcedReset(
-            _orderBookId,
-            _user,
-            _amount
-        );
+    function executeForcedReset(uint256 _maturity, address _user, int256 _amount) external {
+        IFutureValueVault(futureValueVault).executeForcedReset(_maturity, _user, _amount);
     }
 
-    function executeForcedReset(uint8 _orderBookId, address _user) external {
-        IFutureValueVault(futureValueVaults[_orderBookId]).executeForcedReset(_orderBookId, _user);
+    function executeForcedReset(uint256 _maturity, address _user) external {
+        IFutureValueVault(futureValueVault).executeForcedReset(_maturity, _user);
     }
 }

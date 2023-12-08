@@ -63,9 +63,7 @@ library LiquidationLogic {
 
         ExecuteLiquidationVars memory vars;
 
-        vars.isDefaultMarket =
-            Storage.slot().maturityOrderBookIds[_debtCcy][_debtMaturity] ==
-            Storage.slot().orderBookIdLists[_debtCcy][0];
+        vars.isDefaultMarket = _debtMaturity == Storage.slot().orderBookMaturities[_debtCcy][0];
 
         // In order to liquidate using user collateral, inactive order IDs must be cleaned
         // and converted to actual funds first.
@@ -456,9 +454,8 @@ library LiquidationLogic {
         IFutureValueVault futureValueVault = IFutureValueVault(
             Storage.slot().futureValueVaults[_ccy]
         );
-        uint8 orderBookId = Storage.slot().maturityOrderBookIds[_ccy][_maturity];
 
-        (int256 userFVAmount, ) = futureValueVault.getBalance(orderBookId, _from);
+        int256 userFVAmount = futureValueVault.getBalance(_maturity, _from);
 
         if ((isDebt && userFVAmount < 0) || (!isDebt && userFVAmount > 0)) {
             int256 fvAmount = FundManagementLogic.calculateFVFromPV(
@@ -471,7 +468,7 @@ library LiquidationLogic {
                 fvAmount = userFVAmount;
             }
 
-            futureValueVault.transferFrom(orderBookId, _from, _to, fvAmount, _maturity);
+            futureValueVault.transferFrom(_maturity, _from, _to, fvAmount);
             untransferredAmount -= FundManagementLogic.calculatePVFromFV(_ccy, _maturity, fvAmount);
 
             FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, _to);

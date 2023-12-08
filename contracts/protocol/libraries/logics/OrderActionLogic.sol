@@ -40,7 +40,6 @@ library OrderActionLogic {
     }
 
     struct FillOrdersVars {
-        uint8 orderBookId;
         uint256 remainingAmount;
         bool orderExists;
     }
@@ -105,8 +104,8 @@ library OrderActionLogic {
         bool isCircuitBreakerTriggered
     );
 
-    function cancelOrder(uint8 _orderBookId, address _user, uint48 _orderId) external {
-        OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
+    function cancelOrder(uint256 _maturity, address _user, uint48 _orderId) external {
+        OrderBookLib.OrderBook storage orderBook = _getOrderBook(_maturity);
 
         (ProtocolTypes.Side side, uint256 removedAmount, uint256 unitPrice) = orderBook.removeOrder(
             _user,
@@ -125,7 +124,7 @@ library OrderActionLogic {
     }
 
     function cleanUpOrders(
-        uint8 _orderBookId,
+        uint256 _maturity,
         address _user
     )
         external
@@ -135,12 +134,10 @@ library OrderActionLogic {
             uint256 removedLendOrderFutureValue,
             uint256 removedBorrowOrderFutureValue,
             uint256 removedLendOrderAmount,
-            uint256 removedBorrowOrderAmount,
-            uint256 maturity
+            uint256 removedBorrowOrderAmount
         )
     {
-        OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
-        maturity = orderBook.userCurrentMaturities[_user];
+        OrderBookLib.OrderBook storage orderBook = _getOrderBook(_maturity);
 
         uint48[] memory lendOrderIds;
         uint48[] memory borrowOrderIds;
@@ -150,14 +147,14 @@ library OrderActionLogic {
             activeLendOrderCount,
             removedLendOrderFutureValue,
             removedLendOrderAmount
-        ) = _cleanLendOrders(_orderBookId, _user);
+        ) = _cleanLendOrders(_maturity, _user);
 
         (
             borrowOrderIds,
             activeBorrowOrderCount,
             removedBorrowOrderFutureValue,
             removedBorrowOrderAmount
-        ) = _cleanBorrowOrders(_orderBookId, _user);
+        ) = _cleanBorrowOrders(_maturity, _user);
 
         if (removedLendOrderAmount > 0) {
             emit OrdersCleaned(
@@ -185,7 +182,7 @@ library OrderActionLogic {
     }
 
     function executeOrder(
-        uint8 _orderBookId,
+        uint256 _maturity,
         ProtocolTypes.Side _side,
         address _user,
         uint256 _amount,
@@ -201,8 +198,7 @@ library OrderActionLogic {
     {
         if (_amount == 0) revert InvalidAmount();
 
-        OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
-        orderBook.updateUserMaturity(_user);
+        OrderBookLib.OrderBook storage orderBook = _getOrderBook(_maturity);
 
         ExecuteOrderVars memory vars;
         vars.maturity = orderBook.maturity;
@@ -228,7 +224,7 @@ library OrderActionLogic {
                 vars.placedOrder,
                 vars.isCircuitBreakerTriggered
             ) = _fillOrders(
-                _orderBookId,
+                _maturity,
                 _side,
                 _user,
                 _amount,
@@ -277,7 +273,7 @@ library OrderActionLogic {
     }
 
     function executePreOrder(
-        uint8 _orderBookId,
+        uint256 _maturity,
         ProtocolTypes.Side _side,
         address _user,
         uint256 _amount,
@@ -285,8 +281,7 @@ library OrderActionLogic {
     ) external {
         if (_amount == 0) revert InvalidAmount();
 
-        OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
-        orderBook.updateUserMaturity(_user);
+        OrderBookLib.OrderBook storage orderBook = _getOrderBook(_maturity);
 
         if (
             (_side == ProtocolTypes.Side.LEND && orderBook.hasBorrowOrder(_user)) ||
@@ -310,7 +305,7 @@ library OrderActionLogic {
     }
 
     function unwindPosition(
-        uint8 _orderBookId,
+        uint256 _maturity,
         ProtocolTypes.Side _side,
         address _user,
         uint256 _futureValue,
@@ -327,7 +322,7 @@ library OrderActionLogic {
 
         OrderExecutionConditions memory conditions;
         bool isCircuitBreakerTriggered;
-        OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
+        OrderBookLib.OrderBook storage orderBook = _getOrderBook(_maturity);
         uint256 maturity = orderBook.maturity;
 
         (
@@ -346,7 +341,7 @@ library OrderActionLogic {
 
         if (conditions.isFilled) {
             (filledOrder, partiallyFilledOrder, isCircuitBreakerTriggered) = _unwindPosition(
-                _orderBookId,
+                _maturity,
                 _side,
                 _futureValue,
                 conditions.executedUnitPrice
@@ -376,7 +371,7 @@ library OrderActionLogic {
     }
 
     function _cleanLendOrders(
-        uint8 _orderBookId,
+        uint256 _maturity,
         address _user
     )
         internal
@@ -387,7 +382,7 @@ library OrderActionLogic {
             uint256 removedOrderAmount
         )
     {
-        OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
+        OrderBookLib.OrderBook storage orderBook = _getOrderBook(_maturity);
 
         (uint48[] memory activeLendOrderIds, uint48[] memory inActiveLendOrderIds) = orderBook
             .getLendOrderIds(_user);
@@ -410,7 +405,7 @@ library OrderActionLogic {
     }
 
     function _cleanBorrowOrders(
-        uint8 _orderBookId,
+        uint256 _maturity,
         address _user
     )
         internal
@@ -421,7 +416,7 @@ library OrderActionLogic {
             uint256 removedOrderAmount
         )
     {
-        OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
+        OrderBookLib.OrderBook storage orderBook = _getOrderBook(_maturity);
 
         (uint48[] memory activeBorrowOrderIds, uint48[] memory inActiveBorrowOrderIds) = orderBook
             .getBorrowOrderIds(_user);
@@ -445,6 +440,7 @@ library OrderActionLogic {
 
     /**
      * @notice Fills orders in the order book.
+     * @param _maturity The maturity of the order book
      * @param _side Order position type, Borrow or Lend
      * @param _user User's address
      * @param _amount Amount of funds the maker wants to borrow/lend
@@ -452,7 +448,7 @@ library OrderActionLogic {
      * @param _ignoreRemainingAmount Boolean for whether to ignore the remaining amount after filling orders
      */
     function _fillOrders(
-        uint8 _orderBookId,
+        uint256 _maturity,
         ProtocolTypes.Side _side,
         address _user,
         uint256 _amount,
@@ -467,9 +463,8 @@ library OrderActionLogic {
             bool isCircuitBreakerTriggered
         )
     {
-        OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
+        OrderBookLib.OrderBook storage orderBook = _getOrderBook(_maturity);
         FillOrdersVars memory vars;
-        vars.orderBookId = _orderBookId;
 
         (filledOrder, partiallyFilledOrder, vars.remainingAmount, vars.orderExists) = orderBook
             .fillOrders(_side, _amount, 0, _unitPrice);
@@ -494,7 +489,7 @@ library OrderActionLogic {
     }
 
     function _unwindPosition(
-        uint8 _orderBookId,
+        uint256 _maturity,
         ProtocolTypes.Side _side,
         uint256 _futureValue,
         uint256 _unitPrice
@@ -508,7 +503,7 @@ library OrderActionLogic {
     {
         bool orderExists;
         uint256 futureValueWithFee;
-        OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
+        OrderBookLib.OrderBook storage orderBook = _getOrderBook(_maturity);
         uint256 maturity = orderBook.maturity;
         uint256 currentMaturity = maturity >= block.timestamp ? maturity - block.timestamp : 0;
 
@@ -549,8 +544,8 @@ library OrderActionLogic {
     }
 
     function _getOrderBook(
-        uint8 _orderBookId
+        uint256 _maturity
     ) private view returns (OrderBookLib.OrderBook storage) {
-        return Storage.slot().orderBooks[_orderBookId];
+        return Storage.slot().orderBooks[_maturity];
     }
 }

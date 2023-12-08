@@ -33,7 +33,6 @@ describe('Integration Test: Emergency terminations', async () => {
 
   let genesisDate: number;
   let maturities: BigNumber[];
-  let orderBookIds: BigNumber[];
 
   let signers: Signers;
 
@@ -120,7 +119,6 @@ describe('Integration Test: Emergency terminations', async () => {
 
   const resetContractInstances = async () => {
     maturities = await lendingMarketController.getMaturities(hexETH);
-    orderBookIds = await lendingMarketController.getOrderBookIds(hexETH);
     futureValueVault = await lendingMarketController
       .getFutureValueVault(hexETH)
       .then((address) => ethers.getContractAt('FutureValueVault', address));
@@ -204,12 +202,12 @@ describe('Integration Test: Emergency terminations', async () => {
         ).to.emit(fundManagementLogic, 'OrderFilled');
 
         // Check future value
-        const { balance: aliceFV } = await futureValueVault.getBalance(
-          orderBookIds[0],
+        const aliceFV = await futureValueVault.getBalance(
+          maturities[0],
           alice.address,
         );
-        const { balance: bobFV } = await futureValueVault.getBalance(
-          orderBookIds[0],
+        const bobFV = await futureValueVault.getBalance(
+          maturities[0],
           bob.address,
         );
 
@@ -254,12 +252,12 @@ describe('Integration Test: Emergency terminations', async () => {
         ).to.emit(fundManagementLogic, 'OrderFilled');
 
         // Check future value
-        const { balance: aliceFV } = await futureValueVault.getBalance(
-          orderBookIds[0],
+        const aliceFV = await futureValueVault.getBalance(
+          maturities[0],
           alice.address,
         );
-        const { balance: bobFV } = await futureValueVault.getBalance(
-          orderBookIds[0],
+        const bobFV = await futureValueVault.getBalance(
+          maturities[0],
           bob.address,
         );
 

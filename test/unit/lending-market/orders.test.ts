@@ -2,7 +2,7 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { time } from '@openzeppelin/test-helpers';
 import { expect } from 'chai';
 import { MockContract } from 'ethereum-waffle';
-import { BigNumber, Contract } from 'ethers';
+import { Contract } from 'ethers';
 import { ethers } from 'hardhat';
 import moment from 'moment';
 
@@ -17,14 +17,13 @@ describe('LendingMarket - Orders', () => {
   let lendingMarket: Contract;
 
   let targetCurrency: string;
-  let maturity: number;
 
   let owner: SignerWithAddress;
   let alice: SignerWithAddress;
   let bob: SignerWithAddress;
 
   let orderActionLogic: Contract;
-  let currentOrderBookId: BigNumber;
+  let currentMaturity: number;
 
   const deployOrderBook = async (maturity: number, openingDate: number) => {
     await lendingMarketCaller.createOrderBook(
@@ -33,7 +32,6 @@ describe('LendingMarket - Orders', () => {
       openingDate,
       openingDate - 604800,
     );
-    return lendingMarketCaller.getOrderBookId(targetCurrency);
   };
 
   before(async () => {
@@ -55,12 +53,12 @@ describe('LendingMarket - Orders', () => {
   describe('Check the block unit price', async () => {
     beforeEach(async () => {
       const { timestamp } = await ethers.provider.getBlock('latest');
-      maturity = moment(timestamp * 1000)
+      currentMaturity = moment(timestamp * 1000)
         .add(1, 'M')
         .unix();
       const openingDate = moment(timestamp * 1000).unix();
 
-      currentOrderBookId = await deployOrderBook(maturity, openingDate);
+      await deployOrderBook(currentMaturity, openingDate);
     });
 
     afterEach(async () => {
@@ -77,14 +75,14 @@ describe('LendingMarket - Orders', () => {
       const estimations = await Promise.all([
         lendingMarketCaller.estimateGas.executeOrder(
           targetCurrency,
-          currentOrderBookId,
+          currentMaturity,
           Side.LEND,
           amount,
           unitPrice,
         ),
         lendingMarketCaller.estimateGas.executeOrder(
           targetCurrency,
-          currentOrderBookId,
+          currentMaturity,
           Side.BORROW,
           amount,
           unitPrice,
@@ -95,7 +93,7 @@ describe('LendingMarket - Orders', () => {
         .connect(alice)
         .executeOrder(
           targetCurrency,
-          currentOrderBookId,
+          currentMaturity,
           Side.LEND,
           amount,
           unitPrice,
@@ -106,7 +104,7 @@ describe('LendingMarket - Orders', () => {
         .connect(bob)
         .executeOrder(
           targetCurrency,
-          currentOrderBookId,
+          currentMaturity,
           Side.BORROW,
           amount,
           unitPrice,
@@ -120,18 +118,18 @@ describe('LendingMarket - Orders', () => {
       marketUnitPrice: string,
       blockUnitPriceAverage: string,
     ) => {
-      expect(
-        await lendingMarket.getMarketUnitPrice(currentOrderBookId),
-      ).to.equal(marketUnitPrice);
+      expect(await lendingMarket.getMarketUnitPrice(currentMaturity)).to.equal(
+        marketUnitPrice,
+      );
 
       expect(
-        await lendingMarket.getBlockUnitPriceAverage(currentOrderBookId, 5),
+        await lendingMarket.getBlockUnitPriceAverage(currentMaturity, 5),
       ).to.equal(blockUnitPriceAverage);
     };
 
     const checkBlockUnitPriceHistory = async (unitPrices: string[]) => {
       const history = await lendingMarket.getBlockUnitPriceHistory(
-        currentOrderBookId,
+        currentMaturity,
       );
 
       expect(history.unitPrices.length).to.equal(5);
@@ -149,7 +147,7 @@ describe('LendingMarket - Orders', () => {
       await checkBlockUnitPriceHistory(['8000']);
 
       const lastOrderTimestamp = await lendingMarket.getLastOrderTimestamp(
-        currentOrderBookId,
+        currentMaturity,
       );
 
       await tx.wait();
@@ -223,7 +221,7 @@ describe('LendingMarket - Orders', () => {
         .connect(bob)
         .executeOrder(
           targetCurrency,
-          currentOrderBookId,
+          currentMaturity,
           Side.LEND,
           '150000000000000',
           '9000',
@@ -233,7 +231,7 @@ describe('LendingMarket - Orders', () => {
         .connect(alice)
         .unwindPosition(
           targetCurrency,
-          currentOrderBookId,
+          currentMaturity,
           Side.BORROW,
           calculateFutureValue('100000000000000', '8000'),
         );
@@ -264,23 +262,23 @@ describe('LendingMarket - Orders', () => {
   describe('Execute orders', async () => {
     beforeEach(async () => {
       const { timestamp } = await ethers.provider.getBlock('latest');
-      maturity = moment(timestamp * 1000)
+      currentMaturity = moment(timestamp * 1000)
         .add(1, 'M')
         .unix();
       const openingDate = moment(timestamp * 1000).unix();
 
-      currentOrderBookId = await deployOrderBook(maturity, openingDate);
+      await deployOrderBook(currentMaturity, openingDate);
     });
 
     it('Fail to create a order due to the matured order book', async () => {
-      await time.increaseTo(maturity);
+      await time.increaseTo(currentMaturity);
 
-      expect(await lendingMarket.isMatured(currentOrderBookId)).to.true;
+      expect(await lendingMarket.isMatured(currentMaturity)).to.true;
 
       await expect(
         lendingMarketCaller.executeOrder(
           targetCurrency,
-          currentOrderBookId,
+          currentMaturity,
           Side.LEND,
           '1',
           '8000',
@@ -289,14 +287,14 @@ describe('LendingMarket - Orders', () => {
     });
 
     it('Fail to unwind the position due to the matured order book', async () => {
-      await time.increaseTo(maturity);
+      await time.increaseTo(currentMaturity);
 
-      expect(await lendingMarket.isMatured(currentOrderBookId)).to.true;
+      expect(await lendingMarket.isMatured(currentMaturity)).to.true;
 
       await expect(
         lendingMarketCaller.unwindPosition(
           targetCurrency,
-          currentOrderBookId,
+          currentMaturity,
           Side.LEND,
           '125000000000000',
         ),
@@ -306,7 +304,7 @@ describe('LendingMarket - Orders', () => {
     it('Fail to create an order due to invalid caller', async () => {
       await expect(
         lendingMarket.executeOrder(
-          currentOrderBookId,
+          currentMaturity,
           Side.LEND,
           ethers.constants.AddressZero,
           '100000000000000',
@@ -318,7 +316,7 @@ describe('LendingMarket - Orders', () => {
     it('Fail to cancel the order due to invalid caller', async () => {
       await expect(
         lendingMarket.cancelOrder(
-          currentOrderBookId,
+          currentMaturity,
           ethers.constants.AddressZero,
           1,
         ),
@@ -328,7 +326,7 @@ describe('LendingMarket - Orders', () => {
     it('Fail to unwind the position due to invalid caller', async () => {
       await expect(
         lendingMarket.unwindPosition(
-          currentOrderBookId,
+          currentMaturity,
           Side.LEND,
           ethers.constants.AddressZero,
           '125000000000000',
@@ -340,14 +338,14 @@ describe('LendingMarket - Orders', () => {
   describe('Execute pre-orders', async () => {
     beforeEach(async () => {
       const { timestamp } = await ethers.provider.getBlock('latest');
-      const maturity = moment(timestamp * 1000)
+      currentMaturity = moment(timestamp * 1000)
         .add(1, 'M')
         .unix();
       const openingDate = moment(timestamp * 1000)
         .add(48, 'h')
         .unix();
 
-      currentOrderBookId = await deployOrderBook(maturity, openingDate);
+      await deployOrderBook(currentMaturity, openingDate);
     });
 
     it('Fail to create a lending pre-order due to opposite order existing', async () => {
@@ -355,7 +353,7 @@ describe('LendingMarket - Orders', () => {
         .connect(alice)
         .executePreOrder(
           targetCurrency,
-          currentOrderBookId,
+          currentMaturity,
           Side.BORROW,
           '1000000000000000',
           '8000',
@@ -366,7 +364,7 @@ describe('LendingMarket - Orders', () => {
           .connect(alice)
           .executePreOrder(
             targetCurrency,
-            currentOrderBookId,
+            currentMaturity,
             Side.LEND,
             '1000000000000000',
             '8000',
@@ -379,7 +377,7 @@ describe('LendingMarket - Orders', () => {
         .connect(alice)
         .executePreOrder(
           targetCurrency,
-          currentOrderBookId,
+          currentMaturity,
           Side.LEND,
           '1000000000000000',
           '8000',
@@ -390,7 +388,7 @@ describe('LendingMarket - Orders', () => {
           .connect(alice)
           .executePreOrder(
             targetCurrency,
-            currentOrderBookId,
+            currentMaturity,
             Side.BORROW,
             '1000000000000000',
             '8000',
@@ -401,7 +399,7 @@ describe('LendingMarket - Orders', () => {
     it('Fail to create a pre-order due to invalid caller', async () => {
       await expect(
         lendingMarket.executePreOrder(
-          currentOrderBookId,
+          currentMaturity,
           Side.LEND,
           ethers.constants.AddressZero,
           '100000000000000',
@@ -414,12 +412,12 @@ describe('LendingMarket - Orders', () => {
   describe('Clean up orders', async () => {
     beforeEach(async () => {
       const { timestamp } = await ethers.provider.getBlock('latest');
-      maturity = moment(timestamp * 1000)
+      currentMaturity = moment(timestamp * 1000)
         .add(1, 'M')
         .unix();
       const openingDate = moment(timestamp * 1000).unix();
 
-      currentOrderBookId = await deployOrderBook(maturity, openingDate);
+      await deployOrderBook(currentMaturity, openingDate);
     });
 
     it('Clean up a lending order', async () => {
@@ -427,7 +425,7 @@ describe('LendingMarket - Orders', () => {
         .connect(alice)
         .executeOrder(
           targetCurrency,
-          currentOrderBookId,
+          currentMaturity,
           Side.LEND,
           '100000000000000',
           '8000',
@@ -437,7 +435,7 @@ describe('LendingMarket - Orders', () => {
         .connect(bob)
         .executeOrder(
           targetCurrency,
-          currentOrderBookId,
+          currentMaturity,
           Side.BORROW,
           '100000000000000',
           '8000',
@@ -446,7 +444,7 @@ describe('LendingMarket - Orders', () => {
       await expect(
         lendingMarketCaller.cleanUpOrders(
           targetCurrency,
-          currentOrderBookId,
+          currentMaturity,
           alice.address,
         ),
       )
@@ -456,7 +454,7 @@ describe('LendingMarket - Orders', () => {
           alice.address,
           Side.LEND,
           targetCurrency,
-          maturity,
+          currentMaturity,
           '100000000000000',
           '125000000000000',
         );
@@ -467,7 +465,7 @@ describe('LendingMarket - Orders', () => {
         .connect(bob)
         .executeOrder(
           targetCurrency,
-          currentOrderBookId,
+          currentMaturity,
           Side.BORROW,
           '100000000000000',
           '8000',
@@ -477,7 +475,7 @@ describe('LendingMarket - Orders', () => {
         .connect(alice)
         .executeOrder(
           targetCurrency,
-          currentOrderBookId,
+          currentMaturity,
           Side.LEND,
           '100000000000000',
           '8000',
@@ -486,7 +484,7 @@ describe('LendingMarket - Orders', () => {
       await expect(
         lendingMarketCaller.cleanUpOrders(
           targetCurrency,
-          currentOrderBookId,
+          currentMaturity,
           bob.address,
         ),
       )
@@ -496,7 +494,7 @@ describe('LendingMarket - Orders', () => {
           bob.address,
           Side.BORROW,
           targetCurrency,
-          maturity,
+          currentMaturity,
           '100000000000000',
           '125000000000000',
         );
@@ -504,7 +502,7 @@ describe('LendingMarket - Orders', () => {
 
     it('Fail to clean up orders due to invalid caller', async () => {
       await expect(
-        lendingMarket.cleanUpOrders(currentOrderBookId, alice.address),
+        lendingMarket.cleanUpOrders(currentMaturity, alice.address),
       ).revertedWith('OnlyAcceptedContract("LendingMarketController")');
     });
   });

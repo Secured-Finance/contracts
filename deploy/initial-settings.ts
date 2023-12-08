@@ -162,18 +162,19 @@ const createOrderBooks = async (
     );
 
     const marketLog: Record<string, string | undefined>[] = [];
-    const orderBookIds = await lendingMarketController.getOrderBookIds(
+    const maturities = await lendingMarketController.getMaturities(
       currency.key,
     );
     const lendingMarket = await lendingMarketController
       .getLendingMarket(currency.key)
       .then((address) => ethers.getContractAt('LendingMarket', address));
 
-    for (let i = 0; i < orderBookIds.length; i++) {
-      const { maturity, preOpeningDate, openingDate } =
-        await lendingMarket.getOrderBookDetail(orderBookIds[i]);
+    for (let i = 0; i < maturities.length; i++) {
+      const { preOpeningDate, openingDate } =
+        await lendingMarket.getOrderBookDetail(maturities[i]);
+      const maturity = maturities[i];
       marketLog.push({
-        OrderBookID: orderBookIds[i],
+        'Maturity(UnixTime)': maturity.toString(),
         PreOpeningDate: moment
           .unix(preOpeningDate.toString())
           .format('LLL')

@@ -14,11 +14,12 @@ library OrderBookLogic {
 
     error InvalidOrderFeeRate();
     error InvalidCircuitBreakerLimitRange();
+    error InvalidMaturity(uint256 maturity);
     error OrderBookNotMatured();
 
     event OrderFeeRateUpdated(bytes32 ccy, uint256 previousRate, uint256 rate);
     event CircuitBreakerLimitRangeUpdated(bytes32 ccy, uint256 previousRate, uint256 rate);
-    event OrderBookCreated(uint8 orderBookId, uint256 maturity, uint256 openingDate);
+    event OrderBookCreated(uint256 maturity, uint256 openingDate);
 
     event ItayoseExecuted(
         bytes32 ccy,
@@ -29,114 +30,109 @@ library OrderBookLogic {
         uint256 offsetAmount
     );
 
-    function isReady(uint8 _orderBookId) public view returns (bool) {
-        return Storage.slot().isReady[_getOrderBook(_orderBookId).maturity];
+    function isReady(uint256 _maturity) public view returns (bool) {
+        return Storage.slot().isReady[_getOrderBook(_maturity).maturity];
     }
 
-    function isMatured(uint8 _orderBookId) public view returns (bool) {
-        return _getOrderBook(_orderBookId).isMatured();
+    function isMatured(uint256 _maturity) public view returns (bool) {
+        return _getOrderBook(_maturity).isMatured();
     }
 
-    function isOpened(uint8 _orderBookId) public view returns (bool) {
+    function isOpened(uint256 _maturity) public view returns (bool) {
         return
-            isReady(_orderBookId) &&
-            !isMatured(_orderBookId) &&
-            block.timestamp >= _getOrderBook(_orderBookId).openingDate;
+            isReady(_maturity) &&
+            !isMatured(_maturity) &&
+            block.timestamp >= _getOrderBook(_maturity).openingDate;
     }
 
-    function isItayosePeriod(uint8 _orderBookId) public view returns (bool) {
+    function isItayosePeriod(uint256 _maturity) public view returns (bool) {
         return
             block.timestamp >=
-            (_getOrderBook(_orderBookId).openingDate - OrderBookLib.ITAYOSE_PERIOD) &&
-            !isReady(_orderBookId);
+            (_getOrderBook(_maturity).openingDate - OrderBookLib.ITAYOSE_PERIOD) &&
+            !isReady(_maturity);
     }
 
-    function isPreOrderPeriod(uint8 _orderBookId) public view returns (bool) {
-        OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
+    function isPreOrderPeriod(uint256 _maturity) public view returns (bool) {
+        OrderBookLib.OrderBook storage orderBook = _getOrderBook(_maturity);
         return
             block.timestamp >= orderBook.preOpeningDate &&
             block.timestamp < (orderBook.openingDate - OrderBookLib.ITAYOSE_PERIOD);
     }
 
     function getOrderBookDetail(
-        uint8 _orderBookId
-    )
-        public
-        view
-        returns (bytes32 ccy, uint256 maturity, uint256 openingDate, uint256 preOpeningDate)
-    {
-        OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
+        uint256 _maturity
+    ) public view returns (bytes32 ccy, uint256 openingDate, uint256 preOpeningDate) {
+        OrderBookLib.OrderBook storage orderBook = _getOrderBook(_maturity);
 
         ccy = Storage.slot().ccy;
-        maturity = orderBook.maturity;
         openingDate = orderBook.openingDate;
         preOpeningDate = orderBook.preOpeningDate;
     }
 
-    function getLastOrderTimestamp(uint8 _orderBookId) external view returns (uint48) {
-        return _getOrderBook(_orderBookId).lastOrderTimestamp;
+    function getLastOrderTimestamp(uint256 _maturity) external view returns (uint48) {
+        return _getOrderBook(_maturity).lastOrderTimestamp;
     }
 
     function getBlockUnitPriceHistory(
-        uint8 _orderBookId
+        uint256 _maturity
     ) external view returns (uint256[] memory unitPrices, uint48 timestamp) {
-        return _getOrderBook(_orderBookId).getBlockUnitPriceHistory(true);
+        return _getOrderBook(_maturity).getBlockUnitPriceHistory(true);
     }
 
-    function getMarketUnitPrice(uint8 _orderBookId) external view returns (uint256) {
-        return _getOrderBook(_orderBookId).getMarketUnitPrice(true);
+    function getMarketUnitPrice(uint256 _maturity) external view returns (uint256) {
+        return _getOrderBook(_maturity).getMarketUnitPrice(true);
     }
 
     function getBlockUnitPriceAverage(
-        uint8 _orderBookId,
+        uint256 _maturity,
         uint256 _count
     ) external view returns (uint256) {
-        return _getOrderBook(_orderBookId).getBlockUnitPriceAverage(_count, true);
+        return _getOrderBook(_maturity).getBlockUnitPriceAverage(_count, true);
     }
 
     function getCircuitBreakerThresholds(
-        uint8 _orderBookId
+        uint256 _maturity
     ) external view returns (uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice) {
-        maxLendUnitPrice = _getOrderBook(_orderBookId).getLendCircuitBreakerThreshold(
+        maxLendUnitPrice = _getOrderBook(_maturity).getLendCircuitBreakerThreshold(
             Storage.slot().circuitBreakerLimitRange,
             true
         );
-        minBorrowUnitPrice = _getOrderBook(_orderBookId).getBorrowCircuitBreakerThreshold(
+        minBorrowUnitPrice = _getOrderBook(_maturity).getBorrowCircuitBreakerThreshold(
             Storage.slot().circuitBreakerLimitRange,
             true
         );
     }
 
-    function getBestLendUnitPrice(uint8 _orderBookId) public view returns (uint256) {
-        return _getOrderBook(_orderBookId).getBestLendUnitPrice();
+    function getBestLendUnitPrice(uint256 _maturity) public view returns (uint256) {
+        return _getOrderBook(_maturity).getBestLendUnitPrice();
     }
 
     function getBestLendUnitPrices(
-        uint8[] memory _orderBookIds
+        uint256[] memory _maturities
     ) external view returns (uint256[] memory unitPrices) {
-        unitPrices = new uint256[](_orderBookIds.length);
+        unitPrices = new uint256[](_maturities.length);
 
-        for (uint256 i; i < _orderBookIds.length; i++) {
-            unitPrices[i] = _getOrderBook(_orderBookIds[i]).getBestLendUnitPrice();
+        for (uint256 i; i < _maturities.length; i++) {
+            unitPrices[i] = _getOrderBook(_maturities[i]).getBestLendUnitPrice();
         }
     }
 
-    function getBestBorrowUnitPrice(uint8 _orderBookId) public view returns (uint256) {
-        return _getOrderBook(_orderBookId).getBestBorrowUnitPrice();
+    function getBestBorrowUnitPrice(uint256 _maturity) public view returns (uint256) {
+        return _getOrderBook(_maturity).getBestBorrowUnitPrice();
     }
 
     function getBestBorrowUnitPrices(
-        uint8[] memory _orderBookIds
+        uint256[] memory _maturities
     ) external view returns (uint256[] memory unitPrices) {
-        unitPrices = new uint256[](_orderBookIds.length);
+        unitPrices = new uint256[](_maturities.length);
 
-        for (uint256 i; i < _orderBookIds.length; i++) {
-            unitPrices[i] = _getOrderBook(_orderBookIds[i]).getBestBorrowUnitPrice();
+        for (uint256 i; i < _maturities.length; i++) {
+            unitPrices[i] = _getOrderBook(_maturities[i]).getBestBorrowUnitPrice();
         }
     }
 
     function getBorrowOrderBook(
-        uint8 _orderBookId,
+        uint256 _maturity,
         uint256 _start,
         uint256 _limit
     )
@@ -149,11 +145,11 @@ library OrderBookLogic {
             uint256 next
         )
     {
-        return _getOrderBook(_orderBookId).getBorrowOrderBook(_start, _limit);
+        return _getOrderBook(_maturity).getBorrowOrderBook(_start, _limit);
     }
 
     function getLendOrderBook(
-        uint8 _orderBookId,
+        uint256 _maturity,
         uint256 _start,
         uint256 _limit
     )
@@ -166,11 +162,11 @@ library OrderBookLogic {
             uint256 next
         )
     {
-        return _getOrderBook(_orderBookId).getLendOrderBook(_start, _limit);
+        return _getOrderBook(_maturity).getLendOrderBook(_start, _limit);
     }
 
     function getItayoseEstimation(
-        uint8 _orderBookId
+        uint256 _maturity
     )
         external
         view
@@ -181,17 +177,7 @@ library OrderBookLogic {
             uint256 totalOffsetAmount
         )
     {
-        return _getOrderBook(_orderBookId).calculateItayoseResult();
-    }
-
-    function getMaturities(
-        uint8[] memory _orderBookIds
-    ) public view returns (uint256[] memory maturities) {
-        maturities = new uint256[](_orderBookIds.length);
-
-        for (uint256 i; i < _orderBookIds.length; i++) {
-            maturities[i] = _getOrderBook(_orderBookIds[i]).maturity;
-        }
+        return _getOrderBook(_maturity).calculateItayoseResult();
     }
 
     function updateOrderFeeRate(uint256 _orderFeeRate) external {
@@ -222,39 +208,35 @@ library OrderBookLogic {
         uint256 _maturity,
         uint256 _openingDate,
         uint256 _preOpeningDate
-    ) public returns (uint8 orderBookId) {
-        orderBookId = _nextOrderBookId();
-
-        Storage.slot().isReady[_maturity] = _getOrderBook(orderBookId).initialize(
+    ) public {
+        Storage.slot().isReady[_maturity] = _getOrderBook(_maturity).initialize(
             _maturity,
             _openingDate,
             _preOpeningDate
         );
 
-        emit OrderBookCreated(orderBookId, _maturity, _openingDate);
+        emit OrderBookCreated(_maturity, _openingDate);
     }
 
     function executeAutoRoll(
-        uint8 _maturedOrderBookId,
-        uint8 _destinationOrderBookId,
-        uint256 _newMaturity,
-        uint256 _openingDate,
+        uint256 _maturedOrderBookMaturity,
+        uint256 _destinationOrderBookMaturity,
         uint256 _autoRollUnitPrice
     ) external {
         OrderBookLib.OrderBook storage maturedOrderBook = Storage.slot().orderBooks[
-            _maturedOrderBookId
+            _maturedOrderBookMaturity
         ];
+
+        if (maturedOrderBook.maturity != _maturedOrderBookMaturity)
+            revert InvalidMaturity(_maturedOrderBookMaturity);
         if (!maturedOrderBook.isMatured()) revert OrderBookNotMatured();
 
-        Storage.slot().isReady[_newMaturity] = maturedOrderBook.initialize(
-            _newMaturity,
-            _openingDate,
-            _openingDate - OrderBookLib.PRE_ORDER_BASE_PERIOD
-        );
-
         OrderBookLib.OrderBook storage destinationOrderBook = Storage.slot().orderBooks[
-            _destinationOrderBookId
+            _destinationOrderBookMaturity
         ];
+
+        if (destinationOrderBook.maturity != _destinationOrderBookMaturity)
+            revert InvalidMaturity(_destinationOrderBookMaturity);
 
         // NOTE: The auto-roll destination order book has no market unit price if the order has never been filled before.
         // In this case, the market unit price is updated with the unit price of the auto-roll.
@@ -264,7 +246,7 @@ library OrderBookLogic {
     }
 
     function executeItayoseCall(
-        uint8 _orderBookId
+        uint256 _maturity
     )
         external
         returns (
@@ -277,7 +259,7 @@ library OrderBookLogic {
     {
         uint256 lastLendUnitPrice;
         uint256 lastBorrowUnitPrice;
-        OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
+        OrderBookLib.OrderBook storage orderBook = _getOrderBook(_maturity);
 
         (openingUnitPrice, lastLendUnitPrice, lastBorrowUnitPrice, totalOffsetAmount) = orderBook
             .calculateItayoseResult();
@@ -333,14 +315,9 @@ library OrderBookLogic {
         openingDate = orderBook.openingDate;
     }
 
-    function _nextOrderBookId() internal returns (uint8) {
-        Storage.slot().lastOrderBookId++;
-        return Storage.slot().lastOrderBookId;
-    }
-
     function _getOrderBook(
-        uint8 _orderBookId
+        uint256 _maturity
     ) private view returns (OrderBookLib.OrderBook storage) {
-        return Storage.slot().orderBooks[_orderBookId];
+        return Storage.slot().orderBooks[_maturity];
     }
 }

@@ -41,7 +41,6 @@ describe('Integration Test: Order Book', async () => {
   let filLendingMarket: Contract;
   let filMaturities: BigNumber[];
   let ethMaturities: BigNumber[];
-  let filOrderBookIds: BigNumber[];
 
   let signers: Signers;
 
@@ -100,7 +99,7 @@ describe('Integration Test: Order Book', async () => {
       .getLendingMarket(hexWFIL)
       .then((address) => ethers.getContractAt('LendingMarket', address));
 
-    filOrderBookIds = await lendingMarketController.getOrderBookIds(hexWFIL);
+    filMaturities = await lendingMarketController.getMaturities(hexWFIL);
 
     orderActionLogic = orderActionLogic.attach(filLendingMarket.address);
   });
@@ -1364,12 +1363,12 @@ describe('Integration Test: Order Book', async () => {
           );
           const { activeOrderIds: borrowOrderIds } =
             await filLendingMarket.getBorrowOrderIds(
-              filOrderBookIds[1],
+              filMaturities[1],
               bob.address,
             );
           const { activeOrderIds: lendOrderIds } =
             await filLendingMarket.getLendOrderIds(
-              filOrderBookIds[1],
+              filMaturities[1],
               alice.address,
             );
 
@@ -1443,14 +1442,14 @@ describe('Integration Test: Order Book', async () => {
           if (input.label === 'lending') {
             ({ activeOrderIds: orderIds } =
               await filLendingMarket.getLendOrderIds(
-                filOrderBookIds[1],
+                filMaturities[1],
                 alice.address,
               ));
             orderMaker = alice;
           } else {
             ({ activeOrderIds: orderIds } =
               await filLendingMarket.getBorrowOrderIds(
-                filOrderBookIds[1],
+                filMaturities[1],
                 bob.address,
               ));
             orderMaker = bob;
@@ -1538,14 +1537,14 @@ describe('Integration Test: Order Book', async () => {
           if (input.label === 'borrowing') {
             ({ activeOrderIds: orderIds } =
               await filLendingMarket.getLendOrderIds(
-                filOrderBookIds[1],
+                filMaturities[1],
                 alice.address,
               ));
             orderMaker = alice;
           } else {
             ({ activeOrderIds: orderIds } =
               await filLendingMarket.getBorrowOrderIds(
-                filOrderBookIds[1],
+                filMaturities[1],
                 bob.address,
               ));
             orderMaker = bob;
@@ -1619,7 +1618,7 @@ describe('Integration Test: Order Book', async () => {
         const {
           activeOrderIds: [orderId],
         } = await filLendingMarket.getBorrowOrderIds(
-          filOrderBookIds[0],
+          filMaturities[0],
           alice.address,
         );
 
@@ -1717,7 +1716,7 @@ describe('Integration Test: Order Book', async () => {
         const {
           activeOrderIds: [orderId],
         } = await filLendingMarket.getLendOrderIds(
-          filOrderBookIds[0],
+          filMaturities[0],
           alice.address,
         );
 

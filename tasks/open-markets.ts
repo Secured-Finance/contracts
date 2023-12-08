@@ -28,15 +28,12 @@ task(
     const lendingMarket = await lendingMarketController
       .getLendingMarket(currency)
       .then((address) => ethers.getContractAt('LendingMarket', address));
-    const orderBookIds = await lendingMarketController.getOrderBookIds(
-      currency,
-    );
+    const maturities = await lendingMarketController.getMaturities(currency);
 
-    for (const orderBookId of orderBookIds) {
-      const [isItayosePeriod, isMatured, maturity] = await Promise.all([
-        lendingMarket.isItayosePeriod(orderBookId),
-        lendingMarket.isMatured(orderBookId),
-        lendingMarket.getMaturity(orderBookId),
+    for (const maturity of maturities) {
+      const [isItayosePeriod, isMatured] = await Promise.all([
+        lendingMarket.isItayosePeriod(maturity),
+        lendingMarket.isMatured(maturity),
       ]);
 
       if (isItayosePeriod) {
@@ -66,18 +63,13 @@ task(
     const lendingMarket = await lendingMarketController
       .getLendingMarket(currency)
       .then((address) => ethers.getContractAt('LendingMarket', address));
-    const orderBookIds = await lendingMarketController.getOrderBookIds(
-      currency,
-    );
+    const maturities = await lendingMarketController.getMaturities(currency);
 
-    for (const orderBookId of orderBookIds) {
-      const [maturity, openingDate] = await Promise.all([
-        lendingMarket.getMaturity(orderBookId),
-        lendingMarket.getOpeningDate(orderBookId),
-      ]);
+    for (const maturity of maturities) {
+      const openingDate = await lendingMarket.getOpeningDate(maturity);
 
       marketLog.push({
-        OrderBookID: orderBookId,
+        'Maturity(UnixTime)': maturity.toString(),
         OpeningDate: moment
           .unix(openingDate.toString())
           .format('LLL')

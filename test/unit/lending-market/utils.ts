@@ -1,5 +1,5 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
-import { BigNumber, Contract } from 'ethers';
+import { Contract } from 'ethers';
 import { artifacts, ethers, waffle } from 'hardhat';
 
 import {
@@ -27,15 +27,13 @@ const deployOrderBook = async (
   maturity: number,
   openingDate: number,
   lendingMarketCaller: Contract,
-): Promise<BigNumber> => {
+): Promise<void> => {
   await lendingMarketCaller.createOrderBook(
     currency,
     maturity,
     openingDate,
     openingDate - 604800,
   );
-
-  return lendingMarketCaller.getOrderBookId(currency);
 };
 
 const deployContracts = async (owner: SignerWithAddress, currency: string) => {

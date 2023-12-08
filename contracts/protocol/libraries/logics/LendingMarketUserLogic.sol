@@ -93,7 +93,7 @@ library LendingMarketUserLogic {
             PartiallyFilledOrder memory partiallyFilledOrder,
             uint256 feeInFV
         ) = ILendingMarket(Storage.slot().lendingMarkets[_ccy]).executeOrder(
-                Storage.slot().maturityOrderBookIds[_ccy][_maturity],
+                _maturity,
                 _side,
                 _user,
                 _amount,
@@ -157,7 +157,7 @@ library LendingMarketUserLogic {
         FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, _user);
 
         ILendingMarket(Storage.slot().lendingMarkets[_ccy]).executePreOrder(
-            Storage.slot().maturityOrderBookIds[_ccy][_maturity],
+            _maturity,
             _side,
             _user,
             _amount,
@@ -209,8 +209,8 @@ library LendingMarketUserLogic {
 
         // When the market is the nearest market and the user has only GV, a user still has future value after unwinding.
         // For that case, the `registerCurrencyAndMaturity` function needs to be called again.
-        (int256 currentFutureValue, ) = IFutureValueVault(Storage.slot().futureValueVaults[_ccy])
-            .getBalance(Storage.slot().maturityOrderBookIds[_ccy][_maturity], _user);
+        int256 currentFutureValue = IFutureValueVault(Storage.slot().futureValueVaults[_ccy])
+            .getBalance(_maturity, _user);
 
         if (currentFutureValue != 0) {
             FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, _user);
@@ -311,7 +311,7 @@ library LendingMarketUserLogic {
             orderFeeInFV,
             placedAmount
         ) = ILendingMarket(Storage.slot().lendingMarkets[_ccy]).calculateFilledAmount(
-            Storage.slot().maturityOrderBookIds[_ccy][_maturity],
+            _maturity,
             _side,
             _amount,
             _unitPrice
@@ -385,7 +385,7 @@ library LendingMarketUserLogic {
         uint256 _unitPrice
     ) internal view returns (uint256) {
         uint256 marketUnitPrice = ILendingMarket(Storage.slot().lendingMarkets[_ccy])
-            .getMarketUnitPrice(Storage.slot().maturityOrderBookIds[_ccy][_maturity]);
+            .getMarketUnitPrice(_maturity);
 
         if (marketUnitPrice == 0) {
             marketUnitPrice = _unitPrice;
@@ -415,23 +415,13 @@ library LendingMarketUserLogic {
 
             (filledOrder, partiallyFilledOrder, feeInFV) = ILendingMarket(
                 Storage.slot().lendingMarkets[_ccy]
-            ).unwindPosition(
-                    Storage.slot().maturityOrderBookIds[_ccy][_maturity],
-                    side,
-                    _user,
-                    _futureValue.toUint256()
-                );
+            ).unwindPosition(_maturity, side, _user, _futureValue.toUint256());
         } else if (_futureValue < 0) {
             side = ProtocolTypes.Side.LEND;
 
             (filledOrder, partiallyFilledOrder, feeInFV) = ILendingMarket(
                 Storage.slot().lendingMarkets[_ccy]
-            ).unwindPosition(
-                    Storage.slot().maturityOrderBookIds[_ccy][_maturity],
-                    side,
-                    _user,
-                    (-_futureValue).toUint256()
-                );
+            ).unwindPosition(_maturity, side, _user, (-_futureValue).toUint256());
         }
     }
 }

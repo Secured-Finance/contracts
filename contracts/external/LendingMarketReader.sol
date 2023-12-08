@@ -66,7 +66,7 @@ contract LendingMarketReader is MixinAddressResolver {
     function getBestLendUnitPrices(bytes32 _ccy) external view returns (uint256[] memory) {
         return
             _getLendingMarket(_ccy).getBestLendUnitPrices(
-                lendingMarketController().getOrderBookIds(_ccy)
+                lendingMarketController().getMaturities(_ccy)
             );
     }
 
@@ -78,7 +78,7 @@ contract LendingMarketReader is MixinAddressResolver {
     function getBestBorrowUnitPrices(bytes32 _ccy) external view returns (uint256[] memory) {
         return
             _getLendingMarket(_ccy).getBestBorrowUnitPrices(
-                lendingMarketController().getOrderBookIds(_ccy)
+                lendingMarketController().getMaturities(_ccy)
             );
     }
 
@@ -108,12 +108,7 @@ contract LendingMarketReader is MixinAddressResolver {
             uint256 next
         )
     {
-        return
-            _getLendingMarket(_ccy).getBorrowOrderBook(
-                lendingMarketController().getOrderBookId(_ccy, _maturity),
-                _start,
-                _limit
-            );
+        return _getLendingMarket(_ccy).getBorrowOrderBook(_maturity, _start, _limit);
     }
 
     /**
@@ -142,12 +137,7 @@ contract LendingMarketReader is MixinAddressResolver {
             uint256 next
         )
     {
-        return
-            _getLendingMarket(_ccy).getLendOrderBook(
-                lendingMarketController().getOrderBookId(_ccy, _maturity),
-                _start,
-                _limit
-            );
+        return _getLendingMarket(_ccy).getLendOrderBook(_maturity, _start, _limit);
     }
 
     /**
@@ -177,9 +167,7 @@ contract LendingMarketReader is MixinAddressResolver {
             lastLendUnitPrice,
             lastBorrowUnitPrice,
             totalOffsetAmount
-        ) = _getLendingMarket(_ccy).getItayoseEstimation(
-            lendingMarketController().getOrderBookId(_ccy, _maturity)
-        );
+        ) = _getLendingMarket(_ccy).getItayoseEstimation(_maturity);
     }
 
     /**
@@ -236,29 +224,29 @@ contract LendingMarketReader is MixinAddressResolver {
         uint256 _maturity
     ) public view returns (OrderBookDetail memory orderBookDetail) {
         ILendingMarket market = _getLendingMarket(_ccy);
-        uint8 orderBookId = lendingMarketController().getOrderBookId(_ccy, _maturity);
 
         orderBookDetail.ccy = _ccy;
-        orderBookDetail.maturity = market.getMaturity(orderBookId);
-        orderBookDetail.bestLendUnitPrice = market.getBestLendUnitPrice(orderBookId);
-        orderBookDetail.bestBorrowUnitPrice = market.getBestBorrowUnitPrice(orderBookId);
-        orderBookDetail.marketUnitPrice = market.getMarketUnitPrice(orderBookId);
-        orderBookDetail.isReady = market.isReady(orderBookId);
+        orderBookDetail.maturity = _maturity;
+        orderBookDetail.bestLendUnitPrice = market.getBestLendUnitPrice(_maturity);
+        orderBookDetail.bestBorrowUnitPrice = market.getBestBorrowUnitPrice(_maturity);
+        orderBookDetail.marketUnitPrice = market.getMarketUnitPrice(_maturity);
+        orderBookDetail.isReady = market.isReady(_maturity);
 
         (
             orderBookDetail.blockUnitPriceHistory,
             orderBookDetail.lastBlockUnitPriceTimestamp
-        ) = market.getBlockUnitPriceHistory(orderBookId);
+        ) = market.getBlockUnitPriceHistory(_maturity);
 
-        (, , orderBookDetail.openingDate, orderBookDetail.preOpeningDate) = market
-            .getOrderBookDetail(orderBookId);
+        (, orderBookDetail.openingDate, orderBookDetail.preOpeningDate) = market.getOrderBookDetail(
+            _maturity
+        );
         (orderBookDetail.maxLendUnitPrice, orderBookDetail.minBorrowUnitPrice) = market
-            .getCircuitBreakerThresholds(orderBookId);
+            .getCircuitBreakerThresholds(_maturity);
 
         if (orderBookDetail.isReady) {
             orderBookDetail.openingUnitPrice = market.getItayoseLog(_maturity).openingUnitPrice;
         } else {
-            (orderBookDetail.openingUnitPrice, , , ) = market.getItayoseEstimation(orderBookId);
+            (orderBookDetail.openingUnitPrice, , , ) = market.getItayoseEstimation(_maturity);
         }
 
         orderBookDetail.currentMinDebtUnitPrice = lendingMarketController()
@@ -396,38 +384,37 @@ contract LendingMarketReader is MixinAddressResolver {
         address _user
     ) public view returns (Order[] memory activeOrders, Order[] memory inactiveOrders) {
         ILendingMarket market = _getLendingMarket(_ccy);
-        uint8 orderBookId = lendingMarketController().getOrderBookId(_ccy, _maturity);
 
         (uint48[] memory activeLendOrderIds, uint48[] memory inActiveLendOrderIds) = market
-            .getLendOrderIds(orderBookId, _user);
+            .getLendOrderIds(_maturity, _user);
         (uint48[] memory activeBorrowOrderIds, uint48[] memory inActiveBorrowOrderIds) = market
-            .getBorrowOrderIds(orderBookId, _user);
+            .getBorrowOrderIds(_maturity, _user);
 
         activeOrders = new Order[](activeLendOrderIds.length + activeBorrowOrderIds.length);
         inactiveOrders = new Order[](inActiveLendOrderIds.length + inActiveBorrowOrderIds.length);
 
         for (uint256 i; i < activeLendOrderIds.length; i++) {
-            activeOrders[i] = _getOrder(_ccy, market, orderBookId, activeLendOrderIds[i]);
+            activeOrders[i] = _getOrder(_ccy, market, _maturity, activeLendOrderIds[i]);
         }
 
         for (uint256 i; i < activeBorrowOrderIds.length; i++) {
             activeOrders[activeLendOrderIds.length + i] = _getOrder(
                 _ccy,
                 market,
-                orderBookId,
+                _maturity,
                 activeBorrowOrderIds[i]
             );
         }
 
         for (uint256 i; i < inActiveLendOrderIds.length; i++) {
-            inactiveOrders[i] = _getOrder(_ccy, market, orderBookId, inActiveLendOrderIds[i]);
+            inactiveOrders[i] = _getOrder(_ccy, market, _maturity, inActiveLendOrderIds[i]);
         }
 
         for (uint256 i; i < inActiveBorrowOrderIds.length; i++) {
             inactiveOrders[inActiveLendOrderIds.length + i] = _getOrder(
                 _ccy,
                 market,
-                orderBookId,
+                _maturity,
                 inActiveBorrowOrderIds[i]
             );
         }
@@ -436,20 +423,19 @@ contract LendingMarketReader is MixinAddressResolver {
     function _getOrder(
         bytes32 _ccy,
         ILendingMarket _market,
-        uint8 _orderBookId,
+        uint256 _maturity,
         uint48 _orderId
     ) internal view returns (Order memory order) {
         (
             ProtocolTypes.Side side,
             uint256 unitPrice,
-            uint256 maturity,
             ,
             uint256 amount,
             uint256 timestamp,
             bool isPreOrder
-        ) = _market.getOrder(_orderBookId, _orderId);
+        ) = _market.getOrder(_maturity, _orderId);
 
-        order = Order(_orderId, _ccy, maturity, side, unitPrice, amount, timestamp, isPreOrder);
+        order = Order(_orderId, _ccy, _maturity, side, unitPrice, amount, timestamp, isPreOrder);
     }
 
     function _getLendingMarket(bytes32 _ccy) internal view returns (ILendingMarket) {

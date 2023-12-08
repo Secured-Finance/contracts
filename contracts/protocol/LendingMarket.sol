@@ -37,16 +37,16 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
 
     /**
      * @notice Modifier to make a function callable only by order maker.
-     * @param _orderBookId The order book id
+     * @param _maturity The maturity of the order book
      * @param _user User's address
      * @param _orderId Market order id
      */
     modifier onlyMaker(
-        uint8 _orderBookId,
+        uint256 _maturity,
         address _user,
         uint48 _orderId
     ) {
-        (, , , address maker, , , ) = getOrder(_orderBookId, _orderId);
+        (, , address maker, , , ) = getOrder(_maturity, _orderId);
         if (maker == address(0)) revert NoOrderExists();
         if (_user != maker) revert CallerNotMaker();
         _;
@@ -54,37 +54,37 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
 
     /**
      * @notice Modifier to check if the market is opened.
-     * @param _orderBookId The order book id
+     * @param _maturity The maturity of the order book
      */
-    modifier ifOpened(uint8 _orderBookId) {
-        if (!isOpened(_orderBookId)) revert MarketNotOpened();
+    modifier ifOpened(uint256 _maturity) {
+        if (!isOpened(_maturity)) revert MarketNotOpened();
         _;
     }
 
     /**
      * @notice Modifier to check if the market is under the Itayose period.
-     * @param _orderBookId The order book id
+     * @param _maturity The maturity of the order book
      */
-    modifier ifItayosePeriod(uint8 _orderBookId) {
-        if (!isItayosePeriod(_orderBookId)) revert NotItayosePeriod();
+    modifier ifItayosePeriod(uint256 _maturity) {
+        if (!isItayosePeriod(_maturity)) revert NotItayosePeriod();
         _;
     }
 
     /**
      * @notice Modifier to check if the market is not under the Itayose period.
-     * @param _orderBookId The order book id
+     * @param _maturity The maturity of the order book
      */
-    modifier ifNotItayosePeriod(uint8 _orderBookId) {
-        if (isItayosePeriod(_orderBookId)) revert AlreadyItayosePeriod();
+    modifier ifNotItayosePeriod(uint256 _maturity) {
+        if (isItayosePeriod(_maturity)) revert AlreadyItayosePeriod();
         _;
     }
 
     /**
      * @notice Modifier to check if the market is under the pre-order period.
-     * @param _orderBookId The order book id
+     * @param _maturity The maturity of the order book
      */
-    modifier ifPreOrderPeriod(uint8 _orderBookId) {
-        if (!isPreOrderPeriod(_orderBookId)) revert NotPreOrderPeriod();
+    modifier ifPreOrderPeriod(uint256 _maturity) {
+        if (!isPreOrderPeriod(_maturity)) revert NotPreOrderPeriod();
         _;
     }
 
@@ -126,87 +126,81 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
 
     /**
      * @notice Gets if the market is ready.
-     * @param _orderBookId The order book id
+     * @param _maturity The maturity of the order book
      * @return The boolean if the market is ready or not
      */
-    function isReady(uint8 _orderBookId) public view override returns (bool) {
-        return OrderBookLogic.isReady(_orderBookId);
+    function isReady(uint256 _maturity) public view override returns (bool) {
+        return OrderBookLogic.isReady(_maturity);
     }
 
     /**
      * @notice Gets if the market is matured.
-     * @param _orderBookId The order book id
+     * @param _maturity The maturity of the order book
      * @return The boolean if the market is matured or not
      */
-    function isMatured(uint8 _orderBookId) public view override returns (bool) {
-        return OrderBookLogic.isMatured(_orderBookId);
+    function isMatured(uint256 _maturity) public view override returns (bool) {
+        return OrderBookLogic.isMatured(_maturity);
     }
 
     /**
      * @notice Gets if the market is opened.
-     * @param _orderBookId The order book id
+     * @param _maturity The maturity of the order book
      * @return The boolean if the market is opened or not
      */
-    function isOpened(uint8 _orderBookId) public view override returns (bool) {
-        return OrderBookLogic.isOpened(_orderBookId);
+    function isOpened(uint256 _maturity) public view override returns (bool) {
+        return OrderBookLogic.isOpened(_maturity);
     }
 
     /**
      * @notice Gets if the market is under the Itayose period.
-     * @param _orderBookId The order book id
+     * @param _maturity The maturity of the order book
      * @return The boolean if the market is under the Itayose period.
      */
-    function isItayosePeriod(uint8 _orderBookId) public view returns (bool) {
-        return OrderBookLogic.isItayosePeriod(_orderBookId);
+    function isItayosePeriod(uint256 _maturity) public view returns (bool) {
+        return OrderBookLogic.isItayosePeriod(_maturity);
     }
 
     /**
      * @notice Gets if the market is under the pre-order period.
-     * @param _orderBookId The order book id
+     * @param _maturity The maturity of the order book
      * @return The boolean if the market is under the pre-order period.
      */
-    function isPreOrderPeriod(uint8 _orderBookId) public view override returns (bool) {
-        return OrderBookLogic.isPreOrderPeriod(_orderBookId);
+    function isPreOrderPeriod(uint256 _maturity) public view override returns (bool) {
+        return OrderBookLogic.isPreOrderPeriod(_maturity);
     }
 
     /**
      * @notice Gets the order book detail.
-     * @param _orderBookId The order book id
+     * @param _maturity The maturity of the order book
      * @return ccy The currency of the order book
-     * @return maturity The maturity of the order book
      * @return openingDate The opening date of the order book
      * @return preOpeningDate The pre-opening date of the order book
      */
     function getOrderBookDetail(
-        uint8 _orderBookId
-    )
-        public
-        view
-        override
-        returns (bytes32 ccy, uint256 maturity, uint256 openingDate, uint256 preOpeningDate)
-    {
-        return OrderBookLogic.getOrderBookDetail(_orderBookId);
+        uint256 _maturity
+    ) public view override returns (bytes32 ccy, uint256 openingDate, uint256 preOpeningDate) {
+        return OrderBookLogic.getOrderBookDetail(_maturity);
     }
 
     /**
      * @notice Gets unit price Thresholds by CircuitBreaker.
-     * @param _orderBookId The order book id
+     * @param _maturity The maturity of the order book
      * @return maxLendUnitPrice The maximum unit price for lending
      * @return minBorrowUnitPrice The minimum unit price for borrowing
      */
     function getCircuitBreakerThresholds(
-        uint8 _orderBookId
+        uint256 _maturity
     ) external view override returns (uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice) {
-        return OrderBookLogic.getCircuitBreakerThresholds(_orderBookId);
+        return OrderBookLogic.getCircuitBreakerThresholds(_maturity);
     }
 
     /**
      * @notice Gets the best price for lending.
-     * @param _orderBookId The order book id
+     * @param _maturity The maturity of the order book
      * @return The best price for lending
      */
-    function getBestLendUnitPrice(uint8 _orderBookId) public view override returns (uint256) {
-        return OrderBookLogic.getBestLendUnitPrice(_orderBookId);
+    function getBestLendUnitPrice(uint256 _maturity) public view override returns (uint256) {
+        return OrderBookLogic.getBestLendUnitPrice(_maturity);
     }
 
     /**
@@ -214,18 +208,18 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @return The array of the best price for lending
      */
     function getBestLendUnitPrices(
-        uint8[] calldata _orderBookIds
+        uint256[] calldata _maturities
     ) external view override returns (uint256[] memory) {
-        return OrderBookLogic.getBestLendUnitPrices(_orderBookIds);
+        return OrderBookLogic.getBestLendUnitPrices(_maturities);
     }
 
     /**
      * @notice Gets the best price for borrowing.
-     * @param _orderBookId The order book id
+     * @param _maturity The maturity of the order book
      * @return The best price for borrowing
      */
-    function getBestBorrowUnitPrice(uint8 _orderBookId) public view override returns (uint256) {
-        return OrderBookLogic.getBestBorrowUnitPrice(_orderBookId);
+    function getBestBorrowUnitPrice(uint256 _maturity) public view override returns (uint256) {
+        return OrderBookLogic.getBestBorrowUnitPrice(_maturity);
     }
 
     /**
@@ -233,52 +227,52 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @return The array of the best price for borrowing
      */
     function getBestBorrowUnitPrices(
-        uint8[] calldata _orderBookIds
+        uint256[] calldata _maturities
     ) external view override returns (uint256[] memory) {
-        return OrderBookLogic.getBestBorrowUnitPrices(_orderBookIds);
+        return OrderBookLogic.getBestBorrowUnitPrices(_maturities);
     }
 
     /**
      * @notice Gets the market unit price
-     * @param _orderBookId The order book id
+     * @param _maturity The maturity of the order book
      * @return The market unit price
      */
-    function getMarketUnitPrice(uint8 _orderBookId) external view override returns (uint256) {
-        return OrderBookLogic.getMarketUnitPrice(_orderBookId);
+    function getMarketUnitPrice(uint256 _maturity) external view override returns (uint256) {
+        return OrderBookLogic.getMarketUnitPrice(_maturity);
     }
 
     /**
      * @notice Gets the block timestamp of the last filled order.
-     * @param _orderBookId The order book id
+     * @param _maturity The maturity of the order book
      * @return The block number
      */
-    function getLastOrderTimestamp(uint8 _orderBookId) external view override returns (uint48) {
-        return OrderBookLogic.getLastOrderTimestamp(_orderBookId);
+    function getLastOrderTimestamp(uint256 _maturity) external view override returns (uint48) {
+        return OrderBookLogic.getLastOrderTimestamp(_maturity);
     }
 
     /**
      * @notice Gets the block unit price history
-     * @param _orderBookId The order book id
+     * @param _maturity The maturity of the order book
      * @return unitPrices The array of the block unit price
      * @return timestamp Timestamp of the last block unit price
      */
     function getBlockUnitPriceHistory(
-        uint8 _orderBookId
+        uint256 _maturity
     ) external view override returns (uint256[] memory unitPrices, uint48 timestamp) {
-        return OrderBookLogic.getBlockUnitPriceHistory(_orderBookId);
+        return OrderBookLogic.getBlockUnitPriceHistory(_maturity);
     }
 
     /**
      * @notice Gets the block unit price average.
-     * @param _orderBookId The order book id
+     * @param _maturity The maturity of the order book
      * @param _count Count of data used for averaging
      * @return The block unit price average
      */
     function getBlockUnitPriceAverage(
-        uint8 _orderBookId,
+        uint256 _maturity,
         uint256 _count
     ) external view override returns (uint256) {
-        return OrderBookLogic.getBlockUnitPriceAverage(_orderBookId, _count);
+        return OrderBookLogic.getBlockUnitPriceAverage(_maturity, _count);
     }
 
     /**
@@ -287,7 +281,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * the orders are returned for the _limit from there. The unit price that can be
      * set to `_start` of the next data fetching is set to the return value, `next`.
      * If `_start` is 0, this function returns from the first order.
-     * @param _orderBookId The order book id
+     * @param _maturity The maturity of the order book
      * @param _start The starting unit price to get order book
      * @param _limit The max limit for getting unit prices
      * @return unitPrices The array of order unit prices
@@ -296,7 +290,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @return next The next starting unit price to get order book
      */
     function getBorrowOrderBook(
-        uint8 _orderBookId,
+        uint256 _maturity,
         uint256 _start,
         uint256 _limit
     )
@@ -310,7 +304,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             uint256 next
         )
     {
-        return OrderBookLogic.getBorrowOrderBook(_orderBookId, _start, _limit);
+        return OrderBookLogic.getBorrowOrderBook(_maturity, _start, _limit);
     }
 
     /**
@@ -319,7 +313,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * the orders are returned for the _limit from there. The unit price that can be
      * set to `_start` of the next data fetching is set to the return value, `next`.
      * If `_start` is 0, this function returns from the first order.
-     * @param _orderBookId The order book id
+     * @param _maturity The maturity of the order book
      * @param _start The starting unit price to get order book
      * @param _limit The max limit for getting unit prices
      * @return unitPrices The array of order unit prices
@@ -328,7 +322,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @return next The next starting unit price to get order book
      */
     function getLendOrderBook(
-        uint8 _orderBookId,
+        uint256 _maturity,
         uint256 _start,
         uint256 _limit
     )
@@ -342,19 +336,19 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             uint256 next
         )
     {
-        return OrderBookLogic.getLendOrderBook(_orderBookId, _start, _limit);
+        return OrderBookLogic.getLendOrderBook(_maturity, _start, _limit);
     }
 
     /**
      * @notice Gets the estimation of the Itayose process.
-     * @param _orderBookId The order book id
+     * @param _maturity The maturity of the order book
      * @return openingUnitPrice The opening price when Itayose is executed
      * @return lastLendUnitPrice The price of the last lend order filled by Itayose.
      * @return lastBorrowUnitPrice The price of the last borrow order filled by Itayose.
      * @return totalOffsetAmount The total amount of the orders filled by Itayose.
      */
     function getItayoseEstimation(
-        uint8 _orderBookId
+        uint256 _maturity
     )
         external
         view
@@ -365,26 +359,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             uint256 totalOffsetAmount
         )
     {
-        return OrderBookLogic.getItayoseEstimation(_orderBookId);
-    }
-
-    /**
-     * @notice Gets the current market maturity.
-     * @param _orderBookId The order book id
-     * @return maturity The market maturity
-     */
-    function getMaturity(uint8 _orderBookId) public view override returns (uint256 maturity) {
-        return Storage.slot().orderBooks[_orderBookId].maturity;
-    }
-
-    /**
-     * @notice Gets the order book maturities.
-     * @return maturities The array of maturity
-     */
-    function getMaturities(
-        uint8[] calldata _orderBookIds
-    ) external view override returns (uint256[] memory maturities) {
-        return OrderBookLogic.getMaturities(_orderBookIds);
+        return OrderBookLogic.getItayoseEstimation(_maturity);
     }
 
     /**
@@ -413,11 +388,11 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
 
     /**
      * @notice Gets the market opening date.
-     * @param _orderBookId The order book id
+     * @param _maturity The maturity of the order book
      * @return openingDate The market opening date
      */
-    function getOpeningDate(uint8 _orderBookId) public view override returns (uint256 openingDate) {
-        return Storage.slot().orderBooks[_orderBookId].openingDate;
+    function getOpeningDate(uint256 _maturity) public view override returns (uint256 openingDate) {
+        return Storage.slot().orderBooks[_maturity].openingDate;
     }
 
     /**
@@ -431,18 +406,17 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
 
     /**
      * @notice Gets the market order from the order book.
-     * @param _orderBookId The order book id
+     * @param _maturity The maturity of the order book
      * @param _orderId The market order id
      * @return side Order position type, Borrow or Lend
      * @return unitPrice Amount of interest unit price
-     * @return maturity The maturity of the selected order
      * @return maker The order maker
      * @return amount Order amount
      * @return timestamp Timestamp when the order was created
      * @return isPreOrder The boolean if the order is a pre-order.
      */
     function getOrder(
-        uint8 _orderBookId,
+        uint256 _maturity,
         uint48 _orderId
     )
         public
@@ -451,76 +425,63 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         returns (
             ProtocolTypes.Side side,
             uint256 unitPrice,
-            uint256 maturity,
             address maker,
             uint256 amount,
             uint256 timestamp,
             bool isPreOrder
         )
     {
-        return OrderReaderLogic.getOrder(_orderBookId, _orderId);
+        return OrderReaderLogic.getOrder(_maturity, _orderId);
     }
 
     /**
      * @notice Calculates and gets the active and inactive amounts from the user orders of lending deals.
-     * @param _orderBookId The order book id
+     * @param _maturity The maturity of the order book
      * @param _user User's address
      * @return activeAmount The total amount of active order on the order book
      * @return inactiveAmount The total amount of inactive orders filled on the order book
      * @return inactiveFutureValue The total future value amount of inactive orders filled on the order book
-     * @return maturity The maturity of market that orders were placed.
      */
     function getTotalAmountFromLendOrders(
-        uint8 _orderBookId,
+        uint256 _maturity,
         address _user
     )
         external
         view
         override
-        returns (
-            uint256 activeAmount,
-            uint256 inactiveAmount,
-            uint256 inactiveFutureValue,
-            uint256 maturity
-        )
+        returns (uint256 activeAmount, uint256 inactiveAmount, uint256 inactiveFutureValue)
     {
-        return OrderReaderLogic.getTotalAmountFromLendOrders(_orderBookId, _user);
+        return OrderReaderLogic.getTotalAmountFromLendOrders(_maturity, _user);
     }
 
     /**
      * @notice Calculates and gets the active and inactive amounts from the user orders of borrowing deals.
-     * @param _orderBookId The order book id
+     * @param _maturity The maturity of the order book
      * @param _user User's address
      * @return activeAmount The total amount of active order on the order book
      * @return inactiveAmount The total amount of inactive orders filled on the order book
      * @return inactiveFutureValue The total future value amount of inactive orders filled on the order book
-     * @return maturity The maturity of market that orders were placed.
      */
     function getTotalAmountFromBorrowOrders(
-        uint8 _orderBookId,
+        uint256 _maturity,
         address _user,
         uint256 _minUnitPrice
     )
         external
         view
         override
-        returns (
-            uint256 activeAmount,
-            uint256 inactiveAmount,
-            uint256 inactiveFutureValue,
-            uint256 maturity
-        )
+        returns (uint256 activeAmount, uint256 inactiveAmount, uint256 inactiveFutureValue)
     {
-        return OrderReaderLogic.getTotalAmountFromBorrowOrders(_orderBookId, _user, _minUnitPrice);
+        return OrderReaderLogic.getTotalAmountFromBorrowOrders(_maturity, _user, _minUnitPrice);
     }
 
     /**
      * @notice Gets active and inactive order IDs in the lending order book.
-     * @param _orderBookId The order book id
+     * @param _maturity The maturity of the order book
      * @param _user User's address
      */
     function getLendOrderIds(
-        uint8 _orderBookId,
+        uint256 _maturity,
         address _user
     )
         external
@@ -528,16 +489,16 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         override
         returns (uint48[] memory activeOrderIds, uint48[] memory inActiveOrderIds)
     {
-        return OrderReaderLogic.getLendOrderIds(_orderBookId, _user);
+        return OrderReaderLogic.getLendOrderIds(_maturity, _user);
     }
 
     /**
      * @notice Gets active and inactive order IDs in the borrowing order book.
-     * @param _orderBookId The order book id
+     * @param _maturity The maturity of the order book
      * @param _user User's address
      */
     function getBorrowOrderIds(
-        uint8 _orderBookId,
+        uint256 _maturity,
         address _user
     )
         external
@@ -545,12 +506,12 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         override
         returns (uint48[] memory activeOrderIds, uint48[] memory inActiveOrderIds)
     {
-        return OrderReaderLogic.getBorrowOrderIds(_orderBookId, _user);
+        return OrderReaderLogic.getBorrowOrderIds(_maturity, _user);
     }
 
     /**
      * @notice Calculates the amount to be filled when executing an order in the order book.
-     * @param _orderBookId The order book id
+     * @param _maturity The maturity of the order book
      * @param _side Order position type, Borrow or Lend
      * @param _amount Amount of funds the user wants to borrow/lend
      * @param _unitPrice Unit price user want to borrow/lend
@@ -561,7 +522,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @return placedAmount The amount that is placed to the order book
      */
     function calculateFilledAmount(
-        uint8 _orderBookId,
+        uint256 _maturity,
         ProtocolTypes.Side _side,
         uint256 _amount,
         uint256 _unitPrice
@@ -577,7 +538,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             uint256 placedAmount
         )
     {
-        return OrderReaderLogic.calculateFilledAmount(_orderBookId, _side, _amount, _unitPrice);
+        return OrderReaderLogic.calculateFilledAmount(_maturity, _side, _amount, _unitPrice);
     }
 
     /**
@@ -590,34 +551,30 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         uint256 _maturity,
         uint256 _openingDate,
         uint256 _preOpeningDate
-    ) external override onlyLendingMarketController returns (uint8 orderBookId) {
+    ) external override onlyLendingMarketController {
         return OrderBookLogic.createOrderBook(_maturity, _openingDate, _preOpeningDate);
     }
 
     function executeAutoRoll(
-        uint8 _maturedOrderBookId,
-        uint8 _newNearestOrderBookId,
-        uint256 _newMaturity,
-        uint256 _openingDate,
+        uint256 _maturedOrderBookMaturity,
+        uint256 _destinationOrderBookMaturity,
         uint256 _autoRollUnitPrice
     ) external override onlyLendingMarketController {
         OrderBookLogic.executeAutoRoll(
-            _maturedOrderBookId,
-            _newNearestOrderBookId,
-            _newMaturity,
-            _openingDate,
+            _maturedOrderBookMaturity,
+            _destinationOrderBookMaturity,
             _autoRollUnitPrice
         );
     }
 
     /**
      * @notice Cancels the order.
-     * @param _orderBookId The order book id
+     * @param _maturity The maturity of the order book
      * @param _user User address
      * @param _orderId Market order id
      */
     function cancelOrder(
-        uint8 _orderBookId,
+        uint256 _maturity,
         address _user,
         uint48 _orderId
     )
@@ -625,10 +582,10 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         override
         whenNotPaused
         onlyLendingMarketController
-        onlyMaker(_orderBookId, _user, _orderId)
-        ifNotItayosePeriod(_orderBookId)
+        onlyMaker(_maturity, _user, _orderId)
+        ifNotItayosePeriod(_maturity)
     {
-        OrderActionLogic.cancelOrder(_orderBookId, _user, _orderId);
+        OrderActionLogic.cancelOrder(_maturity, _user, _orderId);
     }
 
     /**
@@ -644,10 +601,9 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @return removedBorrowOrderFutureValue The total FV amount of the removed borrow order amount from the order book
      * @return removedLendOrderAmount The total PV amount of the removed lend order amount from the order book
      * @return removedBorrowOrderAmount The total PV amount of the removed borrow order amount from the order book
-     * @return maturity The maturity of the removed orders
      */
     function cleanUpOrders(
-        uint8 _orderBookId,
+        uint256 _maturity,
         address _user
     )
         external
@@ -659,17 +615,16 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             uint256 removedLendOrderFutureValue,
             uint256 removedBorrowOrderFutureValue,
             uint256 removedLendOrderAmount,
-            uint256 removedBorrowOrderAmount,
-            uint256 maturity
+            uint256 removedBorrowOrderAmount
         )
     {
-        return OrderActionLogic.cleanUpOrders(_orderBookId, _user);
+        return OrderActionLogic.cleanUpOrders(_maturity, _user);
     }
 
     /**
      * @notice Executes an order. Takes orders if the order is matched,
      * and places new order if not match it.
-     * @param _orderBookId The order book id
+     * @param _maturity The maturity of the order book
      * @param _side Order position type, Borrow or Lend
      * @param _user User's address
      * @param _amount Amount of funds the user wants to borrow/lend
@@ -678,7 +633,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @return partiallyFilledOrder Partially filled order on the order book
      */
     function executeOrder(
-        uint8 _orderBookId,
+        uint256 _maturity,
         ProtocolTypes.Side _side,
         address _user,
         uint256 _amount,
@@ -688,7 +643,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         override
         whenNotPaused
         onlyLendingMarketController
-        ifOpened(_orderBookId)
+        ifOpened(_maturity)
         returns (
             FilledOrder memory filledOrder,
             PartiallyFilledOrder memory partiallyFilledOrder,
@@ -697,7 +652,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     {
         return
             OrderActionLogic.executeOrder(
-                _orderBookId,
+                _maturity,
                 _side,
                 _user,
                 _amount,
@@ -713,24 +668,24 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @notice Executes a pre-order. A pre-order will only be accepted from 168 hours (7 days) to 1 hour
      * before the market opens (Pre-order period). At the end of this period, Itayose will be executed.
      *
-     * @param _orderBookId The order book id
+     * @param _maturity The maturity of the order book
      * @param _side Order position type, Borrow or Lend
      * @param _amount Amount of funds the maker wants to borrow/lend
      * @param _unitPrice Unit price taker wish to borrow/lend
      */
     function executePreOrder(
-        uint8 _orderBookId,
+        uint256 _maturity,
         ProtocolTypes.Side _side,
         address _user,
         uint256 _amount,
         uint256 _unitPrice
-    ) external override whenNotPaused onlyLendingMarketController ifPreOrderPeriod(_orderBookId) {
-        OrderActionLogic.executePreOrder(_orderBookId, _side, _user, _amount, _unitPrice);
+    ) external override whenNotPaused onlyLendingMarketController ifPreOrderPeriod(_maturity) {
+        OrderActionLogic.executePreOrder(_maturity, _side, _user, _amount, _unitPrice);
     }
 
     /**
      * @notice Unwinds lending or borrowing positions by a specified future value amount.
-     * @param _orderBookId The order book id
+     * @param _maturity The maturity of the order book
      * @param _side Order position type, Borrow or Lend
      * @param _user User's address
      * @param _futureValue Amount of future value unwound
@@ -738,7 +693,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @return partiallyFilledOrder Partially filled order
      */
     function unwindPosition(
-        uint8 _orderBookId,
+        uint256 _maturity,
         ProtocolTypes.Side _side,
         address _user,
         uint256 _futureValue
@@ -747,7 +702,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         override
         whenNotPaused
         onlyLendingMarketController
-        ifOpened(_orderBookId)
+        ifOpened(_maturity)
         returns (
             FilledOrder memory filledOrder,
             PartiallyFilledOrder memory partiallyFilledOrder,
@@ -756,7 +711,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     {
         return
             OrderActionLogic.unwindPosition(
-                _orderBookId,
+                _maturity,
                 _side,
                 _user,
                 _futureValue,
@@ -771,7 +726,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @notice Executes Itayose to aggregate pre-orders and determine the opening unit price.
      * After this action, the market opens.
      * @dev If the opening date had already passed when this contract was created, this Itayose need not be executed.
-     * @param _orderBookId The order book id
+     * @param _maturity The maturity of the order book
      * @return openingUnitPrice The opening price when Itayose is executed
      * @return totalOffsetAmount The total filled amount when Itayose is executed
      * @return openingDate The timestamp when the market opens
@@ -779,13 +734,13 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @return partiallyFilledBorrowingOrder Partially filled borrowing order on the order book
      */
     function executeItayoseCall(
-        uint8 _orderBookId
+        uint256 _maturity
     )
         external
         override
         whenNotPaused
         onlyLendingMarketController
-        ifItayosePeriod(_orderBookId)
+        ifItayosePeriod(_maturity)
         returns (
             uint256 openingUnitPrice,
             uint256 totalOffsetAmount,
@@ -794,7 +749,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             PartiallyFilledOrder memory partiallyFilledBorrowingOrder
         )
     {
-        return OrderBookLogic.executeItayoseCall(_orderBookId);
+        return OrderBookLogic.executeItayoseCall(_maturity);
     }
 
     /**
