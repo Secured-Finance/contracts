@@ -1,9 +1,10 @@
 import moment from 'moment';
 
 const getAdjustedGenesisDate = (): number =>
-  Number(process.env.MARKET_BASE_PERIOD) === 0
-    ? Number(process.env.INITIAL_MARKET_OPENING_DATE || moment().unix())
-    : getGenesisDate();
+  Number(process.env.INITIAL_MARKET_OPENING_DATE) ||
+  (Number(process.env.MARKET_BASE_PERIOD) === 0
+    ? moment().unix()
+    : getGenesisDate());
 
 // Returns 1st of Mar, Jun, Sep, or Dec.
 const getGenesisDate = (input?: moment.MomentInput): number => {
