@@ -235,19 +235,31 @@ describe('TokenVault', () => {
         );
       };
 
-      await updateLiquidationConfiguration(1000);
+      await updateLiquidationConfiguration(PCT_DIGIT + 1);
       await updateLiquidationConfiguration(LIQUIDATION_THRESHOLD_RATE);
     });
 
     it('Fail to call updateLiquidationConfiguration due to invalid rate', async () => {
       await expect(
-        tokenVaultProxy.updateLiquidationConfiguration('0', '1', '1'),
+        tokenVaultProxy.updateLiquidationConfiguration(
+          PCT_DIGIT,
+          PCT_DIGIT,
+          PCT_DIGIT,
+        ),
       ).to.be.revertedWith('InvalidLiquidationThresholdRate');
       await expect(
-        tokenVaultProxy.updateLiquidationConfiguration('1', '10001', '1'),
+        tokenVaultProxy.updateLiquidationConfiguration(
+          PCT_DIGIT + 1,
+          PCT_DIGIT + 1,
+          PCT_DIGIT,
+        ),
       ).to.be.revertedWith('InvalidLiquidationProtocolFeeRate');
       await expect(
-        tokenVaultProxy.updateLiquidationConfiguration('1', '1', '10001'),
+        tokenVaultProxy.updateLiquidationConfiguration(
+          PCT_DIGIT + 1,
+          PCT_DIGIT,
+          PCT_DIGIT + 1,
+        ),
       ).to.be.revertedWith('InvalidLiquidatorFeeRate');
     });
 
