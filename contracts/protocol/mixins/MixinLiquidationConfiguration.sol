@@ -82,7 +82,8 @@ contract MixinLiquidationConfiguration is Ownable {
         uint256 _liquidationProtocolFeeRate,
         uint256 _liquidatorFeeRate
     ) private {
-        if (_liquidationThresholdRate == 0) revert InvalidLiquidationThresholdRate();
+        if (_liquidationThresholdRate <= Constants.PCT_DIGIT)
+            revert InvalidLiquidationThresholdRate();
         if (_liquidationProtocolFeeRate > Constants.PCT_DIGIT)
             revert InvalidLiquidationProtocolFeeRate();
         if (_liquidatorFeeRate > Constants.PCT_DIGIT) revert InvalidLiquidatorFeeRate();
