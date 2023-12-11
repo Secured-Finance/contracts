@@ -30,10 +30,10 @@
   },
   "author": "Secured Finance",
   "license": "BUSL-1.1",
-  "homepage": "https://github.com/secured-finance/smart-contracts#readme",
+  "homepage": "https://github.com/secured-finance/contracts#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/secured-finance/smart-contracts"
+    "url": "https://github.com/secured-finance/contracts"
   },
   "dependencies": {
     "@chainlink/contracts": "^0.4.0",
