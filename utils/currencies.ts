@@ -27,7 +27,7 @@ export interface Currency {
   args: string[];
   priceFeed: {
     addresses: string[];
-    heartbeat: number;
+    heartbeats: number[];
   };
 }
 
@@ -57,7 +57,8 @@ const currencies: Record<string, Currency> = {
     args: ['1000000000000000'], // 1,000,000,000 USDC,
     priceFeed: {
       addresses: process.env.PRICE_FEED_ADDRESSES_USDC?.split(',') || [],
-      heartbeat: Number(process.env.PRICE_FEED_MAX_HEARTBEAT_USDC),
+      heartbeats:
+        process.env.PRICE_FEED_HEARTBEATS_USDC?.split(',').map(Number) || [],
     },
   },
   WBTC: {
@@ -70,7 +71,8 @@ const currencies: Record<string, Currency> = {
     args: ['4000000000000'], // 40,000 BTC,
     priceFeed: {
       addresses: process.env.PRICE_FEED_ADDRESSES_WBTC?.split(',') || [],
-      heartbeat: Number(process.env.PRICE_FEED_MAX_HEARTBEAT_WBTC),
+      heartbeats:
+        process.env.PRICE_FEED_HEARTBEATS_WBTC?.split(',').map(Number) || [],
     },
   },
   WETH: {
@@ -83,7 +85,8 @@ const currencies: Record<string, Currency> = {
     args: [],
     priceFeed: {
       addresses: process.env.PRICE_FEED_ADDRESSES_WETH?.split(',') || [],
-      heartbeat: Number(process.env.PRICE_FEED_MAX_HEARTBEAT_WETH),
+      heartbeats:
+        process.env.PRICE_FEED_HEARTBEATS_WETH?.split(',').map(Number) || [],
     },
   },
   wFIL: {
@@ -96,7 +99,8 @@ const currencies: Record<string, Currency> = {
     args: ['250000000000000000000000000'], // 250,000,000 wFIL
     priceFeed: {
       addresses: process.env.PRICE_FEED_ADDRESSES_WFIL?.split(',') || [],
-      heartbeat: Number(process.env.PRICE_FEED_MAX_HEARTBEAT_WFIL),
+      heartbeats:
+        process.env.PRICE_FEED_HEARTBEATS_WFIL?.split(',').map(Number) || [],
     },
   },
 };

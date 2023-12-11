@@ -14,8 +14,8 @@ interface ICurrencyController {
     error InvalidCurrency();
     error InvalidHaircut();
     error InvalidPriceFeed();
-    error InvalidDecimals();
-    error NoPriceFeedExists();
+    error InvalidDecimals(address priceFeed, uint8 decimals);
+    error InvalidPriceFeedInputs();
     error StalePriceFeed(
         address priceFeed,
         uint256 heartbeat,
@@ -85,7 +85,7 @@ interface ICurrencyController {
         bytes32 _ccy,
         uint8 _decimals,
         address[] calldata _priceFeeds,
-        uint256 _heartbeat
+        uint256[] calldata _heartbeats
     ) external;
 
     function addCurrency(
@@ -93,7 +93,7 @@ interface ICurrencyController {
         uint8 _decimals,
         uint256 _haircut,
         address[] calldata _priceFeeds,
-        uint256 _heartbeat
+        uint256[] calldata _heartbeats
     ) external;
 
     function updateHaircut(bytes32 _ccy, uint256 _haircut) external;

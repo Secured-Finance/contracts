@@ -31,7 +31,9 @@ describe('CurrencyController', () => {
     const proxyController = await deployContract(owner, ProxyController, [
       ethers.constants.AddressZero,
     ]);
-    const currencyController = await deployContract(owner, CurrencyController);
+    const currencyController = await deployContract(owner, CurrencyController, [
+      18,
+    ]);
 
     // Get the Proxy contract addresses
     await proxyController.setAddressResolverImpl(addressResolver.address);
@@ -65,7 +67,7 @@ describe('CurrencyController', () => {
         18,
         9000,
         [mockPriceFeed.address],
-        86400,
+        [86400],
       );
       await expect(tx).to.emit(currencyControllerProxy, 'CurrencyAdded');
       await expect(tx).to.emit(currencyControllerProxy, 'PriceFeedUpdated');
@@ -93,10 +95,11 @@ describe('CurrencyController', () => {
 
       await currencyControllerProxy
         .getPriceFeed(currency)
-        .then(({ instances, heartbeat }) => {
+        .then(({ instances, heartbeats }) => {
           expect(instances.length).to.equal(1);
           expect(instances[0]).to.equal(mockPriceFeed.address);
-          expect(heartbeat).to.equal(86400);
+          expect(heartbeats.length).to.equal(1);
+          expect(heartbeats[0]).to.equal(86400);
         });
     });
 
@@ -113,7 +116,7 @@ describe('CurrencyController', () => {
           18,
           8000,
           [mockPriceFeed.address],
-          86400,
+          [86400],
         ),
       ).to.be.revertedWith('InvalidPriceFeed');
     });
@@ -131,17 +134,49 @@ describe('CurrencyController', () => {
           18,
           8000,
           [mockPriceFeed.address],
-          86400,
+          [86400],
         ),
-      ).to.be.revertedWith('InvalidDecimals');
+      ).to.be.revertedWith(`InvalidDecimals("${mockPriceFeed.address}", 19)`);
     });
 
-    it('Fail to add a currency due to the invalid price feed', async () => {
+    it('Fail to add a currency due to the mismatch of price feeds decimals with the base currency', async () => {
+      const currency = ethers.utils.formatBytes32String('ETH');
+
+      // Set up for the mocks
+      await mockPriceFeed.mock.latestRoundData.returns(0, 100, 0, 0, 0);
+      await mockPriceFeed.mock.decimals.returns(10);
+
+      await expect(
+        currencyControllerProxy.addCurrency(
+          currency,
+          18,
+          8000,
+          [mockPriceFeed.address],
+          [86400],
+        ),
+      ).to.be.revertedWith(`InvalidDecimals("${mockPriceFeed.address}", 10)`);
+    });
+
+    it('Fail to add a currency due to empty price feed', async () => {
       const currency = ethers.utils.formatBytes32String('ETH');
 
       await expect(
-        currencyControllerProxy.addCurrency(currency, 18, 9000, [], 0),
-      ).revertedWith('NoPriceFeedExists');
+        currencyControllerProxy.addCurrency(currency, 18, 9000, [], []),
+      ).revertedWith('InvalidPriceFeedInputs');
+    });
+
+    it('Fail to add a currency due to input array length mismatch', async () => {
+      const currency = ethers.utils.formatBytes32String('ETH');
+
+      await expect(
+        currencyControllerProxy.addCurrency(
+          currency,
+          18,
+          9000,
+          [mockPriceFeed.address],
+          [],
+        ),
+      ).revertedWith('InvalidPriceFeedInputs');
     });
 
     it('Fail to add a currency due to execution by non-owner', async () => {
@@ -150,7 +185,7 @@ describe('CurrencyController', () => {
       await expect(
         currencyControllerProxy
           .connect(alice)
-          .addCurrency(currency, 18, 9000, [mockPriceFeed.address], 0),
+          .addCurrency(currency, 18, 9000, [mockPriceFeed.address], [0]),
       ).revertedWith('Ownable: caller is not the owner');
     });
 
@@ -164,6 +199,7 @@ describe('CurrencyController', () => {
       const currencyController = await deployContract(
         owner,
         CurrencyController,
+        [18],
       );
 
       await expect(currencyController.initialize(owner.address)).revertedWith(
@@ -189,7 +225,7 @@ describe('CurrencyController', () => {
         18,
         9000,
         [mockPriceFeed.address],
-        86400,
+        [86400],
       );
     });
 
@@ -226,7 +262,7 @@ describe('CurrencyController', () => {
           currency,
           18,
           [newMockPriceFeed.address],
-          86400,
+          [86400],
         ),
       ).to.emit(currencyControllerProxy, 'PriceFeedUpdated');
 
@@ -274,7 +310,7 @@ describe('CurrencyController', () => {
           currency,
           18,
           [newMockPriceFeed1.address, newMockPriceFeed2.address],
-          86400,
+          [86400, 3600],
         ),
       ).to.emit(currencyControllerProxy, 'PriceFeedUpdated');
 
@@ -292,8 +328,8 @@ describe('CurrencyController', () => {
       const currency2 = ethers.utils.formatBytes32String('CCY2');
 
       const inputs = [
-        [currency1, 18, 9000, [mockPriceFeed.address], 86400],
-        [currency2, 18, 8000, [mockPriceFeed.address], 3600],
+        [currency1, 18, 9000, [mockPriceFeed.address], [86400]],
+        [currency2, 18, 8000, [mockPriceFeed.address], [3600]],
       ];
 
       await currencyControllerProxy.multicall(
@@ -333,9 +369,28 @@ describe('CurrencyController', () => {
           ethers.utils.formatBytes32String('TEST'),
           1,
           [],
-          1,
+          [],
         ),
       ).to.be.revertedWith('InvalidCurrency');
+    });
+
+    it('Fail to update the price feed due to input array length mismatch', async () => {
+      await currencyControllerProxy.addCurrency(
+        currency,
+        18,
+        9000,
+        [mockPriceFeed.address],
+        [0],
+      );
+
+      await expect(
+        currencyControllerProxy.updatePriceFeed(
+          currency,
+          1,
+          [mockPriceFeed.address],
+          [],
+        ),
+      ).to.be.revertedWith('InvalidPriceFeedInputs');
     });
 
     it('Fail to remove the currency due to execution by non-owner', async () => {
@@ -354,11 +409,11 @@ describe('CurrencyController', () => {
       await expect(
         currencyControllerProxy
           .connect(alice)
-          .updatePriceFeed(currency, 1, [], 1),
+          .updatePriceFeed(currency, 1, [], []),
       ).revertedWith('Ownable: caller is not the owner');
     });
 
-    it('Fail to update the price feed due to stale price feed', async () => {
+    it('Fail to update the price feed due to stale price feed with old timestamp', async () => {
       const { timestamp: now } = await ethers.provider.getBlock('latest');
       await mockPriceFeed.mock.latestRoundData.returns(
         0,
@@ -373,7 +428,21 @@ describe('CurrencyController', () => {
           currency,
           1,
           [mockPriceFeed.address],
-          86400,
+          [86400],
+        ),
+      ).to.be.revertedWith('InvalidPriceFeed');
+    });
+
+    it('Fail to update the price feed due to stale price feed with zero price', async () => {
+      const { timestamp: now } = await ethers.provider.getBlock('latest');
+      await mockPriceFeed.mock.latestRoundData.returns(0, 0, 0, now, 0);
+
+      await expect(
+        currencyControllerProxy.updatePriceFeed(
+          currency,
+          1,
+          [mockPriceFeed.address],
+          [86400],
         ),
       ).to.be.revertedWith('InvalidPriceFeed');
     });
@@ -402,7 +471,7 @@ describe('CurrencyController', () => {
         18,
         9000,
         [mockPriceFeed.address],
-        86400,
+        [86400],
       );
     });
 
@@ -502,7 +571,7 @@ describe('CurrencyController', () => {
         18,
         9000,
         [mockPriceFeed2.address],
-        86400,
+        [86400],
       );
 
       const amount = await currencyControllerProxy[
@@ -546,7 +615,7 @@ describe('CurrencyController', () => {
         18,
         9000,
         [mockPriceFeed2.address],
-        86400,
+        [86400],
       );
 
       const amounts = await currencyControllerProxy[
@@ -578,7 +647,7 @@ describe('CurrencyController', () => {
         18,
         9000,
         [mockPriceFeed.address],
-        86400,
+        [86400],
       );
 
       const zeroAmounts = await currencyControllerProxy[
@@ -589,7 +658,7 @@ describe('CurrencyController', () => {
       expect(zeroAmounts[0]).to.equal(0);
     });
 
-    it('Fail to get the converted amount due to stale price feed', async () => {
+    it('Fail to get the converted amount due to stale price feed with old timestamp', async () => {
       const { timestamp: now } = await ethers.provider.getBlock('latest');
       await mockPriceFeed.mock.latestRoundData.returns(
         0,
@@ -598,6 +667,18 @@ describe('CurrencyController', () => {
         now - 86400 - 60 * 5,
         0,
       );
+
+      await expect(
+        currencyControllerProxy['convertToBaseCurrency(bytes32,int256)'](
+          currency,
+          10000000000,
+        ),
+      ).to.be.revertedWith('StalePriceFeed');
+    });
+
+    it('Fail to get the converted amount due to stale price feed with zero price', async () => {
+      const { timestamp: now } = await ethers.provider.getBlock('latest');
+      await mockPriceFeed.mock.latestRoundData.returns(0, 0, 0, now, 0);
 
       await expect(
         currencyControllerProxy['convertToBaseCurrency(bytes32,int256)'](

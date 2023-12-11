@@ -1,3 +1,4 @@
+export const BASE_CURRENCY_DECIMALS = 8;
 export const ORDER_FEE_RATE = 100;
 export const CIRCUIT_BREAKER_LIMIT_RANGE = 500;
 export const MIN_DEBT_UNIT_PRICE = 8100;

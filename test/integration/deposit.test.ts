@@ -661,7 +661,7 @@ describe('Integration Test: Deposit', async () => {
       const priceFeedContract = await ethers
         .getContractFactory('MockV3Aggregator')
         .then((factory) =>
-          factory.deploy(18, hexTestToken, '2000000000000000000'),
+          factory.deploy(8, hexTestToken, '2000000000000000000'),
         );
 
       testToken = await ethers
@@ -673,7 +673,7 @@ describe('Integration Test: Deposit', async () => {
         18,
         HAIRCUT,
         [priceFeedContract.address],
-        86400,
+        [86400],
       );
 
       await tokenVault.registerCurrency(hexTestToken, testToken.address, true);

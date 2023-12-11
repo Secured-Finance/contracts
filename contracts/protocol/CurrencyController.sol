@@ -32,6 +32,8 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable, Multical
     using RoundingInt256 for int256;
 
     uint256 public constant HEARTBEAT_BUFFER = 5 minutes;
+    /// @dev Used for decimals of the base currency
+    uint256 immutable BASE_CURRENCY_DECIMALS;
 
     /**
      * @notice Modifier to check if the currency is supported.
@@ -40,6 +42,14 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable, Multical
     modifier onlySupportedCurrency(bytes32 _ccy) {
         if (!currencyExists(_ccy)) revert InvalidCurrency();
         _;
+    }
+
+    /**
+     * @notice Contract constructor function.
+     * @param _baseCurrencyDecimals The decimals of the base currency
+     */
+    constructor(uint256 _baseCurrencyDecimals) {
+        BASE_CURRENCY_DECIMALS = _baseCurrencyDecimals;
     }
 
     /**
@@ -99,18 +109,19 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable, Multical
      * @param _decimals Currency decimals
      * @param _haircut Remaining ratio after haircut
      * @param _priceFeeds Array with the contract address of price feed
+     * @param _heartbeats Array with the heartbeat of price feed
      */
     function addCurrency(
         bytes32 _ccy,
         uint8 _decimals,
         uint256 _haircut,
         address[] calldata _priceFeeds,
-        uint256 _heartbeat
+        uint256[] calldata _heartbeats
     ) public override onlyOwner {
         Storage.slot().currencies.add(_ccy);
 
         _updateHaircut(_ccy, _haircut);
-        _updatePriceFeed(_ccy, _decimals, _priceFeeds, _heartbeat);
+        _updatePriceFeed(_ccy, _decimals, _priceFeeds, _heartbeats);
 
         emit CurrencyAdded(_ccy, _haircut);
     }
@@ -141,14 +152,15 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable, Multical
      * @param _ccy Currency name in bytes32
      * @param _decimals Currency decimals
      * @param _priceFeeds Array with the contract address of price feed
+     * @param _heartbeats Array with the heartbeat of price feed
      */
     function updatePriceFeed(
         bytes32 _ccy,
         uint8 _decimals,
         address[] calldata _priceFeeds,
-        uint256 _heartbeat
+        uint256[] calldata _heartbeats
     ) public override onlyOwner onlySupportedCurrency(_ccy) {
-        _updatePriceFeed(_ccy, _decimals, _priceFeeds, _heartbeat);
+        _updatePriceFeed(_ccy, _decimals, _priceFeeds, _heartbeats);
     }
 
     /**
@@ -327,10 +339,13 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable, Multical
         for (uint256 i; i < priceFeeds.instances.length; i++) {
             (, int256 price, , uint256 updatedAt, ) = priceFeeds.instances[i].latestRoundData();
 
-            if (updatedAt < block.timestamp - priceFeeds.heartbeat - HEARTBEAT_BUFFER) {
+            if (
+                price <= 0 ||
+                updatedAt < block.timestamp - priceFeeds.heartbeats[i] - HEARTBEAT_BUFFER
+            ) {
                 revert StalePriceFeed(
                     address(priceFeeds.instances[i]),
-                    priceFeeds.heartbeat,
+                    priceFeeds.heartbeats[i],
                     updatedAt,
                     block.timestamp
                 );
@@ -351,24 +366,27 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable, Multical
         bytes32 _ccy,
         uint8 _decimals,
         address[] calldata _priceFeeds,
-        uint256 _heartbeat
+        uint256[] calldata _heartbeats
     ) internal {
-        AggregatorV3Interface[] memory priceFeeds = new AggregatorV3Interface[](_priceFeeds.length);
+        if (_priceFeeds.length == 0 || _priceFeeds.length != _heartbeats.length)
+            revert InvalidPriceFeedInputs();
 
-        if (_priceFeeds.length == 0) revert NoPriceFeedExists();
+        AggregatorV3Interface[] memory priceFeeds = new AggregatorV3Interface[](_priceFeeds.length);
 
         for (uint256 i; i < _priceFeeds.length; i++) {
             priceFeeds[i] = AggregatorV3Interface(_priceFeeds[i]);
 
             uint8 decimals = priceFeeds[i].decimals();
-            if (decimals > 18) revert InvalidDecimals();
+            if (
+                decimals > 18 || (i == _priceFeeds.length - 1 && decimals != BASE_CURRENCY_DECIMALS)
+            ) revert InvalidDecimals(_priceFeeds[i], decimals);
 
             (, int256 price, , uint256 updatedAt, ) = priceFeeds[i].latestRoundData();
-            if (price < 0 || updatedAt < block.timestamp - _heartbeat - HEARTBEAT_BUFFER)
+            if (price <= 0 || updatedAt < block.timestamp - _heartbeats[i] - HEARTBEAT_BUFFER)
                 revert InvalidPriceFeed();
         }
 
-        Storage.slot().priceFeeds[_ccy] = PriceFeed(priceFeeds, _heartbeat);
+        Storage.slot().priceFeeds[_ccy] = PriceFeed(priceFeeds, _heartbeats);
         Storage.slot().decimalsCaches[_ccy] = _decimals;
 
         emit PriceFeedUpdated(_ccy, _decimals, _priceFeeds);

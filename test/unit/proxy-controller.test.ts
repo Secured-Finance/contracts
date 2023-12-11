@@ -3,6 +3,7 @@ import { expect } from 'chai';
 import { Contract, ContractTransaction } from 'ethers';
 import { artifacts, ethers, waffle } from 'hardhat';
 import { hexETH, hexWBTC, toBytes32 } from '../../utils/strings';
+import { BASE_CURRENCY_DECIMALS } from '../common/constants';
 import { btcToUSDRate, wBtcToBTCRate } from '../common/currencies';
 
 const AddressResolver = artifacts.require('AddressResolver');
@@ -56,6 +57,7 @@ describe('ProxyController', () => {
       const currencyController = await deployContract(
         owner,
         CurrencyController,
+        [BASE_CURRENCY_DECIMALS],
       );
       const tx = await proxyController.setCurrencyControllerImpl(
         currencyController.address,
@@ -74,6 +76,7 @@ describe('ProxyController', () => {
       const currencyController = await deployContract(
         owner,
         CurrencyController,
+        [BASE_CURRENCY_DECIMALS],
       );
 
       await expect(
@@ -88,6 +91,7 @@ describe('ProxyController', () => {
       const currencyController1 = await deployContract(
         owner,
         CurrencyController,
+        [BASE_CURRENCY_DECIMALS],
       );
       const currencyControllerProxyAddress1 = await proxyController
         .setCurrencyControllerImpl(currencyController1.address)
@@ -102,6 +106,7 @@ describe('ProxyController', () => {
       const currencyController2 = await deployContract(
         owner,
         CurrencyController,
+        [BASE_CURRENCY_DECIMALS],
       );
       const tx = await proxyController.setCurrencyControllerImpl(
         currencyController2.address,
@@ -217,6 +222,7 @@ describe('ProxyController', () => {
       const currencyController = await deployContract(
         owner,
         CurrencyController,
+        [BASE_CURRENCY_DECIMALS],
       );
       const currencyControllerProxyAddress = await proxyController
         .setCurrencyControllerImpl(currencyController.address)
@@ -267,6 +273,7 @@ describe('ProxyController', () => {
       const currencyController1 = await deployContract(
         owner,
         CurrencyController,
+        [BASE_CURRENCY_DECIMALS],
       );
       const currencyControllerProxyAddress1 = await proxyController
         .setCurrencyControllerImpl(currencyController1.address)
@@ -282,21 +289,21 @@ describe('ProxyController', () => {
 
       // Set up for CurrencyController
       const btcToETHPriceFeed = await deployContract(owner, MockV3Aggregator, [
-        18,
+        BASE_CURRENCY_DECIMALS,
         hexWBTC,
         btcToUSDRate,
       ]);
       const wBtcToBTCPriceFeed = await deployContract(owner, MockV3Aggregator, [
-        6,
+        BASE_CURRENCY_DECIMALS,
         hexWBTC,
         wBtcToBTCRate,
       ]);
       await currencyControllerProxy1.addCurrency(
         hexWBTC,
-        6,
+        BASE_CURRENCY_DECIMALS,
         HAIRCUT,
         [wBtcToBTCPriceFeed.address, btcToETHPriceFeed.address],
-        HEARTBEAT,
+        [HEARTBEAT, HEARTBEAT],
       );
 
       const haircut1 = await currencyControllerProxy1.getHaircut(hexWBTC);
@@ -309,6 +316,7 @@ describe('ProxyController', () => {
       const currencyController2 = await deployContract(
         owner,
         CurrencyController,
+        [BASE_CURRENCY_DECIMALS],
       );
       const currencyControllerProxyAddress2 = await proxyController
         .setCurrencyControllerImpl(currencyController2.address)
@@ -325,6 +333,7 @@ describe('ProxyController', () => {
       const currencyController = await deployContract(
         owner,
         CurrencyController,
+        [BASE_CURRENCY_DECIMALS],
       );
 
       await expect(currencyController.initialize(owner.address)).revertedWith(
@@ -338,6 +347,7 @@ describe('ProxyController', () => {
       const currencyController = await deployContract(
         owner,
         CurrencyController,
+        [BASE_CURRENCY_DECIMALS],
       );
 
       const currencyControllerProxyAddress = await proxyController

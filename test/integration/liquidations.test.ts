@@ -1996,7 +1996,7 @@ describe('Integration Test: Liquidations', async () => {
     let decimals: BigNumber;
     let haircut: BigNumber;
     let priceFeeds: string[];
-    let heartbeat: BigNumber;
+    let heartbeats: BigNumber[];
 
     const addCurrency = async (currency: string) => {
       if (!(await currencyController.currencyExists(currency))) {
@@ -2005,7 +2005,7 @@ describe('Integration Test: Liquidations', async () => {
           decimals,
           haircut,
           priceFeeds,
-          heartbeat,
+          heartbeats,
         );
       }
     };
@@ -2013,7 +2013,7 @@ describe('Integration Test: Liquidations', async () => {
     before(async () => {
       decimals = await currencyController.getDecimals(hexWFIL);
       haircut = await currencyController.getHaircut(hexWFIL);
-      ({ instances: priceFeeds, heartbeat } =
+      ({ instances: priceFeeds, heartbeats } =
         await currencyController.getPriceFeed(hexWFIL));
     });
 
