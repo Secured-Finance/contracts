@@ -11,6 +11,7 @@ import {
   toBytes32,
 } from '../../utils/strings';
 import {
+  BASE_CURRENCY_DECIMALS,
   CIRCUIT_BREAKER_LIMIT_RANGE,
   HAIRCUT,
   INITIAL_COMPOUND_FACTOR,
@@ -87,21 +88,23 @@ const deployContracts = async () => {
   const [
     addressResolver,
     beaconProxyController,
-    currencyController,
     genesisValueVault,
     reserveFund,
+    currencyController,
     tokenVault,
     lendingMarketController,
   ] = await Promise.all([
     ...[
       'AddressResolver',
       'BeaconProxyController',
-      'CurrencyController',
       'GenesisValueVault',
       'ReserveFund',
     ].map((contract) =>
       ethers.getContractFactory(contract).then((factory) => factory.deploy()),
     ),
+    ethers
+      .getContractFactory('CurrencyController')
+      .then((factory) => factory.deploy(BASE_CURRENCY_DECIMALS)),
     ethers
       .getContractFactory('TokenVault', {
         libraries: {
@@ -233,7 +236,7 @@ const deployContracts = async () => {
   for (const currency of currencyIterator()) {
     const mock = mocks[currency.symbol];
     const priceFeedAddresses: string[] = [];
-    let heartbeat = 0;
+    const heartbeats: number[] = [];
     let decimals = 0;
 
     for (const priceFeed of mock.priceFeeds) {
@@ -250,9 +253,7 @@ const deployContracts = async () => {
 
       priceFeedAddresses.push(priceFeedContracts[priceFeed.name].address);
 
-      if (heartbeat < priceFeed.heartbeat) {
-        heartbeat = priceFeed.heartbeat;
-      }
+      heartbeats.push(priceFeed.heartbeat);
     }
 
     await currencyControllerProxy.addCurrency(
@@ -260,7 +261,7 @@ const deployContracts = async () => {
       decimals,
       HAIRCUT,
       priceFeedAddresses,
-      heartbeat,
+      heartbeats,
     );
   }
 

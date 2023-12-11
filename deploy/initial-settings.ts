@@ -54,7 +54,7 @@ const updateCurrencyControllerSettings = async (
 
     const priceFeedAddresses = currency.priceFeed.addresses.filter(Boolean);
     const mock = mocks[currency.symbol];
-    let heartbeat = 0;
+    let heartbeats: number[] = [];
 
     if (priceFeedAddresses.length === 0) {
       for (const priceFeed of mock.priceFeeds) {
@@ -68,13 +68,10 @@ const updateCurrencyControllerSettings = async (
         );
 
         priceFeedAddresses.push(priceFeedContract.address);
-
-        if (heartbeat < priceFeed.heartbeat) {
-          heartbeat = priceFeed.heartbeat;
-        }
+        heartbeats.push(priceFeed.heartbeat);
       }
     } else {
-      heartbeat = currency.priceFeed.heartbeat;
+      heartbeats = currency.priceFeed.heartbeats;
     }
 
     const decimals = getAggregatedDecimals(
@@ -89,7 +86,7 @@ const updateCurrencyControllerSettings = async (
         decimals,
         currency.haircut,
         priceFeedAddresses,
-        heartbeat,
+        heartbeats,
       )
       .then((tx) => tx.wait());
   }

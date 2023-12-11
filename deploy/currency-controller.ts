@@ -1,5 +1,6 @@
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
+import { BASE_CURRENCY_DECIMALS } from '../test/common/constants';
 import {
   DeploymentStorage,
   executeIfNewlyDeployment,
@@ -15,6 +16,7 @@ const func: DeployFunction = async function ({
 
   const deployResult = await deploy('CurrencyController', {
     from: deployer,
+    args: [BASE_CURRENCY_DECIMALS],
   });
 
   await executeIfNewlyDeployment(

@@ -6,7 +6,7 @@ import "../../dependencies/openzeppelin/utils/structs/EnumerableSet.sol";
 
 struct PriceFeed {
     AggregatorV3Interface[] instances;
-    uint256 heartbeat;
+    uint256[] heartbeats;
 }
 
 library CurrencyControllerStorage {
