@@ -52,11 +52,11 @@ const config: HardhatUserConfig = {
       gasPrice: 'auto',
       gasMultiplier: 3,
     },
-    goerli: {
+    sepolia: {
       url:
         process.env.FORK_RPC_ENDPOINT ||
-        `https://eth-goerli.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
-      chainId: 5,
+        `https://eth-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
+      chainId: 11155111,
       accounts: privateKey,
       live: true,
       saveDeployments: true,
