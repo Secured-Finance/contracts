@@ -44,6 +44,7 @@ jobs:
         run: npm run compile
       - name: Set environment variables
         run: |
+          echo "INITIAL_CURRENCIES=${{ vars.INITIAL_CURRENCIES }}" >> $GITHUB_ENV
           echo "INITIAL_COMPOUND_FACTOR=${{ vars.INITIAL_COMPOUND_FACTOR }}" >> $GITHUB_ENV
           echo "INITIAL_MARKET_OPENING_DATE=${{ vars.INITIAL_MARKET_OPENING_DATE }}" >> $GITHUB_ENV
           echo "INITIAL_MARKET_PRE_OPENING_DATE=${{ vars.INITIAL_MARKET_PRE_OPENING_DATE }}" >> $GITHUB_ENV

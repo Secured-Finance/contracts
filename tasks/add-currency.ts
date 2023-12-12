@@ -15,10 +15,10 @@ task('add-currency', 'Add a new currency to the protocol')
     types.string,
   )
   .addParam(
-    'heartbeat',
-    'Countdown timer that updates the price feed',
-    0,
-    types.int,
+    'heartbeats',
+    'Array with the countdown timer that updates the price feed',
+    undefined,
+    types.string,
   )
   .addParam('tokenAddress', 'ERC20 token address', undefined, types.string)
   .addParam(
@@ -29,7 +29,7 @@ task('add-currency', 'Add a new currency to the protocol')
   )
   .setAction(
     async (
-      { currency, haircut, priceFeeds, heartbeat, tokenAddress, isCollateral },
+      { currency, haircut, priceFeeds, heartbeats, tokenAddress, isCollateral },
       { deployments, ethers },
     ) => {
       if (!ethers.utils.isAddress(tokenAddress)) {
@@ -91,40 +91,49 @@ task('add-currency', 'Add a new currency to the protocol')
         decimals,
         haircut,
         priceFeeds.split(', '),
-        heartbeat,
+        heartbeats.split(', '),
       ];
 
       const tokenVaultArgs = [toBytes32(currency), tokenAddress, isCollateral];
 
-      await proposal.add(
-        currencyController.address,
-        currencyController.contract.interface.encodeFunctionData(
-          'addCurrency',
-          currencyControllerArgs,
-        ),
-      );
+      if (process.env.ENABLE_AUTO_UPDATE === 'true') {
+        await currencyController.contract
+          .addCurrency(...currencyControllerArgs)
+          .then((tx) => tx.wait());
+        await tokenVault.contract
+          .registerCurrency(...tokenVaultArgs)
+          .then((tx) => tx.wait());
+      } else {
+        await proposal.add(
+          currencyController.address,
+          currencyController.contract.interface.encodeFunctionData(
+            'addCurrency',
+            currencyControllerArgs,
+          ),
+        );
 
-      await proposal.add(
-        tokenVault.address,
-        tokenVault.contract.interface.encodeFunctionData(
-          'registerCurrency',
-          tokenVaultArgs,
-        ),
-      );
+        await proposal.add(
+          tokenVault.address,
+          tokenVault.contract.interface.encodeFunctionData(
+            'registerCurrency',
+            tokenVaultArgs,
+          ),
+        );
 
-      console.table([
-        {
-          ContractName: 'CurrencyController',
-          FunctionName: 'addCurrency',
-          Args: currencyControllerArgs.join(', '),
-        },
-        {
-          ContractName: 'TokenVault',
-          FunctionName: 'registerCurrency',
-          Args: tokenVaultArgs.join(', '),
-        },
-      ]);
+        console.table([
+          {
+            ContractName: 'CurrencyController',
+            FunctionName: 'addCurrency',
+            Args: currencyControllerArgs.join(', '),
+          },
+          {
+            ContractName: 'TokenVault',
+            FunctionName: 'registerCurrency',
+            Args: tokenVaultArgs.join(', '),
+          },
+        ]);
 
-      await proposal.submit(await signer.getAddress());
+        await proposal.submit(await signer.getAddress());
+      }
     },
   );

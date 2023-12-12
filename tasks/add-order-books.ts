@@ -58,21 +58,27 @@ task('add-order-books', 'Add new order books to the protocol')
         preOpeningDate,
       );
 
-      await proposal.add(
-        lendingMarketController.address,
-        lendingMarketController.interface.encodeFunctionData('multicall', [
-          multicallInputs.map(({ callData }) => callData),
-        ]),
-      );
+      if (process.env.ENABLE_AUTO_UPDATE === 'true') {
+        await lendingMarketController
+          .multicall(multicallInputs.map(({ callData }) => callData))
+          .then((tx) => tx.wait());
+      } else {
+        await proposal.add(
+          lendingMarketController.address,
+          lendingMarketController.interface.encodeFunctionData('multicall', [
+            multicallInputs.map(({ callData }) => callData),
+          ]),
+        );
 
-      console.table(
-        multicallInputs.map((input) => ({
-          ContractName: 'LendingMarketController',
-          FunctionName: input.functionName,
-          Args: input.args.join(', '),
-        })),
-      );
+        console.table(
+          multicallInputs.map((input) => ({
+            ContractName: 'LendingMarketController',
+            FunctionName: input.functionName,
+            Args: input.args.join(', '),
+          })),
+        );
 
-      await proposal.submit(await signer.getAddress());
+        await proposal.submit(await signer.getAddress());
+      }
     },
   );
