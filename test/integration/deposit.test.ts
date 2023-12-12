@@ -49,7 +49,6 @@ describe('Integration Test: Deposit', async () => {
 
   let addressResolver: Contract;
   let mockUniswapRouter: Contract;
-  let mockUniswapQuoter: Contract;
   let liquidator: Contract;
 
   let genesisDate: number;
@@ -1310,11 +1309,6 @@ describe('Integration Test: Deposit', async () => {
         .then((factory) =>
           factory.deploy(addressResolver.address, wETHToken.address),
         );
-      mockUniswapQuoter = await ethers
-        .getContractFactory('MockUniswapQuoter')
-        .then((factory) =>
-          factory.deploy(addressResolver.address, wETHToken.address),
-        );
 
       liquidator = await ethers
         .getContractFactory('Liquidator')
@@ -1324,7 +1318,6 @@ describe('Integration Test: Deposit', async () => {
             lendingMarketController.address,
             tokenVault.address,
             mockUniswapRouter.address,
-            mockUniswapQuoter.address,
           ),
         );
     });

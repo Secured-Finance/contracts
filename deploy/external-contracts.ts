@@ -1,6 +1,8 @@
+import { Contract } from 'ethers';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { executeIfNewlyDeployment } from '../utils/deployment';
+import { toBytes32 } from '../utils/strings';
 
 const func: DeployFunction = async function ({
   getNamedAccounts,
@@ -10,13 +12,23 @@ const func: DeployFunction = async function ({
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  const proxyController = await deployments
+  const proxyController: Contract = await deployments
     .get('ProxyController')
     .then(({ address }) => ethers.getContractAt('ProxyController', address));
 
-  const addressResolver = await proxyController
+  const addressResolver: Contract = await proxyController
     .getAddressResolverAddress()
     .then((address) => ethers.getContractAt('AddressResolver', address));
+
+  const tokenVault: Contract = await proxyController
+    .getAddress(toBytes32('TokenVault'))
+    .then((address) => ethers.getContractAt('TokenVault', address));
+
+  const lendingMarketController: Contract = await proxyController
+    .getAddress(toBytes32('LendingMarketController'))
+    .then((address) =>
+      ethers.getContractAt('LendingMarketController', address),
+    );
 
   for (const contractName of [
     'LendingMarketReader',
@@ -28,6 +40,39 @@ const func: DeployFunction = async function ({
       args: [addressResolver.address],
     }).then((result) => executeIfNewlyDeployment(contractName, result));
   }
+
+  let uniswapRouterAddress = process.env.UNISWAP_ROUTER_ADDRESS;
+
+  if (!uniswapRouterAddress) {
+    const nativeToken =
+      process.env.NATIVE_TOKEN_ADDRESS ||
+      process.env.TOKEN_WETH ||
+      (await deployments.get('MockWETH9')).address;
+
+    const deployResult = await deploy('MockUniswapRouter', {
+      from: deployer,
+      args: [addressResolver.address, nativeToken],
+    });
+
+    await executeIfNewlyDeployment('MockUniswapRouter', deployResult);
+    uniswapRouterAddress = deployResult.address;
+  }
+
+  const nativeCurrencySymbol = toBytes32(
+    process.env.NATIVE_CURRENCY_SYMBOL || 'ETH',
+  );
+
+  const deployResult = await deploy('Liquidator', {
+    from: deployer,
+    args: [
+      nativeCurrencySymbol,
+      lendingMarketController.address,
+      tokenVault.address,
+      uniswapRouterAddress,
+    ],
+  });
+
+  executeIfNewlyDeployment('Liquidator', deployResult);
 };
 
 func.tags = ['ExternalContracts'];

@@ -2,7 +2,6 @@
 pragma solidity 0.8.19;
 
 import {ISwapRouter} from "../dependencies/uniswap/ISwapRouter.sol";
-import {IQuoter} from "../dependencies/uniswap/IQuoter.sol";
 import {IERC20} from "../dependencies/openzeppelin/token/ERC20/IERC20.sol";
 
 // libraries
@@ -19,10 +18,9 @@ contract Liquidator is ILiquidationReceiver, MixinAccessControl, MixinWallet {
     bytes32 public immutable nativeToken;
     ILendingMarketController public immutable lendingMarketController;
     ITokenVault public immutable tokenVault;
-    ISwapRouter public immutable uniswapRouter;
-    IQuoter public immutable uniswapQuoter;
-    uint24 internal poolFee;
-    uint256[] internal collateralMaturities;
+    ISwapRouter public uniswapRouter;
+    uint24 public poolFee;
+    uint256[] public collateralMaturities;
 
     modifier onlyLendingMarketController() {
         require(_msgSender() == address(lendingMarketController), "Invalid caller");
@@ -33,19 +31,21 @@ contract Liquidator is ILiquidationReceiver, MixinAccessControl, MixinWallet {
         bytes32 _nativeToken,
         address _lendingMarketController,
         address _tokenVault,
-        address _uniswapRouter,
-        address _uniswapQuoter
+        address _uniswapRouter
     ) {
         nativeToken = _nativeToken;
         lendingMarketController = ILendingMarketController(_lendingMarketController);
         tokenVault = ITokenVault(_tokenVault);
         uniswapRouter = ISwapRouter(_uniswapRouter);
-        uniswapQuoter = IQuoter(_uniswapQuoter);
         MixinAccessControl._setupInitialRoles(msg.sender);
         MixinWallet._initialize(msg.sender, tokenVault.getTokenAddress(_nativeToken));
     }
 
     receive() external payable {}
+
+    function updateUniswapRouter(address _uniswapRouter) external onlyOperator {
+        uniswapRouter = ISwapRouter(_uniswapRouter);
+    }
 
     function executeLiquidationCall(
         bytes32 _collateralCcy,
