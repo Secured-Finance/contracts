@@ -26,12 +26,6 @@ contract ITokenVault tokenVault
 contract ISwapRouter uniswapRouter
 ```
 
-### uniswapQuoter
-
-```solidity
-contract IQuoter uniswapQuoter
-```
-
 ### poolFee
 
 ```solidity
@@ -53,13 +47,19 @@ modifier onlyLendingMarketController()
 ### constructor
 
 ```solidity
-constructor(bytes32 _nativeToken, address _lendingMarketController, address _tokenVault, address _uniswapRouter, address _uniswapQuoter) public
+constructor(bytes32 _nativeToken, address _lendingMarketController, address _tokenVault, address _uniswapRouter) public
 ```
 
 ### receive
 
 ```solidity
 receive() external payable
+```
+
+### updateUniswapRouter
+
+```solidity
+function updateUniswapRouter(address _uniswapRouter) external
 ```
 
 ### executeLiquidationCall
