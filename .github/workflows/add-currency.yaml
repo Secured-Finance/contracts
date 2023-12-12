@@ -25,10 +25,10 @@ on:
         description: 'PriceFeeds'
         required: true
         type: string
-      heartbeat:
-        description: 'Heartbeat'
+      heartbeats:
+        description: 'Heartbeats'
         required: true
-        type: number
+        type: string
       tokenAddress:
         description: 'TokenAddress'
         required: true
@@ -66,6 +66,6 @@ jobs:
           --currency ${{ github.event.inputs.currency }}
           --haircut ${{ github.event.inputs.haircut }}
           --price-feeds ${{ github.event.inputs.priceFeeds }}
-          --heartbeat ${{ github.event.inputs.heartbeat }}
+          --heartbeats ${{ github.event.inputs.heartbeats }}
           --token-address ${{ github.event.inputs.tokenAddress }}
           --is-collateral ${{ github.event.inputs.isCollateral }}
