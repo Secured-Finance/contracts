@@ -11,7 +11,7 @@ on:
         options:
           - development
           - staging
-          - goerli
+          - sepolia
           - mainnet
 
 jobs:
