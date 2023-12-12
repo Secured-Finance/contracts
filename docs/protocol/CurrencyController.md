@@ -13,6 +13,14 @@ It uses those settings and also has the functions to change prices to other curr
 uint256 HEARTBEAT_BUFFER
 ```
 
+### BASE_CURRENCY_DECIMALS
+
+```solidity
+uint256 BASE_CURRENCY_DECIMALS
+```
+
+_Used for decimals of the base currency_
+
 ### onlySupportedCurrency
 
 ```solidity
@@ -24,6 +32,18 @@ Modifier to check if the currency is supported.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _ccy | bytes32 | Currency name in bytes32 |
+
+### constructor
+
+```solidity
+constructor(uint256 _baseCurrencyDecimals) public
+```
+
+Contract constructor function.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _baseCurrencyDecimals | uint256 | The decimals of the base currency |
 
 ### initialize
 
@@ -107,7 +127,7 @@ Gets if the selected currency is supported.
 ### addCurrency
 
 ```solidity
-function addCurrency(bytes32 _ccy, uint8 _decimals, uint256 _haircut, address[] _priceFeeds, uint256 _heartbeat) public
+function addCurrency(bytes32 _ccy, uint8 _decimals, uint256 _haircut, address[] _priceFeeds, uint256[] _heartbeats) public
 ```
 
 Adds new currency into the protocol and links with existing price feed.
@@ -118,7 +138,7 @@ Adds new currency into the protocol and links with existing price feed.
 | _decimals | uint8 | Currency decimals |
 | _haircut | uint256 | Remaining ratio after haircut |
 | _priceFeeds | address[] | Array with the contract address of price feed |
-| _heartbeat | uint256 |  |
+| _heartbeats | uint256[] | Array with the heartbeat of price feed |
 
 ### removeCurrency
 
@@ -148,7 +168,7 @@ Updates the haircut ratio for supported currency
 ### updatePriceFeed
 
 ```solidity
-function updatePriceFeed(bytes32 _ccy, uint8 _decimals, address[] _priceFeeds, uint256 _heartbeat) public
+function updatePriceFeed(bytes32 _ccy, uint8 _decimals, address[] _priceFeeds, uint256[] _heartbeats) public
 ```
 
 Update the price feed contract addresses.
@@ -158,7 +178,7 @@ Update the price feed contract addresses.
 | _ccy | bytes32 | Currency name in bytes32 |
 | _decimals | uint8 | Currency decimals |
 | _priceFeeds | address[] | Array with the contract address of price feed |
-| _heartbeat | uint256 |  |
+| _heartbeats | uint256[] | Array with the heartbeat of price feed |
 
 ### getLastPrice
 
@@ -329,6 +349,6 @@ function _updateHaircut(bytes32 _ccy, uint256 _haircut) internal
 ### _updatePriceFeed
 
 ```solidity
-function _updatePriceFeed(bytes32 _ccy, uint8 _decimals, address[] _priceFeeds, uint256 _heartbeat) internal
+function _updatePriceFeed(bytes32 _ccy, uint8 _decimals, address[] _priceFeeds, uint256[] _heartbeats) internal
 ```
 

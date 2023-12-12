@@ -29,13 +29,13 @@ error InvalidPriceFeed()
 ### InvalidDecimals
 
 ```solidity
-error InvalidDecimals()
+error InvalidDecimals(address priceFeed, uint8 decimals)
 ```
 
-### NoPriceFeedExists
+### InvalidPriceFeedInputs
 
 ```solidity
-error NoPriceFeedExists()
+error InvalidPriceFeedInputs()
 ```
 
 ### StalePriceFeed
@@ -155,13 +155,13 @@ function currencyExists(bytes32 _ccy) external view returns (bool)
 ### updatePriceFeed
 
 ```solidity
-function updatePriceFeed(bytes32 _ccy, uint8 _decimals, address[] _priceFeeds, uint256 _heartbeat) external
+function updatePriceFeed(bytes32 _ccy, uint8 _decimals, address[] _priceFeeds, uint256[] _heartbeats) external
 ```
 
 ### addCurrency
 
 ```solidity
-function addCurrency(bytes32 _ccy, uint8 _decimals, uint256 _haircut, address[] _priceFeeds, uint256 _heartbeat) external
+function addCurrency(bytes32 _ccy, uint8 _decimals, uint256 _haircut, address[] _priceFeeds, uint256[] _heartbeats) external
 ```
 
 ### updateHaircut

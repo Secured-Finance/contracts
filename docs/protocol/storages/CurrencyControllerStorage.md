@@ -5,7 +5,7 @@
 ```solidity
 struct PriceFeed {
   contract AggregatorV3Interface[] instances;
-  uint256 heartbeat;
+  uint256[] heartbeats;
 }
 ```
 
