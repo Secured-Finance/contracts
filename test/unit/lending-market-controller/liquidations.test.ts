@@ -154,7 +154,6 @@ describe('LendingMarketController - Liquidations', () => {
               lendingMarketControllerProxy.address,
               mockTokenVault.address,
               ethers.constants.AddressZero,
-              ethers.constants.AddressZero,
             ),
         );
     });

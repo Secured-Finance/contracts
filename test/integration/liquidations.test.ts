@@ -253,7 +253,6 @@ describe('Integration Test: Liquidations', async () => {
             lendingMarketController.address,
             tokenVault.address,
             mockUniswapRouter.address,
-            mockUniswapQuoter.address,
           ),
       );
   };
