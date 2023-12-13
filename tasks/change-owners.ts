@@ -1,6 +1,8 @@
+import { EthersAdapter } from '@safe-global/protocol-kit';
 import { Contract, ContractTransaction } from 'ethers';
 import { task } from 'hardhat/config';
 import { HardhatPluginError } from 'hardhat/internal/core/errors';
+import { Proposal, getRelaySigner } from '../utils/deployment';
 import { toBytes32 } from '../utils/strings';
 
 task(
@@ -17,6 +19,18 @@ task(
 
   const [owner] = await ethers.getSigners();
   let nonce = await owner.getTransactionCount();
+  const relayer = getRelaySigner();
+
+  if (!relayer) {
+    throw new HardhatPluginError('SecuredFinance', 'Relayer must be provided');
+  }
+
+  const ethersAdapter = new EthersAdapter({
+    ethers,
+    signerOrProvider: relayer,
+  });
+  const proposal = new Proposal();
+  await proposal.initSdk(ethersAdapter);
 
   const proxyController = await deployments
     .get('ProxyController')
@@ -103,16 +117,19 @@ task(
     );
 
     if (isOwnerDefaultAdmin) {
-      await contract
-        .connect(owner)
-        .revokeRole(DEFAULT_ADMIN_ROLE, owner.address)
-        .then((tx) => tx.wait());
-
-      nonce++;
-
       console.log(
-        `Revoked DEFAULT_ADMIN_ROLE of ${name} from ${owner.address}`,
+        `Revoking DEFAULT_ADMIN_ROLE of ${name} from ${owner.address}`,
+      );
+
+      await proposal.add(
+        contract.address,
+        contract.interface.encodeFunctionData('revokeRole', [
+          DEFAULT_ADMIN_ROLE,
+          owner.address,
+        ]),
       );
     }
   }
+
+  await proposal.submit(await relayer.getAddress());
 });
