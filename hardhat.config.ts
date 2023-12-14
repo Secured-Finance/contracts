@@ -1,3 +1,4 @@
+import '@nomicfoundation/hardhat-verify';
 import '@nomiclabs/hardhat-ethers';
 import '@nomiclabs/hardhat-ganache';
 import '@nomiclabs/hardhat-truffle5';
@@ -16,6 +17,7 @@ const privateKey =
   process.env.USE_DEFAULT_ACCOUNTS === 'true' || !process.env.PRIVATE_KEY
     ? undefined
     : [process.env.PRIVATE_KEY];
+const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY;
 
 const config: HardhatUserConfig = {
   defaultNetwork: 'hardhat',
@@ -120,6 +122,9 @@ const config: HardhatUserConfig = {
   docgen: {
     pages: 'files',
     exclude: ['mocks', 'interfaces', 'dependencies'],
+  },
+  etherscan: {
+    apiKey: ETHERSCAN_API_KEY,
   },
 };
 
