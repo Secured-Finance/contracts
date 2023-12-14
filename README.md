@@ -1,4 +1,22 @@
-# Secured Finance Smart Contracts
+```
+        `-_`.         .______`
+      -!1111r".    .t96/////]%991
+      "1111111`   ~88(.      .T8?
+      -=11111".   488!         _?
+        ,"""'.    488a"_       .:
+                  "d8888%x/.
+                    +s#88888%C!_
+                       .~/Ep8888e'
+                  ,         ^e888>
+                 .5           q88%
+                 .ws`         q88;
+                 .e85='`   `;Z84;
+                   _!tt7!!!tt!_
+```
+
+# Secured Finance Contracts
+
+Secured Finance is an **Orderbook-based Rates Trading Platform** on Ethereum to facilitate the lending and borrowing of digital assets so as to construct yield curves in the DeFi space. We're all about fixed-rate, fixed-term crypto asset lending and borrowing, made possible through our unique Zero-Coupon Bond instrument. Our protocol is implemented as a decentralized on-chain orderbook system.
 
 ## Quick Start
 
