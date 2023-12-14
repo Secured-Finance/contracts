@@ -5,3 +5,4 @@ import './fork';
 import './open-markets';
 import './register-orders';
 import './unfork';
+import './verify-contracts';
