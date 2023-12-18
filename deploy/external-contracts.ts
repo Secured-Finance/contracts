@@ -1,6 +1,7 @@
 import { Contract } from 'ethers';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
+import { getNativeTokenAddress } from '../utils/currencies';
 import { executeIfNewlyDeployment } from '../utils/deployment';
 import { toBytes32 } from '../utils/strings';
 
@@ -44,10 +45,7 @@ const func: DeployFunction = async function ({
   let uniswapRouterAddress = process.env.UNISWAP_ROUTER_ADDRESS;
 
   if (!uniswapRouterAddress) {
-    const nativeToken =
-      process.env.NATIVE_TOKEN_ADDRESS ||
-      process.env.TOKEN_WETH ||
-      (await deployments.get('MockWETH9')).address;
+    const nativeToken = getNativeTokenAddress(deployments);
 
     const deployResult = await deploy('MockUniswapRouter', {
       from: deployer,

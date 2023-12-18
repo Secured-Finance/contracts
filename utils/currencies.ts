@@ -1,4 +1,5 @@
 import { HardhatEthersHelpers } from '@nomiclabs/hardhat-ethers/types';
+import { DeploymentsExtension } from 'hardhat-deploy/types';
 import { hexUSDC, hexWBTC, hexWETH, hexWFIL, toBytes32 } from './strings';
 
 const ERC20_ABI = [
@@ -215,4 +216,14 @@ const getAggregatedDecimals = async (
   return decimals;
 };
 
-export { currencyIterator, getAggregatedDecimals, mocks };
+const getNativeTokenAddress = async (deployments: DeploymentsExtension) =>
+  process.env.NATIVE_TOKEN_ADDRESS ||
+  process.env.TOKEN_WETH ||
+  (await deployments.get('MockWETH9')).address;
+
+export {
+  currencyIterator,
+  getAggregatedDecimals,
+  getNativeTokenAddress,
+  mocks,
+};

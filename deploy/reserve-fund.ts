@@ -1,5 +1,6 @@
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
+import { getNativeTokenAddress } from '../utils/currencies';
 import {
   DeploymentStorage,
   executeIfNewlyDeployment,
@@ -13,10 +14,7 @@ const func: DeployFunction = async function ({
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  const nativeToken =
-    process.env.NATIVE_TOKEN_ADDRESS ||
-    process.env.TOKEN_WETH ||
-    (await deployments.get('MockWETH9')).address;
+  const nativeToken = getNativeTokenAddress(deployments);
   const deployResult = await deploy('ReserveFund', {
     from: deployer,
   });
