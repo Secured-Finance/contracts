@@ -3,7 +3,7 @@ import moment from 'moment';
 import {
   CIRCUIT_BREAKER_LIMIT_RANGE,
   ORDER_FEE_RATE,
-} from '../utils/currencies';
+} from '../utils/constants';
 import { fromBytes32 } from './strings';
 
 // NOTE: Active markets are 8.

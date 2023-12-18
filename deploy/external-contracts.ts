@@ -45,7 +45,7 @@ const func: DeployFunction = async function ({
   let uniswapRouterAddress = process.env.UNISWAP_ROUTER_ADDRESS;
 
   if (!uniswapRouterAddress) {
-    const nativeToken = getNativeTokenAddress(deployments);
+    const nativeToken = await getNativeTokenAddress(deployments);
 
     const deployResult = await deploy('MockUniswapRouter', {
       from: deployer,

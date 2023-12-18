@@ -6,7 +6,7 @@ import {
   LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATOR_FEE_RATE,
   MINIMUM_RELIABLE_AMOUNT,
-} from '../test/common/constants';
+} from '../utils/constants';
 import { getNativeTokenAddress } from '../utils/currencies';
 
 const externalContracts = [
@@ -25,7 +25,7 @@ task(
     .get('ProxyController')
     .then(({ address }) => ethers.getContractAt('ProxyController', address));
   const addressResolver = await proxyController.getAddressResolverAddress();
-  const nativeToken = getNativeTokenAddress(deployments);
+  const nativeToken = await getNativeTokenAddress(deployments);
 
   const constructorArguments = {
     CurrencyController: [BASE_CURRENCY_DECIMALS],

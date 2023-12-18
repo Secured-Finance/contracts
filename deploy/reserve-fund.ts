@@ -14,7 +14,7 @@ const func: DeployFunction = async function ({
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  const nativeToken = getNativeTokenAddress(deployments);
+  const nativeToken = await getNativeTokenAddress(deployments);
   const deployResult = await deploy('ReserveFund', {
     from: deployer,
   });

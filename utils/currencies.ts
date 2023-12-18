@@ -44,9 +44,6 @@ export interface MockPriceFeed {
   mockRate?: string;
 }
 
-export const ORDER_FEE_RATE = 100;
-export const CIRCUIT_BREAKER_LIMIT_RANGE = 500;
-
 const currencies: Record<string, Currency> = {
   USDC: {
     symbol: 'USDC',
