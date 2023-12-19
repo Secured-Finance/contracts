@@ -1,6 +1,6 @@
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { BASE_CURRENCY_DECIMALS } from '../test/common/constants';
+import { BASE_CURRENCY_DECIMALS } from '../utils/constants';
 import {
   DeploymentStorage,
   executeIfNewlyDeployment,

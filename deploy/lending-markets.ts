@@ -2,13 +2,12 @@ import { Contract } from 'ethers';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
+import { MINIMUM_RELIABLE_AMOUNT } from '../utils/constants';
 import {
   DeploymentStorage,
   executeIfNewlyDeployment,
 } from '../utils/deployment';
 import { toBytes32 } from '../utils/strings';
-
-const MINIMUM_RELIABLE_AMOUNT = '100000000000';
 
 const func: DeployFunction = async function ({
   getNamedAccounts,

@@ -4,8 +4,7 @@ import BigNumberJS from 'bignumber.js';
 import { expect } from 'chai';
 import { BigNumber, Contract, Wallet } from 'ethers';
 import { deployments, ethers } from 'hardhat';
-import { LIQUIDATION_THRESHOLD_RATE } from '../test/common/constants';
-import { Side } from '../utils/constants';
+import { LIQUIDATION_THRESHOLD_RATE, Side } from '../utils/constants';
 import { hexETH, hexWFIL, toBytes32 } from '../utils/strings';
 
 describe('ZC e2e test', async function () {

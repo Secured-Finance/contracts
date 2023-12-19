@@ -1,13 +1,15 @@
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import {
+  LIQUIDATION_PROTOCOL_FEE_RATE,
+  LIQUIDATION_THRESHOLD_RATE,
+  LIQUIDATOR_FEE_RATE,
+} from '../utils/constants';
+import { getNativeTokenAddress } from '../utils/currencies';
+import {
   DeploymentStorage,
   executeIfNewlyDeployment,
 } from '../utils/deployment';
-
-const LIQUIDATION_THRESHOLD_RATE = 12500;
-const LIQUIDATION_PROTOCOL_FEE_RATE = 200;
-const LIQUIDATOR_FEE_RATE = 500;
 
 const func: DeployFunction = async function ({
   getNamedAccounts,
@@ -17,10 +19,7 @@ const func: DeployFunction = async function ({
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  const nativeToken =
-    process.env.NATIVE_TOKEN_ADDRESS ||
-    process.env.TOKEN_WETH ||
-    (await deployments.get('MockWETH9')).address;
+  const nativeToken = await getNativeTokenAddress(deployments);
   const depositManagementLogic = await deployments.get(
     'DepositManagementLogic',
   );
