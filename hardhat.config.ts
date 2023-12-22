@@ -11,6 +11,7 @@ import { HardhatUserConfig } from 'hardhat/config';
 import 'solidity-coverage';
 import 'solidity-docgen';
 
+import { HttpNetworkUserConfig } from 'hardhat/types';
 import './tasks';
 
 const privateKey =
@@ -18,6 +19,24 @@ const privateKey =
     ? undefined
     : [process.env.PRIVATE_KEY];
 const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY;
+
+const alchemyNetworkKeys = {
+  1: 'eth-mainnet',
+  421614: 'arb-sepolia',
+  11155111: 'eth-sepolia',
+};
+
+const networkConfig = (chainId: number): HttpNetworkUserConfig => ({
+  url:
+    process.env.FORK_RPC_ENDPOINT ||
+    `https://${alchemyNetworkKeys[chainId]}.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
+  chainId,
+  accounts: privateKey,
+  live: true,
+  saveDeployments: true,
+  gasPrice: 'auto',
+  gasMultiplier: 3,
+});
 
 const config: HardhatUserConfig = {
   defaultNetwork: 'hardhat',
@@ -32,50 +51,12 @@ const config: HardhatUserConfig = {
       chainId: parseInt(process.env.DEV_CHAIN_ID || '1337'),
       accounts: privateKey,
     },
-    development: {
-      url:
-        process.env.FORK_RPC_ENDPOINT ||
-        `https://eth-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
-      chainId: 11155111,
-      accounts: privateKey,
-      live: true,
-      saveDeployments: true,
-      gasPrice: 'auto',
-      gasMultiplier: 3,
-    },
-    staging: {
-      url:
-        process.env.FORK_RPC_ENDPOINT ||
-        `https://eth-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
-      chainId: 11155111,
-      accounts: privateKey,
-      live: true,
-      saveDeployments: true,
-      gasPrice: 'auto',
-      gasMultiplier: 3,
-    },
-    sepolia: {
-      url:
-        process.env.FORK_RPC_ENDPOINT ||
-        `https://eth-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
-      chainId: 11155111,
-      accounts: privateKey,
-      live: true,
-      saveDeployments: true,
-      gasPrice: 'auto',
-      gasMultiplier: 3,
-    },
-    mainnet: {
-      url:
-        process.env.FORK_RPC_ENDPOINT ||
-        `https://eth-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
-      chainId: 1,
-      accounts: privateKey,
-      live: true,
-      saveDeployments: true,
-      gasPrice: 'auto',
-      gasMultiplier: 3,
-    },
+    development: networkConfig(11155111),
+    developmentArb: networkConfig(421614),
+    staging: networkConfig(11155111),
+    stagingArb: networkConfig(421614),
+    sepolia: networkConfig(11155111),
+    mainnet: networkConfig(1),
   },
   solidity: {
     compilers: [

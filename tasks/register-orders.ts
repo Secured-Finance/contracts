@@ -272,11 +272,13 @@ task('register-orders', 'Registers order data into the selected lending market')
       const borrowUnitPrices = await lendingMarketReader.getBorrowOrderBook(
         marketCurrencyName,
         maturity,
+        0,
         10,
       );
       const lendUnitPrices = await lendingMarketReader.getLendOrderBook(
         marketCurrencyName,
         maturity,
+        0,
         10,
       );
 
