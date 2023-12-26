@@ -52,11 +52,12 @@ const config: HardhatUserConfig = {
       accounts: privateKey,
     },
     development: networkConfig(11155111),
-    developmentArb: networkConfig(421614),
+    'development-arb': networkConfig(421614),
     staging: networkConfig(11155111),
-    stagingArb: networkConfig(421614),
+    'staging-arb': networkConfig(421614),
     sepolia: networkConfig(11155111),
     mainnet: networkConfig(1),
+    'arbitrum-one': networkConfig(42161),
   },
   solidity: {
     compilers: [

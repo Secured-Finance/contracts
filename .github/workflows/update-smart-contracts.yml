@@ -10,9 +10,12 @@ on:
         type: choice
         options:
           - development
+          - development-arb
           - staging
+          - staging-arb
           - sepolia
           - mainnet
+          - arbitrum-one
 
 jobs:
   test:
