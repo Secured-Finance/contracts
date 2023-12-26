@@ -10,7 +10,9 @@ on:
         type: choice
         options:
           - development
+          - development-arb
           - staging
+          - staging-arb
       collateralCurrency:
         description: 'CollateralCurrency'
         required: true
