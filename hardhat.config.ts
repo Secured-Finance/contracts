@@ -22,6 +22,7 @@ const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY;
 
 const alchemyNetworkKeys = {
   1: 'eth-mainnet',
+  42161: 'arb-mainnet',
   421614: 'arb-sepolia',
   11155111: 'eth-sepolia',
 };
