@@ -10,9 +10,13 @@ on:
         type: choice
         options:
           - development
+          - development-arb
           - staging
+          - staging-arb
           - sepolia
+          - arbitrum-sepolia
           - mainnet
+          - arbitrum-one
       currency:
         description: 'Currency'
         required: true

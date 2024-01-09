@@ -12,8 +12,9 @@ on:
           - development
           - development-arb
           - staging
-          - development-arb
+          - staging-arb
           - sepolia
+          - arbitrum-sepolia
           - mainnet
           - arbitrum-one
 

@@ -1,6 +1,7 @@
 import moment from 'moment';
 
 const getAdjustedGenesisDate = (): number =>
+  Number(process.env.GENESIS_DATE) ||
   Number(process.env.INITIAL_MARKET_OPENING_DATE) ||
   (Number(process.env.MARKET_BASE_PERIOD) === 0
     ? moment().unix()

@@ -22,6 +22,7 @@ const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY;
 
 const alchemyNetworkKeys = {
   1: 'eth-mainnet',
+  42161: 'arb-mainnet',
   421614: 'arb-sepolia',
   11155111: 'eth-sepolia',
 };
@@ -56,6 +57,7 @@ const config: HardhatUserConfig = {
     staging: networkConfig(11155111),
     'staging-arb': networkConfig(421614),
     sepolia: networkConfig(11155111),
+    'arbitrum-sepolia': networkConfig(421614),
     mainnet: networkConfig(1),
     'arbitrum-one': networkConfig(42161),
   },
