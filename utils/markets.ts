@@ -12,8 +12,10 @@ const MARKET_COUNT = Number(process.env.TOTAL_MARKET_COUNT || 8) + 1;
 const INITIAL_MARKET_COUNT = Number(
   process.env.INITIAL_MARKET_COUNT || MARKET_COUNT,
 );
-const OPENING_DATE_INTERVAL = Number(process.env.OPENING_DATE_INTERVAL || 0);
 const DEFAULT_PRE_ORDER_PERIOD = 604800;
+const OPENING_DATE_INTERVAL = Number(
+  process.env.OPENING_DATE_INTERVAL || DEFAULT_PRE_ORDER_PERIOD,
+);
 
 interface MulticallInput {
   functionName: string;
@@ -93,9 +95,11 @@ const getMulticallOrderBookInputs = async (
           : (initialOpeningDate || genesisDate) + openingDateDelay;
 
       const preOpeningDate =
-        openingDateDelay === 0
+        i === count - 1
+          ? openingDate - DEFAULT_PRE_ORDER_PERIOD
+          : openingDateDelay === 0
           ? initialPreOpeningDate || openingDate - DEFAULT_PRE_ORDER_PERIOD
-          : openingDate - DEFAULT_PRE_ORDER_PERIOD;
+          : openingDate - OPENING_DATE_INTERVAL;
 
       const args = [currencyKey, openingDate, preOpeningDate];
 
