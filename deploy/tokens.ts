@@ -14,8 +14,13 @@ const func: DeployFunction = async function ({
   // Deploy mock tokens
   const log = {};
   const logHeader = 'Contract Addresses';
+  let hasNativeToken = false;
 
   for (const currency of currencyIterator()) {
+    if (currency.isNative) {
+      hasNativeToken = true;
+    }
+
     if (currency.tokenAddress) {
       console.log(`${currency.symbol} uses the existing address`);
       log[currency.symbol] = { [logHeader]: currency.tokenAddress };
@@ -24,7 +29,7 @@ const func: DeployFunction = async function ({
 
     const tokenDeployResult = await deploy(mocks[currency.symbol].tokenName, {
       from: deployer,
-      args: currency.args,
+      args: currency.isNative ? [] : currency.args,
     });
     log[currency.symbol] = { [logHeader]: tokenDeployResult.address };
 
@@ -32,6 +37,11 @@ const func: DeployFunction = async function ({
       mocks[currency.symbol].tokenName,
       tokenDeployResult,
     );
+  }
+
+  if (!process.env.NATIVE_TOKEN_ADDRESS && !hasNativeToken) {
+    const deployResult = await deploy('MockWETH9', { from: deployer });
+    await executeIfNewlyDeployment('MockWETH9', deployResult);
   }
 
   console.table(log);
@@ -56,7 +66,7 @@ const func: DeployFunction = async function ({
             (await deployments.get(mock.tokenName)).address;
 
           if (
-            currency.symbol !== 'WETH' &&
+            !currency.isNative &&
             (await tokenFaucetContract.getCurrencyAddress(currency.key)) !==
               tokenAddress
           ) {

@@ -11,12 +11,15 @@ on:
         options:
           - development
           - development-arb
+          - development-ava
           - staging
           - staging-arb
+          - staging-ava
           - sepolia
-          - arbitrum-sepolia
           - mainnet
+          - arbitrum-sepolia
           - arbitrum-one
+          - avalanche-mainnet
 
 jobs:
   test:
@@ -47,10 +50,14 @@ jobs:
           echo "NATIVE_CURRENCY_SYMBOL=${{ vars.NATIVE_CURRENCY_SYMBOL }}" >> $GITHUB_ENV
           echo "NATIVE_TOKEN_ADDRESS=${{ vars.NATIVE_TOKEN_ADDRESS }}" >> $GITHUB_ENV
           echo "NATIVE_TOKEN_SYMBOL=${{ vars.NATIVE_TOKEN_SYMBOL }}" >> $GITHUB_ENV
-          echo "TOKEN_WFIL=${{ vars.TOKEN_WFIL }}" >> $GITHUB_ENV
-          echo "TOKEN_USDC=${{ vars.TOKEN_USDC }}" >> $GITHUB_ENV
-          echo "TOKEN_WBTC=${{ vars.TOKEN_WBTC }}" >> $GITHUB_ENV
-          echo "TOKEN_WETH=${{ vars.TOKEN_WETH }}" >> $GITHUB_ENV
+          echo "TOKEN_SYMBOL_USDC=${{ vars.TOKEN_SYMBOL_USDC }}" >> $GITHUB_ENV
+          echo "TOKEN_SYMBOL_WBTC=${{ vars.TOKEN_SYMBOL_WBTC }}" >> $GITHUB_ENV
+          echo "TOKEN_SYMBOL_WETH=${{ vars.TOKEN_SYMBOL_WETH }}" >> $GITHUB_ENV
+          echo "TOKEN_SYMBOL_WFIL=${{ vars.TOKEN_SYMBOL_WFIL }}" >> $GITHUB_ENV
+          echo "TOKEN_ADDRESS_WFIL=${{ vars.TOKEN_ADDRESS_WFIL }}" >> $GITHUB_ENV
+          echo "TOKEN_ADDRESS_USDC=${{ vars.TOKEN_ADDRESS_USDC }}" >> $GITHUB_ENV
+          echo "TOKEN_ADDRESS_WBTC=${{ vars.TOKEN_ADDRESS_WBTC }}" >> $GITHUB_ENV
+          echo "TOKEN_ADDRESS_WETH=${{ vars.TOKEN_ADDRESS_WETH }}" >> $GITHUB_ENV
           echo "PRICE_FEED_ADDRESSES_WFIL=${{ vars.PRICE_FEED_ADDRESSES_WFIL }}" >> $GITHUB_ENV
           echo "PRICE_FEED_ADDRESSES_USDC=${{ vars.PRICE_FEED_ADDRESSES_USDC }}" >> $GITHUB_ENV
           echo "PRICE_FEED_ADDRESSES_WBTC=${{ vars.PRICE_FEED_ADDRESSES_WBTC }}" >> $GITHUB_ENV
@@ -140,10 +147,14 @@ jobs:
           echo "NATIVE_CURRENCY_SYMBOL=${{ vars.NATIVE_CURRENCY_SYMBOL }}" >> $GITHUB_ENV
           echo "NATIVE_TOKEN_ADDRESS=${{ vars.NATIVE_TOKEN_ADDRESS }}" >> $GITHUB_ENV
           echo "NATIVE_TOKEN_SYMBOL=${{ vars.NATIVE_TOKEN_SYMBOL }}" >> $GITHUB_ENV
-          echo "TOKEN_WFIL=${{ vars.TOKEN_WFIL }}" >> $GITHUB_ENV
-          echo "TOKEN_USDC=${{ vars.TOKEN_USDC }}" >> $GITHUB_ENV
-          echo "TOKEN_WBTC=${{ vars.TOKEN_WBTC }}" >> $GITHUB_ENV
-          echo "TOKEN_WETH=${{ vars.TOKEN_WETH }}" >> $GITHUB_ENV
+          echo "TOKEN_SYMBOL_USDC=${{ vars.TOKEN_SYMBOL_USDC }}" >> $GITHUB_ENV
+          echo "TOKEN_SYMBOL_WBTC=${{ vars.TOKEN_SYMBOL_WBTC }}" >> $GITHUB_ENV
+          echo "TOKEN_SYMBOL_WETH=${{ vars.TOKEN_SYMBOL_WETH }}" >> $GITHUB_ENV
+          echo "TOKEN_SYMBOL_WFIL=${{ vars.TOKEN_SYMBOL_WFIL }}" >> $GITHUB_ENV
+          echo "TOKEN_ADDRESS_WFIL=${{ vars.TOKEN_ADDRESS_WFIL }}" >> $GITHUB_ENV
+          echo "TOKEN_ADDRESS_USDC=${{ vars.TOKEN_ADDRESS_USDC }}" >> $GITHUB_ENV
+          echo "TOKEN_ADDRESS_WBTC=${{ vars.TOKEN_ADDRESS_WBTC }}" >> $GITHUB_ENV
+          echo "TOKEN_ADDRESS_WETH=${{ vars.TOKEN_ADDRESS_WETH }}" >> $GITHUB_ENV
           echo "PRICE_FEED_ADDRESSES_WFIL=${{ vars.PRICE_FEED_ADDRESSES_WFIL }}" >> $GITHUB_ENV
           echo "PRICE_FEED_ADDRESSES_USDC=${{ vars.PRICE_FEED_ADDRESSES_USDC }}" >> $GITHUB_ENV
           echo "PRICE_FEED_ADDRESSES_WBTC=${{ vars.PRICE_FEED_ADDRESSES_WBTC }}" >> $GITHUB_ENV

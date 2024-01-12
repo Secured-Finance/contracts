@@ -11,12 +11,15 @@ on:
         options:
           - development
           - development-arb
+          - development-ava
           - staging
           - staging-arb
+          - staging-ava
           - sepolia
-          - arbitrum-sepolia
           - mainnet
+          - arbitrum-sepolia
           - arbitrum-one
+          - avalanche-mainnet
       currency:
         description: 'Currency'
         required: true
