@@ -126,7 +126,7 @@ const deployContracts = async () => {
 
   const tokens: Record<string, Contract> = {};
   for (const currency of currencyIterator()) {
-    const args = currency.args;
+    const args = currency.isNative ? [] : currency.args;
 
     // Increase initial mint amount for testing
     if (args[0]) {
@@ -138,7 +138,7 @@ const deployContracts = async () => {
       .then((factory) => factory.deploy(...args));
   }
 
-  const wFILToken = tokens['wFIL'];
+  const wFILToken = tokens['WFIL'];
   const usdcToken = tokens['USDC'];
   const wBTCToken = tokens['WBTC'];
   const wETHToken = tokens['WETH'];

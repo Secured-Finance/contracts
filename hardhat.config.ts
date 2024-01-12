@@ -22,15 +22,32 @@ const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY;
 
 const alchemyNetworkKeys = {
   1: 'eth-mainnet',
+  11155111: 'eth-sepolia',
   42161: 'arb-mainnet',
   421614: 'arb-sepolia',
-  11155111: 'eth-sepolia',
+};
+
+const infuraNetworkKeys = {
+  1: 'mainnet',
+  11155111: 'sepolia',
+  42161: 'arbitrum-mainnet',
+  421614: 'arbitrum-sepolia',
+  43114: 'avalanche-mainnet',
+  43113: 'avalanche-fuji',
+};
+
+const getNodeEndpoint = (chainId: number): string => {
+  if (process.env.ALCHEMY_API_KEY && alchemyNetworkKeys[chainId]) {
+    return `https://${alchemyNetworkKeys[chainId]}.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`;
+  } else if (process.env.INFURA_API_KEY && infuraNetworkKeys[chainId]) {
+    return `https://${infuraNetworkKeys[chainId]}.infura.io/v3/${process.env.INFURA_API_KEY}`;
+  } else {
+    return '';
+  }
 };
 
 const networkConfig = (chainId: number): HttpNetworkUserConfig => ({
-  url:
-    process.env.FORK_RPC_ENDPOINT ||
-    `https://${alchemyNetworkKeys[chainId]}.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
+  url: process.env.FORK_RPC_ENDPOINT || getNodeEndpoint(chainId),
   chainId,
   accounts: privateKey,
   live: true,
@@ -48,18 +65,21 @@ const config: HardhatUserConfig = {
   networks: {
     hardhat: { accounts: { count: 50 } },
     localhost: {
-      url: process.env.DEV_RPC_ENDPOINT || 'http://0.0.0.0:8545',
-      chainId: parseInt(process.env.DEV_CHAIN_ID || '1337'),
+      url: process.env.DEV_RPC_ENDPOINT || 'http://127.0.0.1:8545',
+      chainId: parseInt(process.env.DEV_CHAIN_ID || '31337'),
       accounts: privateKey,
     },
     development: networkConfig(11155111),
     'development-arb': networkConfig(421614),
+    'development-ava': networkConfig(43113),
     staging: networkConfig(11155111),
     'staging-arb': networkConfig(421614),
+    'staging-ava': networkConfig(43113),
     sepolia: networkConfig(11155111),
-    'arbitrum-sepolia': networkConfig(421614),
     mainnet: networkConfig(1),
+    'arbitrum-sepolia': networkConfig(421614),
     'arbitrum-one': networkConfig(42161),
+    'avalanche-mainnet': networkConfig(43114),
   },
   solidity: {
     compilers: [
