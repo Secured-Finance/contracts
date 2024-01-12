@@ -42,7 +42,6 @@ const getNodeEndpoint = (chainId: number): string => {
   } else if (process.env.INFURA_API_KEY && infuraNetworkKeys[chainId]) {
     return `https://${infuraNetworkKeys[chainId]}.infura.io/v3/${process.env.INFURA_API_KEY}`;
   } else {
-    // throw new Error(`Unknown chainId: ${chainId}`);
     return '';
   }
 };

@@ -73,6 +73,7 @@ jobs:
           echo "PRICE_FEED_MOCK_RATE_ETH_TO_USD=${{ vars.PRICE_FEED_MOCK_RATE_ETH_TO_USD }}" >> $GITHUB_ENV
           echo "PRIVATE_KEY=${{ secrets.PRIVATE_KEY }}" >> $GITHUB_ENV
           echo "ALCHEMY_API_KEY=${{ secrets.ALCHEMY_API_KEY }}" >> $GITHUB_ENV
+          echo "INFURA_API_KEY=${{ secrets.INFURA_API_KEY }}" >> $GITHUB_ENV
           echo "ENABLE_FAUCET=${{ vars.ENABLE_FAUCET }}" >> $GITHUB_ENV
           echo "TENDERLY_USER=${{ vars.TENDERLY_USER }}" >> $GITHUB_ENV
           echo "TENDERLY_PROJECT=${{ vars.TENDERLY_PROJECT }}" >> $GITHUB_ENV
@@ -170,6 +171,7 @@ jobs:
           echo "PRICE_FEED_MOCK_RATE_ETH_TO_USD=${{ vars.PRICE_FEED_MOCK_RATE_ETH_TO_USD }}" >> $GITHUB_ENV
           echo "PRIVATE_KEY=${{ secrets.PRIVATE_KEY }}" >> $GITHUB_ENV
           echo "ALCHEMY_API_KEY=${{ secrets.ALCHEMY_API_KEY }}" >> $GITHUB_ENV
+          echo "INFURA_API_KEY=${{ secrets.INFURA_API_KEY }}" >> $GITHUB_ENV
           echo "ENABLE_FAUCET=${{ vars.ENABLE_FAUCET }}" >> $GITHUB_ENV
           echo "SAFE_WALLET_ADDRESS=${{ vars.SAFE_WALLET_ADDRESS }}" >> $GITHUB_ENV
           echo "SAFE_API_URL=${{ vars.SAFE_API_URL }}" >> $GITHUB_ENV

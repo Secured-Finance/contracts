@@ -81,6 +81,7 @@ jobs:
           echo "PRICE_FEED_MOCK_RATE_ETH_TO_USD=${{ vars.PRICE_FEED_MOCK_RATE_ETH_TO_USD }}" >> $GITHUB_ENV
           echo "PRIVATE_KEY=${{ secrets.PRIVATE_KEY }}" >> $GITHUB_ENV
           echo "ALCHEMY_API_KEY=${{ secrets.ALCHEMY_API_KEY }}" >> $GITHUB_ENV
+          echo "INFURA_API_KEY=${{ secrets.INFURA_API_KEY }}" >> $GITHUB_ENV
           echo "ENABLE_FAUCET=true" >> $GITHUB_ENV
       - name: Deploy smart contracts
         run: npm run deploy:force ${{ github.event.inputs.network }}

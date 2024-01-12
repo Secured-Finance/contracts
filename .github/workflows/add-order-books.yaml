@@ -55,6 +55,7 @@ jobs:
           echo "RELAYER_API_SECRET=${{ secrets.RELAYER_API_SECRET }}" >> $GITHUB_ENV
           echo "PRIVATE_KEY=${{ secrets.PRIVATE_KEY }}" >> $GITHUB_ENV
           echo "ALCHEMY_API_KEY=${{ secrets.ALCHEMY_API_KEY }}" >> $GITHUB_ENV
+          echo "INFURA_API_KEY=${{ secrets.INFURA_API_KEY }}" >> $GITHUB_ENV
       - name: Build Smart Contracts
         run: npm run compile
       - name: Run task
