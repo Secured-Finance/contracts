@@ -1,6 +1,6 @@
 {
   "name": "@secured-finance/contracts",
-  "version": "1.0.2-beta.1",
+  "version": "1.0.2",
   "description": "Secured Finance protocol smart contracts",
   "scripts": {
     "test": "hardhat test",
