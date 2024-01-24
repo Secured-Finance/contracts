@@ -731,12 +731,15 @@ library FundManagementLogic {
             );
         }
 
-        if (
-            totalActiveOrderCount == 0 &&
-            !futureValueExists &&
-            AddressResolverLib.genesisValueVault().getBalance(_ccy, _user) == 0
-        ) {
-            Storage.slot().usedCurrencies[_user].remove(_ccy);
+        if (totalActiveOrderCount == 0) {
+            AddressResolverLib.tokenVault().cleanUpUsedCurrencies(_user, _ccy);
+
+            if (
+                !futureValueExists &&
+                AddressResolverLib.genesisValueVault().getBalance(_ccy, _user) == 0
+            ) {
+                Storage.slot().usedCurrencies[_user].remove(_ccy);
+            }
         }
     }
 

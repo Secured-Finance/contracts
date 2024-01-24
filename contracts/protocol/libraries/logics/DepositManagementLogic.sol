@@ -32,10 +32,22 @@ library DepositManagementLogic {
         uint256 borrowedAmount;
     }
 
-    function isCovered(address _user) public view returns (bool) {
-        (uint256 totalCollateral, uint256 totalUsedCollateral, ) = getTotalCollateralAmount(_user);
+    function isCovered(
+        address _user,
+        bytes32 _orderCcy
+    ) public view returns (bool isEnoughCollateral, bool isEnoughDepositInOrderCcy) {
+        ILendingMarketController.AdditionalFunds memory _funds;
+        _funds.ccy = _orderCcy;
 
-        return
+        (
+            uint256 totalCollateral,
+            uint256 totalUsedCollateral,
+            ,
+            bool isInsufficientDepositAmount
+        ) = _calculateCollateral(_user, _funds);
+
+        isEnoughDepositInOrderCcy = !isInsufficientDepositAmount;
+        isEnoughCollateral =
             totalUsedCollateral == 0 ||
             (totalCollateral * Constants.PCT_DIGIT >=
                 totalUsedCollateral * Storage.slot().liquidationThresholdRate);
@@ -179,12 +191,11 @@ library DepositManagementLogic {
         vars.debtAmount = funds.debtAmount;
         vars.borrowedAmount = funds.borrowedAmount;
 
-        // Check if the user has enough deposit amount for lending in the selected currency.
+        // Check if the user has enough deposit amount in the selected currency.
         if (
-            _funds.lentAmount != 0 &&
-            (vars.plusDepositAmountInAdditionalFundsCcy +
+            vars.plusDepositAmountInAdditionalFundsCcy +
                 Storage.slot().depositAmounts[_user][_funds.ccy] <
-                vars.minusDepositAmountInAdditionalFundsCcy)
+            vars.minusDepositAmountInAdditionalFundsCcy
         ) {
             isInsufficientDepositAmount = true;
         }
@@ -246,7 +257,7 @@ library DepositManagementLogic {
 
     function addDepositAmount(address _user, bytes32 _ccy, uint256 _amount) public {
         Storage.slot().depositAmounts[_user][_ccy] += _amount;
-        _updateUsedCurrencies(_user, _ccy);
+        Storage.slot().usedCurrencies[_user].add(_ccy);
     }
 
     function removeDepositAmount(address _user, bytes32 _ccy, uint256 _amount) public {
@@ -255,7 +266,6 @@ library DepositManagementLogic {
         }
 
         Storage.slot().depositAmounts[_user][_ccy] -= _amount;
-        _updateUsedCurrencies(_user, _ccy);
     }
 
     function executeForcedReset(
@@ -377,12 +387,18 @@ library DepositManagementLogic {
         address _to,
         uint256 _amount
     ) external returns (uint256 untransferredAmount) {
-        uint256 depositAmount = Storage.slot().depositAmounts[_from][_ccy];
+        uint256 depositAmount = getDepositAmount(_from, _ccy);
         uint256 amount = depositAmount >= _amount ? _amount : depositAmount;
         untransferredAmount = _amount - amount;
 
         removeDepositAmount(_from, _ccy, amount);
         addDepositAmount(_to, _ccy, amount);
+    }
+
+    function cleanUpUsedCurrencies(address _user, bytes32 _ccy) internal {
+        if (Storage.slot().depositAmounts[_user][_ccy] == 0) {
+            Storage.slot().usedCurrencies[_user].remove(_ccy);
+        }
     }
 
     /**
@@ -409,13 +425,5 @@ library DepositManagementLogic {
         }
 
         return totalDepositAmount;
-    }
-
-    function _updateUsedCurrencies(address _user, bytes32 _ccy) internal {
-        if (Storage.slot().depositAmounts[_user][_ccy] > 0) {
-            Storage.slot().usedCurrencies[_user].add(_ccy);
-        } else {
-            Storage.slot().usedCurrencies[_user].remove(_ccy);
-        }
     }
 }

@@ -109,12 +109,16 @@ contract TokenVault is
     }
 
     /**
-     * @notice Gets if the collateral has enough coverage.
+     * @notice Gets if the collateral is sufficient or not
      * @param _user User's address
-     * @return The boolean if the collateral has sufficient coverage or not
+     * @return isEnoughCollateral The boolean if the user has enough collateral or not
+     * @return isEnoughDepositInOrderCcy The boolean if the user has enough deposit in the order currency or not
      */
-    function isCovered(address _user) public view override returns (bool) {
-        return DepositManagementLogic.isCovered(_user);
+    function isCovered(
+        address _user,
+        bytes32 _orderCcy
+    ) public view override returns (bool isEnoughCollateral, bool isEnoughDepositInOrderCcy) {
+        return DepositManagementLogic.isCovered(_user, _orderCcy);
     }
 
     /**
@@ -435,6 +439,18 @@ contract TokenVault is
         uint256 _amount
     ) external override whenNotPaused onlyLendingMarketController onlyRegisteredCurrency(_ccy) {
         DepositManagementLogic.removeDepositAmount(_user, _ccy, _amount);
+    }
+
+    /**
+     * @notice Clean up the used currencies of the user.
+     * @param _user User's address
+     * @param _ccy Currency name in bytes32
+     */
+    function cleanUpUsedCurrencies(
+        address _user,
+        bytes32 _ccy
+    ) external override whenNotPaused onlyLendingMarketController {
+        DepositManagementLogic.cleanUpUsedCurrencies(_user, _ccy);
     }
 
     /**

@@ -103,6 +103,7 @@ describe('LendingMarketController - Liquidations', () => {
     ].returns('10');
     await mockTokenVault.mock.addDepositAmount.returns();
     await mockTokenVault.mock.removeDepositAmount.returns();
+    await mockTokenVault.mock.cleanUpUsedCurrencies.returns();
   });
 
   beforeEach(async () => {
@@ -116,8 +117,7 @@ describe('LendingMarketController - Liquidations', () => {
     await mockTokenVault.mock.getLiquidationAmount.returns(1000, 20, 10);
     await mockTokenVault.mock.getDepositAmount.returns(100);
     await mockTokenVault.mock.transferFrom.returns(0);
-    await mockTokenVault.mock['isCovered(address)'].returns(true);
-    await mockTokenVault.mock.isCovered.returns(true);
+    await mockTokenVault.mock.isCovered.returns(true, true);
     await mockTokenVault.mock.isCollateral.returns(true);
     await mockReserveFund.mock.isPaused.returns(true);
     await mockCurrencyController.mock[
@@ -744,7 +744,7 @@ describe('LendingMarketController - Liquidations', () => {
         );
 
       // Set up for the mocks
-      await mockTokenVault.mock.isCovered.returns(false);
+      await mockTokenVault.mock.isCovered.returns(false, true);
 
       await expect(
         lendingMarketControllerProxy

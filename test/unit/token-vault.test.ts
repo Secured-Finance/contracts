@@ -710,26 +710,36 @@ describe('TokenVault', () => {
       await updateReturnValuesOfCalculateTotalFundsInBaseCurrencyMock();
 
       expect(await tokenVaultProxy.getCoverage(bob.address)).to.equal('0');
-      expect(await tokenVaultProxy['isCovered(address)'](bob.address)).to.equal(
-        true,
-      );
+
+      await tokenVaultProxy
+        .isCovered(bob.address, ethers.constants.HashZero)
+        .then(({ isEnoughCollateral, isEnoughDepositInOrderCcy }) => {
+          expect(isEnoughCollateral).to.equal(true);
+          expect(isEnoughDepositInOrderCcy).to.equal(true);
+        });
 
       // NOTE: Deposit in two currencies to double the collateral
       // since the mock always returns the same value with "convertToBaseCurrency".
       await tokenVaultProxy.connect(bob).deposit(targetCurrency, value);
       await tokenVaultProxy.connect(bob).deposit(previousCurrency, value);
 
-      expect(await tokenVaultProxy['isCovered(address)'](bob.address)).to.equal(
-        true,
-      );
-
+      await tokenVaultProxy
+        .isCovered(bob.address, ethers.constants.HashZero)
+        .then(({ isEnoughCollateral, isEnoughDepositInOrderCcy }) => {
+          expect(isEnoughCollateral).to.equal(true);
+          expect(isEnoughDepositInOrderCcy).to.equal(true);
+        });
       await updateReturnValuesOfCalculateTotalFundsInBaseCurrencyMock({
         workingBorrowOrdersAmount: usedValue,
       });
 
-      expect(await tokenVaultProxy['isCovered(address)'](bob.address)).to.equal(
-        true,
-      );
+      await tokenVaultProxy
+        .isCovered(bob.address, ethers.constants.HashZero)
+        .then(({ isEnoughCollateral, isEnoughDepositInOrderCcy }) => {
+          expect(isEnoughCollateral).to.equal(true);
+          expect(isEnoughDepositInOrderCcy).to.equal(true);
+        });
+
       expect(
         await tokenVaultProxy['getWithdrawableCollateral(address)'](
           bob.address,
@@ -872,6 +882,10 @@ describe('TokenVault', () => {
         .connect(signer)
         .removeDepositAmount(signer.address, targetCurrency, value);
 
+      await tokenVaultCaller
+        .connect(signer)
+        .cleanUpUsedCurrencies(signer.address, targetCurrency);
+
       expect(
         await tokenVaultProxy.getTotalUnusedCollateralAmount(signer.address),
       ).to.equal('0');
@@ -956,8 +970,13 @@ describe('TokenVault', () => {
       expect(await tokenVaultProxy.getCoverage(signer.address)).to.equal(
         '2500',
       );
-      expect(await tokenVaultProxy['isCovered(address)'](signer.address)).to
-        .true;
+
+      await tokenVaultProxy
+        .isCovered(signer.address, ethers.constants.HashZero)
+        .then(({ isEnoughCollateral, isEnoughDepositInOrderCcy }) => {
+          expect(isEnoughCollateral).to.equal(true);
+          expect(isEnoughDepositInOrderCcy).to.equal(true);
+        });
 
       await mockCurrencyController.mock[
         'convertToBaseCurrency(bytes32,uint256)'
@@ -966,8 +985,12 @@ describe('TokenVault', () => {
       expect(await tokenVaultProxy.getCoverage(signer.address)).to.equal(
         '10000',
       );
-      expect(await tokenVaultProxy['isCovered(address)'](signer.address)).to
-        .false;
+      await tokenVaultProxy
+        .isCovered(signer.address, ethers.constants.HashZero)
+        .then(({ isEnoughCollateral, isEnoughDepositInOrderCcy }) => {
+          expect(isEnoughCollateral).to.equal(false);
+          expect(isEnoughDepositInOrderCcy).to.equal(true);
+        });
     });
 
     it('Get the withdrawable amount per currency', async () => {
@@ -1435,6 +1458,16 @@ describe('TokenVault', () => {
         mockERC20.address,
         true,
       );
+
+      await mockLendingMarketController.mock.calculateFunds.returns({
+        workingLendOrdersAmount: 0,
+        claimableAmount: 0,
+        collateralAmount: 0,
+        lentAmount: 0,
+        workingBorrowOrdersAmount: 0,
+        debtAmount: 0,
+        borrowedAmount: 0,
+      });
     });
 
     it('Transfer from Alice to Bob', async () => {
@@ -1490,6 +1523,45 @@ describe('TokenVault', () => {
       )
         .to.emit(tokenVaultProxy, 'Transfer')
         .withArgs(targetCurrency, alice.address, bob.address, depositAmount);
+    });
+
+    it('Transfer the deposit amount of Alice, who has a lent amount..', async () => {
+      const depositAmount = BigNumber.from('20000000000000');
+      const lentAmount = BigNumber.from('1000000000');
+
+      await mockLendingMarketController.mock.calculateFunds.returns({
+        workingLendOrdersAmount: 0,
+        claimableAmount: 0,
+        collateralAmount: 0,
+        lentAmount,
+        workingBorrowOrdersAmount: 0,
+        debtAmount: 0,
+        borrowedAmount: 0,
+      });
+
+      await tokenVaultProxy
+        .connect(alice)
+        .deposit(targetCurrency, depositAmount);
+
+      await expect(
+        tokenVaultCaller.transferFrom(
+          targetCurrency,
+          alice.address,
+          bob.address,
+          depositAmount,
+        ),
+      )
+        .to.emit(tokenVaultProxy, 'Transfer')
+        .withArgs(
+          targetCurrency,
+          alice.address,
+          bob.address,
+          depositAmount.sub(lentAmount),
+        );
+
+      expect(
+        await tokenVaultProxy.getDepositAmount(alice.address, targetCurrency),
+      ).to.equal(0);
     });
 
     it('Fail to transfer deposits due to invalid caller', async () => {
@@ -1559,6 +1631,10 @@ describe('TokenVault', () => {
           bob.address,
           arbitraryAmount,
         ),
+      ).to.be.revertedWith('Pausable: paused');
+
+      await expect(
+        tokenVaultCaller.cleanUpUsedCurrencies(alice.address, targetCurrency),
       ).to.be.revertedWith('Pausable: paused');
     });
 

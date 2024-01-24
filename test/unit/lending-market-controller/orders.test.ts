@@ -87,6 +87,7 @@ describe('LendingMarketController - Orders', () => {
     ].returns('10');
     await mockTokenVault.mock.addDepositAmount.returns();
     await mockTokenVault.mock.removeDepositAmount.returns();
+    await mockTokenVault.mock.cleanUpUsedCurrencies.returns();
     await mockTokenVault.mock.depositFrom.returns();
   });
 
@@ -380,7 +381,7 @@ describe('LendingMarketController - Orders', () => {
 
     beforeEach(async () => {
       // Set up for the mocks
-      await mockTokenVault.mock.isCovered.returns(true);
+      await mockTokenVault.mock.isCovered.returns(true, true);
 
       await initialize(targetCurrency);
     });
@@ -3202,7 +3203,7 @@ describe('LendingMarketController - Orders', () => {
             ),
         ).to.emit(fundManagementLogic, 'OrderFilled');
 
-        await mockTokenVault.mock.isCovered.returns(false);
+        await mockTokenVault.mock.isCovered.returns(false, true);
 
         await expect(
           lendingMarketControllerProxy
@@ -3360,7 +3361,7 @@ describe('LendingMarketController - Orders', () => {
 
     describe('Failure', async () => {
       it('Fail to create an order due to insufficient collateral', async () => {
-        await mockTokenVault.mock.isCovered.returns(false);
+        await mockTokenVault.mock.isCovered.returns(false, true);
 
         await expect(
           lendingMarketControllerProxy

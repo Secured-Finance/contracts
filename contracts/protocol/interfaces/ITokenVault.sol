@@ -20,7 +20,10 @@ interface ITokenVault {
     event CurrencyRegistered(bytes32 ccy, address tokenAddress, bool isCollateral);
     event CurrencyUpdated(bytes32 ccy, bool isCollateral);
 
-    function isCovered(address user) external view returns (bool);
+    function isCovered(
+        address user,
+        bytes32 ccy
+    ) external view returns (bool isEnoughCollateral, bool isEnoughDepositInOrderCcy);
 
     function isCollateral(bytes32 ccy) external view returns (bool);
 
@@ -80,6 +83,8 @@ interface ITokenVault {
     function addDepositAmount(address user, bytes32 ccy, uint256 amount) external;
 
     function removeDepositAmount(address user, bytes32 ccy, uint256 amount) external;
+
+    function cleanUpUsedCurrencies(address user, bytes32 ccy) external;
 
     function executeForcedReset(address user, bytes32 ccy) external returns (uint256 removedAmount);
 
