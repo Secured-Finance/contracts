@@ -395,7 +395,7 @@ library DepositManagementLogic {
         addDepositAmount(_to, _ccy, amount);
     }
 
-    function cleanUpUsedCurrencies(address _user, bytes32 _ccy) internal {
+    function cleanUpUsedCurrencies(address _user, bytes32 _ccy) external {
         if (Storage.slot().depositAmounts[_user][_ccy] == 0) {
             Storage.slot().usedCurrencies[_user].remove(_ccy);
         }

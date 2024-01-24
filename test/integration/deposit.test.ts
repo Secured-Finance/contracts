@@ -194,7 +194,7 @@ describe('Integration Test: Deposit', async () => {
       ).to.equal(initialETHBalance.div(5));
     });
 
-    it('Clean up', async () => {
+    it('Clean up funds', async () => {
       await lendingMarketController.cleanUpFunds(hexETH, alice.address);
       const currencies = await tokenVault.getUsedCurrencies(alice.address);
 
@@ -262,7 +262,7 @@ describe('Integration Test: Deposit', async () => {
       ).to.equal(initialWBTCBalance.div(5));
     });
 
-    it('Clean up', async () => {
+    it('Clean up funds', async () => {
       await lendingMarketController.cleanUpFunds(hexWBTC, alice.address);
       const currencies = await tokenVault.getUsedCurrencies(alice.address);
 
@@ -346,7 +346,7 @@ describe('Integration Test: Deposit', async () => {
       ).to.equal(initialETHBalance.div(5));
     });
 
-    it('Clean up', async () => {
+    it('Clean up funds', async () => {
       await lendingMarketController.cleanUpFunds(hexETH, alice.address);
       const currencies = await tokenVault.getUsedCurrencies(alice.address);
 
@@ -466,7 +466,7 @@ describe('Integration Test: Deposit', async () => {
       ).to.equal(initialETHBalance.div(5));
     });
 
-    it('Clean up', async () => {
+    it('Clean up funds', async () => {
       await lendingMarketController.cleanUpFunds(hexETH, alice.address);
       const currencies = await tokenVault.getUsedCurrencies(alice.address);
 
@@ -592,7 +592,7 @@ describe('Integration Test: Deposit', async () => {
       ).to.equal(tokenVaultBalanceBefore);
     });
 
-    it('Clean up', async () => {
+    it('Clean up funds', async () => {
       await lendingMarketController.cleanUpFunds(hexWFIL, alice.address);
       const currencies = await tokenVault.getUsedCurrencies(alice.address);
 
