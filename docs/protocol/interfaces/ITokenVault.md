@@ -83,7 +83,7 @@ event CurrencyUpdated(bytes32 ccy, bool isCollateral)
 ### isCovered
 
 ```solidity
-function isCovered(address user) external view returns (bool)
+function isCovered(address user, bytes32 ccy) external view returns (bool isEnoughCollateral, bool isEnoughDepositInOrderCcy)
 ```
 
 ### isCollateral
@@ -234,6 +234,12 @@ function addDepositAmount(address user, bytes32 ccy, uint256 amount) external
 
 ```solidity
 function removeDepositAmount(address user, bytes32 ccy, uint256 amount) external
+```
+
+### cleanUpUsedCurrencies
+
+```solidity
+function cleanUpUsedCurrencies(address user, bytes32 ccy) external
 ```
 
 ### executeForcedReset

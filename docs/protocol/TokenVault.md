@@ -69,18 +69,20 @@ receive() external payable
 ### isCovered
 
 ```solidity
-function isCovered(address _user) public view returns (bool)
+function isCovered(address _user, bytes32 _orderCcy) public view returns (bool isEnoughCollateral, bool isEnoughDepositInOrderCcy)
 ```
 
-Gets if the collateral has enough coverage.
+Gets if the collateral is sufficient or not
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _user | address | User's address |
+| _orderCcy | bytes32 |  |
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| [0] | bool | The boolean if the collateral has sufficient coverage or not |
+| isEnoughCollateral | bool | The boolean if the user has enough collateral or not |
+| isEnoughDepositInOrderCcy | bool | The boolean if the user has enough deposit in the order currency or not |
 
 ### isCollateral
 
@@ -471,6 +473,19 @@ Removes deposit amount.
 | _user | address | User's address |
 | _ccy | bytes32 | Currency name in bytes32 |
 | _amount | uint256 | Amount of funds to withdraw. |
+
+### cleanUpUsedCurrencies
+
+```solidity
+function cleanUpUsedCurrencies(address _user, bytes32 _ccy) external
+```
+
+Clean up the used currencies of the user.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _user | address | User's address |
+| _ccy | bytes32 | Currency name in bytes32 |
 
 ### executeForcedReset
 

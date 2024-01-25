@@ -26,6 +26,12 @@ error TooManyActiveOrders()
 error NotEnoughCollateral()
 ```
 
+### NotEnoughDeposit
+
+```solidity
+error NotEnoughDeposit(bytes32 ccy)
+```
+
 ### getOrderEstimation
 
 ```solidity
@@ -84,5 +90,11 @@ function _estimatePVFromFV(bytes32 _ccy, uint256 _maturity, uint256 _amount, uin
 
 ```solidity
 function _unwindPosition(bytes32 _ccy, uint256 _maturity, address _user, int256 _futureValue) internal returns (struct FilledOrder filledOrder, struct PartiallyFilledOrder partiallyFilledOrder, uint256 feeInFV, enum ProtocolTypes.Side side)
+```
+
+### _isCovered
+
+```solidity
+function _isCovered(address _user, bytes32 _ccy) internal view
 ```
 

@@ -38,7 +38,7 @@ struct CalculatedFundVars {
 ### isCovered
 
 ```solidity
-function isCovered(address _user) public view returns (bool)
+function isCovered(address _user, bytes32 _orderCcy) public view returns (bool isEnoughCollateral, bool isEnoughDepositInOrderCcy)
 ```
 
 ### getUsedCurrencies
@@ -155,6 +155,12 @@ function calculateLiquidationFees(uint256 _amount) public view returns (uint256 
 function transferFrom(bytes32 _ccy, address _from, address _to, uint256 _amount) external returns (uint256 untransferredAmount)
 ```
 
+### cleanUpUsedCurrencies
+
+```solidity
+function cleanUpUsedCurrencies(address _user, bytes32 _ccy) external
+```
+
 ### _getTotalInternalDepositAmountInBaseCurrency
 
 ```solidity
@@ -171,10 +177,4 @@ Gets the total of amount deposited in the user's collateral of all currencies
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | totalDepositAmount | uint256 | The total deposited amount in the base currency |
-
-### _updateUsedCurrencies
-
-```solidity
-function _updateUsedCurrencies(address _user, bytes32 _ccy) internal
-```
 
