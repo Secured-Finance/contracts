@@ -190,7 +190,11 @@ library LiquidationLogic {
             }
         }
 
-        if (!AddressResolverLib.tokenVault().isCovered(_liquidator)) revert InvalidLiquidation();
+        (bool isEnoughCollateral, ) = AddressResolverLib.tokenVault().isCovered(
+            _liquidator,
+            bytes32(0)
+        );
+        if (!isEnoughCollateral) revert InvalidLiquidation();
 
         emit LiquidationExecuted(
             _user,

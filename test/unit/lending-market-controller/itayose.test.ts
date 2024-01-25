@@ -70,9 +70,10 @@ describe('LendingMarketController - Itayose', () => {
     await mockCurrencyController.mock[
       'convertFromBaseCurrency(bytes32,uint256)'
     ].returns('10');
-    await mockTokenVault.mock.isCovered.returns(true);
+    await mockTokenVault.mock.isCovered.returns(true, true);
     await mockTokenVault.mock.addDepositAmount.returns();
     await mockTokenVault.mock.removeDepositAmount.returns();
+    await mockTokenVault.mock.cleanUpUsedCurrencies.returns();
   });
 
   const initialize = async (currency: string, openingDate = genesisDate) => {

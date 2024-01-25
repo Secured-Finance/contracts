@@ -30,6 +30,7 @@ library LendingMarketUserLogic {
     error FutureValueIsZero();
     error TooManyActiveOrders();
     error NotEnoughCollateral();
+    error NotEnoughDeposit(bytes32 ccy);
 
     function getOrderEstimation(
         ILendingMarketController.GetOrderEstimationParams memory input
@@ -137,7 +138,7 @@ library LendingMarketUserLogic {
 
         Storage.slot().usedCurrencies[_user].add(_ccy);
 
-        if (!AddressResolverLib.tokenVault().isCovered(_user)) revert NotEnoughCollateral();
+        _isCovered(_user, _ccy);
     }
 
     function executePreOrder(
@@ -166,7 +167,7 @@ library LendingMarketUserLogic {
 
         Storage.slot().usedCurrencies[_user].add(_ccy);
 
-        if (!AddressResolverLib.tokenVault().isCovered(_user)) revert NotEnoughCollateral();
+        _isCovered(_user, _ccy);
     }
 
     function unwindPosition(bytes32 _ccy, uint256 _maturity, address _user) external {
@@ -216,7 +217,7 @@ library LendingMarketUserLogic {
             FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, _user);
         }
 
-        if (!AddressResolverLib.tokenVault().isCovered(_user)) revert NotEnoughCollateral();
+        _isCovered(_user, _ccy);
     }
 
     function updateFundsForTaker(
@@ -433,5 +434,14 @@ library LendingMarketUserLogic {
                     (-_futureValue).toUint256()
                 );
         }
+    }
+
+    function _isCovered(address _user, bytes32 _ccy) internal view {
+        (bool isEnoughCollateral, bool isEnoughDepositInOrderCcy) = AddressResolverLib
+            .tokenVault()
+            .isCovered(_user, _ccy);
+
+        if (!isEnoughDepositInOrderCcy) revert NotEnoughDeposit(_ccy);
+        if (!isEnoughCollateral) revert NotEnoughCollateral();
     }
 }

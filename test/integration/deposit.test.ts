@@ -187,11 +187,18 @@ describe('Integration Test: Deposit', async () => {
       );
 
       expect(tokenVaultBalance).to.equal(0);
-      expect(currencies.includes(hexETH)).to.equal(false);
+      expect(currencies.includes(hexETH)).to.equal(true);
       expect(depositAmount).to.equal(0);
       expect(
         totalCollateralAmountBefore.sub(totalCollateralAmountAfter),
       ).to.equal(initialETHBalance.div(5));
+    });
+
+    it('Clean up funds', async () => {
+      await lendingMarketController.cleanUpFunds(hexETH, alice.address);
+      const currencies = await tokenVault.getUsedCurrencies(alice.address);
+
+      expect(currencies.includes(hexETH)).to.equal(false);
     });
   });
 
@@ -248,11 +255,18 @@ describe('Integration Test: Deposit', async () => {
       );
 
       expect(tokenVaultBalance).to.equal(0);
-      expect(currencies.includes(hexWBTC)).to.equal(false);
+      expect(currencies.includes(hexWBTC)).to.equal(true);
       expect(depositAmount).to.equal(0);
       expect(
         totalCollateralAmountBefore.sub(totalCollateralAmountAfter),
       ).to.equal(initialWBTCBalance.div(5));
+    });
+
+    it('Clean up funds', async () => {
+      await lendingMarketController.cleanUpFunds(hexWBTC, alice.address);
+      const currencies = await tokenVault.getUsedCurrencies(alice.address);
+
+      expect(currencies.includes(hexWBTC)).to.equal(false);
     });
   });
 
@@ -325,11 +339,18 @@ describe('Integration Test: Deposit', async () => {
       );
 
       expect(tokenVaultBalance).to.equal(0);
-      expect(currencies.includes(hexETH)).to.equal(false);
+      expect(currencies.includes(hexETH)).to.equal(true);
       expect(depositAmount).to.equal(0);
       expect(
         totalCollateralAmountBefore.sub(totalCollateralAmountAfter),
       ).to.equal(initialETHBalance.div(5));
+    });
+
+    it('Clean up funds', async () => {
+      await lendingMarketController.cleanUpFunds(hexETH, alice.address);
+      const currencies = await tokenVault.getUsedCurrencies(alice.address);
+
+      expect(currencies.includes(hexETH)).to.equal(false);
     });
   });
 
@@ -438,11 +459,18 @@ describe('Integration Test: Deposit', async () => {
         initialETHBalance.div(5),
       );
       expect(tokenVaultBalance).to.equal(0);
-      expect(currencies.includes(hexETH)).to.equal(false);
+      expect(currencies.includes(hexETH)).to.equal(true);
       expect(depositAmount).to.equal(0);
       expect(
         totalCollateralAmountBefore.sub(totalCollateralAmountAfter),
       ).to.equal(initialETHBalance.div(5));
+    });
+
+    it('Clean up funds', async () => {
+      await lendingMarketController.cleanUpFunds(hexETH, alice.address);
+      const currencies = await tokenVault.getUsedCurrencies(alice.address);
+
+      expect(currencies.includes(hexETH)).to.equal(false);
     });
 
     it('Deposit USDC (ERC20 collateral currency)', async () => {
@@ -557,11 +585,18 @@ describe('Integration Test: Deposit', async () => {
 
       expect(collateralAmountAfter.sub(collateralAmountBefore)).to.equal(0);
       expect(tokenVaultBalanceAfter).to.equal(0);
-      expect(currencies.includes(hexWFIL)).to.equal(false);
+      expect(currencies.includes(hexWFIL)).to.equal(true);
       expect(depositAmount).to.equal(0);
       expect(
         totalCollateralAmountBefore.sub(totalCollateralAmountAfter),
       ).to.equal(tokenVaultBalanceBefore);
+    });
+
+    it('Clean up funds', async () => {
+      await lendingMarketController.cleanUpFunds(hexWFIL, alice.address);
+      const currencies = await tokenVault.getUsedCurrencies(alice.address);
+
+      expect(currencies.includes(hexWFIL)).to.equal(false);
     });
   });
 

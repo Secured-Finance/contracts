@@ -89,8 +89,9 @@ describe('LendingMarketController - Operations', () => {
     ].returns('10');
     await mockTokenVault.mock.addDepositAmount.returns();
     await mockTokenVault.mock.removeDepositAmount.returns();
+    await mockTokenVault.mock.cleanUpUsedCurrencies.returns();
     await mockTokenVault.mock.depositFrom.returns();
-    await mockTokenVault.mock.isCovered.returns(true);
+    await mockTokenVault.mock.isCovered.returns(true, true);
   });
 
   const initialize = async (currency: string) => {

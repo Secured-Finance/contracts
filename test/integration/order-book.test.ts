@@ -1261,6 +1261,94 @@ describe('Integration Test: Order Book', async () => {
         ).to.be.revertedWith('NotEnoughCollateral');
       });
     });
+
+    describe('Fail to execute order due to not enough deposit', async () => {
+      const depositAmount = initialETHBalance.div(5);
+      const orderAmount = depositAmount
+        .mul(3)
+        .div(5)
+        .mul(BigNumber.from(10).pow(18))
+        .div(wFilToETHRate);
+
+      before(async () => {
+        [alice, bob] = await getUsers(2);
+        filMaturities = await lendingMarketController.getMaturities(hexWFIL);
+      });
+
+      after(async () => {
+        for (const user of [alice, bob]) {
+          const { activeOrders } = await lendingMarketReader[
+            'getOrders(bytes32,address)'
+          ](hexWFIL, user.address);
+
+          for (const order of activeOrders) {
+            await lendingMarketController
+              .connect(user)
+              .cancelOrder(hexWFIL, order.maturity, order.orderId);
+          }
+        }
+      });
+
+      it('Fail to execute order due to no deposit in the selected currency', async () => {
+        await expect(
+          lendingMarketController
+            .connect(alice)
+            .executeOrder(
+              hexWFIL,
+              filMaturities[0],
+              Side.LEND,
+              orderAmount,
+              '9600',
+            ),
+        ).revertedWith('NotEnoughDeposit');
+      });
+
+      it('Deposit ETH ', async () => {
+        await tokenVault.connect(alice).deposit(hexETH, depositAmount, {
+          value: depositAmount,
+        });
+
+        await tokenVault.connect(bob).deposit(hexETH, depositAmount, {
+          value: depositAmount,
+        });
+      });
+
+      it('Fail to execute order due to double spend', async () => {
+        await wFILToken.connect(alice).approve(tokenVault.address, orderAmount);
+
+        await lendingMarketController
+          .connect(alice)
+          .depositAndExecuteOrder(
+            hexWFIL,
+            filMaturities[0],
+            Side.LEND,
+            orderAmount,
+            '9000',
+          );
+
+        await lendingMarketController
+          .connect(bob)
+          .executeOrder(
+            hexWFIL,
+            filMaturities[0],
+            Side.BORROW,
+            orderAmount,
+            '9600',
+          );
+
+        await expect(
+          lendingMarketController
+            .connect(alice)
+            .executeOrder(
+              hexWFIL,
+              filMaturities[0],
+              Side.LEND,
+              orderAmount,
+              '9600',
+            ),
+        ).revertedWith('NotEnoughDeposit');
+      });
+    });
   });
 
   describe('Limit orders', async () => {
