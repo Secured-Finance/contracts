@@ -26,7 +26,7 @@ import {
 } from '../common/currencies';
 import { deployContracts } from '../common/deployment';
 import { calculateOrderFee } from '../common/orders';
-import { Signers } from '../common/signers';
+import { Signers, getPermitSignature } from '../common/signers';
 
 describe('Integration Test: Deposit', async () => {
   let owner: SignerWithAddress;
@@ -661,6 +661,67 @@ describe('Integration Test: Deposit', async () => {
       );
 
       expect(tokenVaultBalanceBefore).to.equal(tokenVaultBalanceAfter);
+    });
+  });
+
+  describe('Deposit without prior approval', async () => {
+    before(async () => {
+      [alice] = await getUsers(1);
+    });
+
+    it('Deposit USDC without prior approval', async () => {
+      const deadline =
+        (await ethers.provider.getBlock('latest')).timestamp + 4200;
+      const { chainId } = await ethers.provider.getNetwork();
+
+      const sig = await getPermitSignature(
+        chainId,
+        usdcToken,
+        alice,
+        tokenVault,
+        initialUSDCBalance.div(5),
+        deadline,
+      );
+
+      await tokenVault
+        .connect(owner)
+        .depositWithPermit(
+          alice.address,
+          hexUSDC,
+          initialUSDCBalance.div(5).toString(),
+          deadline,
+          sig.v,
+          sig.r,
+          sig.s,
+        );
+
+      const aliceDepositAmount = await tokenVault.getDepositAmount(
+        alice.address,
+        hexUSDC,
+      );
+
+      expect(aliceDepositAmount).to.equal(initialUSDCBalance.div(5));
+    });
+
+    it('Withdraw by one user', async () => {
+      const tokenVaultBalanceBefore = await usdcToken.balanceOf(
+        tokenVault.address,
+      );
+
+      await tokenVault.connect(alice).withdraw(hexUSDC, initialUSDCBalance);
+
+      const tokenVaultBalanceAfter = await usdcToken.balanceOf(
+        tokenVault.address,
+      );
+      const depositAmount = await tokenVault.getDepositAmount(
+        alice.address,
+        hexUSDC,
+      );
+
+      expect(tokenVaultBalanceBefore.sub(tokenVaultBalanceAfter)).to.equal(
+        initialUSDCBalance.div(5),
+      );
+      expect(depositAmount).to.equal(0);
     });
   });
 

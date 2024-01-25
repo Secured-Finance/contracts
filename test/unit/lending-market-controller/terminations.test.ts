@@ -171,6 +171,20 @@ describe('LendingMarketController - Terminations', () => {
       ).to.revertedWith('AlreadyTerminated');
 
       await expect(
+        lendingMarketControllerProxy.depositWithPermitAndExecuteOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '1',
+          '0',
+          ethers.constants.MaxUint256,
+          1,
+          ethers.utils.formatBytes32String('dummy'),
+          ethers.utils.formatBytes32String('dummy'),
+        ),
+      ).to.revertedWith('AlreadyTerminated');
+
+      await expect(
         lendingMarketControllerProxy.executePreOrder(
           targetCurrency,
           maturities[0],
@@ -187,6 +201,20 @@ describe('LendingMarketController - Terminations', () => {
           Side.LEND,
           '1',
           '0',
+        ),
+      ).to.revertedWith('AlreadyTerminated');
+
+      await expect(
+        lendingMarketControllerProxy.depositWithPermitAndExecuteOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '1',
+          '0',
+          ethers.constants.MaxUint256,
+          1,
+          ethers.utils.formatBytes32String('dummy'),
+          ethers.utils.formatBytes32String('dummy'),
         ),
       ).to.revertedWith('AlreadyTerminated');
 

@@ -109,6 +109,7 @@ describe('TokenVault', () => {
     await mockERC20.mock.transferFrom.returns(true);
     await mockERC20.mock.transfer.returns(true);
     await mockERC20.mock.approve.returns(true);
+    await mockERC20.mock.permit.returns();
     await mockCurrencyController.mock.currencyExists.returns(true);
     await mockLendingMarketController.mock.isTerminated.returns(false);
     await mockLendingMarketController.mock.cleanUpFunds.returns(0);
@@ -682,6 +683,30 @@ describe('TokenVault', () => {
         targetCurrency,
       );
       expect(depositAmount).to.equal('30000000000000');
+    });
+
+    it('Deposit with permit', async () => {
+      const value = '10000000000000';
+      const deadline = ethers.constants.MaxUint256;
+      const v = 1;
+      const r = ethers.utils.formatBytes32String('dummy');
+      const s = ethers.utils.formatBytes32String('dummy');
+
+      await expect(
+        tokenVaultProxy
+          .connect(alice)
+          .depositWithPermit(
+            alice.address,
+            targetCurrency,
+            value,
+            deadline,
+            v,
+            r,
+            s,
+          ),
+      )
+        .to.emit(tokenVaultProxy, 'Deposit')
+        .withArgs(alice.address, targetCurrency, value);
     });
 
     it('Get the withdrawable amount with the working orders & Withdraw collateral', async () => {
@@ -1449,6 +1474,24 @@ describe('TokenVault', () => {
         tokenVaultCaller.depositFrom(alice.address, targetCurrency, '1'),
       ).to.be.revertedWith('MarketTerminated');
     });
+
+    it('Fail to call deposit from Alice due to lending market termination', async () => {
+      await mockLendingMarketController.mock.isTerminated.returns(true);
+
+      await expect(
+        tokenVaultProxy
+          .connect(alice)
+          .depositWithPermit(
+            alice.address,
+            targetCurrency,
+            '10000000000000',
+            ethers.constants.MaxUint256,
+            1,
+            ethers.utils.formatBytes32String('dummy'),
+            ethers.utils.formatBytes32String('dummy'),
+          ),
+      ).to.be.revertedWith('MarketTerminated');
+    });
   });
 
   describe('Transfer', async () => {
@@ -1609,6 +1652,20 @@ describe('TokenVault', () => {
       ).to.be.revertedWith('Pausable: paused');
 
       await expect(
+        tokenVaultProxy
+          .connect(alice)
+          .depositWithPermit(
+            alice.address,
+            targetCurrency,
+            arbitraryAmount,
+            ethers.constants.MaxUint256,
+            1,
+            ethers.utils.formatBytes32String('dummy'),
+            ethers.utils.formatBytes32String('dummy'),
+          ),
+      ).to.be.revertedWith('Pausable: paused');
+
+      await expect(
         tokenVaultCaller.addDepositAmount(
           alice.address,
           targetCurrency,
@@ -1651,17 +1708,26 @@ describe('TokenVault', () => {
           .withdraw(targetCurrency, arbitraryAmount),
       ).to.be.not.reverted;
 
-      tokenVaultCaller.depositFrom(
-        alice.address,
-        targetCurrency,
-        arbitraryAmount,
-      );
       await expect(
         tokenVaultCaller.depositFrom(
           alice.address,
           targetCurrency,
           arbitraryAmount,
         ),
+      ).to.be.not.reverted;
+
+      await expect(
+        tokenVaultProxy
+          .connect(alice)
+          .depositWithPermit(
+            alice.address,
+            targetCurrency,
+            arbitraryAmount,
+            ethers.constants.MaxUint256,
+            1,
+            ethers.utils.formatBytes32String('dummy'),
+            ethers.utils.formatBytes32String('dummy'),
+          ),
       ).to.be.not.reverted;
 
       await expect(

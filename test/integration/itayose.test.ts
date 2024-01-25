@@ -25,7 +25,6 @@ describe('Integration Test: Itayose', async () => {
   let lendingMarket: Contract;
   let lendingMarketReader: Contract;
   let wETHToken: Contract;
-  let wFILToken: Contract;
 
   let fundManagementLogic: Contract;
 
@@ -35,14 +34,7 @@ describe('Integration Test: Itayose', async () => {
 
   let signers: Signers;
 
-  const initialFILBalance = BigNumber.from('100000000000000000000');
-
-  const getUsers = async (count: number) =>
-    signers.get(count, async (signer) => {
-      await wFILToken
-        .connect(owner)
-        .transfer(signer.address, initialFILBalance);
-    });
+  const getUsers = async (count: number) => signers.get(count);
 
   const createSampleETHOrders = async (
     user: SignerWithAddress,
@@ -97,7 +89,6 @@ describe('Integration Test: Itayose', async () => {
       lendingMarketController,
       lendingMarketReader,
       wETHToken,
-      wFILToken,
       lendingMarketOperationLogic,
       fundManagementLogic,
     } = await deployContracts());
