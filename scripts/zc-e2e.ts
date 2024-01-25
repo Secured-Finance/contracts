@@ -126,7 +126,7 @@ describe('ZC e2e test', async function () {
       .then(({ address }) => ethers.getContractAt('ProxyController', address));
 
     const wFILTokenAddress =
-      process.env.TOKEN_SYMBOL_WFIL ||
+      process.env.TOKEN_ADDRESS_WFIL ||
       (await deployments.get('MockWFIL')).address;
     wFILToken = await ethers.getContractAt('MockWFIL', wFILTokenAddress);
 
