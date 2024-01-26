@@ -5,14 +5,18 @@ import { expect } from 'chai';
 import { BigNumber, Contract, Wallet } from 'ethers';
 import { deployments, ethers } from 'hardhat';
 import { LIQUIDATION_THRESHOLD_RATE, Side } from '../utils/constants';
-import { hexETH, hexWFIL, toBytes32 } from '../utils/strings';
+import { toBytes32 } from '../utils/strings';
+
+const INITIAL_CURRENCIES = (
+  process.env.INITIAL_CURRENCIES || 'USDC,WBTC,WETH,WFIL'
+).split(',');
+
+const NATIVE_CURRENCY_SYMBOL = process.env.NATIVE_CURRENCY_SYMBOL || 'ETH';
 
 describe('ZC e2e test', async function () {
-  const targetCurrency = hexWFIL;
   const BP = 10000;
-  const depositAmountInETH = '10000000000000000000';
-  const orderAmountInFIL = '500000000000000000';
-  const orderUnitPrice = '9000';
+  const depositAmount = BigNumber.from('100000000000000000');
+  let orderAmount: BigNumber;
 
   // Accounts
   let ownerSigner: SignerWithAddress | Wallet;
@@ -25,19 +29,20 @@ describe('ZC e2e test', async function () {
   let tokenVault: Contract;
   let lendingMarketController: Contract;
   let reserveFund: Contract;
-  let wFILToken: Contract;
   let orderActionLogic: Contract;
   let lendingMarketReader: Contract;
 
   let maturities: BigNumber[];
   let orderBookIds: BigNumber[];
 
+  let nativeCurrency: string;
+
   const executeOrder = async (
     user: SignerWithAddress | Wallet,
     currency: string,
     maturity: BigNumber,
     side: number,
-    amount: string,
+    amount: string | BigNumber,
     unitPrice: string | BigNumber,
   ) => {
     const estimatedGas = await lendingMarketController
@@ -102,6 +107,14 @@ describe('ZC e2e test', async function () {
       ['address'],
     );
 
+    // Set currencies
+    nativeCurrency = toBytes32(NATIVE_CURRENCY_SYMBOL);
+
+    if (!INITIAL_CURRENCIES.includes(NATIVE_CURRENCY_SYMBOL)) {
+      console.log('Skip the all steps since no native currency is registered');
+      this.skip();
+    }
+
     // Get ETH
     if (process.env.FORK_RPC_ENDPOINT) {
       const params = [[ownerSigner.address], ethers.utils.hexValue(10)];
@@ -125,11 +138,6 @@ describe('ZC e2e test', async function () {
       .get('ProxyController')
       .then(({ address }) => ethers.getContractAt('ProxyController', address));
 
-    const wFILTokenAddress =
-      process.env.TOKEN_ADDRESS_WFIL ||
-      (await deployments.get('MockWFIL')).address;
-    wFILToken = await ethers.getContractAt('MockWFIL', wFILTokenAddress);
-
     orderActionLogic = await deployments
       .get('OrderActionLogic')
       .then(({ address }) => ethers.getContractAt('OrderActionLogic', address));
@@ -150,96 +158,84 @@ describe('ZC e2e test', async function () {
       ['address'],
     );
 
-    // Transfer wFIL token for testing
-    await wFILToken
-      .connect(ownerSigner)
-      .transfer(aliceSigner.address, orderAmountInFIL)
-      .then((tx) => tx.wait());
+    orderAmount = depositAmount.div(10);
 
-    await wFILToken
-      .connect(ownerSigner)
-      .transfer(bobSigner.address, orderAmountInFIL)
-      .then((tx) => tx.wait());
-
-    maturities = await lendingMarketController.getMaturities(targetCurrency);
+    maturities = await lendingMarketController.getMaturities(nativeCurrency);
     orderBookIds = await lendingMarketController.getOrderBookIds(
-      targetCurrency,
+      nativeCurrency,
     );
   });
 
-  it('Deposit ETH', async function () {
+  it('Deposit', async function () {
     const aliceDepositAmountBefore = await tokenVault.getDepositAmount(
       aliceSigner.address,
-      hexWFIL,
+      nativeCurrency,
     );
     const bobDepositAmountBefore = await tokenVault.getDepositAmount(
       bobSigner.address,
-      hexETH,
+      nativeCurrency,
     );
 
     // Deposit wFIL by Alice
-    if (aliceDepositAmountBefore.lt(orderAmountInFIL)) {
-      const depositAmountInFIL = ethers.BigNumber.from(orderAmountInFIL).sub(
-        aliceDepositAmountBefore,
-      );
-      await wFILToken
-        .connect(aliceSigner)
-        .approve(tokenVault.address, depositAmountInFIL)
-        .then((tx) => tx.wait());
+    if (aliceDepositAmountBefore.lt(orderAmount)) {
+      const depositAmount = orderAmount.sub(aliceDepositAmountBefore);
 
       await tokenVault
         .connect(aliceSigner)
-        .deposit(hexWFIL, depositAmountInFIL)
+        .deposit(nativeCurrency, depositAmount, { value: depositAmount })
         .then((tx) => tx.wait());
 
       const aliceDepositAmountAfter = await tokenVault.getDepositAmount(
         aliceSigner.address,
-        hexWFIL,
+        nativeCurrency,
       );
 
       expect(
         aliceDepositAmountAfter.sub(aliceDepositAmountBefore).toString(),
-      ).to.equal(orderAmountInFIL);
+      ).to.equal(orderAmount);
     }
 
     // Deposit ETH by BoB
     if (bobDepositAmountBefore.toString() === '0') {
       await tokenVault
         .connect(bobSigner)
-        .deposit(hexETH, depositAmountInETH, {
-          value: depositAmountInETH,
+        .deposit(nativeCurrency, depositAmount, {
+          value: depositAmount,
         })
         .then((tx) => tx.wait());
 
       const bobDepositAmountAfter = await tokenVault.getDepositAmount(
         bobSigner.address,
-        hexETH,
+        nativeCurrency,
       );
       expect(
         bobDepositAmountAfter.sub(bobDepositAmountBefore).toString(),
-      ).to.equal(depositAmountInETH);
+      ).to.equal(depositAmount);
     }
   });
 
   it('Unwind order', async function () {
     await tokenVault
       .connect(aliceSigner)
-      .deposit(hexETH, depositAmountInETH, {
-        value: depositAmountInETH,
+      .deposit(nativeCurrency, depositAmount, {
+        value: depositAmount,
       })
       .then((tx) => tx.wait());
 
     await tokenVault
       .connect(carolSigner)
-      .deposit(hexETH, depositAmountInETH, {
-        value: depositAmountInETH,
+      .deposit(nativeCurrency, depositAmount, {
+        value: depositAmount,
       })
       .then((tx) => tx.wait());
 
-    const orderUnitPrice = await getOrderUnitPrice(hexETH, maturities[0]);
+    const orderUnitPrice = await getOrderUnitPrice(
+      nativeCurrency,
+      maturities[0],
+    );
 
     const lendingMarket = await lendingMarketController
-      .getLendingMarket(hexETH)
+      .getLendingMarket(nativeCurrency)
       .then((address) => ethers.getContractAt('LendingMarket', address));
 
     const isMarketOpened = await lendingMarket.isOpened(orderBookIds[0]);
@@ -251,35 +247,35 @@ describe('ZC e2e test', async function () {
 
     await executeOrder(
       aliceSigner,
-      hexETH,
+      nativeCurrency,
       maturities[0],
       Side.LEND,
-      depositAmountInETH,
+      depositAmount.div(2),
       orderUnitPrice,
     ).then((tx) => tx.wait());
 
     await executeOrder(
       bobSigner,
-      hexETH,
+      nativeCurrency,
       maturities[0],
       Side.BORROW,
-      depositAmountInETH,
+      depositAmount.div(2),
       orderUnitPrice,
     ).then((tx) => tx.wait());
 
     // Create one more LEND order since orderbook is empty and maker can't unwind
     await executeOrder(
       carolSigner,
-      hexETH,
+      nativeCurrency,
       maturities[0],
       Side.LEND,
-      depositAmountInETH,
+      depositAmount.div(2),
       orderUnitPrice,
     ).then((tx) => tx.wait());
 
     const { futureValue: aliceFVBefore } =
       await lendingMarketController.getPosition(
-        hexETH,
+        nativeCurrency,
         maturities[0],
         aliceSigner.address,
       );
@@ -288,10 +284,11 @@ describe('ZC e2e test', async function () {
 
     await lendingMarketController
       .connect(aliceSigner)
-      .unwindPosition(hexETH, maturities[0]);
+      .unwindPosition(nativeCurrency, maturities[0])
+      .then((tx) => tx.wait());
 
     const { futureValue: aliceFV } = await lendingMarketController.getPosition(
-      hexETH,
+      nativeCurrency,
       maturities[0],
       aliceSigner.address,
     );
@@ -301,7 +298,7 @@ describe('ZC e2e test', async function () {
 
   it('Cancel order', async function () {
     const lendingMarket = await lendingMarketController
-      .getLendingMarket(targetCurrency)
+      .getLendingMarket(nativeCurrency)
       .then((address) => ethers.getContractAt('LendingMarket', address));
 
     const isMarketOpened = await lendingMarket.isOpened(orderBookIds[0]);
@@ -312,31 +309,31 @@ describe('ZC e2e test', async function () {
 
     await executeOrder(
       aliceSigner,
-      targetCurrency,
+      nativeCurrency,
       maturities[0],
       Side.LEND,
-      orderAmountInFIL,
-      orderUnitPrice,
+      orderAmount,
+      '1',
     ).then((tx) => tx.wait());
 
     const { activeOrders } = await lendingMarketReader[
       'getOrders(bytes32,address)'
-    ](targetCurrency, aliceSigner.address);
+    ](nativeCurrency, aliceSigner.address);
 
     await expect(
       lendingMarketController
         .connect(aliceSigner)
-        .cancelOrder(targetCurrency, maturities[0], activeOrders[0].orderId),
+        .cancelOrder(nativeCurrency, maturities[0], activeOrders[0].orderId),
     ).to.emit(orderActionLogic.attach(lendingMarket.address), 'OrderCanceled');
   });
 
   it('Take order', async function () {
     const lendingMarket = await lendingMarketController
-      .getLendingMarket(targetCurrency)
+      .getLendingMarket(nativeCurrency)
       .then((address) => ethers.getContractAt('LendingMarket', address));
 
     const futureValueVaultAddresses =
-      await lendingMarketController.getFutureValueVault(targetCurrency);
+      await lendingMarketController.getFutureValueVault(nativeCurrency);
 
     const futureValueVault = await ethers.getContractAt(
       'FutureValueVault',
@@ -344,7 +341,7 @@ describe('ZC e2e test', async function () {
     );
 
     const orderUnitPrice = await getOrderUnitPrice(
-      targetCurrency,
+      nativeCurrency,
       maturities[0],
     );
 
@@ -357,14 +354,14 @@ describe('ZC e2e test', async function () {
     const [aliceFVBefore, bobFVBefore, reserveFundFVBefore] = await Promise.all(
       [aliceSigner, bobSigner, reserveFund].map(({ address }) =>
         lendingMarketController
-          .getPosition(targetCurrency, maturities[0], address)
+          .getPosition(nativeCurrency, maturities[0], address)
           .then(({ futureValue }) => futureValue),
       ),
     );
 
     const { workingBorrowOrdersAmount: workingOrdersAmountBefore } =
       await lendingMarketController.calculateFunds(
-        targetCurrency,
+        nativeCurrency,
         bobSigner.address,
         LIQUIDATION_THRESHOLD_RATE,
       );
@@ -372,26 +369,26 @@ describe('ZC e2e test', async function () {
     // Make lend orders
     await executeOrder(
       aliceSigner,
-      targetCurrency,
+      nativeCurrency,
       maturities[0],
       Side.LEND,
-      orderAmountInFIL,
+      orderAmount,
       orderUnitPrice,
     ).then((tx) => tx.wait());
 
     // Make borrow orders
     await executeOrder(
       bobSigner,
-      targetCurrency,
+      nativeCurrency,
       maturities[0],
       Side.BORROW,
-      orderAmountInFIL,
+      orderAmount,
       orderUnitPrice,
     ).then((tx) => tx.wait());
 
     // Calculate the future value from order unitPrice & amount
     // NOTE: The formula is: futureValue = amount / unitPrice.
-    const calculatedFV = BigNumberJS(orderAmountInFIL)
+    const calculatedFV = BigNumberJS(orderAmount.toString())
       .times(BP)
       .div(orderUnitPrice.toNumber())
       .dp(0)
@@ -401,7 +398,7 @@ describe('ZC e2e test', async function () {
     const [aliceFVAfter, bobFVAfter, reserveFundFVAfter] = await Promise.all(
       [aliceSigner, bobSigner, reserveFund].map(({ address }) =>
         lendingMarketController
-          .getPosition(targetCurrency, maturities[0], address)
+          .getPosition(nativeCurrency, maturities[0], address)
           .then(({ futureValue }) => futureValue),
       ),
     );
@@ -412,10 +409,9 @@ describe('ZC e2e test', async function () {
       calculatedFV,
     );
 
-    await lendingMarketController.cleanUpFunds(
-      targetCurrency,
-      aliceSigner.address,
-    );
+    await lendingMarketController
+      .cleanUpFunds(nativeCurrency, aliceSigner.address)
+      .then((tx) => tx.wait());
     const [aliceFVInFutureValue] = await futureValueVault.getBalance(
       orderBookIds[0],
       aliceSigner.address,
@@ -426,7 +422,7 @@ describe('ZC e2e test', async function () {
     // Check the future value and working amount of Bob
     const { workingBorrowOrdersAmount: workingOrdersAmountAfter } =
       await lendingMarketController.calculateFunds(
-        targetCurrency,
+        nativeCurrency,
         bobSigner.address,
         LIQUIDATION_THRESHOLD_RATE,
       );
@@ -434,31 +430,26 @@ describe('ZC e2e test', async function () {
     expect(workingOrdersAmountAfter).to.equal(workingOrdersAmountBefore);
   });
 
-  it('Withdraw WFIL', async function () {
-    await wFILToken
-      .connect(bobSigner)
-      .approve(tokenVault.address, orderAmountInFIL)
-      .then((tx) => tx.wait());
-
+  it('Withdraw', async function () {
     await tokenVault
       .connect(bobSigner)
-      .deposit(hexWFIL, orderAmountInFIL)
+      .deposit(nativeCurrency, orderAmount, { value: orderAmount })
       .then((tx) => tx.wait());
 
     const bobDepositAmountBefore = await tokenVault.getDepositAmount(
       bobSigner.address,
-      hexWFIL,
+      nativeCurrency,
     );
     const withdrawAmount = '100000';
 
     await tokenVault
       .connect(bobSigner)
-      .withdraw(hexWFIL, withdrawAmount)
+      .withdraw(nativeCurrency, withdrawAmount)
       .then((tx) => tx.wait());
 
     const bobDepositAmountAfter = await tokenVault.getDepositAmount(
       bobSigner.address,
-      hexWFIL,
+      nativeCurrency,
     );
 
     expect(
@@ -467,10 +458,13 @@ describe('ZC e2e test', async function () {
   });
 
   it('Execute auto-roll', async function () {
-    const orderUnitPrice = await getOrderUnitPrice(hexETH, maturities[0]);
+    const orderUnitPrice = await getOrderUnitPrice(
+      nativeCurrency,
+      maturities[0],
+    );
 
     const lendingMarket = await lendingMarketController
-      .getLendingMarket(hexETH)
+      .getLendingMarket(nativeCurrency)
       .then((address) => ethers.getContractAt('LendingMarket', address));
 
     const isMarketOpened = await lendingMarket.isOpened(orderBookIds[0]);
@@ -482,45 +476,50 @@ describe('ZC e2e test', async function () {
 
     await executeOrder(
       aliceSigner,
-      hexETH,
+      nativeCurrency,
       maturities[0],
       Side.LEND,
-      '100000000000000000',
+      depositAmount.div(100),
       orderUnitPrice,
     ).then((tx) => tx.wait());
+
     await executeOrder(
       bobSigner,
-      hexETH,
+      nativeCurrency,
       maturities[0],
       Side.BORROW,
-      '100000000000000000',
+      depositAmount.div(100),
       orderUnitPrice,
     ).then((tx) => tx.wait());
 
     const { futureValue: aliceFVBefore } =
       await lendingMarketController.getPosition(
-        hexETH,
+        nativeCurrency,
         maturities[0],
         aliceSigner.address,
       );
 
     await time.increaseTo(maturities[0].toString());
 
-    await lendingMarketController.connect(ownerSigner).rotateOrderBooks(hexETH);
+    await lendingMarketController
+      .connect(ownerSigner)
+      .rotateOrderBooks(nativeCurrency)
+      .then((tx) => tx.wait());
 
     await lendingMarketController
       .connect(ownerSigner)
-      .executeItayoseCall(hexETH, maturities[maturities.length - 1]);
+      .executeItayoseCall(nativeCurrency, maturities[maturities.length - 1])
+      .then((tx) => tx.wait());
 
     const position = await lendingMarketController.getPosition(
-      hexETH,
+      nativeCurrency,
       maturities[1],
       aliceSigner.address,
     );
 
     const { futureValue: aliceActualFV } =
       await lendingMarketController.getPosition(
-        hexETH,
+        nativeCurrency,
         maturities[0],
         aliceSigner.address,
       );
