@@ -74,6 +74,6 @@ const func: DeployFunction = async function ({
 };
 
 func.tags = ['ExternalContracts'];
-func.dependencies = ['AddressResolver', 'Migration'];
-
+func.skip = async () => process.env.ENABLE_AUTO_UPDATE !== 'true';
+func.runAtTheEnd = true;
 export default func;
