@@ -2,6 +2,11 @@
   "name": "@secured-finance/contracts",
   "version": "1.0.2",
   "description": "Secured Finance protocol smart contracts",
+  "files": [
+    "/deployments/**/*",
+    "/contracts/**/*.sol",
+    "!/contracts/mocks/**/*"
+  ],
   "scripts": {
     "test": "hardhat test",
     "test:unit": "DOTENV_CONFIG_PATH=.env.test hardhat test ./test/unit/*.test.ts ./test/unit/**/*.test.ts",
