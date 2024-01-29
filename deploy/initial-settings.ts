@@ -140,23 +140,24 @@ const createOrderBooks = async (
       )
     ).map(({ callData }) => callData);
 
-    const receipt = await lendingMarketController
-      .multicall(multicallInputs)
-      .then((tx) => tx.wait());
+    if (multicallInputs.length > 0) {
+      const receipt = await lendingMarketController
+        .multicall(multicallInputs)
+        .then((tx) => tx.wait());
 
-    const lendingMarketInitializedEvent = (
-      await lendingMarketOperationLogic.queryFilter(
-        lendingMarketOperationLogic.filters.LendingMarketInitialized(),
-        receipt.blockNumber,
-      )
-    ).find(({ args }) => args?.ccy === currency.key);
+      const lendingMarketInitializedEvent = (
+        await lendingMarketOperationLogic.queryFilter(
+          lendingMarketOperationLogic.filters.LendingMarketInitialized(),
+          receipt.blockNumber,
+        )
+      ).find(({ args }) => args?.ccy === currency.key);
 
-    console.log(
-      `Deployed ${fromBytes32(currency.key)} order books at ${
-        lendingMarketInitializedEvent?.args?.lendingMarket ||
-        (await lendingMarketController.getLendingMarket(currency.key))
-      }`,
-    );
+      console.log(
+        `Deployed ${fromBytes32(currency.key)} order books at ${
+          lendingMarketInitializedEvent?.args?.lendingMarket
+        }`,
+      );
+    }
 
     const marketLog: Record<string, string | undefined>[] = [];
     const orderBookIds = await lendingMarketController.getOrderBookIds(
