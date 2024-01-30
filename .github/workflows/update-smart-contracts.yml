@@ -32,7 +32,7 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
-          ref: ${{ (github.event.inputs.network == 'development' && 'develop') || 'main' }}
+          ref: ${{ (contains(github.event.inputs.network, 'development') && 'develop') || 'main' }}
       - uses: actions/setup-node@v3
         with:
           node-version-file: '.nvmrc'
@@ -124,7 +124,7 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
-          ref: ${{ (github.event.inputs.network == 'staging' && 'main') || 'develop' }}
+          ref: ${{ (contains(github.event.inputs.network, 'development') && 'develop') || 'main' }}
           token: ${{ steps.generate_token.outputs.token }}
       - uses: actions/setup-node@v3
         with:
