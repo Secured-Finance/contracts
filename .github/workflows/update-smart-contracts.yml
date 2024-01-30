@@ -210,7 +210,7 @@ jobs:
           git push
       - name: Merge main into develop
         shell: bash
-        if: ${{ github.event.inputs.network != 'development' }}
+        if: ${{ !contains(github.event.inputs.network, 'development') }}
         run: |
           git switch develop
           git merge main --no-verify
