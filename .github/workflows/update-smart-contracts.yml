@@ -26,6 +26,7 @@ jobs:
     name: Test on a Fork
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.network }}
+    if: ${{ vars.SKIP_TEST_ON_FORK != 'true' }}
     outputs:
       diff: ${{ steps.diff.outputs.count }}
     steps:
