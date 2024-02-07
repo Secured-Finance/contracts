@@ -1,0 +1,4 @@
+# Need this file to overwite `.gitignore` and include the `build` folder when the package is published
+# https://docs.npmjs.com/cli/v8/using-npm/developers#keeping-files-out-of-your-package
+
+cache/
