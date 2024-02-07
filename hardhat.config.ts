@@ -25,6 +25,7 @@ const alchemyNetworkKeys = {
   11155111: 'eth-sepolia',
   42161: 'arb-mainnet',
   421614: 'arb-sepolia',
+  1101: 'polygonzkevm-mainnet',
 };
 
 const infuraNetworkKeys = {
@@ -80,6 +81,7 @@ const config: HardhatUserConfig = {
     'arbitrum-sepolia': networkConfig(421614),
     'arbitrum-one': networkConfig(42161),
     'avalanche-mainnet': networkConfig(43114),
+    'polygon-zkevm-mainnet': networkConfig(1101),
   },
   solidity: {
     compilers: [

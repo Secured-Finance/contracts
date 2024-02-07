@@ -11,6 +11,8 @@ const func: DeployFunction = async function ({
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
+  const currentBlockNumber = await ethers.provider.getBlockNumber();
+
   // Get deployments
   const proxyController = await deployments
     .get('ProxyController')
@@ -55,7 +57,7 @@ const func: DeployFunction = async function ({
   // the `queryFilter` method throw an error.
   const proxyCreatedEvents = process.env.FORK_RPC_ENDPOINT
     ? []
-    : await proxyController.queryFilter(filter);
+    : await proxyController.queryFilter(filter, currentBlockNumber);
 
   const proxyObj = proxyCreatedEvents.reduce((obj, event) => {
     obj[event.args?.id] = event.args?.proxyAddress;
