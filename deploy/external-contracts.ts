@@ -1,7 +1,6 @@
 import { Contract } from 'ethers';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { getNativeTokenAddress } from '../utils/currencies';
 import { executeIfNewlyDeployment } from '../utils/deployment';
 import { toBytes32 } from '../utils/strings';
 
@@ -42,20 +41,6 @@ const func: DeployFunction = async function ({
     }).then((result) => executeIfNewlyDeployment(contractName, result));
   }
 
-  let uniswapRouterAddress = process.env.UNISWAP_ROUTER_ADDRESS;
-
-  if (!uniswapRouterAddress) {
-    const nativeToken = await getNativeTokenAddress(deployments);
-
-    const deployResult = await deploy('MockUniswapRouter', {
-      from: deployer,
-      args: [addressResolver.address, nativeToken],
-    });
-
-    await executeIfNewlyDeployment('MockUniswapRouter', deployResult);
-    uniswapRouterAddress = deployResult.address;
-  }
-
   const nativeCurrencySymbol = toBytes32(
     process.env.NATIVE_CURRENCY_SYMBOL || 'ETH',
   );
@@ -66,7 +51,6 @@ const func: DeployFunction = async function ({
       nativeCurrencySymbol,
       lendingMarketController.address,
       tokenVault.address,
-      uniswapRouterAddress,
     ],
   });
 
