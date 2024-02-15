@@ -47,8 +47,6 @@ describe('Integration Test: Deposit', async () => {
 
   let fundManagementLogic: Contract;
 
-  let addressResolver: Contract;
-  let mockUniswapRouter: Contract;
   let liquidator: Contract;
 
   let genesisDate: number;
@@ -82,7 +80,6 @@ describe('Integration Test: Deposit', async () => {
 
     ({
       genesisDate,
-      addressResolver,
       currencyController,
       tokenVault,
       reserveFund,
@@ -1339,12 +1336,6 @@ describe('Integration Test: Deposit', async () => {
 
   describe('Deposit and withdraw wFIL using MixinWallet', async () => {
     before(async () => {
-      mockUniswapRouter = await ethers
-        .getContractFactory('MockUniswapRouter')
-        .then((factory) =>
-          factory.deploy(addressResolver.address, wETHToken.address),
-        );
-
       liquidator = await ethers
         .getContractFactory('Liquidator')
         .then((factory) =>
@@ -1352,7 +1343,6 @@ describe('Integration Test: Deposit', async () => {
             hexETH,
             lendingMarketController.address,
             tokenVault.address,
-            mockUniswapRouter.address,
           ),
         );
     });

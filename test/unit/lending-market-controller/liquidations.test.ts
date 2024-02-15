@@ -153,7 +153,6 @@ describe('LendingMarketController - Liquidations', () => {
               targetCurrency,
               lendingMarketControllerProxy.address,
               mockTokenVault.address,
-              ethers.constants.AddressZero,
             ),
         );
     });
@@ -168,6 +167,7 @@ describe('LendingMarketController - Liquidations', () => {
             targetCurrency,
             maturities[0],
             alice.address,
+            ethers.constants.AddressZero,
             10,
           ),
       ).revertedWith('CallerNotOperator');
@@ -181,6 +181,7 @@ describe('LendingMarketController - Liquidations', () => {
           targetCurrency,
           '1',
           alice.address,
+          ethers.constants.AddressZero,
           10,
         ),
       ).revertedWith('InvalidMaturity');
@@ -196,6 +197,7 @@ describe('LendingMarketController - Liquidations', () => {
           maturities,
           targetCurrency,
           maturities[0],
+          ethers.constants.AddressZero,
           alice.address,
           10,
         ),
@@ -212,6 +214,7 @@ describe('LendingMarketController - Liquidations', () => {
             targetCurrency,
             maturities[0],
             alice.address,
+            ethers.constants.AddressZero,
             10,
           ),
       ).revertedWith('CallerNotOperator');
@@ -225,6 +228,7 @@ describe('LendingMarketController - Liquidations', () => {
           targetCurrency,
           '1',
           alice.address,
+          ethers.constants.AddressZero,
           10,
         ),
       ).revertedWith('InvalidMaturity');
@@ -244,6 +248,7 @@ describe('LendingMarketController - Liquidations', () => {
           targetCurrency,
           maturities[0],
           alice.address,
+          ethers.constants.AddressZero,
           10,
         ),
       ).revertedWith(`NotCollateralCurrency("${targetCurrency}")`);

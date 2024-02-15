@@ -2,14 +2,14 @@
 pragma solidity 0.8.19;
 
 // interfaces
-import {ILendingMarket} from "../protocol/interfaces/ILendingMarket.sol";
-import {ILendingMarketController} from "../protocol/interfaces/ILendingMarketController.sol";
+import {ILendingMarket} from "../../protocol/interfaces/ILendingMarket.sol";
+import {ILendingMarketController} from "../../protocol/interfaces/ILendingMarketController.sol";
 // libraries
-import {Contracts} from "../protocol/libraries/Contracts.sol";
+import {Contracts} from "../../protocol/libraries/Contracts.sol";
 // mixins
-import {MixinAddressResolver} from "../protocol/mixins/MixinAddressResolver.sol";
+import {MixinAddressResolver} from "../../protocol/mixins/MixinAddressResolver.sol";
 // types
-import {ProtocolTypes} from "../protocol/types/ProtocolTypes.sol";
+import {ProtocolTypes} from "../../protocol/types/ProtocolTypes.sol";
 
 contract LendingMarketReader is MixinAddressResolver {
     struct OrderBookDetail {

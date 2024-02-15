@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.19;
 
-import {ISwapRouter} from "../../dependencies/uniswap/ISwapRouter.sol";
+import {ISwapRouter} from "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 // libraries
 import {Contracts} from "../../protocol/libraries/Contracts.sol";
 import {TransferHelper} from "../../protocol/libraries/TransferHelper.sol";
@@ -10,6 +10,11 @@ import {MixinAddressResolver} from "../../protocol/mixins/MixinAddressResolver.s
 
 contract MockUniswapRouter is MixinAddressResolver {
     mapping(address => bytes32) private currencies;
+
+    modifier ensure(uint deadline) {
+        require(deadline >= block.timestamp, "UniswapV2Router: EXPIRED");
+        _;
+    }
 
     constructor(address _resolver, address _nativeToken) {
         registerAddressResolver(_resolver);
@@ -29,6 +34,7 @@ contract MockUniswapRouter is MixinAddressResolver {
         currencies[token] = ccy;
     }
 
+    // V3 functions
     function exactOutputSingle(
         ISwapRouter.ExactOutputSingleParams calldata params
     ) external returns (uint256 amountIn) {
@@ -69,5 +75,66 @@ contract MockUniswapRouter is MixinAddressResolver {
         } else {
             TransferHelper.safeTransferETH(msg.sender, amountOut);
         }
+    }
+
+    // V2 functions
+    function swapExactTokensForETH(
+        uint256 amountIn,
+        uint256 amountOutMin,
+        address[] calldata path,
+        address to,
+        uint256 deadline
+    ) external ensure(deadline) returns (uint256[] memory amounts) {
+        require(TransferHelper.isNative(path[1]), "UniswapV2Router: INVALID_PATH");
+
+        amounts = new uint256[](1);
+        amounts[0] = currencyController().convert(
+            currencies[path[0]],
+            currencies[path[1]],
+            amountIn
+        );
+
+        require(amounts[0] >= amountOutMin, "UniswapV2Router: INSUFFICIENT_OUTPUT_AMOUNT");
+
+        TransferHelper.safeTransferETH(to, amounts[0]);
+    }
+
+    function swapExactTokensForTokens(
+        uint256 amountIn,
+        uint256 amountOutMin,
+        address[] calldata path,
+        address to,
+        uint256 deadline
+    ) external ensure(deadline) returns (uint256[] memory amounts) {
+        amounts = new uint256[](1);
+        amounts[0] = currencyController().convert(
+            currencies[path[0]],
+            currencies[path[1]],
+            amountIn
+        );
+
+        require(amounts[0] >= amountOutMin, "UniswapV2Router: INSUFFICIENT_OUTPUT_AMOUNT");
+
+        TransferHelper.safeTransfer(path[1], to, amounts[0]);
+    }
+
+    function swapExactETHForTokens(
+        uint amountOutMin,
+        address[] calldata path,
+        address to,
+        uint deadline
+    ) external payable ensure(deadline) returns (uint[] memory amounts) {
+        require(TransferHelper.isNative(path[0]), "UniswapV2Router: INVALID_PATH");
+
+        amounts = new uint256[](1);
+        amounts[0] = currencyController().convert(
+            currencies[path[0]],
+            currencies[path[1]],
+            msg.value
+        );
+
+        require(amounts[0] >= amountOutMin, "UniswapV2Router: INSUFFICIENT_OUTPUT_AMOUNT");
+
+        TransferHelper.safeTransfer(path[1], to, amounts[0]);
     }
 }
