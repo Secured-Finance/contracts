@@ -328,10 +328,10 @@ library OrderBookLib {
                     }
                 }
             } else {
+                unchecked {
+                    activeOrderCount += 1;
+                }
                 if (!isPastMaturity) {
-                    unchecked {
-                        activeOrderCount += 1;
-                    }
                     activeOrderIds[i - inActiveOrderCount] = orderId;
                 }
                 assembly {
