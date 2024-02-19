@@ -169,7 +169,9 @@ contract Liquidator is ILiquidationReceiver, MixinAccessControl, MixinWallet, In
         address collateralCcyAddr = tokenVault.getTokenAddress(_collateralCcy);
         address debtCcyAddr = tokenVault.getTokenAddress(_debtCcy);
 
-        // TODO: After `LiquidationLogic` is fixed, remove this check
+        // Actual amount of collateral might be less than the received amount because
+        // unwinding the position depends on market prices if ZC Bonds are used as collateral.
+        // In this case, we need to check the actual balance of the collateral token to be used in the swap.
         uint256 collateralTokenBalance = collateralCcyAddr == nativeToken
             ? address(this).balance
             : IERC20(collateralCcyAddr).balanceOf(address(this));

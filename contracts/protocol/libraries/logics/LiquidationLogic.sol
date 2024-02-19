@@ -159,7 +159,7 @@ library LiquidationLogic {
                     _liquidator,
                     _user,
                     _collateralCcy,
-                    vars.receivedCollateralAmount
+                    vars.receivedCollateralAmount - untransferredAmount
                 ) == false
             ) revert ILiquidationReceiver.InvalidOperationExecution();
         }
@@ -181,7 +181,7 @@ library LiquidationLogic {
                         _liquidator,
                         _user,
                         _collateralCcy,
-                        vars.receivedCollateralAmount,
+                        vars.receivedCollateralAmount - untransferredAmount,
                         _debtCcy,
                         _debtMaturity,
                         vars.liquidationAmountInDebtCcy
@@ -295,7 +295,7 @@ library LiquidationLogic {
                     _executor,
                     _user,
                     _collateralCcy,
-                    receivedCollateralAmount
+                    receivedCollateralAmount - untransferredAmount
                 ) == false
             ) revert ILiquidationReceiver.InvalidOperationExecution();
 
@@ -304,7 +304,7 @@ library LiquidationLogic {
                     _executor,
                     _user,
                     _collateralCcy,
-                    receivedCollateralAmount,
+                    receivedCollateralAmount - untransferredAmount,
                     _debtCcy,
                     _debtMaturity,
                     liquidationAmountInDebtCcy

@@ -47,7 +47,6 @@ describe('Integration Test: Liquidations', async () => {
   let liquidationLogic: Contract;
 
   let mockUniswapRouter: Contract;
-  let mockUniswapQuoter: Contract;
   let liquidator: Contract;
 
   let genesisDate: number;
@@ -282,18 +281,10 @@ describe('Integration Test: Liquidations', async () => {
       .then((factory) =>
         factory.deploy(addressResolver.address, wETHToken.address),
       );
-    mockUniswapQuoter = await ethers
-      .getContractFactory('MockUniswapQuoter')
-      .then((factory) =>
-        factory.deploy(addressResolver.address, wETHToken.address),
-      );
 
     await mockUniswapRouter.setToken(hexETH, wETHToken.address);
     await mockUniswapRouter.setToken(hexWFIL, wFILToken.address);
     await mockUniswapRouter.setToken(hexUSDC, usdcToken.address);
-    await mockUniswapQuoter.setToken(hexETH, wETHToken.address);
-    await mockUniswapQuoter.setToken(hexWFIL, wFILToken.address);
-    await mockUniswapQuoter.setToken(hexUSDC, usdcToken.address);
 
     await tokenVault.updateLiquidationConfiguration(
       LIQUIDATION_THRESHOLD_RATE,
@@ -1009,9 +1000,7 @@ describe('Integration Test: Liquidations', async () => {
         expect(liquidatorFutureValue).to.equal(0);
         expect(liquidatorDepositAmount).not.equal(0);
         expect(receivedDebtAmount).lt(filledOrderAmount.div(2));
-        // TODO: After `LiquidationLogic` is fixed, uncomment the following line
-        // expect(receivedCollateralAmount).to.equal(depositAmount);
-        expect(receivedCollateralAmount).gt(depositAmount);
+        expect(receivedCollateralAmount).to.equal(depositAmount);
       });
 
       it('Withdraw funds on Liquidator contract', async () => {
