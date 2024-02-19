@@ -89,7 +89,7 @@ describe('LendingMarketController - Orders', () => {
     await mockTokenVault.mock.removeDepositAmount.returns();
     await mockTokenVault.mock.cleanUpUsedCurrencies.returns();
     await mockTokenVault.mock.depositFrom.returns();
-    await mockTokenVault.mock.depositWithPermit.returns();
+    await mockTokenVault.mock.depositWithPermitFrom.returns();
   });
 
   describe('Initialization', async () => {

@@ -278,15 +278,15 @@ library DepositManagementLogic {
         Storage.slot().usedCurrencies[_user].remove(_ccy);
     }
 
-    function deposit(address _user, bytes32 _ccy, uint256 _amount) public {
+    function deposit(address _caller, bytes32 _ccy, uint256 _amount, address _onBehalfOf) public {
         TransferHelper.depositAssets(
             Storage.slot().tokenAddresses[_ccy],
-            _user,
+            _caller,
             address(this),
             _amount
         );
 
-        addDepositAmount(_user, _ccy, _amount);
+        addDepositAmount(_onBehalfOf, _ccy, _amount);
         Storage.slot().totalDepositAmount[_ccy] += _amount;
     }
 

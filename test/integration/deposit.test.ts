@@ -664,6 +664,64 @@ describe('Integration Test: Deposit', async () => {
     });
   });
 
+  describe('Deposit by another user', async () => {
+    before(async () => {
+      [alice, bob] = await getUsers(2);
+    });
+
+    it('Deposit FIL', async () => {
+      await wFILToken
+        .connect(alice)
+        .approve(tokenVault.address, initialFILBalance);
+
+      await tokenVault
+        .connect(alice)
+        .depositTo(hexWFIL, initialFILBalance, bob.address);
+
+      const aliceDepositAmount = await tokenVault.getDepositAmount(
+        alice.address,
+        hexWFIL,
+      );
+      const bobDepositAmount = await tokenVault.getDepositAmount(
+        bob.address,
+        hexWFIL,
+      );
+
+      expect(aliceDepositAmount).to.equal(0);
+      expect(bobDepositAmount).to.equal(initialFILBalance);
+    });
+
+    it('Withdraw by caller', async () => {
+      await expect(
+        tokenVault.connect(alice).withdraw(hexWFIL, initialFILBalance),
+      )
+        .to.emit(tokenVault, 'Withdraw')
+        .withArgs(alice.address, hexWFIL, 0);
+    });
+
+    it('Withdraw by the deposited user', async () => {
+      const tokenVaultBalanceBefore = await wFILToken.balanceOf(
+        tokenVault.address,
+      );
+
+      await tokenVault.connect(bob).withdraw(hexWFIL, initialFILBalance);
+
+      const tokenVaultBalanceAfter = await wFILToken.balanceOf(
+        tokenVault.address,
+      );
+
+      const depositAmount = await tokenVault.getDepositAmount(
+        alice.address,
+        hexWFIL,
+      );
+
+      expect(tokenVaultBalanceBefore.sub(tokenVaultBalanceAfter)).to.equal(
+        initialFILBalance,
+      );
+      expect(depositAmount).to.equal(0);
+    });
+  });
+
   describe('Deposit without prior approval', async () => {
     before(async () => {
       [alice] = await getUsers(1);
@@ -684,11 +742,11 @@ describe('Integration Test: Deposit', async () => {
       );
 
       await tokenVault
-        .connect(owner)
-        .depositWithPermit(
-          alice.address,
+        .connect(alice)
+        .depositWithPermitTo(
           hexUSDC,
           initialUSDCBalance.div(5).toString(),
+          alice.address,
           deadline,
           sig.v,
           sig.r,

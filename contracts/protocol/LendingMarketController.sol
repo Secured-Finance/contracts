@@ -565,7 +565,7 @@ contract LendingMarketController is
         bytes32 _permitR,
         bytes32 _permitS
     ) external override nonReentrant ifValidMaturity(_ccy, _maturity) ifActive returns (bool) {
-        tokenVault().depositWithPermit(
+        tokenVault().depositWithPermitFrom(
             msg.sender,
             _ccy,
             _amount,
@@ -680,7 +680,7 @@ contract LendingMarketController is
         bytes32 _permitR,
         bytes32 _permitS
     ) external override nonReentrant ifValidMaturity(_ccy, _maturity) ifActive returns (bool) {
-        tokenVault().depositWithPermit(
+        tokenVault().depositWithPermitFrom(
             msg.sender,
             _ccy,
             _amount,

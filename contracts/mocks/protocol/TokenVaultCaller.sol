@@ -29,6 +29,18 @@ contract TokenVaultCaller {
         tokenVault.executeForcedReset(user, ccy);
     }
 
+    function depositWithPermitFrom(
+        address from,
+        bytes32 ccy,
+        uint256 amount,
+        uint256 deadline,
+        uint8 permitV,
+        bytes32 permitR,
+        bytes32 permitS
+    ) public {
+        tokenVault.depositWithPermitFrom(from, ccy, amount, deadline, permitV, permitR, permitS);
+    }
+
     function depositFrom(address from, bytes32 ccy, uint256 amount) public {
         tokenVault.depositFrom(from, ccy, amount);
     }
