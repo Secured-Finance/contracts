@@ -957,17 +957,27 @@ describe('LendingMarketController - Operations', () => {
             '7900',
           );
 
+        await time.increaseTo(maturities[0].sub(3600).toString());
+
+        const funds = await lendingMarketControllerProxy.calculateFunds(
+          targetCurrency,
+          alice.address,
+          LIQUIDATION_THRESHOLD_RATE,
+        );
+
+        expect(funds.workingLendOrdersAmount).to.equal('100000000000000000');
+        expect(funds.workingBorrowOrdersAmount).to.equal('36000000000000000');
+
         await time.increaseTo(maturities[0].toString());
 
-        const { workingLendOrdersAmount, workingBorrowOrdersAmount } =
-          await lendingMarketControllerProxy.calculateFunds(
-            targetCurrency,
-            alice.address,
-            LIQUIDATION_THRESHOLD_RATE,
-          );
+        const funds2 = await lendingMarketControllerProxy.calculateFunds(
+          targetCurrency,
+          alice.address,
+          LIQUIDATION_THRESHOLD_RATE,
+        );
 
-        expect(workingLendOrdersAmount).to.equal('100000000000000000');
-        expect(workingBorrowOrdersAmount).to.equal('36000000000000000');
+        expect(funds2.workingLendOrdersAmount).to.equal('0');
+        expect(funds2.workingBorrowOrdersAmount).to.equal('0');
       });
 
       it('Calculate the total funds with position less than min debt unit price', async () => {

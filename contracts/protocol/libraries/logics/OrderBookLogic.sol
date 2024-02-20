@@ -237,20 +237,13 @@ library OrderBookLogic {
     function executeAutoRoll(
         uint8 _maturedOrderBookId,
         uint8 _destinationOrderBookId,
-        uint256 _newMaturity,
-        uint256 _openingDate,
         uint256 _autoRollUnitPrice
     ) external {
         OrderBookLib.OrderBook storage maturedOrderBook = Storage.slot().orderBooks[
             _maturedOrderBookId
         ];
-        if (!maturedOrderBook.isMatured()) revert OrderBookNotMatured();
 
-        Storage.slot().isReady[_newMaturity] = maturedOrderBook.initialize(
-            _newMaturity,
-            _openingDate,
-            _openingDate - OrderBookLib.PRE_ORDER_BASE_PERIOD
-        );
+        if (!maturedOrderBook.isMatured()) revert OrderBookNotMatured();
 
         OrderBookLib.OrderBook storage destinationOrderBook = Storage.slot().orderBooks[
             _destinationOrderBookId

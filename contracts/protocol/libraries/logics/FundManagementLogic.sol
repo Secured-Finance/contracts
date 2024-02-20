@@ -148,7 +148,6 @@ library FundManagementLogic {
     function convertFutureValueToGenesisValue(
         bytes32 _ccy,
         uint8 _orderBookId,
-        uint256 _maturity,
         address _user
     ) public returns (int256) {
         address futureValueVault = Storage.slot().futureValueVaults[_ccy];
@@ -157,7 +156,7 @@ library FundManagementLogic {
             int256 currentAmount,
             uint256 basisMaturity,
             bool isAllRemoved
-        ) = IFutureValueVault(futureValueVault).reset(_orderBookId, _user, _maturity);
+        ) = IFutureValueVault(futureValueVault).reset(_orderBookId, _user);
 
         if (removedAmount != 0) {
             // Overwrite the `removedAmount` with the unsettled amount left of the Genesis Value
@@ -374,13 +373,12 @@ library FundManagementLogic {
         vars.maturities = getUsedMaturities(_ccy, _user);
 
         for (uint256 i; i < vars.maturities.length; i++) {
-            uint8 currentOrderBookId = Storage.slot().maturityOrderBookIds[_ccy][
-                vars.maturities[i]
-            ];
+            uint256 currentMaturity = vars.maturities[i];
+            uint8 currentOrderBookId = Storage.slot().maturityOrderBookIds[_ccy][currentMaturity];
+            bool isMatured = vars.defaultOrderBookId > currentOrderBookId;
 
             if (vars.isDefaultMarket || currentOrderBookId == vars.orderBookId) {
                 {
-                    uint256 currentMaturity = vars.market.getMaturity(currentOrderBookId);
                     bool isDefaultMarket = currentOrderBookId == vars.defaultOrderBookId;
 
                     // Get current funds from Future Value Vault by lazy evaluations.
@@ -390,8 +388,8 @@ library FundManagementLogic {
                             _user,
                             vars,
                             currentOrderBookId,
-                            currentMaturity,
-                            isDefaultMarket
+                            isDefaultMarket,
+                            isMatured
                         );
                     // Get current funds from borrowing orders by lazy evaluations.
                     InactiveBorrowOrdersFunds
@@ -401,7 +399,8 @@ library FundManagementLogic {
                             vars,
                             currentOrderBookId,
                             currentMaturity,
-                            isDefaultMarket
+                            isDefaultMarket,
+                            isMatured
                         );
                     // Get current funds from lending orders by lazy evaluations.
                     InactiveLendOrdersFunds
@@ -410,8 +409,8 @@ library FundManagementLogic {
                             _user,
                             vars,
                             currentOrderBookId,
-                            currentMaturity,
-                            isDefaultMarket
+                            isDefaultMarket,
+                            isMatured
                         );
 
                     // Set genesis value.
@@ -688,10 +687,10 @@ library FundManagementLogic {
     }
 
     function cleanUpAllFunds(address _user) external {
-        EnumerableSet.Bytes32Set storage ccySet = Storage.slot().usedCurrencies[_user];
-        uint256 length = ccySet.length();
+        bytes32[] memory currencies = Storage.slot().usedCurrencies[_user].values();
+        uint256 length = currencies.length;
         for (uint256 i; i < length; i++) {
-            cleanUpFunds(ccySet.at(i), _user);
+            cleanUpFunds(currencies[i], _user);
         }
     }
 
@@ -701,20 +700,13 @@ library FundManagementLogic {
     ) public returns (uint256 totalActiveOrderCount) {
         bool futureValueExists = false;
         uint256[] memory maturities = getUsedMaturities(_ccy, _user);
-        ILendingMarket market = ILendingMarket(Storage.slot().lendingMarkets[_ccy]);
 
         for (uint256 i; i < maturities.length; i++) {
             uint8 orderBookId = Storage.slot().maturityOrderBookIds[_ccy][maturities[i]];
-            uint256 activeMaturity = market.getMaturity(orderBookId);
-            uint256 activeOrderCount = _cleanUpOrders(_ccy, activeMaturity, _user);
+            uint256 activeOrderCount = _cleanUpOrders(_ccy, orderBookId, _user);
             totalActiveOrderCount += activeOrderCount;
 
-            int256 currentFutureValue = convertFutureValueToGenesisValue(
-                _ccy,
-                orderBookId,
-                activeMaturity,
-                _user
-            );
+            int256 currentFutureValue = convertFutureValueToGenesisValue(_ccy, orderBookId, _user);
 
             if (currentFutureValue != 0) {
                 futureValueExists = true;
@@ -745,11 +737,9 @@ library FundManagementLogic {
 
     function _cleanUpOrders(
         bytes32 _ccy,
-        uint256 _maturity,
+        uint8 _orderBookId,
         address _user
     ) internal returns (uint256 activeOrderCount) {
-        uint8 orderBookId = Storage.slot().maturityOrderBookIds[_ccy][_maturity];
-
         (
             uint256 activeLendOrderCount,
             uint256 activeBorrowOrderCount,
@@ -758,7 +748,7 @@ library FundManagementLogic {
             uint256 removedLendOrderAmount,
             uint256 removedBorrowOrderAmount,
             uint256 userCurrentMaturity
-        ) = ILendingMarket(Storage.slot().lendingMarkets[_ccy]).cleanUpOrders(orderBookId, _user);
+        ) = ILendingMarket(Storage.slot().lendingMarkets[_ccy]).cleanUpOrders(_orderBookId, _user);
 
         if (removedLendOrderAmount > removedBorrowOrderAmount) {
             AddressResolverLib.tokenVault().removeDepositAmount(
@@ -776,7 +766,7 @@ library FundManagementLogic {
 
         if (removedLendOrderFutureValue > 0) {
             IFutureValueVault(Storage.slot().futureValueVaults[_ccy]).increase(
-                orderBookId,
+                _orderBookId,
                 _user,
                 removedLendOrderFutureValue,
                 userCurrentMaturity
@@ -793,7 +783,7 @@ library FundManagementLogic {
 
         if (removedBorrowOrderFutureValue > 0) {
             IFutureValueVault(Storage.slot().futureValueVaults[_ccy]).decrease(
-                orderBookId,
+                _orderBookId,
                 _user,
                 removedBorrowOrderFutureValue,
                 userCurrentMaturity
@@ -820,8 +810,8 @@ library FundManagementLogic {
         address _user,
         CalculateActualFundsVars memory vars,
         uint8 currentOrderBookId,
-        uint256 currentMaturity,
-        bool isDefaultMarket
+        bool isDefaultMarket,
+        bool isMatured
     ) internal view returns (FutureValueVaultFunds memory funds) {
         (int256 futureValueInMaturity, uint256 fvMaturity) = vars.futureValueVault.getBalance(
             currentOrderBookId,
@@ -829,7 +819,7 @@ library FundManagementLogic {
         );
 
         if (futureValueInMaturity != 0) {
-            if (currentMaturity != fvMaturity) {
+            if (isMatured) {
                 if (vars.isDefaultMarket) {
                     funds.genesisValue = AddressResolverLib.genesisValueVault().calculateGVFromFV(
                         _ccy,
@@ -837,7 +827,7 @@ library FundManagementLogic {
                         futureValueInMaturity
                     );
                 }
-            } else if (currentMaturity == fvMaturity) {
+            } else {
                 if (vars.isTotal && !isDefaultMarket) {
                     uint256 unitPrice = _getDefaultOrderBookMarketUnitPrice(vars);
 
@@ -868,7 +858,7 @@ library FundManagementLogic {
                     // Apply min debt unit price if the future value is negative (debt).
                     if (funds.futureValue < 0) {
                         uint256 currentMinDebtUnitPrice = getCurrentMinDebtUnitPrice(
-                            currentMaturity,
+                            fvMaturity,
                             vars.minDebtUnitPrice
                         );
 
@@ -892,7 +882,8 @@ library FundManagementLogic {
         CalculateActualFundsVars memory vars,
         uint8 currentOrderBookId,
         uint256 currentMaturity,
-        bool isDefaultMarket
+        bool isDefaultMarket,
+        bool isMatured
     ) internal view returns (InactiveBorrowOrdersFunds memory funds) {
         uint256 filledFutureValue;
         uint256 orderMaturity;
@@ -905,8 +896,12 @@ library FundManagementLogic {
             .market
             .getTotalAmountFromBorrowOrders(currentOrderBookId, _user, currentMinDebtUnitPrice);
 
+        if (isMatured) {
+            funds.workingOrdersAmount = 0;
+        }
+
         if (filledFutureValue != 0) {
-            if (currentMaturity != orderMaturity) {
+            if (isMatured) {
                 if (vars.isDefaultMarket) {
                     funds.genesisValue = AddressResolverLib.genesisValueVault().calculateGVFromFV(
                         _ccy,
@@ -914,7 +909,7 @@ library FundManagementLogic {
                         filledFutureValue.toInt256()
                     );
                 }
-            } else if (currentMaturity == orderMaturity) {
+            } else {
                 if (vars.isTotal && !isDefaultMarket) {
                     uint256 unitPrice = _getDefaultOrderBookMarketUnitPrice(vars);
 
@@ -954,8 +949,8 @@ library FundManagementLogic {
         address _user,
         CalculateActualFundsVars memory vars,
         uint8 currentOrderBookId,
-        uint256 currentMaturity,
-        bool isDefaultMarket
+        bool isDefaultMarket,
+        bool isMatured
     ) internal view returns (InactiveLendOrdersFunds memory funds) {
         uint256 filledFutureValue;
         uint256 orderMaturity;
@@ -963,8 +958,12 @@ library FundManagementLogic {
             .market
             .getTotalAmountFromLendOrders(currentOrderBookId, _user);
 
+        if (isMatured) {
+            funds.workingOrdersAmount = 0;
+        }
+
         if (filledFutureValue != 0) {
-            if (currentMaturity != orderMaturity) {
+            if (isMatured) {
                 if (vars.isDefaultMarket) {
                     funds.genesisValue = AddressResolverLib.genesisValueVault().calculateGVFromFV(
                         _ccy,
@@ -972,7 +971,7 @@ library FundManagementLogic {
                         filledFutureValue.toInt256()
                     );
                 }
-            } else if (currentMaturity == orderMaturity) {
+            } else {
                 if (vars.isTotal && !isDefaultMarket) {
                     (funds.presentValue, funds.futureValue) = _convertFVtoOtherMaturity(
                         _ccy,
@@ -1000,8 +999,6 @@ library FundManagementLogic {
         int256 _fromFutureValue,
         uint256 _toUnitPrice
     ) internal view returns (int256 presentValue, int256 futureValue) {
-        // uint256 unitPrice = _market.getMarketUnitPrice(Storage.slot().orderBookIdLists[_ccy][0]);
-
         if (
             AddressResolverLib.genesisValueVault().getAutoRollLog(_ccy, _fromMaturity).unitPrice ==
             0

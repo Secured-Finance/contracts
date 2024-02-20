@@ -597,15 +597,11 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     function executeAutoRoll(
         uint8 _maturedOrderBookId,
         uint8 _newNearestOrderBookId,
-        uint256 _newMaturity,
-        uint256 _openingDate,
         uint256 _autoRollUnitPrice
     ) external override onlyLendingMarketController {
         OrderBookLogic.executeAutoRoll(
             _maturedOrderBookId,
             _newNearestOrderBookId,
-            _newMaturity,
-            _openingDate,
             _autoRollUnitPrice
         );
     }
