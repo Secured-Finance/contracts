@@ -47,6 +47,16 @@ const func: DeployFunction = async function ({
 
   const deployResult = await deploy('Liquidator', {
     from: deployer,
+    proxy: {
+      owner: deployer,
+      execute: {
+        init: {
+          methodName: 'initialize',
+          args: [],
+        },
+      },
+      proxyContract: 'OpenZeppelinTransparentProxy',
+    },
     args: [
       nativeCurrencySymbol,
       lendingMarketController.address,
