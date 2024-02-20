@@ -632,11 +632,122 @@ describe('Integration Test: Auto-rolls', async () => {
     });
   });
 
+  describe('Execute auto-rolls with users who has open orders and filled orders.', async () => {
+    const orderAmount = BigNumber.from('1000000000000000000000');
+
+    before(async () => {
+      [alice, bob] = await getUsers(2);
+      await resetContractInstances();
+      await executeAutoRoll('9600');
+    });
+
+    it('Fill an order', async () => {
+      await tokenVault.connect(bob).deposit(hexETH, orderAmount.mul(2), {
+        value: orderAmount.mul(2),
+      });
+
+      for (let i = 0; i < 3; i++) {
+        await expect(
+          lendingMarketController
+            .connect(alice)
+            .depositAndExecuteOrder(
+              hexETH,
+              maturities[0],
+              Side.LEND,
+              orderAmount,
+              9580 + i * 10,
+              {
+                value: orderAmount,
+              },
+            ),
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
+      }
+
+      await expect(
+        lendingMarketController
+          .connect(bob)
+          .executeOrder(hexETH, maturities[0], Side.BORROW, orderAmount, 0),
+      ).to.emit(fundManagementLogic, 'OrderFilled');
+
+      await createSampleETHOrders(owner, maturities[1], '9600');
+
+      // Check future value
+      const { futureValue: aliceActualFV } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[0],
+          alice.address,
+        );
+
+      expect(aliceActualFV).to.equal(calculateFutureValue(orderAmount, 9600));
+    });
+
+    it(`Execute auto-roll`, async () => {
+      const { futureValue: aliceFV0Before } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[0],
+          alice.address,
+        );
+      const { futureValue: aliceFV1Before } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[1],
+          alice.address,
+        );
+
+      // Auto-roll
+      await executeAutoRoll();
+
+      const aliceTotalPVAfter =
+        await lendingMarketController.getTotalPresentValue(
+          hexETH,
+          alice.address,
+        );
+
+      const { presentValue: alicePV0After } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[0],
+          alice.address,
+        );
+      const { presentValue: alicePV1After, futureValue: aliceFV1After } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[1],
+          alice.address,
+        );
+
+      const { lendingCompoundFactor: lendingCF0 } =
+        await genesisValueVault.getAutoRollLog(hexETH, maturities[0]);
+      const { lendingCompoundFactor: lendingCF1 } =
+        await genesisValueVault.getAutoRollLog(hexETH, maturities[1]);
+
+      // Check present value
+      expect(alicePV0After).to.equal('0');
+      expect(alicePV1After).to.equal(aliceTotalPVAfter);
+
+      // Check future value
+      expect(
+        aliceFV1After
+          .sub(
+            BigNumberJS(aliceFV0Before.toString())
+              .times(lendingCF1.toString())
+              .div(lendingCF0.toString())
+              .plus(aliceFV1Before.toString())
+              .dp(0)
+              .toFixed(),
+          )
+          .abs(),
+      ).lte(1);
+    });
+  });
+
   describe('Execute auto-rolls more times than the number of markets using the past auto-roll price', async () => {
     const orderAmount = BigNumber.from('1000000000000000000000');
 
     before(async () => {
-      [alice, bob, carol] = await getUsers(3);
+      [alice, bob] = await getUsers(2);
       await resetContractInstances();
       await executeAutoRoll('9600');
     });
