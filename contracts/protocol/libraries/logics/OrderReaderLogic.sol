@@ -70,7 +70,7 @@ library OrderReaderLogic {
 
         (uint48[] memory activeOrderIds, uint48[] memory inActiveOrderIds) = orderBook
             .getLendOrderIds(_user);
-        maturity = orderBook.userCurrentMaturities[_user];
+        maturity = orderBook.maturity;
 
         for (uint256 i; i < activeOrderIds.length; ) {
             PlacedOrder memory order = orderBook.getOrder(activeOrderIds[i]);
@@ -123,7 +123,7 @@ library OrderReaderLogic {
 
         (uint48[] memory activeOrderIds, uint48[] memory inActiveOrderIds) = orderBook
             .getBorrowOrderIds(_user);
-        maturity = orderBook.userCurrentMaturities[_user];
+        maturity = orderBook.maturity;
 
         for (uint256 i; i < activeOrderIds.length; ) {
             // Sum future values in the current maturity.

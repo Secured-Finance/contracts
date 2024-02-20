@@ -9,6 +9,8 @@ library FutureValueVaultStorage {
         // Mapping from user to balances per order book id
         mapping(uint8 orderBookId => mapping(address user => int256 balance)) balances;
         // Maturity when the user receives the balance on the target order book
+        // NOTE: Now maturities don't need to be sorted per user because the user can have only one balance per maturity.
+        // However, this storage must be kept to be used as it is for backward compatibility due to contract upgrade limitations.
         mapping(uint8 orderBookId => mapping(address user => uint256 maturity)) balanceMaturities;
         // Total lending amount supplied per maturity
         mapping(uint256 maturity => uint256 amount) totalLendingSupplies;

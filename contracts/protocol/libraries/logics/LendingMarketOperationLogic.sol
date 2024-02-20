@@ -29,6 +29,7 @@ library LendingMarketOperationLogic {
 
     uint256 public constant OBSERVATION_PERIOD = 6 hours;
     uint8 public constant COMPOUND_FACTOR_DECIMALS = 36;
+    uint256 public constant PRE_ORDER_BASE_PERIOD = 7 days;
 
     error InvalidCompoundFactor();
     error InvalidCurrency();
@@ -116,7 +117,7 @@ library LendingMarketOperationLogic {
         emit MinDebtUnitPriceUpdated(_ccy, _minDebtUnitPrice);
     }
 
-    function createOrderBook(bytes32 _ccy, uint256 _openingDate, uint256 _preOpeningDate) external {
+    function createOrderBook(bytes32 _ccy, uint256 _openingDate, uint256 _preOpeningDate) public {
         if (!AddressResolverLib.genesisValueVault().isInitialized(_ccy)) {
             revert LendingMarketNotInitialized();
         }
@@ -211,6 +212,7 @@ library LendingMarketOperationLogic {
 
         uint8 maturedOrderBookId = orderBookIds[0];
         uint8 destinationOrderBookId = orderBookIds[1];
+        uint256 maturedOrderBookMaturity = maturities[0];
         uint256 destinationOrderBookMaturity = maturities[1];
 
         uint256 newMaturity = calculateNextMaturity(
@@ -218,44 +220,37 @@ library LendingMarketOperationLogic {
             Storage.slot().marketBasePeriod
         );
 
-        // Rotate the order of the market
-        for (uint256 i; i < orderBookIds.length; i++) {
-            uint8 orderBookId = (orderBookIds.length - 1) == i
-                ? maturedOrderBookId
-                : orderBookIds[i + 1];
-            orderBookIds[i] = orderBookId;
+        // Delete the matured order book from the list
+        for (uint256 i; i < orderBookIds.length - 1; i++) {
+            orderBookIds[i] = orderBookIds[i + 1];
         }
+        orderBookIds.pop();
 
         uint256 autoRollUnitPrice = _calculateAutoRollUnitPrice(
             _ccy,
-            maturities[0],
+            maturedOrderBookMaturity,
             destinationOrderBookMaturity,
             destinationOrderBookId,
             market
         );
 
-        market.executeAutoRoll(
-            maturedOrderBookId,
-            destinationOrderBookId,
-            newMaturity,
+        market.executeAutoRoll(maturedOrderBookId, destinationOrderBookId, autoRollUnitPrice);
+
+        createOrderBook(
+            _ccy,
             destinationOrderBookMaturity,
-            autoRollUnitPrice
+            destinationOrderBookMaturity - PRE_ORDER_BASE_PERIOD
         );
 
         AddressResolverLib.genesisValueVault().executeAutoRoll(
             _ccy,
-            maturities[0],
-            maturities[1],
+            maturedOrderBookMaturity,
+            destinationOrderBookMaturity,
             autoRollUnitPrice,
             market.getOrderFeeRate()
         );
 
-        uint256 maturedMaturity = maturities[0];
-        Storage.slot().maturityOrderBookIds[_ccy][newMaturity] = Storage
-            .slot()
-            .maturityOrderBookIds[_ccy][maturedMaturity];
-
-        emit OrderBooksRotated(_ccy, maturedMaturity, newMaturity);
+        emit OrderBooksRotated(_ccy, maturedOrderBookMaturity, newMaturity);
     }
 
     function executeEmergencyTermination() external {

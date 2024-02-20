@@ -771,7 +771,7 @@ describe('LendingMarketController - Orders', () => {
         await lendingMarketControllerProxy.getMaturities(targetCurrency);
       const rotatedMarket = await lendingMarketReader.getOrderBookDetail(
         targetCurrency,
-        maturities[0],
+        newMaturity,
       );
 
       // Check borrow rates

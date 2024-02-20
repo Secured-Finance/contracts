@@ -37,7 +37,6 @@ library OrderBookLib {
     uint256 public constant CIRCUIT_BREAKER_MINIMUM_BORROW_RANGE = 200;
 
     error EmptyOrderBook();
-    error PastMaturityOrderExists();
 
     struct OrderBook {
         uint256 maturity;
@@ -54,6 +53,8 @@ library OrderBookLib {
         mapping(address user => uint48[] orderIds) activeLendOrderIds;
         mapping(address user => uint48[] orderIds) activeBorrowOrderIds;
         // Maturity when user last executes order
+        // NOTE: Deprecated due to discontinuation of order book rotation
+        // However, this old storage must be kept as it is for backward compatibility due to contract upgrade limitations.
         mapping(address user => uint256 maturity) userCurrentMaturities;
         // Micro slots for order
         mapping(uint48 orderId => uint256 slots) orders;
@@ -305,8 +306,8 @@ library OrderBookLib {
     ) internal view returns (uint48[] memory activeOrderIds, uint48[] memory inActiveOrderIds) {
         uint256 activeOrderCount = 0;
         uint256 inActiveOrderCount = 0;
-        uint256 userMaturity = self.userCurrentMaturities[_user];
-        bool isPastMaturity = userMaturity != self.maturity;
+        uint256 currentMaturity = self.maturity;
+        bool isPastMaturity = block.timestamp >= currentMaturity;
 
         uint48[] memory orderIds = self.activeLendOrderIds[_user];
         uint256 orderIdLength = orderIds.length;
@@ -317,7 +318,7 @@ library OrderBookLib {
             uint48 orderId = orderIds[i];
             (, uint256 unitPrice, , ) = _unpackOrder(self.orders[orderId]);
 
-            if (!self.lendOrders[userMaturity].isActiveOrderId(unitPrice, orderId)) {
+            if (!self.lendOrders[currentMaturity].isActiveOrderId(unitPrice, orderId)) {
                 unchecked {
                     inActiveOrderCount += 1;
                 }
@@ -347,8 +348,8 @@ library OrderBookLib {
     ) internal view returns (uint48[] memory activeOrderIds, uint48[] memory inActiveOrderIds) {
         uint256 activeOrderCount = 0;
         uint256 inActiveOrderCount = 0;
-        uint256 userMaturity = self.userCurrentMaturities[_user];
-        bool isPastMaturity = userMaturity != self.maturity;
+        uint256 currentMaturity = self.maturity;
+        bool isPastMaturity = block.timestamp >= currentMaturity;
 
         uint48[] memory orderIds = self.activeBorrowOrderIds[_user];
         uint256 orderIdLength = orderIds.length;
@@ -359,7 +360,7 @@ library OrderBookLib {
             uint48 orderId = orderIds[i];
             (, uint256 unitPrice, , ) = _unpackOrder(self.orders[orderId]);
 
-            if (!self.borrowOrders[userMaturity].isActiveOrderId(unitPrice, orderId)) {
+            if (!self.borrowOrders[currentMaturity].isActiveOrderId(unitPrice, orderId)) {
                 unchecked {
                     inActiveOrderCount += 1;
                 }
@@ -409,22 +410,6 @@ library OrderBookLib {
                     0,
                     _unitPrice
                 );
-        }
-    }
-
-    function updateUserMaturity(OrderBook storage self, address _user) internal {
-        uint256 userMaturity = self.userCurrentMaturities[_user];
-        uint256 orderBookMaturity = self.maturity;
-
-        if (userMaturity != orderBookMaturity) {
-            if (
-                self.activeLendOrderIds[_user].length > 0 ||
-                self.activeBorrowOrderIds[_user].length > 0
-            ) {
-                revert PastMaturityOrderExists();
-            }
-
-            self.userCurrentMaturities[_user] = orderBookMaturity;
         }
     }
 
