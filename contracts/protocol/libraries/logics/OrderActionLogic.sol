@@ -105,6 +105,12 @@ library OrderActionLogic {
         bool isCircuitBreakerTriggered
     );
 
+    event BlockUnitPriceHistoryUpdated(
+        bytes32 indexed ccy,
+        uint256 indexed maturity,
+        uint256 blockUnitPrice
+    );
+
     function cancelOrder(uint8 _orderBookId, address _user, uint48 _orderId) external {
         OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
 
@@ -238,11 +244,19 @@ library OrderActionLogic {
                 vars.maturity,
                 filledOrder.futureValue
             );
-            orderBook.updateBlockUnitPriceHistory(
+            (uint256 latestBlockUnitPrice, bool isUpdated) = orderBook.updateBlockUnitPriceHistory(
                 filledOrder.amount,
                 filledOrder.futureValue,
                 _minimumReliableAmount
             );
+
+            if (isUpdated) {
+                emit BlockUnitPriceHistoryUpdated(
+                    Storage.slot().ccy,
+                    vars.maturity,
+                    latestBlockUnitPrice
+                );
+            }
         } else {
             if (!vars.conditions.ignoreRemainingAmount) {
                 vars.placedOrder = PlacedOrder(
@@ -350,11 +364,19 @@ library OrderActionLogic {
                 conditions.executedUnitPrice
             );
             feeInFV = OrderReaderLogic.calculateOrderFeeAmount(maturity, filledOrder.futureValue);
-            orderBook.updateBlockUnitPriceHistory(
+            (uint256 latestBlockUnitPrice, bool isUpdated) = orderBook.updateBlockUnitPriceHistory(
                 filledOrder.amount,
                 filledOrder.futureValue,
                 _minimumReliableAmount
             );
+
+            if (isUpdated) {
+                emit BlockUnitPriceHistoryUpdated(
+                    Storage.slot().ccy,
+                    maturity,
+                    latestBlockUnitPrice
+                );
+            }
         } else {
             isCircuitBreakerTriggered = true;
         }
