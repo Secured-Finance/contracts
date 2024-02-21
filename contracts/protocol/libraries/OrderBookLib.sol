@@ -490,8 +490,8 @@ library OrderBookLib {
         uint256 _filledAmount,
         uint256 _filledFutureValue,
         uint256 _minimumReliableAmount
-    ) internal {
-        uint256 latestBlockUnitPrice = _unpackBlockUnitPriceHistory(self.blockUnitPriceHistory)[0];
+    ) internal returns (uint256 latestBlockUnitPrice, bool isUpdated) {
+        latestBlockUnitPrice = _unpackBlockUnitPriceHistory(self.blockUnitPriceHistory)[0];
 
         if (self.lastOrderTimestamp != block.timestamp) {
             if (self.isReliableBlock) {
@@ -504,6 +504,7 @@ library OrderBookLib {
                     uint16(latestBlockUnitPrice) |
                     (self.blockUnitPriceHistory << 16);
                 self.lastBlockUnitPriceTimestamp = uint48(block.timestamp);
+                isUpdated = true;
             }
 
             self.lastOrderTimestamp = uint48(block.timestamp);
