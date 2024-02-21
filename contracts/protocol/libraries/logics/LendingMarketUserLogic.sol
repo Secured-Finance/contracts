@@ -32,6 +32,20 @@ library LendingMarketUserLogic {
     error NotEnoughCollateral();
     error NotEnoughDeposit(bytes32 ccy);
 
+    struct EstimateCollateralCoverageParams {
+        bytes32 ccy;
+        uint256 maturity;
+        address user;
+        ProtocolTypes.Side side;
+        uint256 unitPrice;
+        uint256 additionalDepositAmount;
+        bool ignoreBorrowedAmount;
+        uint256 filledAmount;
+        uint256 filledAmountInFV;
+        uint256 orderFeeInFV;
+        uint256 placedAmount;
+    }
+
     function getOrderEstimation(
         ILendingMarketController.GetOrderEstimationParams memory input
     )
@@ -62,17 +76,19 @@ library LendingMarketUserLogic {
         );
 
         (coverage, isInsufficientDepositAmount) = _estimateCollateralCoverage(
-            input.ccy,
-            input.maturity,
-            input.user,
-            input.side,
-            input.unitPrice,
-            input.additionalDepositAmount,
-            input.ignoreBorrowedAmount,
-            filledAmount,
-            filledAmountInFV,
-            orderFeeInFV,
-            placedAmount
+            EstimateCollateralCoverageParams(
+                input.ccy,
+                input.maturity,
+                input.user,
+                input.side,
+                input.unitPrice,
+                input.additionalDepositAmount,
+                input.ignoreBorrowedAmount,
+                filledAmount,
+                filledAmountInFV,
+                orderFeeInFV,
+                placedAmount
+            )
         );
     }
 
@@ -320,61 +336,65 @@ library LendingMarketUserLogic {
     }
 
     function _estimateCollateralCoverage(
-        bytes32 _ccy,
-        uint256 _maturity,
-        address _user,
-        ProtocolTypes.Side _side,
-        uint256 _unitPrice,
-        uint256 _additionalDepositAmount,
-        bool _ignoreBorrowedAmount,
-        uint256 _filledAmount,
-        uint256 _filledAmountInFV,
-        uint256 _orderFeeInFV,
-        uint256 _placedAmount
+        EstimateCollateralCoverageParams memory _params
     ) internal view returns (uint256 coverage, bool isInsufficientDepositAmount) {
-        uint256 filledAmountWithFeeInFV = _filledAmountInFV;
+        uint256 filledAmountWithFeeInFV = _params.filledAmountInFV;
 
-        if (_side == ProtocolTypes.Side.LEND) {
-            filledAmountWithFeeInFV -= _orderFeeInFV;
+        if (_params.side == ProtocolTypes.Side.LEND) {
+            filledAmountWithFeeInFV -= _params.orderFeeInFV;
         } else {
-            filledAmountWithFeeInFV += _orderFeeInFV;
+            filledAmountWithFeeInFV += _params.orderFeeInFV;
         }
 
         uint256 filledAmountWithFeeInPV = _estimatePVFromFV(
-            _ccy,
-            _maturity,
+            _params.ccy,
+            _params.maturity,
             filledAmountWithFeeInFV,
-            _unitPrice
+            _params.unitPrice
         );
 
         ILendingMarketController.AdditionalFunds memory funds;
-        funds.ccy = _ccy;
+        funds.ccy = _params.ccy;
         // Store the _additionalDepositAmount in the borrowedAmount,
         // because the borrowedAmount is used as collateral.
-        funds.borrowedAmount = _additionalDepositAmount;
+        funds.borrowedAmount = _params.additionalDepositAmount;
 
-        if (_placedAmount > 0) {
-            if (_side == ProtocolTypes.Side.BORROW) {
-                funds.workingBorrowOrdersAmount = _placedAmount;
+        if (_params.placedAmount != 0) {
+            if (_params.side == ProtocolTypes.Side.BORROW) {
+                uint256 minUnitPrice = FundManagementLogic.getCurrentMinDebtUnitPrice(
+                    _params.maturity,
+                    Storage.slot().minDebtUnitPrices[_params.ccy]
+                );
+
+                if (_params.unitPrice >= minUnitPrice) {
+                    funds.workingBorrowOrdersAmount = _params.placedAmount;
+                } else {
+                    // NOTE: The formula is:
+                    // futureValue = placedAmount / unitPrice
+                    // workingBorrowOrdersAmount = futureValue * minUnitPrice
+                    funds.workingBorrowOrdersAmount = (_params.placedAmount * minUnitPrice).div(
+                        _params.unitPrice
+                    );
+                }
             } else {
-                funds.workingLendOrdersAmount = _placedAmount;
+                funds.workingLendOrdersAmount = _params.placedAmount;
             }
         }
 
         if (filledAmountWithFeeInPV > 0) {
-            if (_side == ProtocolTypes.Side.BORROW) {
-                if (!_ignoreBorrowedAmount) {
-                    funds.borrowedAmount += _filledAmount;
+            if (_params.side == ProtocolTypes.Side.BORROW) {
+                if (!_params.ignoreBorrowedAmount) {
+                    funds.borrowedAmount += _params.filledAmount;
                 }
                 funds.debtAmount += filledAmountWithFeeInPV;
             } else {
-                funds.lentAmount += _filledAmount;
+                funds.lentAmount += _params.filledAmount;
                 funds.claimableAmount += filledAmountWithFeeInPV;
             }
         }
 
         (coverage, isInsufficientDepositAmount) = AddressResolverLib.tokenVault().calculateCoverage(
-            _user,
+            _params.user,
             funds
         );
     }

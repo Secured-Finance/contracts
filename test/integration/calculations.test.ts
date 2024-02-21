@@ -374,6 +374,86 @@ describe('Integration Test: Calculations', async () => {
       });
     });
 
+    describe('Estimate a borrowing order result to be placed with unit price less than min debt unit prices', async () => {
+      const orderAmount = initialETHBalance.div(5);
+      const depositAmount = orderAmount.mul(3).div(2);
+
+      before(async () => {
+        [alice] = await getUsers(1);
+        ethMaturities = await lendingMarketController.getMaturities(hexETH);
+      });
+
+      after(async () => {
+        const { activeOrders } = await lendingMarketReader[
+          'getOrders(bytes32,address)'
+        ](hexETH, alice.address);
+
+        for (const order of activeOrders) {
+          await lendingMarketController
+            .connect(alice)
+            .cancelOrder(hexETH, order.maturity, order.orderId);
+        }
+      });
+
+      it('Deposit ETH', async () => {
+        await tokenVault.connect(alice).deposit(hexETH, depositAmount, {
+          value: depositAmount,
+        });
+
+        const aliceDepositAmount = await tokenVault.getDepositAmount(
+          alice.address,
+          hexETH,
+        );
+
+        expect(aliceDepositAmount).to.equal(depositAmount);
+      });
+
+      it('Estimate a borrowing order result', async () => {
+        const orderUnitPrice = '8000';
+
+        const estimation = await lendingMarketController
+          .connect(alice)
+          .getOrderEstimation({
+            ccy: hexETH,
+            maturity: ethMaturities[0],
+            user: alice.address,
+            side: Side.BORROW,
+            amount: orderAmount,
+            unitPrice: orderUnitPrice,
+            additionalDepositAmount: '0',
+            ignoreBorrowedAmount: false,
+          });
+
+        await lendingMarketController
+          .connect(alice)
+          .executeOrder(
+            hexETH,
+            ethMaturities[0],
+            Side.BORROW,
+            orderAmount,
+            orderUnitPrice,
+          );
+
+        const aliceCoverage = await tokenVault.getCoverage(alice.address);
+        const currentMinDebtUnitPrice =
+          await lendingMarketController.getCurrentMinDebtUnitPrice(
+            hexETH,
+            ethMaturities[0],
+          );
+
+        const adjustedPV = orderAmount
+          .mul(currentMinDebtUnitPrice)
+          .div(orderUnitPrice);
+
+        expect(estimation.filledAmount).to.equal(0);
+        expect(estimation.placedAmount).to.equal(orderAmount);
+        expect(estimation.coverage).to.equal(aliceCoverage);
+        expect(estimation.coverage).to.equal(
+          adjustedPV.abs().mul(PCT_DIGIT).div(depositAmount),
+        );
+      });
+    });
+
     describe('Estimate a lending order result to be placed', async () => {
       const orderAmount = initialETHBalance.div(5);
       const depositAmount = orderAmount.mul(3).div(2);
