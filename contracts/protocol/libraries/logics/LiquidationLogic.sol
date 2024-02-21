@@ -22,8 +22,8 @@ library LiquidationLogic {
     error NoLiquidationAmount(address user, bytes32 ccy);
     error InvalidLiquidation();
     error InvalidRepaymentAmount();
+    error InvalidCurrency(bytes32 ccy);
     error NotRepaymentPeriod();
-    error NotCollateralCurrency(bytes32 ccy);
 
     struct ExecuteLiquidationVars {
         uint256 liquidationAmountInCollateralCcy;
@@ -57,8 +57,8 @@ library LiquidationLogic {
         bytes32 _debtCcy,
         uint256 _debtMaturity
     ) external {
-        if (!AddressResolverLib.tokenVault().isCollateral(_collateralCcy)) {
-            revert NotCollateralCurrency(_collateralCcy);
+        if (!AddressResolverLib.currencyController().currencyExists(_collateralCcy)) {
+            revert InvalidCurrency(_collateralCcy);
         }
 
         ExecuteLiquidationVars memory vars;
@@ -219,8 +219,8 @@ library LiquidationLogic {
             revert NotRepaymentPeriod();
         }
 
-        if (!AddressResolverLib.tokenVault().isCollateral(_collateralCcy)) {
-            revert NotCollateralCurrency(_collateralCcy);
+        if (!AddressResolverLib.currencyController().currencyExists(_collateralCcy)) {
+            revert InvalidCurrency(_collateralCcy);
         }
 
         // In order to liquidate using user collateral, inactive order IDs must be cleaned
