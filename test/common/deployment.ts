@@ -13,6 +13,7 @@ import {
 import {
   BASE_CURRENCY_DECIMALS,
   CIRCUIT_BREAKER_LIMIT_RANGE,
+  FULL_LIQUIDATION_THRESHOLD_RATE,
   HAIRCUT,
   INITIAL_COMPOUND_FACTOR,
   LIQUIDATION_PROTOCOL_FEE_RATE,
@@ -177,6 +178,7 @@ const deployContracts = async () => {
     proxyController.setTokenVaultImpl(
       tokenVault.address,
       LIQUIDATION_THRESHOLD_RATE,
+      FULL_LIQUIDATION_THRESHOLD_RATE,
       LIQUIDATION_PROTOCOL_FEE_RATE,
       LIQUIDATOR_FEE_RATE,
       wETHToken.address,

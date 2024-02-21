@@ -6,6 +6,7 @@ import { ethers } from 'hardhat';
 import { Side } from '../../utils/constants';
 import { hexETH, hexWFIL } from '../../utils/strings';
 import {
+  FULL_LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATOR_FEE_RATE,
@@ -76,6 +77,7 @@ describe('Integration Test: Order Book', async () => {
 
     await tokenVault.updateLiquidationConfiguration(
       LIQUIDATION_THRESHOLD_RATE,
+      FULL_LIQUIDATION_THRESHOLD_RATE,
       LIQUIDATION_PROTOCOL_FEE_RATE,
       LIQUIDATOR_FEE_RATE,
     );

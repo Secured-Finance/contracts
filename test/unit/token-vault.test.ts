@@ -4,6 +4,7 @@ import { MockContract } from 'ethereum-waffle';
 import { BigNumber, Contract } from 'ethers';
 import { artifacts, ethers, waffle } from 'hardhat';
 import {
+  FULL_LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATOR_FEE_RATE,
@@ -155,6 +156,7 @@ describe('TokenVault', () => {
       .setTokenVaultImpl(
         tokenVault.address,
         LIQUIDATION_THRESHOLD_RATE,
+        FULL_LIQUIDATION_THRESHOLD_RATE,
         LIQUIDATION_PROTOCOL_FEE_RATE,
         LIQUIDATOR_FEE_RATE,
         mockWETH.address,
@@ -225,6 +227,7 @@ describe('TokenVault', () => {
       ) => {
         await tokenVaultProxy.updateLiquidationConfiguration(
           liquidationThresholdRate,
+          FULL_LIQUIDATION_THRESHOLD_RATE,
           LIQUIDATION_PROTOCOL_FEE_RATE,
           LIQUIDATOR_FEE_RATE,
         );
@@ -243,6 +246,7 @@ describe('TokenVault', () => {
       await expect(
         tokenVaultProxy.updateLiquidationConfiguration(
           PCT_DIGIT,
+          PCT_DIGIT + 1,
           PCT_DIGIT,
           PCT_DIGIT,
         ),
@@ -250,12 +254,22 @@ describe('TokenVault', () => {
       await expect(
         tokenVaultProxy.updateLiquidationConfiguration(
           PCT_DIGIT + 1,
+          PCT_DIGIT,
+          PCT_DIGIT,
+          PCT_DIGIT,
+        ),
+      ).to.be.revertedWith('InvalidFullLiquidationThresholdRate');
+      await expect(
+        tokenVaultProxy.updateLiquidationConfiguration(
+          PCT_DIGIT + 1,
+          PCT_DIGIT + 1,
           PCT_DIGIT + 1,
           PCT_DIGIT,
         ),
       ).to.be.revertedWith('InvalidLiquidationProtocolFeeRate');
       await expect(
         tokenVaultProxy.updateLiquidationConfiguration(
+          PCT_DIGIT + 1,
           PCT_DIGIT + 1,
           PCT_DIGIT,
           PCT_DIGIT + 1,
@@ -268,6 +282,7 @@ describe('TokenVault', () => {
         tokenVaultProxy.initialize(
           ethers.constants.AddressZero,
           ethers.constants.AddressZero,
+          1,
           1,
           1,
           1,
@@ -289,6 +304,7 @@ describe('TokenVault', () => {
         tokenVault.initialize(
           ethers.constants.AddressZero,
           ethers.constants.AddressZero,
+          1,
           1,
           1,
           1,

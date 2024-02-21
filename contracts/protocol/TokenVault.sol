@@ -69,6 +69,7 @@ contract TokenVault is
      * @param _owner The address of the contract owner
      * @param _resolver The address of the Address Resolver contract
      * @param _liquidationThresholdRate The liquidation threshold rate
+     * @param _fullLiquidationThresholdRate  The full liquidation threshold rate
      * @param _liquidationProtocolFeeRate The liquidation fee rate received by protocol
      * @param _liquidatorFeeRate The liquidation fee rate received by liquidators
      * @param _nativeToken The address of wrapped token of native currency
@@ -77,6 +78,7 @@ contract TokenVault is
         address _owner,
         address _resolver,
         uint256 _liquidationThresholdRate,
+        uint256 _fullLiquidationThresholdRate,
         uint256 _liquidationProtocolFeeRate,
         uint256 _liquidatorFeeRate,
         address _nativeToken
@@ -89,6 +91,7 @@ contract TokenVault is
         MixinLiquidationConfiguration._initialize(
             _owner,
             _liquidationThresholdRate,
+            _fullLiquidationThresholdRate,
             _liquidationProtocolFeeRate,
             _liquidatorFeeRate
         );

@@ -329,10 +329,16 @@ library DepositManagementLogic {
 
         if (collateralAmount == 0) revert CollateralIsZero({ccy: _liquidationCcy});
 
-        uint256 liquidationAmountInBaseCcy = totalCollateralInBaseCcy * Constants.PCT_DIGIT >=
-            totalUsedCollateralInBaseCcy * Storage.slot().liquidationThresholdRate
-            ? 0
-            : totalUsedCollateralInBaseCcy.div(2);
+        uint256 liquidationAmountInBaseCcy = 0;
+        uint256 coveredRatio = (totalCollateralInBaseCcy * Constants.PCT_DIGIT).div(
+            totalUsedCollateralInBaseCcy
+        );
+
+        if (coveredRatio < Storage.slot().fullLiquidationThresholdRate) {
+            liquidationAmountInBaseCcy = totalUsedCollateralInBaseCcy;
+        } else if (coveredRatio < Storage.slot().liquidationThresholdRate) {
+            liquidationAmountInBaseCcy = totalUsedCollateralInBaseCcy.div(2);
+        }
 
         uint256[] memory amountsInBaseCcy = new uint256[](2);
         amountsInBaseCcy[0] = liquidationAmountInBaseCcy;
