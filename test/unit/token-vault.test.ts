@@ -1249,8 +1249,38 @@ describe('TokenVault', () => {
     });
 
     it('Get liquidation amount with no collateral', async () => {
+      const signer = getUser();
+
+      await updateReturnValuesOfCalculateTotalFundsInBaseCurrencyMock({
+        debtAmount: '10000000000',
+      });
+
       const liquidationAmounts = await tokenVaultProxy.getLiquidationAmount(
-        owner.address,
+        signer.address,
+        targetCurrency,
+        1,
+      );
+
+      expect(liquidationAmounts.liquidationAmount).equal(0);
+      expect(liquidationAmounts.protocolFee).equal(0);
+      expect(liquidationAmounts.liquidatorFee).equal(0);
+    });
+
+    it('Get liquidation amount with no used collateral', async () => {
+      // Set up for the mocks
+      await mockCurrencyController.mock[
+        'convertToBaseCurrency(bytes32,uint256)'
+      ].returns('0');
+
+      const signer = getUser();
+
+      await tokenVaultProxy
+        .connect(signer)
+        .deposit(targetCurrency, '20000000000');
+      await updateReturnValuesOfCalculateTotalFundsInBaseCurrencyMock();
+
+      const liquidationAmounts = await tokenVaultProxy.getLiquidationAmount(
+        signer.address,
         targetCurrency,
         1,
       );
