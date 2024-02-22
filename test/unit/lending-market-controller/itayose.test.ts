@@ -74,6 +74,7 @@ describe('LendingMarketController - Itayose', () => {
     await mockTokenVault.mock.addDepositAmount.returns();
     await mockTokenVault.mock.removeDepositAmount.returns();
     await mockTokenVault.mock.cleanUpUsedCurrencies.returns();
+    await mockTokenVault.mock.depositWithPermitFrom.returns();
   });
 
   const initialize = async (currency: string, openingDate = genesisDate) => {
@@ -1050,6 +1051,36 @@ describe('LendingMarketController - Itayose', () => {
     expect(bobOrders.inactiveOrders[1].isPreOrder).to.equal(true);
   });
 
+  it('Crete a pre-order with permit', async () => {
+    const { timestamp } = await ethers.provider.getBlock('latest');
+    const openingDate = moment(timestamp * 1000)
+      .add(2, 'h')
+      .unix();
+
+    await initialize(targetCurrency, openingDate);
+
+    const deadline = ethers.constants.MaxUint256;
+    const v = 1;
+    const r = ethers.utils.formatBytes32String('dummy');
+    const s = ethers.utils.formatBytes32String('dummy');
+
+    await expect(
+      lendingMarketControllerProxy
+        .connect(alice)
+        .depositWithPermitAndExecutePreOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '10000000000000000',
+          '8800',
+          deadline,
+          v,
+          r,
+          s,
+        ),
+    ).to.not.emit(fundManagementLogic, 'OrderFilled');
+  });
+
   it('Fail to create an order due to too many orders', async () => {
     const { timestamp } = await ethers.provider.getBlock('latest');
     const openingDate = moment(timestamp * 1000)
@@ -1107,6 +1138,24 @@ describe('LendingMarketController - Itayose', () => {
           Side.LEND,
           '10000000000000000',
           '0',
+        ),
+    ).to.be.revertedWith('InvalidMaturity');
+  });
+
+  it('Fail to create an pre-order and deposit token with permit due to invalid maturity', async () => {
+    await expect(
+      lendingMarketControllerProxy
+        .connect(alice)
+        .depositWithPermitAndExecutePreOrder(
+          targetCurrency,
+          '1',
+          Side.LEND,
+          '10000000000000000',
+          '0',
+          ethers.constants.MaxUint256,
+          1,
+          ethers.utils.formatBytes32String('dummy'),
+          ethers.utils.formatBytes32String('dummy'),
         ),
     ).to.be.revertedWith('InvalidMaturity');
   });

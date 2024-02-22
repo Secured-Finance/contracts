@@ -161,6 +161,18 @@ interface ILendingMarketController {
         uint256 unitPrice
     ) external payable returns (bool);
 
+    function depositWithPermitAndExecuteOrder(
+        bytes32 ccy,
+        uint256 maturity,
+        ProtocolTypes.Side side,
+        uint256 amount,
+        uint256 unitPrice,
+        uint256 deadline,
+        uint8 permitV,
+        bytes32 permitR,
+        bytes32 permitS
+    ) external returns (bool);
+
     function executePreOrder(
         bytes32 ccy,
         uint256 maturity,
@@ -176,6 +188,18 @@ interface ILendingMarketController {
         uint256 amount,
         uint256 unitPrice
     ) external payable returns (bool);
+
+    function depositWithPermitAndExecutePreOrder(
+        bytes32 _ccy,
+        uint256 _maturity,
+        ProtocolTypes.Side _side,
+        uint256 _amount,
+        uint256 _unitPrice,
+        uint256 _deadline,
+        uint8 _permitV,
+        bytes32 _permitR,
+        bytes32 _permitS
+    ) external returns (bool);
 
     function unwindPosition(bytes32 ccy, uint256 maturity) external returns (bool);
 

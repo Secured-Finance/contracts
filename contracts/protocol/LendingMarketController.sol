@@ -123,6 +123,11 @@ contract LendingMarketController is
         return isTerminated() && !Storage.slot().isRedeemed[_user];
     }
 
+    // @inheritdoc Proxyable
+    function getRevision() external pure override returns (uint256) {
+        return 0x2;
+    }
+
     /**
      * @notice Gets the base period for market maturity
      * @return The base period
@@ -535,6 +540,53 @@ contract LendingMarketController is
     }
 
     /**
+     * @notice Deposits funds with transfer approval of asset via permit function
+     * and executes an order at the same time.
+     *
+     * @param _ccy Currency name in bytes32 of the selected order book
+     * @param _maturity The maturity of the selected order book
+     * @param _side Order position type, Borrow or Lend
+     * @param _amount Amount of funds the maker wants to borrow/lend
+     * @param _unitPrice Amount of unit price taker wish to borrow/lend
+     * @param _deadline The deadline timestamp that the permit is valid
+     * @param _permitV The V parameter of ERC712 permit sig
+     * @param _permitR The R parameter of ERC712 permit sig
+     * @param _permitS The S parameter of ERC712 permit sig
+     * @return True if the execution of the operation succeeds
+     */
+    function depositWithPermitAndExecuteOrder(
+        bytes32 _ccy,
+        uint256 _maturity,
+        ProtocolTypes.Side _side,
+        uint256 _amount,
+        uint256 _unitPrice,
+        uint256 _deadline,
+        uint8 _permitV,
+        bytes32 _permitR,
+        bytes32 _permitS
+    ) external override nonReentrant ifValidMaturity(_ccy, _maturity) ifActive returns (bool) {
+        tokenVault().depositWithPermitFrom(
+            msg.sender,
+            _ccy,
+            _amount,
+            _deadline,
+            _permitV,
+            _permitR,
+            _permitS
+        );
+
+        LendingMarketUserLogic.executeOrder(
+            _ccy,
+            _maturity,
+            msg.sender,
+            _side,
+            _amount,
+            _unitPrice
+        );
+        return true;
+    }
+
+    /**
      * @notice Executes a pre-order. A pre-order will only be accepted from 168 hours (7 days) to 1 hour
      * before the order book opens (Pre-order period). At the end of this period, Itayose will be executed.
      *
@@ -590,6 +642,54 @@ contract LendingMarketController is
         returns (bool)
     {
         tokenVault().depositFrom{value: msg.value}(msg.sender, _ccy, _amount);
+        LendingMarketUserLogic.executePreOrder(
+            _ccy,
+            _maturity,
+            msg.sender,
+            _side,
+            _amount,
+            _unitPrice
+        );
+
+        return true;
+    }
+
+    /**
+     * @notice Deposits funds with transfer approval of asset via permit function
+     * and executes a pre-order at the same time.
+     *
+     * @param _ccy Currency name in bytes32 of the selected order book
+     * @param _maturity The maturity of the selected order book
+     * @param _side Order position type, Borrow or Lend
+     * @param _amount Amount of funds the maker wants to borrow/lend
+     * @param _unitPrice Amount of unit price taker wish to borrow/lend
+     * @param _deadline The deadline timestamp that the permit is valid
+     * @param _permitV The V parameter of ERC712 permit sig
+     * @param _permitR The R parameter of ERC712 permit sig
+     * @param _permitS The S parameter of ERC712 permit sig
+     * @return True if the execution of the operation succeeds
+     */
+    function depositWithPermitAndExecutePreOrder(
+        bytes32 _ccy,
+        uint256 _maturity,
+        ProtocolTypes.Side _side,
+        uint256 _amount,
+        uint256 _unitPrice,
+        uint256 _deadline,
+        uint8 _permitV,
+        bytes32 _permitR,
+        bytes32 _permitS
+    ) external override nonReentrant ifValidMaturity(_ccy, _maturity) ifActive returns (bool) {
+        tokenVault().depositWithPermitFrom(
+            msg.sender,
+            _ccy,
+            _amount,
+            _deadline,
+            _permitV,
+            _permitR,
+            _permitS
+        );
+
         LendingMarketUserLogic.executePreOrder(
             _ccy,
             _maturity,
