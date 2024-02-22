@@ -169,6 +169,11 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         return OrderBookLogic.isPreOrderPeriod(_orderBookId);
     }
 
+    // @inheritdoc Proxyable
+    function getRevision() external pure override returns (uint256) {
+        return 0x2;
+    }
+
     /**
      * @notice Gets the order book detail.
      * @param _orderBookId The order book id
@@ -597,15 +602,11 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     function executeAutoRoll(
         uint8 _maturedOrderBookId,
         uint8 _newNearestOrderBookId,
-        uint256 _newMaturity,
-        uint256 _openingDate,
         uint256 _autoRollUnitPrice
     ) external override onlyLendingMarketController {
         OrderBookLogic.executeAutoRoll(
             _maturedOrderBookId,
             _newNearestOrderBookId,
-            _newMaturity,
-            _openingDate,
             _autoRollUnitPrice
         );
     }

@@ -184,6 +184,7 @@ describe('ProxyController', () => {
             1,
             1,
             1,
+            1,
             ethers.constants.AddressZero,
           ),
       ).revertedWith('Ownable: caller is not the owner');

@@ -72,13 +72,24 @@ const func: DeployFunction = async function ({
         .getContractAt('AddressResolver', addressResolverAddress)
         .then((contract) => contract.getAddresses());
 
-      // Change admin address of all proxy contracts from the old ProxyController to the new one.
-      DeploymentStorage.instance.add(
-        prevProxyController.address,
-        'ProxyController',
-        'changeProxyAdmins',
-        [deployResult.address, [addressResolverAddress, ...addresses]],
-      );
+      if (process.env.ENABLE_AUTO_UPDATE === 'true') {
+        await prevProxyController.changeProxyAdmins(deployResult.address, [
+          addressResolverAddress,
+          ...addresses,
+        ]);
+
+        console.log(
+          `Changed admin address of all proxy contracts to ${deployResult.address}`,
+        );
+      } else {
+        // Change admin address of all proxy contracts from the old ProxyController to the new one.
+        DeploymentStorage.instance.add(
+          prevProxyController.address,
+          'ProxyController',
+          'changeProxyAdmins',
+          [deployResult.address, [addressResolverAddress, ...addresses]],
+        );
+      }
     }
   });
 };

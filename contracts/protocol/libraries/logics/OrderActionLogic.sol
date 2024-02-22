@@ -105,6 +105,12 @@ library OrderActionLogic {
         bool isCircuitBreakerTriggered
     );
 
+    event BlockUnitPriceHistoryUpdated(
+        bytes32 indexed ccy,
+        uint256 indexed maturity,
+        uint256 blockUnitPrice
+    );
+
     function cancelOrder(uint8 _orderBookId, address _user, uint48 _orderId) external {
         OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
 
@@ -140,7 +146,7 @@ library OrderActionLogic {
         )
     {
         OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
-        maturity = orderBook.userCurrentMaturities[_user];
+        maturity = orderBook.maturity;
 
         uint48[] memory lendOrderIds;
         uint48[] memory borrowOrderIds;
@@ -202,7 +208,6 @@ library OrderActionLogic {
         if (_amount == 0) revert InvalidAmount();
 
         OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
-        orderBook.updateUserMaturity(_user);
 
         ExecuteOrderVars memory vars;
         vars.maturity = orderBook.maturity;
@@ -239,11 +244,19 @@ library OrderActionLogic {
                 vars.maturity,
                 filledOrder.futureValue
             );
-            orderBook.updateBlockUnitPriceHistory(
+            (uint256 latestBlockUnitPrice, bool isUpdated) = orderBook.updateBlockUnitPriceHistory(
                 filledOrder.amount,
                 filledOrder.futureValue,
                 _minimumReliableAmount
             );
+
+            if (isUpdated) {
+                emit BlockUnitPriceHistoryUpdated(
+                    Storage.slot().ccy,
+                    vars.maturity,
+                    latestBlockUnitPrice
+                );
+            }
         } else {
             if (!vars.conditions.ignoreRemainingAmount) {
                 vars.placedOrder = PlacedOrder(
@@ -286,7 +299,6 @@ library OrderActionLogic {
         if (_amount == 0) revert InvalidAmount();
 
         OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
-        orderBook.updateUserMaturity(_user);
 
         if (
             (_side == ProtocolTypes.Side.LEND && orderBook.hasBorrowOrder(_user)) ||
@@ -352,11 +364,19 @@ library OrderActionLogic {
                 conditions.executedUnitPrice
             );
             feeInFV = OrderReaderLogic.calculateOrderFeeAmount(maturity, filledOrder.futureValue);
-            orderBook.updateBlockUnitPriceHistory(
+            (uint256 latestBlockUnitPrice, bool isUpdated) = orderBook.updateBlockUnitPriceHistory(
                 filledOrder.amount,
                 filledOrder.futureValue,
                 _minimumReliableAmount
             );
+
+            if (isUpdated) {
+                emit BlockUnitPriceHistoryUpdated(
+                    Storage.slot().ccy,
+                    maturity,
+                    latestBlockUnitPrice
+                );
+            }
         } else {
             isCircuitBreakerTriggered = true;
         }

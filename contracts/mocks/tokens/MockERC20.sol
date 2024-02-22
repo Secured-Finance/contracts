@@ -2,10 +2,11 @@
 
 pragma solidity 0.8.19;
 import {ERC20} from "../../dependencies/openzeppelin/token/ERC20/ERC20.sol";
+import {ERC20Permit} from "../../dependencies/openzeppelin/token/ERC20/extensions/ERC20Permit.sol";
 import {AccessControl} from "../../dependencies/openzeppelin/access/AccessControl.sol";
 import {IMockERC20} from "./IMockERC20.sol";
 
-contract MockERC20 is IMockERC20, ERC20, AccessControl {
+contract MockERC20 is IMockERC20, ERC20Permit, AccessControl {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
     modifier onlyMinter() {
@@ -22,7 +23,7 @@ contract MockERC20 is IMockERC20, ERC20, AccessControl {
         string memory name,
         string memory symbol,
         uint256 initialBalance
-    ) payable ERC20(name, symbol) {
+    ) payable ERC20(name, symbol) ERC20Permit(name) {
         _mint(msg.sender, initialBalance);
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _setupRole(MINTER_ROLE, _msgSender());

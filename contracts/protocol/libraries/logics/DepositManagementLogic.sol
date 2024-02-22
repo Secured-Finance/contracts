@@ -18,7 +18,6 @@ library DepositManagementLogic {
     using RoundingUint256 for uint256;
 
     error NotEnoughDeposit(bytes32 ccy);
-    error CollateralIsZero(bytes32 ccy);
     error ProtocolIsInsolvent(bytes32 ccy);
 
     struct CalculatedFundVars {
@@ -278,15 +277,15 @@ library DepositManagementLogic {
         Storage.slot().usedCurrencies[_user].remove(_ccy);
     }
 
-    function deposit(address _user, bytes32 _ccy, uint256 _amount) public {
+    function deposit(address _caller, bytes32 _ccy, uint256 _amount, address _onBehalfOf) public {
         TransferHelper.depositAssets(
             Storage.slot().tokenAddresses[_ccy],
-            _user,
+            _caller,
             address(this),
             _amount
         );
 
-        addDepositAmount(_user, _ccy, _amount);
+        addDepositAmount(_onBehalfOf, _ccy, _amount);
         Storage.slot().totalDepositAmount[_ccy] += _amount;
     }
 
@@ -325,14 +324,26 @@ library DepositManagementLogic {
 
         ) = getTotalCollateralAmount(_user);
 
+        if (totalUsedCollateralInBaseCcy == 0) {
+            return (0, 0, 0);
+        }
+
         (uint256 collateralAmount, , ) = getCollateralAmount(_user, _liquidationCcy);
 
-        if (collateralAmount == 0) revert CollateralIsZero({ccy: _liquidationCcy});
+        if (collateralAmount == 0) {
+            return (0, 0, 0);
+        }
 
-        uint256 liquidationAmountInBaseCcy = totalCollateralInBaseCcy * Constants.PCT_DIGIT >=
-            totalUsedCollateralInBaseCcy * Storage.slot().liquidationThresholdRate
-            ? 0
-            : totalUsedCollateralInBaseCcy.div(2);
+        uint256 liquidationAmountInBaseCcy = 0;
+        uint256 coveredRatio = (totalCollateralInBaseCcy * Constants.PCT_DIGIT).div(
+            totalUsedCollateralInBaseCcy
+        );
+
+        if (coveredRatio < Storage.slot().fullLiquidationThresholdRate) {
+            liquidationAmountInBaseCcy = totalUsedCollateralInBaseCcy;
+        } else if (coveredRatio < Storage.slot().liquidationThresholdRate) {
+            liquidationAmountInBaseCcy = totalUsedCollateralInBaseCcy.div(2);
+        }
 
         uint256[] memory amountsInBaseCcy = new uint256[](2);
         amountsInBaseCcy[0] = liquidationAmountInBaseCcy;

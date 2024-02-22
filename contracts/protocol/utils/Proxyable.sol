@@ -20,6 +20,10 @@ abstract contract Proxyable is Initializable {
         _;
     }
 
+    /**
+     * @notice Gets the revision number of the contract
+     * @return The revision number
+     */
     function getRevision() external pure virtual returns (uint256) {
         return 0x1;
     }

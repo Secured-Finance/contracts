@@ -189,7 +189,6 @@ describe('LendingMarketController - Liquidations', () => {
 
     it('Fail to execute liquidation call due to non-collateral currency selected', async () => {
       await mockCurrencyController.mock.currencyExists.returns(false);
-      await mockTokenVault.mock.isCollateral.returns(false);
 
       await expect(
         liquidator.executeLiquidationCall(
@@ -201,7 +200,7 @@ describe('LendingMarketController - Liquidations', () => {
           alice.address,
           10,
         ),
-      ).revertedWith(`NotCollateralCurrency("${targetCurrency}")`);
+      ).revertedWith(`InvalidCurrency("${targetCurrency}")`);
     });
 
     it('Fail to execute forced repayment due to non-operator', async () => {
@@ -236,7 +235,6 @@ describe('LendingMarketController - Liquidations', () => {
 
     it('Fail to execute forced repayment due to non-collateral currency selected', async () => {
       await mockCurrencyController.mock.currencyExists.returns(false);
-      await mockTokenVault.mock.isCollateral.returns(false);
 
       // Move to 1 weeks after maturity.
       await time.increaseTo(maturities[0].add(604800).toString());
@@ -251,7 +249,7 @@ describe('LendingMarketController - Liquidations', () => {
           ethers.constants.AddressZero,
           10,
         ),
-      ).revertedWith(`NotCollateralCurrency("${targetCurrency}")`);
+      ).revertedWith(`InvalidCurrency("${targetCurrency}")`);
     });
 
     it('Fail to execute operations for collateral due to non lending market controller', async () => {
@@ -765,6 +763,8 @@ describe('LendingMarketController - Liquidations', () => {
   });
 
   describe('Delisting', async () => {
+    const collateralCurrency = ethers.utils.formatBytes32String('Debt');
+
     it('Execute repayment & redemption', async () => {
       const orderAmount = ethers.BigNumber.from('100000000000000000');
       const orderRate = ethers.BigNumber.from('8000');
@@ -888,6 +888,12 @@ describe('LendingMarketController - Liquidations', () => {
       const orderRate = ethers.BigNumber.from('8000');
 
       await mockTokenVault.mock.getLiquidationAmount.returns(0, 0, 0);
+      await mockCurrencyController.mock.currencyExists
+        .withArgs(targetCurrency)
+        .returns(false);
+      await mockCurrencyController.mock.currencyExists
+        .withArgs(collateralCurrency)
+        .returns(true);
       await mockCurrencyController.mock.currencyExists.returns(false);
       await mockTokenVault.mock.calculateLiquidationFees.returns(
         '100000000',
@@ -923,13 +929,13 @@ describe('LendingMarketController - Liquidations', () => {
         lendingMarketControllerProxy
           .connect(owner)
           .executeLiquidationCall(
-            targetCurrency,
+            collateralCurrency,
             targetCurrency,
             maturities[0],
             alice.address,
           ),
       ).to.be.revertedWith(
-        `NoLiquidationAmount("${alice.address}", "${targetCurrency}")`,
+        `NoLiquidationAmount("${alice.address}", "${collateralCurrency}")`,
       );
 
       await time.increaseTo(maturities[0].toString());
@@ -938,13 +944,13 @@ describe('LendingMarketController - Liquidations', () => {
         lendingMarketControllerProxy
           .connect(owner)
           .executeLiquidationCall(
-            targetCurrency,
+            collateralCurrency,
             targetCurrency,
             maturities[0],
             alice.address,
           ),
       ).to.be.revertedWith(
-        `NoLiquidationAmount("${alice.address}", "${targetCurrency}")`,
+        `NoLiquidationAmount("${alice.address}", "${collateralCurrency}")`,
       );
 
       // Move to 1 weeks after maturity.
@@ -954,7 +960,7 @@ describe('LendingMarketController - Liquidations', () => {
         lendingMarketControllerProxy
           .connect(owner)
           .executeForcedRepayment(
-            targetCurrency,
+            collateralCurrency,
             targetCurrency,
             maturities[0],
             alice.address,
@@ -963,7 +969,7 @@ describe('LendingMarketController - Liquidations', () => {
         .to.emit(liquidationLogic, 'ForcedRepaymentExecuted')
         .withArgs(
           alice.address,
-          targetCurrency,
+          collateralCurrency,
           targetCurrency,
           maturities[0],
           '125000000000000000',
@@ -976,7 +982,12 @@ describe('LendingMarketController - Liquidations', () => {
 
       await mockTokenVault.mock.getLiquidationAmount.returns(0, 0, 0);
       await mockTokenVault.mock.transferFrom.returns(100);
-      await mockCurrencyController.mock.currencyExists.returns(false);
+      await mockCurrencyController.mock.currencyExists
+        .withArgs(targetCurrency)
+        .returns(false);
+      await mockCurrencyController.mock.currencyExists
+        .withArgs(collateralCurrency)
+        .returns(true);
       await mockTokenVault.mock.calculateLiquidationFees.returns(
         '100000000',
         '50000000',
@@ -1018,13 +1029,13 @@ describe('LendingMarketController - Liquidations', () => {
         lendingMarketControllerProxy
           .connect(owner)
           .executeLiquidationCall(
-            targetCurrency,
+            collateralCurrency,
             targetCurrency,
             maturities[0],
             alice.address,
           ),
       ).to.be.revertedWith(
-        `NoLiquidationAmount("${alice.address}", "${targetCurrency}")`,
+        `NoLiquidationAmount("${alice.address}", "${collateralCurrency}")`,
       );
 
       await time.increaseTo(maturities[0].toString());
@@ -1033,13 +1044,13 @@ describe('LendingMarketController - Liquidations', () => {
         lendingMarketControllerProxy
           .connect(owner)
           .executeLiquidationCall(
-            targetCurrency,
+            collateralCurrency,
             targetCurrency,
             maturities[0],
             alice.address,
           ),
       ).to.be.revertedWith(
-        `NoLiquidationAmount("${alice.address}", "${targetCurrency}")`,
+        `NoLiquidationAmount("${alice.address}", "${collateralCurrency}")`,
       );
 
       // Move to 1 weeks after maturity.
@@ -1049,7 +1060,7 @@ describe('LendingMarketController - Liquidations', () => {
         lendingMarketControllerProxy
           .connect(owner)
           .executeForcedRepayment(
-            targetCurrency,
+            collateralCurrency,
             targetCurrency,
             maturities[0],
             alice.address,
@@ -1058,7 +1069,7 @@ describe('LendingMarketController - Liquidations', () => {
         .to.emit(liquidationLogic, 'ForcedRepaymentExecuted')
         .withArgs(
           alice.address,
-          targetCurrency,
+          collateralCurrency,
           targetCurrency,
           maturities[0],
           '75000000000000000',
@@ -1119,7 +1130,12 @@ describe('LendingMarketController - Liquidations', () => {
 
       await time.increaseTo(maturities[0].toString());
       await lendingMarketControllerProxy.rotateOrderBooks(targetCurrency);
-      await mockCurrencyController.mock.currencyExists.returns(false);
+      await mockCurrencyController.mock.currencyExists
+        .withArgs(targetCurrency)
+        .returns(false);
+      await mockCurrencyController.mock.currencyExists
+        .withArgs(collateralCurrency)
+        .returns(true);
 
       // Move to 1 weeks after maturity.
       await time.increaseTo(maturities[1].add(604800).toString());
@@ -1135,7 +1151,7 @@ describe('LendingMarketController - Liquidations', () => {
         lendingMarketControllerProxy
           .connect(owner)
           .executeForcedRepayment(
-            targetCurrency,
+            collateralCurrency,
             targetCurrency,
             maturities[1],
             alice.address,
@@ -1144,7 +1160,7 @@ describe('LendingMarketController - Liquidations', () => {
         .to.emit(liquidationLogic, 'ForcedRepaymentExecuted')
         .withArgs(
           alice.address,
-          targetCurrency,
+          collateralCurrency,
           targetCurrency,
           maturities[1],
           '75000000000000000',

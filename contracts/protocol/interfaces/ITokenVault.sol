@@ -14,7 +14,7 @@ interface ITokenVault {
     error MarketTerminated();
     error RedemptionIsRequired();
 
-    event Deposit(address indexed user, bytes32 ccy, uint256 amount);
+    event Deposit(address indexed user, bytes32 ccy, uint256 amount, address caller);
     event Withdraw(address indexed user, bytes32 ccy, uint256 amount);
     event Transfer(bytes32 indexed ccy, address indexed from, address indexed to, uint256 amount);
     event CurrencyRegistered(bytes32 ccy, address tokenAddress, bool isCollateral);
@@ -76,7 +76,29 @@ interface ITokenVault {
 
     function deposit(bytes32 ccy, uint256 amount) external payable;
 
+    function depositTo(bytes32 ccy, uint256 amount, address onBehalfOf) external payable;
+
     function depositFrom(address user, bytes32 ccy, uint256 amount) external payable;
+
+    function depositWithPermitTo(
+        bytes32 ccy,
+        uint256 amount,
+        address onBehalfOf,
+        uint256 deadline,
+        uint8 permitV,
+        bytes32 permitR,
+        bytes32 permitS
+    ) external;
+
+    function depositWithPermitFrom(
+        address user,
+        bytes32 ccy,
+        uint256 amount,
+        uint256 deadline,
+        uint8 permitV,
+        bytes32 permitR,
+        bytes32 permitS
+    ) external;
 
     function withdraw(bytes32 ccy, uint256 amount) external;
 

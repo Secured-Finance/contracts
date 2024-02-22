@@ -68,22 +68,10 @@ describe('LendingMarket - Auto-rolls', () => {
 
     await time.increaseTo(maturity);
 
-    const { timestamp: newTimestamp } = await ethers.provider.getBlock(
-      'latest',
-    );
-    const newMaturity = moment(newTimestamp * 1000)
-      .add(1, 'M')
-      .unix();
-    const newOpeningDate = moment(newTimestamp * 1000)
-      .add(48, 'h')
-      .unix();
-
     await lendingMarketCaller.executeAutoRoll(
       targetCurrency,
       currentOrderBookId,
       currentOrderBookId,
-      newMaturity,
-      newOpeningDate,
       10000,
     );
   });
@@ -94,8 +82,6 @@ describe('LendingMarket - Auto-rolls', () => {
         targetCurrency,
         currentOrderBookId,
         currentOrderBookId,
-        1,
-        1,
         10000,
       ),
     ).revertedWith('OrderBookNotMatured');
@@ -106,8 +92,6 @@ describe('LendingMarket - Auto-rolls', () => {
       lendingMarket.executeAutoRoll(
         currentOrderBookId,
         currentOrderBookId,
-        1,
-        1,
         10000,
       ),
     ).revertedWith('OnlyAcceptedContract("LendingMarketController")');

@@ -6,6 +6,7 @@ import { ethers } from 'hardhat';
 import { Side } from '../../utils/constants';
 import { hexETH, hexWFIL } from '../../utils/strings';
 import {
+  FULL_LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATOR_FEE_RATE,
@@ -18,7 +19,7 @@ import {
   calculateOrderFee,
   getAmountWithOrderFee,
 } from '../common/orders';
-import { Signers } from '../common/signers';
+import { Signers, getPermitSignature } from '../common/signers';
 
 describe('Integration Test: Order Book', async () => {
   let owner: SignerWithAddress;
@@ -76,6 +77,7 @@ describe('Integration Test: Order Book', async () => {
 
     await tokenVault.updateLiquidationConfiguration(
       LIQUIDATION_THRESHOLD_RATE,
+      FULL_LIQUIDATION_THRESHOLD_RATE,
       LIQUIDATION_PROTOCOL_FEE_RATE,
       LIQUIDATOR_FEE_RATE,
     );
@@ -1259,6 +1261,89 @@ describe('Integration Test: Order Book', async () => {
             .connect(bob)
             .unwindPosition(hexWFIL, filMaturities[0]),
         ).to.be.revertedWith('NotEnoughCollateral');
+      });
+    });
+    describe('Fill orders without prior approval', async () => {
+      const depositAmount = initialETHBalance.div(5);
+      const orderAmount = depositAmount
+        .mul(3)
+        .div(5)
+        .mul(BigNumber.from(10).pow(18))
+        .div(wFilToETHRate);
+
+      before(async () => {
+        [alice, bob] = await getUsers(2);
+        filMaturities = await lendingMarketController.getMaturities(hexWFIL);
+      });
+
+      it('Deposit ETH ', async () => {
+        await tokenVault.connect(alice).deposit(hexETH, depositAmount, {
+          value: depositAmount,
+        });
+
+        const aliceDepositAmount = await tokenVault.getDepositAmount(
+          alice.address,
+          hexETH,
+        );
+
+        expect(aliceDepositAmount).to.equal(depositAmount);
+      });
+
+      it('Fill an order without prior approval', async () => {
+        const deadline =
+          (await ethers.provider.getBlock('latest')).timestamp + 4200;
+        const { chainId } = await ethers.provider.getNetwork();
+
+        const sig = await getPermitSignature(
+          chainId,
+          wFILToken,
+          bob,
+          tokenVault,
+          orderAmount,
+          deadline,
+        );
+
+        await lendingMarketController
+          .connect(bob)
+          .depositWithPermitAndExecuteOrder(
+            hexWFIL,
+            filMaturities[0],
+            Side.LEND,
+            orderAmount,
+            '9600',
+            deadline,
+            sig.v,
+            sig.r,
+            sig.s,
+          );
+
+        const { blockHash } = await lendingMarketController
+          .connect(alice)
+          .executeOrder(
+            hexWFIL,
+            filMaturities[0],
+            Side.BORROW,
+            orderAmount,
+            '0',
+          );
+
+        const { timestamp } = await ethers.provider.getBlock(blockHash);
+        const fee = calculateOrderFee(
+          orderAmount,
+          '9600',
+          filMaturities[0].sub(timestamp),
+        );
+
+        const [aliceFV, bobFV] = await Promise.all(
+          [alice, bob].map(({ address }) =>
+            lendingMarketController
+              .getPosition(hexWFIL, filMaturities[0], address)
+              .then(({ futureValue }) => futureValue),
+          ),
+        );
+
+        expect(bobFV.sub(orderAmount.mul(10).div(8))).lte(1);
+        expect(bobFV.add(aliceFV).add(fee)).to.lte(1);
       });
     });
 

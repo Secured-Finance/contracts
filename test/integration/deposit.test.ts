@@ -12,6 +12,7 @@ import {
   toBytes32,
 } from '../../utils/strings';
 import {
+  FULL_LIQUIDATION_THRESHOLD_RATE,
   HAIRCUT,
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
@@ -26,7 +27,7 @@ import {
 } from '../common/currencies';
 import { deployContracts } from '../common/deployment';
 import { calculateOrderFee } from '../common/orders';
-import { Signers } from '../common/signers';
+import { Signers, getPermitSignature } from '../common/signers';
 
 describe('Integration Test: Deposit', async () => {
   let owner: SignerWithAddress;
@@ -99,6 +100,7 @@ describe('Integration Test: Deposit', async () => {
 
     await tokenVault.updateLiquidationConfiguration(
       LIQUIDATION_THRESHOLD_RATE,
+      FULL_LIQUIDATION_THRESHOLD_RATE,
       LIQUIDATION_PROTOCOL_FEE_RATE,
       LIQUIDATOR_FEE_RATE,
     );
@@ -661,6 +663,125 @@ describe('Integration Test: Deposit', async () => {
       );
 
       expect(tokenVaultBalanceBefore).to.equal(tokenVaultBalanceAfter);
+    });
+  });
+
+  describe('Deposit by another user', async () => {
+    before(async () => {
+      [alice, bob] = await getUsers(2);
+    });
+
+    it('Deposit FIL', async () => {
+      await wFILToken
+        .connect(alice)
+        .approve(tokenVault.address, initialFILBalance);
+
+      await tokenVault
+        .connect(alice)
+        .depositTo(hexWFIL, initialFILBalance, bob.address);
+
+      const aliceDepositAmount = await tokenVault.getDepositAmount(
+        alice.address,
+        hexWFIL,
+      );
+      const bobDepositAmount = await tokenVault.getDepositAmount(
+        bob.address,
+        hexWFIL,
+      );
+
+      expect(aliceDepositAmount).to.equal(0);
+      expect(bobDepositAmount).to.equal(initialFILBalance);
+    });
+
+    it('Withdraw by caller', async () => {
+      await expect(
+        tokenVault.connect(alice).withdraw(hexWFIL, initialFILBalance),
+      )
+        .to.emit(tokenVault, 'Withdraw')
+        .withArgs(alice.address, hexWFIL, 0);
+    });
+
+    it('Withdraw by the deposited user', async () => {
+      const tokenVaultBalanceBefore = await wFILToken.balanceOf(
+        tokenVault.address,
+      );
+
+      await tokenVault.connect(bob).withdraw(hexWFIL, initialFILBalance);
+
+      const tokenVaultBalanceAfter = await wFILToken.balanceOf(
+        tokenVault.address,
+      );
+
+      const depositAmount = await tokenVault.getDepositAmount(
+        alice.address,
+        hexWFIL,
+      );
+
+      expect(tokenVaultBalanceBefore.sub(tokenVaultBalanceAfter)).to.equal(
+        initialFILBalance,
+      );
+      expect(depositAmount).to.equal(0);
+    });
+  });
+
+  describe('Deposit without prior approval', async () => {
+    before(async () => {
+      [alice] = await getUsers(1);
+    });
+
+    it('Deposit USDC without prior approval', async () => {
+      const deadline =
+        (await ethers.provider.getBlock('latest')).timestamp + 4200;
+      const { chainId } = await ethers.provider.getNetwork();
+
+      const sig = await getPermitSignature(
+        chainId,
+        usdcToken,
+        alice,
+        tokenVault,
+        initialUSDCBalance.div(5),
+        deadline,
+      );
+
+      await tokenVault
+        .connect(alice)
+        .depositWithPermitTo(
+          hexUSDC,
+          initialUSDCBalance.div(5).toString(),
+          alice.address,
+          deadline,
+          sig.v,
+          sig.r,
+          sig.s,
+        );
+
+      const aliceDepositAmount = await tokenVault.getDepositAmount(
+        alice.address,
+        hexUSDC,
+      );
+
+      expect(aliceDepositAmount).to.equal(initialUSDCBalance.div(5));
+    });
+
+    it('Withdraw by one user', async () => {
+      const tokenVaultBalanceBefore = await usdcToken.balanceOf(
+        tokenVault.address,
+      );
+
+      await tokenVault.connect(alice).withdraw(hexUSDC, initialUSDCBalance);
+
+      const tokenVaultBalanceAfter = await usdcToken.balanceOf(
+        tokenVault.address,
+      );
+      const depositAmount = await tokenVault.getDepositAmount(
+        alice.address,
+        hexUSDC,
+      );
+
+      expect(tokenVaultBalanceBefore.sub(tokenVaultBalanceAfter)).to.equal(
+        initialUSDCBalance.div(5),
+      );
+      expect(depositAmount).to.equal(0);
     });
   });
 

@@ -8,6 +8,7 @@ import { ethers } from 'hardhat';
 import { Side } from '../../utils/constants';
 import { hexETH, hexUSDC, hexWFIL } from '../../utils/strings';
 import {
+  FULL_LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATOR_FEE_RATE,
@@ -47,7 +48,6 @@ describe('Integration Test: Liquidations', async () => {
   let liquidationLogic: Contract;
 
   let mockUniswapRouter: Contract;
-  let mockUniswapQuoter: Contract;
   let liquidator: Contract;
 
   let genesisDate: number;
@@ -282,21 +282,14 @@ describe('Integration Test: Liquidations', async () => {
       .then((factory) =>
         factory.deploy(addressResolver.address, wETHToken.address),
       );
-    mockUniswapQuoter = await ethers
-      .getContractFactory('MockUniswapQuoter')
-      .then((factory) =>
-        factory.deploy(addressResolver.address, wETHToken.address),
-      );
 
     await mockUniswapRouter.setToken(hexETH, wETHToken.address);
     await mockUniswapRouter.setToken(hexWFIL, wFILToken.address);
     await mockUniswapRouter.setToken(hexUSDC, usdcToken.address);
-    await mockUniswapQuoter.setToken(hexETH, wETHToken.address);
-    await mockUniswapQuoter.setToken(hexWFIL, wFILToken.address);
-    await mockUniswapQuoter.setToken(hexUSDC, usdcToken.address);
 
     await tokenVault.updateLiquidationConfiguration(
       LIQUIDATION_THRESHOLD_RATE,
+      FULL_LIQUIDATION_THRESHOLD_RATE,
       LIQUIDATION_PROTOCOL_FEE_RATE,
       LIQUIDATOR_FEE_RATE,
     );
@@ -566,7 +559,7 @@ describe('Integration Test: Liquidations', async () => {
       });
     });
 
-    describe('Increase FIL exchange rate, Execute liquidation twice', async () => {
+    describe('Increase FIL exchange rate, Execute full liquidation', async () => {
       const filledOrderAmount = BigNumber.from('200000000000000000000');
       const depositAmount = BigNumber.from('1000000000000000000');
       let lendingInfo: LendingInfo;
@@ -648,7 +641,7 @@ describe('Integration Test: Liquidations', async () => {
         ).to.lt(ERROR_RANGE);
       });
 
-      it('Execute liquidation twice', async () => {
+      it('Execute full liquidation', async () => {
         await wFilToETHPriceFeed.updateAnswer(
           wFilToETHRate.mul('115').div('100'),
         );
@@ -681,61 +674,24 @@ describe('Integration Test: Liquidations', async () => {
             filMaturities[0],
             reserveFund.address,
           );
-        const tokenVaultBalanceAfter = await wETHToken.balanceOf(
-          tokenVault.address,
-        );
-        const lendingInfoAfter1 = await lendingInfo.load('After1', {
-          WFIL: filMaturities[0],
-        });
 
-        expect(rfFutureValueAfter.lt(rfFutureValueBefore));
-        expect(rfFutureValueAfter.gte(0));
-
-        await expect(
-          liquidator.executeLiquidationCall(
-            hexETH,
-            ethMaturities,
-            hexWFIL,
-            filMaturities[0],
-            alice.address,
-            mockUniswapRouter.address,
-            0,
-          ),
-        ).to.emit(liquidationLogic, 'LiquidationExecuted');
-
-        const tokenVaultBalanceAfter2 = await wETHToken.balanceOf(
-          tokenVault.address,
-        );
-        const lendingInfoAfter2 = await lendingInfo.load('After2', {
+        const lendingInfoAfter = await lendingInfo.load('After', {
           WFIL: filMaturities[0],
         });
 
         lendingInfo.show();
 
-        expect(tokenVaultBalanceAfter2.lt(tokenVaultBalanceAfter));
-        expect(tokenVaultBalanceAfter2.gte(0));
-        expect(lendingInfoAfter1.coverage.lt(lendingInfoBefore.coverage)).to
-          .true;
-        expect(lendingInfoAfter2.coverage.lt(lendingInfoAfter1.coverage)).to
-          .true;
+        expect(rfFutureValueAfter.lt(rfFutureValueBefore));
+        expect(rfFutureValueAfter.gte(0));
 
         expect(
-          BigNumberJS(lendingInfoAfter1.pvs[0].toString())
+          BigNumberJS(lendingInfoAfter.pvs[0].toString())
             .times(100)
             .div(lendingInfoBefore.pvs[0].toString())
             .abs()
             .dp(0)
             .toString(),
-        ).to.equal('50');
-
-        expect(
-          BigNumberJS(lendingInfoAfter2.pvs[0].toString())
-            .times(100)
-            .div(lendingInfoAfter1.pvs[0].toString())
-            .abs()
-            .dp(0)
-            .toString(),
-        ).to.equal('50');
+        ).to.equal('0');
 
         await expect(
           liquidator.executeLiquidationCall(
@@ -748,7 +704,7 @@ describe('Integration Test: Liquidations', async () => {
             10,
           ),
         ).to.be.revertedWith(
-          `NoLiquidationAmount("${alice.address}", "${hexETH}")`,
+          `NoDebt("${alice.address}", "${hexWFIL}", ${filMaturities[0]})`,
         );
       });
     });
@@ -1009,9 +965,7 @@ describe('Integration Test: Liquidations', async () => {
         expect(liquidatorFutureValue).to.equal(0);
         expect(liquidatorDepositAmount).not.equal(0);
         expect(receivedDebtAmount).lt(filledOrderAmount.div(2));
-        // TODO: After `LiquidationLogic` is fixed, uncomment the following line
-        // expect(receivedCollateralAmount).to.equal(depositAmount);
-        expect(receivedCollateralAmount).gt(depositAmount);
+        expect(receivedCollateralAmount).to.equal(depositAmount);
       });
 
       it('Withdraw funds on Liquidator contract', async () => {
@@ -1344,7 +1298,7 @@ describe('Integration Test: Liquidations', async () => {
             .abs()
             .dp(0)
             .toString(),
-        ).to.equal('50');
+        ).to.equal('0');
 
         const liquidatorLendingInfo = new LendingInfo(liquidator.address);
         await liquidatorLendingInfo.load('Liquidator', {
@@ -1767,7 +1721,7 @@ describe('Integration Test: Liquidations', async () => {
             .abs()
             .dp(0)
             .toString(),
-        ).to.equal('50');
+        ).to.equal('0');
 
         const liquidatorLendingInfo = new LendingInfo(liquidator.address);
         await liquidatorLendingInfo.load('Liquidator', {

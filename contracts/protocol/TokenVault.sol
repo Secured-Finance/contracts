@@ -2,6 +2,7 @@
 pragma solidity 0.8.19;
 
 // dependencies
+import {IERC20Permit} from "../dependencies/openzeppelin/token/ERC20/extensions/IERC20Permit.sol";
 import {EnumerableSet} from "../dependencies/openzeppelin/utils/structs/EnumerableSet.sol";
 import {Multicall} from "../dependencies/openzeppelin/utils/Multicall.sol";
 // libraries
@@ -69,6 +70,7 @@ contract TokenVault is
      * @param _owner The address of the contract owner
      * @param _resolver The address of the Address Resolver contract
      * @param _liquidationThresholdRate The liquidation threshold rate
+     * @param _fullLiquidationThresholdRate  The full liquidation threshold rate
      * @param _liquidationProtocolFeeRate The liquidation fee rate received by protocol
      * @param _liquidatorFeeRate The liquidation fee rate received by liquidators
      * @param _nativeToken The address of wrapped token of native currency
@@ -77,6 +79,7 @@ contract TokenVault is
         address _owner,
         address _resolver,
         uint256 _liquidationThresholdRate,
+        uint256 _fullLiquidationThresholdRate,
         uint256 _liquidationProtocolFeeRate,
         uint256 _liquidatorFeeRate,
         address _nativeToken
@@ -89,6 +92,7 @@ contract TokenVault is
         MixinLiquidationConfiguration._initialize(
             _owner,
             _liquidationThresholdRate,
+            _fullLiquidationThresholdRate,
             _liquidationProtocolFeeRate,
             _liquidatorFeeRate
         );
@@ -152,6 +156,11 @@ contract TokenVault is
      */
     function isRegisteredCurrency(bytes32 _ccy) public view override returns (bool) {
         return Storage.slot().tokenAddresses[_ccy] != address(0);
+    }
+
+    // @inheritdoc Proxyable
+    function getRevision() external pure override returns (uint256) {
+        return 0x2;
     }
 
     /**
@@ -377,28 +386,106 @@ contract TokenVault is
 
     /**
      * @dev Deposits funds by the caller into collateral.
-     * @param _amount Amount of funds to deposit
      * @param _ccy Currency name in bytes32
+     * @param _amount Amount of funds to deposit
      */
     function deposit(
         bytes32 _ccy,
         uint256 _amount
     ) external payable override ifActive whenNotPaused onlyRegisteredCurrency(_ccy) {
-        _deposit(msg.sender, _ccy, _amount);
+        _deposit(msg.sender, _ccy, _amount, msg.sender);
+    }
+
+    /**
+     * @dev Deposits funds by the caller into collateral.
+     * @param _ccy Currency name in bytes32
+     * @param _amount Amount of funds to deposit
+     * @param _onBehalfOf The beneficiary of the supplied deposits
+     */
+    function depositTo(
+        bytes32 _ccy,
+        uint256 _amount,
+        address _onBehalfOf
+    ) external payable override ifActive whenNotPaused onlyRegisteredCurrency(_ccy) {
+        _deposit(msg.sender, _ccy, _amount, _onBehalfOf);
     }
 
     /**
      * @dev Deposits funds by the `from` into collateral.
-     * @param _from user's address
-     * @param _amount Amount of funds to deposit
+     * @param _from Address of the user
      * @param _ccy Currency name in bytes32
+     * @param _amount Amount of funds to deposit
      */
     function depositFrom(
         address _from,
         bytes32 _ccy,
         uint256 _amount
     ) external payable override ifActive whenNotPaused onlyLendingMarketController {
-        _deposit(_from, _ccy, _amount);
+        _deposit(_from, _ccy, _amount, _from);
+    }
+
+    /**
+     * @dev Deposits funds by the caller into collateral with transfer approval of asset via permit function
+     * @param _ccy Currency name in bytes32
+     * @param _amount Amount of funds to deposit
+     * @param _onBehalfOf The beneficiary of the supplied deposits
+     * @param _deadline The deadline timestamp that the permit is valid
+     * @param _permitV The V parameter of ERC712 permit sig
+     * @param _permitR The R parameter of ERC712 permit sig
+     * @param _permitS The S parameter of ERC712 permit sig
+     */
+    function depositWithPermitTo(
+        bytes32 _ccy,
+        uint256 _amount,
+        address _onBehalfOf,
+        uint256 _deadline,
+        uint8 _permitV,
+        bytes32 _permitR,
+        bytes32 _permitS
+    ) external override ifActive whenNotPaused onlyRegisteredCurrency(_ccy) {
+        IERC20Permit(getTokenAddress(_ccy)).permit(
+            msg.sender,
+            address(this),
+            _amount,
+            _deadline,
+            _permitV,
+            _permitR,
+            _permitS
+        );
+
+        _deposit(msg.sender, _ccy, _amount, _onBehalfOf);
+    }
+
+    /**
+     * @dev Deposits funds by the `from` into collateral with transfer approval of asset via permit function
+     * @param _from Address of the user
+     * @param _ccy Currency name in bytes32
+     * @param _amount Amount of funds to deposit
+     * @param _deadline The deadline timestamp that the permit is valid
+     * @param _permitV The V parameter of ERC712 permit sig
+     * @param _permitR The R parameter of ERC712 permit sig
+     * @param _permitS The S parameter of ERC712 permit sig
+     */
+    function depositWithPermitFrom(
+        address _from,
+        bytes32 _ccy,
+        uint256 _amount,
+        uint256 _deadline,
+        uint8 _permitV,
+        bytes32 _permitR,
+        bytes32 _permitS
+    ) external override ifActive whenNotPaused onlyLendingMarketController {
+        IERC20Permit(getTokenAddress(_ccy)).permit(
+            _from,
+            address(this),
+            _amount,
+            _deadline,
+            _permitV,
+            _permitR,
+            _permitS
+        );
+
+        _deposit(_from, _ccy, _amount, _from);
     }
 
     /**
@@ -503,7 +590,12 @@ contract TokenVault is
         _unpause();
     }
 
-    function _deposit(address _user, bytes32 _ccy, uint256 _amount) internal {
+    function _deposit(
+        address _caller,
+        bytes32 _ccy,
+        uint256 _amount,
+        address _onBehalfOf
+    ) internal {
         if (_amount == 0) revert AmountIsZero();
 
         address tokenAddress = Storage.slot().tokenAddresses[_ccy];
@@ -514,9 +606,9 @@ contract TokenVault is
             revert InvalidAmount(_ccy, _amount, msg.value);
         }
 
-        DepositManagementLogic.deposit(_user, _ccy, _amount);
+        DepositManagementLogic.deposit(_caller, _ccy, _amount, _onBehalfOf);
 
-        emit Deposit(_user, _ccy, _amount);
+        emit Deposit(_onBehalfOf, _ccy, _amount, _caller);
     }
 
     function _withdraw(address _user, bytes32 _ccy, uint256 _amount) internal {

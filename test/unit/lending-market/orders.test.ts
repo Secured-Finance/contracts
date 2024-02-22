@@ -145,6 +145,11 @@ describe('LendingMarket - Orders', () => {
     it('Check with a single order', async () => {
       const tx = await fillOrder('100000000000000', '8000');
 
+      await expect(tx).not.emit(
+        orderActionLogic,
+        'BlockUnitPriceHistoryUpdated',
+      );
+
       await checkBlockUnitPrice('8000', '8000');
       await checkBlockUnitPriceHistory(['8000']);
 
@@ -161,20 +166,35 @@ describe('LendingMarket - Orders', () => {
     it('Check with multiple orders in the same block', async () => {
       await ethers.provider.send('evm_setAutomine', [false]);
 
-      await fillOrder('100000000000000', '8000');
-      await fillOrder('200000000000000', '9000');
+      const tx1 = await fillOrder('100000000000000', '8000');
+      const tx2 = await fillOrder('200000000000000', '9000');
 
       await checkBlockUnitPrice('0', '0');
 
       await ethers.provider.send('evm_mine', []);
+
+      await expect(tx1).not.emit(
+        orderActionLogic,
+        'BlockUnitPriceHistoryUpdated',
+      );
+
+      await expect(tx2).not.emit(
+        orderActionLogic,
+        'BlockUnitPriceHistoryUpdated',
+      );
 
       await checkBlockUnitPrice('8640', '8640');
       await checkBlockUnitPriceHistory(['8640']);
     });
 
     it('Check with multiple orders in the different block', async () => {
-      await fillOrder('100000000000000', '8000');
-      await fillOrder('200000000000000', '9000');
+      await expect(fillOrder('100000000000000', '8000')).not.emit(
+        orderActionLogic,
+        'BlockUnitPriceHistoryUpdated',
+      );
+      await expect(fillOrder('200000000000000', '9000'))
+        .emit(orderActionLogic, 'BlockUnitPriceHistoryUpdated')
+        .withArgs(targetCurrency, maturity, '8000');
 
       await checkBlockUnitPrice('9000', '8500');
       await checkBlockUnitPriceHistory(['9000', '8000']);
@@ -229,14 +249,18 @@ describe('LendingMarket - Orders', () => {
           '9000',
         );
 
-      await lendingMarketCaller
-        .connect(alice)
-        .unwindPosition(
-          targetCurrency,
-          currentOrderBookId,
-          Side.BORROW,
-          calculateFutureValue('100000000000000', '8000'),
-        );
+      await expect(
+        lendingMarketCaller
+          .connect(alice)
+          .unwindPosition(
+            targetCurrency,
+            currentOrderBookId,
+            Side.BORROW,
+            calculateFutureValue('100000000000000', '8000'),
+          ),
+      )
+        .emit(orderActionLogic, 'BlockUnitPriceHistoryUpdated')
+        .withArgs(targetCurrency, maturity, '8000');
 
       await checkBlockUnitPrice('9000', '8500');
     });

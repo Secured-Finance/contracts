@@ -196,8 +196,6 @@ interface ILendingMarket {
     function executeAutoRoll(
         uint8 maturedOrderBookId,
         uint8 newNearestOrderBookId,
-        uint256 newMaturity,
-        uint256 openingDate,
         uint256 autoRollUnitPrice
     ) external;
 

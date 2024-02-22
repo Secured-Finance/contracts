@@ -86,7 +86,8 @@ contract ProxyController is IProxyController, Ownable, Multicall {
     /**
      * @notice  Sets the implementation contract of TokenVault
      * @param newImpl The address of implementation contract
-     * @param liquidationThresholdRate  The rate used as the auto liquidation threshold
+     * @param liquidationThresholdRate  The liquidation threshold rate
+     * @param fullLiquidationThresholdRate  The full liquidation threshold rate
      * @param liquidationProtocolFeeRate The liquidation fee rate received by protocol
      * @param liquidatorFeeRate The liquidation fee rate received by liquidators
      * @param nativeToken The address of wrapped token of native currency
@@ -94,15 +95,17 @@ contract ProxyController is IProxyController, Ownable, Multicall {
     function setTokenVaultImpl(
         address newImpl,
         uint256 liquidationThresholdRate,
+        uint256 fullLiquidationThresholdRate,
         uint256 liquidationProtocolFeeRate,
         uint256 liquidatorFeeRate,
         address nativeToken
     ) external onlyOwner {
         bytes memory data = abi.encodeWithSignature(
-            "initialize(address,address,uint256,uint256,uint256,address)",
+            "initialize(address,address,uint256,uint256,uint256,uint256,address)",
             msg.sender,
             resolver,
             liquidationThresholdRate,
+            fullLiquidationThresholdRate,
             liquidationProtocolFeeRate,
             liquidatorFeeRate,
             nativeToken

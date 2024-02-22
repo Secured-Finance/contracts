@@ -4,6 +4,7 @@ import { MockContract } from 'ethereum-waffle';
 import { BigNumber, Contract } from 'ethers';
 import { artifacts, ethers, waffle } from 'hardhat';
 import {
+  FULL_LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATOR_FEE_RATE,
@@ -42,6 +43,7 @@ describe('TokenVault', () => {
   let bob: SignerWithAddress;
   let carol: SignerWithAddress;
   let dave: SignerWithAddress;
+  let ellen: SignerWithAddress;
   let signers: SignerWithAddress[];
 
   let targetCurrency: string;
@@ -87,7 +89,8 @@ describe('TokenVault', () => {
   };
 
   before(async () => {
-    [owner, alice, bob, carol, dave, ...signers] = await ethers.getSigners();
+    [owner, alice, bob, carol, dave, ellen, ...signers] =
+      await ethers.getSigners();
 
     // Set up for the mocks
     mockCurrencyController = await deployMockContract(
@@ -109,6 +112,7 @@ describe('TokenVault', () => {
     await mockERC20.mock.transferFrom.returns(true);
     await mockERC20.mock.transfer.returns(true);
     await mockERC20.mock.approve.returns(true);
+    await mockERC20.mock.permit.returns();
     await mockCurrencyController.mock.currencyExists.returns(true);
     await mockLendingMarketController.mock.isTerminated.returns(false);
     await mockLendingMarketController.mock.cleanUpFunds.returns(0);
@@ -155,6 +159,7 @@ describe('TokenVault', () => {
       .setTokenVaultImpl(
         tokenVault.address,
         LIQUIDATION_THRESHOLD_RATE,
+        FULL_LIQUIDATION_THRESHOLD_RATE,
         LIQUIDATION_PROTOCOL_FEE_RATE,
         LIQUIDATOR_FEE_RATE,
         mockWETH.address,
@@ -225,6 +230,7 @@ describe('TokenVault', () => {
       ) => {
         await tokenVaultProxy.updateLiquidationConfiguration(
           liquidationThresholdRate,
+          FULL_LIQUIDATION_THRESHOLD_RATE,
           LIQUIDATION_PROTOCOL_FEE_RATE,
           LIQUIDATOR_FEE_RATE,
         );
@@ -243,6 +249,7 @@ describe('TokenVault', () => {
       await expect(
         tokenVaultProxy.updateLiquidationConfiguration(
           PCT_DIGIT,
+          PCT_DIGIT + 1,
           PCT_DIGIT,
           PCT_DIGIT,
         ),
@@ -250,12 +257,22 @@ describe('TokenVault', () => {
       await expect(
         tokenVaultProxy.updateLiquidationConfiguration(
           PCT_DIGIT + 1,
+          PCT_DIGIT,
+          PCT_DIGIT,
+          PCT_DIGIT,
+        ),
+      ).to.be.revertedWith('InvalidFullLiquidationThresholdRate');
+      await expect(
+        tokenVaultProxy.updateLiquidationConfiguration(
+          PCT_DIGIT + 1,
+          PCT_DIGIT + 1,
           PCT_DIGIT + 1,
           PCT_DIGIT,
         ),
       ).to.be.revertedWith('InvalidLiquidationProtocolFeeRate');
       await expect(
         tokenVaultProxy.updateLiquidationConfiguration(
+          PCT_DIGIT + 1,
           PCT_DIGIT + 1,
           PCT_DIGIT,
           PCT_DIGIT + 1,
@@ -268,6 +285,7 @@ describe('TokenVault', () => {
         tokenVaultProxy.initialize(
           ethers.constants.AddressZero,
           ethers.constants.AddressZero,
+          1,
           1,
           1,
           1,
@@ -289,6 +307,7 @@ describe('TokenVault', () => {
         tokenVault.initialize(
           ethers.constants.AddressZero,
           ethers.constants.AddressZero,
+          1,
           1,
           1,
           1,
@@ -495,7 +514,7 @@ describe('TokenVault', () => {
         tokenVaultProxy.connect(signer).deposit(targetCurrency, value),
       )
         .to.emit(tokenVaultProxy, 'Deposit')
-        .withArgs(signer.address, targetCurrency, value);
+        .withArgs(signer.address, targetCurrency, value, signer.address);
 
       expect(await tokenVaultProxy.getCoverage(signer.address)).to.equal('0');
 
@@ -613,7 +632,7 @@ describe('TokenVault', () => {
         tokenVaultProxy.connect(alice).deposit(targetCurrency, value),
       )
         .to.emit(tokenVaultProxy, 'Deposit')
-        .withArgs(alice.address, targetCurrency, value);
+        .withArgs(alice.address, targetCurrency, value, alice.address);
 
       const currencies = await tokenVaultProxy.getUsedCurrencies(alice.address);
       expect(currencies[0]).to.equal(targetCurrency);
@@ -646,7 +665,7 @@ describe('TokenVault', () => {
           .deposit(ETH, valueInETH, { value: valueInETH }),
       )
         .to.emit(tokenVaultProxy, 'Deposit')
-        .withArgs(alice.address, ETH, valueInETH);
+        .withArgs(alice.address, ETH, valueInETH, alice.address);
 
       const currencies = await tokenVaultProxy.getUsedCurrencies(alice.address);
       expect(currencies.includes(ETH)).to.true;
@@ -661,6 +680,37 @@ describe('TokenVault', () => {
         ETH,
       );
       expect(totalDepositAmount).to.equal(depositAmount);
+    });
+
+    it('Deposit ETH to another user', async () => {
+      const valueInETH = '20000000000000';
+
+      await expect(
+        tokenVaultProxy
+          .connect(carol)
+          .depositTo(ETH, valueInETH, dave.address, { value: valueInETH }),
+      )
+        .to.emit(tokenVaultProxy, 'Deposit')
+        .withArgs(dave.address, ETH, valueInETH, carol.address);
+
+      const [carolResult, daveResult] = await Promise.all(
+        [carol, dave].map(async (user) => {
+          const currencies = await tokenVaultProxy.getUsedCurrencies(
+            user.address,
+          );
+          const depositAmount = await tokenVaultProxy.getDepositAmount(
+            user.address,
+            ETH,
+          );
+
+          return { currencies, depositAmount };
+        }),
+      );
+
+      expect(carolResult.currencies.includes(ETH)).to.false;
+      expect(carolResult.depositAmount).to.equal(0);
+      expect(daveResult.currencies.includes(ETH)).to.true;
+      expect(daveResult.depositAmount).to.equal(valueInETH);
     });
 
     it('Deposit multiple tokens using multicall', async () => {
@@ -682,6 +732,54 @@ describe('TokenVault', () => {
         targetCurrency,
       );
       expect(depositAmount).to.equal('30000000000000');
+    });
+
+    it('Deposit to another user with permit', async () => {
+      const value = '10000000000000';
+      const deadline = ethers.constants.MaxUint256;
+      const v = 1;
+      const r = ethers.utils.formatBytes32String('dummy');
+      const s = ethers.utils.formatBytes32String('dummy');
+
+      await expect(
+        tokenVaultProxy
+          .connect(owner)
+          .depositWithPermitTo(
+            targetCurrency,
+            value,
+            alice.address,
+            deadline,
+            v,
+            r,
+            s,
+          ),
+      )
+        .to.emit(tokenVaultProxy, 'Deposit')
+        .withArgs(alice.address, targetCurrency, value, owner.address);
+    });
+
+    it('Deposit from another user with permit', async () => {
+      const value = '10000000000000';
+      const deadline = ethers.constants.MaxUint256;
+      const v = 1;
+      const r = ethers.utils.formatBytes32String('dummy');
+      const s = ethers.utils.formatBytes32String('dummy');
+
+      await expect(
+        tokenVaultCaller
+          .connect(owner)
+          .depositWithPermitFrom(
+            alice.address,
+            targetCurrency,
+            value,
+            deadline,
+            v,
+            r,
+            s,
+          ),
+      )
+        .to.emit(tokenVaultProxy, 'Deposit')
+        .withArgs(alice.address, targetCurrency, value, alice.address);
     });
 
     it('Get the withdrawable amount with the working orders & Withdraw collateral', async () => {
@@ -825,11 +923,11 @@ describe('TokenVault', () => {
         debtAmount,
       });
 
-      await tokenVaultProxy.connect(dave).deposit(targetCurrency, value);
+      await tokenVaultProxy.connect(ellen).deposit(targetCurrency, value);
 
       expect(
         await tokenVaultProxy['getWithdrawableCollateral(address)'](
-          dave.address,
+          ellen.address,
         ),
       ).to.equal(
         valueInETH
@@ -838,9 +936,9 @@ describe('TokenVault', () => {
           .div('10000'),
       );
 
-      expect(await tokenVaultProxy.getCoverage(dave.address)).to.equal('5000');
+      expect(await tokenVaultProxy.getCoverage(ellen.address)).to.equal('5000');
       expect(
-        await tokenVaultProxy.getTotalUnusedCollateralAmount(dave.address),
+        await tokenVaultProxy.getTotalUnusedCollateralAmount(ellen.address),
       ).to.equal(valueInETH.sub(debtAmount));
     });
 
@@ -1232,6 +1330,48 @@ describe('TokenVault', () => {
       );
     });
 
+    it('Get liquidation amount with no collateral', async () => {
+      const signer = getUser();
+
+      await updateReturnValuesOfCalculateTotalFundsInBaseCurrencyMock({
+        debtAmount: '10000000000',
+      });
+
+      const liquidationAmounts = await tokenVaultProxy.getLiquidationAmount(
+        signer.address,
+        targetCurrency,
+        1,
+      );
+
+      expect(liquidationAmounts.liquidationAmount).equal(0);
+      expect(liquidationAmounts.protocolFee).equal(0);
+      expect(liquidationAmounts.liquidatorFee).equal(0);
+    });
+
+    it('Get liquidation amount with no used collateral', async () => {
+      // Set up for the mocks
+      await mockCurrencyController.mock[
+        'convertToBaseCurrency(bytes32,uint256)'
+      ].returns('0');
+
+      const signer = getUser();
+
+      await tokenVaultProxy
+        .connect(signer)
+        .deposit(targetCurrency, '20000000000');
+      await updateReturnValuesOfCalculateTotalFundsInBaseCurrencyMock();
+
+      const liquidationAmounts = await tokenVaultProxy.getLiquidationAmount(
+        signer.address,
+        targetCurrency,
+        1,
+      );
+
+      expect(liquidationAmounts.liquidationAmount).equal(0);
+      expect(liquidationAmounts.protocolFee).equal(0);
+      expect(liquidationAmounts.liquidatorFee).equal(0);
+    });
+
     it('Fail to deposit token due to unregistered currency', async () => {
       await expect(
         tokenVaultProxy.deposit(ethers.utils.formatBytes32String('Dummy'), '1'),
@@ -1316,6 +1456,20 @@ describe('TokenVault', () => {
       ).to.be.revertedWith('OnlyAcceptedContract("LendingMarketController")');
     });
 
+    it('Fail to call depositWithPermitFrom due to invalid caller', async () => {
+      await expect(
+        tokenVaultProxy.depositWithPermitFrom(
+          alice.address,
+          targetCurrency,
+          '1',
+          '1',
+          '1',
+          ethers.utils.formatBytes32String('dummy'),
+          ethers.utils.formatBytes32String('dummy'),
+        ),
+      ).to.be.revertedWith('OnlyAcceptedContract("LendingMarketController")');
+    });
+
     it('Fail to call addDepositAmount due to invalid amount', async () => {
       const amount = ethers.BigNumber.from('20000000000000');
       await tokenVaultCaller.addDepositAmount(
@@ -1392,14 +1546,6 @@ describe('TokenVault', () => {
       ).to.be.revertedWith(`ProtocolIsInsolvent("${targetCurrency}")`);
     });
 
-    it('Fail to get liquidation amount due to no collateral', async () => {
-      await expect(
-        depositManagementLogic
-          .attach(tokenVaultProxy.address)
-          .getLiquidationAmount(owner.address, targetCurrency, 1),
-      ).to.be.revertedWith('CollateralIsZero');
-    });
-
     it('Deposit funds from Alice', async () => {
       const valueInETH = '10000';
 
@@ -1415,7 +1561,7 @@ describe('TokenVault', () => {
         tokenVaultCaller.depositFrom(alice.address, targetCurrency, valueInETH),
       )
         .to.emit(tokenVaultProxy, 'Deposit')
-        .withArgs(alice.address, targetCurrency, valueInETH);
+        .withArgs(alice.address, targetCurrency, valueInETH, alice.address);
     });
 
     it('Withdraw funds from Alice', async () => {
@@ -1442,11 +1588,47 @@ describe('TokenVault', () => {
         .withArgs(alice.address, targetCurrency, valueInETH);
     });
 
-    it('Fail to call deposit from Alice due to lending market termination', async () => {
+    it('Fail to call depositFrom due to lending market termination', async () => {
       await mockLendingMarketController.mock.isTerminated.returns(true);
 
       await expect(
         tokenVaultCaller.depositFrom(alice.address, targetCurrency, '1'),
+      ).to.be.revertedWith('MarketTerminated');
+    });
+
+    it('Fail to call depositWithPermitTo due to lending market termination', async () => {
+      await mockLendingMarketController.mock.isTerminated.returns(true);
+
+      await expect(
+        tokenVaultProxy
+          .connect(alice)
+          .depositWithPermitTo(
+            targetCurrency,
+            '10000000000000',
+            alice.address,
+            ethers.constants.MaxUint256,
+            1,
+            ethers.utils.formatBytes32String('dummy'),
+            ethers.utils.formatBytes32String('dummy'),
+          ),
+      ).to.be.revertedWith('MarketTerminated');
+    });
+
+    it('Fail to depositWithPermitFrom due to lending market termination', async () => {
+      await mockLendingMarketController.mock.isTerminated.returns(true);
+
+      await expect(
+        tokenVaultCaller
+          .connect(alice)
+          .depositWithPermitFrom(
+            alice.address,
+            targetCurrency,
+            '10000000000000',
+            ethers.constants.MaxUint256,
+            1,
+            ethers.utils.formatBytes32String('dummy'),
+            ethers.utils.formatBytes32String('dummy'),
+          ),
       ).to.be.revertedWith('MarketTerminated');
     });
   });
@@ -1609,6 +1791,20 @@ describe('TokenVault', () => {
       ).to.be.revertedWith('Pausable: paused');
 
       await expect(
+        tokenVaultProxy
+          .connect(alice)
+          .depositWithPermitTo(
+            targetCurrency,
+            arbitraryAmount,
+            alice.address,
+            ethers.constants.MaxUint256,
+            1,
+            ethers.utils.formatBytes32String('dummy'),
+            ethers.utils.formatBytes32String('dummy'),
+          ),
+      ).to.be.revertedWith('Pausable: paused');
+
+      await expect(
         tokenVaultCaller.addDepositAmount(
           alice.address,
           targetCurrency,
@@ -1651,17 +1847,26 @@ describe('TokenVault', () => {
           .withdraw(targetCurrency, arbitraryAmount),
       ).to.be.not.reverted;
 
-      tokenVaultCaller.depositFrom(
-        alice.address,
-        targetCurrency,
-        arbitraryAmount,
-      );
       await expect(
         tokenVaultCaller.depositFrom(
           alice.address,
           targetCurrency,
           arbitraryAmount,
         ),
+      ).to.be.not.reverted;
+
+      await expect(
+        tokenVaultProxy
+          .connect(alice)
+          .depositWithPermitTo(
+            targetCurrency,
+            arbitraryAmount,
+            alice.address,
+            ethers.constants.MaxUint256,
+            1,
+            ethers.utils.formatBytes32String('dummy'),
+            ethers.utils.formatBytes32String('dummy'),
+          ),
       ).to.be.not.reverted;
 
       await expect(

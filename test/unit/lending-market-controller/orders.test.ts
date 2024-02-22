@@ -89,6 +89,7 @@ describe('LendingMarketController - Orders', () => {
     await mockTokenVault.mock.removeDepositAmount.returns();
     await mockTokenVault.mock.cleanUpUsedCurrencies.returns();
     await mockTokenVault.mock.depositFrom.returns();
+    await mockTokenVault.mock.depositWithPermitFrom.returns();
   });
 
   describe('Initialization', async () => {
@@ -771,7 +772,7 @@ describe('LendingMarketController - Orders', () => {
         await lendingMarketControllerProxy.getMaturities(targetCurrency);
       const rotatedMarket = await lendingMarketReader.getOrderBookDetail(
         targetCurrency,
-        maturities[0],
+        newMaturity,
       );
 
       // Check borrow rates
@@ -2854,6 +2855,27 @@ describe('LendingMarketController - Orders', () => {
             () => true, // any value
           );
       });
+
+      it('Deposit and place a lending order with permit', async () => {
+        const deadline = ethers.constants.MaxUint256;
+        const v = 1;
+        const r = ethers.utils.formatBytes32String('dummy');
+        const s = ethers.utils.formatBytes32String('dummy');
+
+        await lendingMarketControllerProxy
+          .connect(alice)
+          .depositWithPermitAndExecuteOrder(
+            targetCurrency,
+            maturities[0],
+            Side.LEND,
+            '50000000000000000',
+            '8800',
+            deadline,
+            v,
+            r,
+            s,
+          );
+      });
     });
 
     describe('Market Order', async () => {
@@ -3438,6 +3460,24 @@ describe('LendingMarketController - Orders', () => {
               Side.LEND,
               '10000000000000000',
               '0',
+            ),
+        ).to.be.revertedWith('InvalidMaturity');
+      });
+
+      it('Fail to create an order and deposit token with permit due to invalid maturity', async () => {
+        await expect(
+          lendingMarketControllerProxy
+            .connect(alice)
+            .depositWithPermitAndExecuteOrder(
+              targetCurrency,
+              1,
+              Side.LEND,
+              '10000000000000000',
+              '0',
+              ethers.constants.MaxUint256,
+              1,
+              ethers.utils.formatBytes32String('dummy'),
+              ethers.utils.formatBytes32String('dummy'),
             ),
         ).to.be.revertedWith('InvalidMaturity');
       });

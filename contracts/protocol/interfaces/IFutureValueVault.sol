@@ -44,8 +44,7 @@ interface IFutureValueVault {
 
     function reset(
         uint8 orderBookId,
-        address user,
-        uint256 activeMaturity
+        address user
     )
         external
         returns (int256 removedAmount, int256 currentAmount, uint256 maturity, bool isAllRemoved);
