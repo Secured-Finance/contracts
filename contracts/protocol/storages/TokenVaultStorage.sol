@@ -23,6 +23,8 @@ library TokenVaultStorage {
         mapping(address user => EnumerableSet.Bytes32Set currency) usedCurrencies;
         mapping(bytes32 ccy => uint256 totalDepositAmount) totalDepositAmount;
         mapping(address user => mapping(bytes32 currency => uint256 depositAmount)) depositAmounts;
+        // Full liquidation threshold rate (in basis point)
+        uint256 fullLiquidationThresholdRate;
     }
 
     function slot() internal pure returns (Storage storage r) {

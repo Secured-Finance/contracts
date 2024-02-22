@@ -4,6 +4,7 @@ import { MockContract } from 'ethereum-waffle';
 import { BigNumber, Contract } from 'ethers';
 import { artifacts, ethers, waffle } from 'hardhat';
 import {
+  FULL_LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATOR_FEE_RATE,
@@ -155,6 +156,7 @@ describe('TokenVault', () => {
       .setTokenVaultImpl(
         tokenVault.address,
         LIQUIDATION_THRESHOLD_RATE,
+        FULL_LIQUIDATION_THRESHOLD_RATE,
         LIQUIDATION_PROTOCOL_FEE_RATE,
         LIQUIDATOR_FEE_RATE,
         mockWETH.address,
@@ -225,6 +227,7 @@ describe('TokenVault', () => {
       ) => {
         await tokenVaultProxy.updateLiquidationConfiguration(
           liquidationThresholdRate,
+          FULL_LIQUIDATION_THRESHOLD_RATE,
           LIQUIDATION_PROTOCOL_FEE_RATE,
           LIQUIDATOR_FEE_RATE,
         );
@@ -243,6 +246,7 @@ describe('TokenVault', () => {
       await expect(
         tokenVaultProxy.updateLiquidationConfiguration(
           PCT_DIGIT,
+          PCT_DIGIT + 1,
           PCT_DIGIT,
           PCT_DIGIT,
         ),
@@ -250,12 +254,22 @@ describe('TokenVault', () => {
       await expect(
         tokenVaultProxy.updateLiquidationConfiguration(
           PCT_DIGIT + 1,
+          PCT_DIGIT,
+          PCT_DIGIT,
+          PCT_DIGIT,
+        ),
+      ).to.be.revertedWith('InvalidFullLiquidationThresholdRate');
+      await expect(
+        tokenVaultProxy.updateLiquidationConfiguration(
+          PCT_DIGIT + 1,
+          PCT_DIGIT + 1,
           PCT_DIGIT + 1,
           PCT_DIGIT,
         ),
       ).to.be.revertedWith('InvalidLiquidationProtocolFeeRate');
       await expect(
         tokenVaultProxy.updateLiquidationConfiguration(
+          PCT_DIGIT + 1,
           PCT_DIGIT + 1,
           PCT_DIGIT,
           PCT_DIGIT + 1,
@@ -268,6 +282,7 @@ describe('TokenVault', () => {
         tokenVaultProxy.initialize(
           ethers.constants.AddressZero,
           ethers.constants.AddressZero,
+          1,
           1,
           1,
           1,
@@ -289,6 +304,7 @@ describe('TokenVault', () => {
         tokenVault.initialize(
           ethers.constants.AddressZero,
           ethers.constants.AddressZero,
+          1,
           1,
           1,
           1,
@@ -1232,6 +1248,48 @@ describe('TokenVault', () => {
       );
     });
 
+    it('Get liquidation amount with no collateral', async () => {
+      const signer = getUser();
+
+      await updateReturnValuesOfCalculateTotalFundsInBaseCurrencyMock({
+        debtAmount: '10000000000',
+      });
+
+      const liquidationAmounts = await tokenVaultProxy.getLiquidationAmount(
+        signer.address,
+        targetCurrency,
+        1,
+      );
+
+      expect(liquidationAmounts.liquidationAmount).equal(0);
+      expect(liquidationAmounts.protocolFee).equal(0);
+      expect(liquidationAmounts.liquidatorFee).equal(0);
+    });
+
+    it('Get liquidation amount with no used collateral', async () => {
+      // Set up for the mocks
+      await mockCurrencyController.mock[
+        'convertToBaseCurrency(bytes32,uint256)'
+      ].returns('0');
+
+      const signer = getUser();
+
+      await tokenVaultProxy
+        .connect(signer)
+        .deposit(targetCurrency, '20000000000');
+      await updateReturnValuesOfCalculateTotalFundsInBaseCurrencyMock();
+
+      const liquidationAmounts = await tokenVaultProxy.getLiquidationAmount(
+        signer.address,
+        targetCurrency,
+        1,
+      );
+
+      expect(liquidationAmounts.liquidationAmount).equal(0);
+      expect(liquidationAmounts.protocolFee).equal(0);
+      expect(liquidationAmounts.liquidatorFee).equal(0);
+    });
+
     it('Fail to deposit token due to unregistered currency', async () => {
       await expect(
         tokenVaultProxy.deposit(ethers.utils.formatBytes32String('Dummy'), '1'),
@@ -1390,14 +1448,6 @@ describe('TokenVault', () => {
       await expect(
         tokenVaultProxy.withdraw(targetCurrency, '10000000000000'),
       ).to.be.revertedWith(`ProtocolIsInsolvent("${targetCurrency}")`);
-    });
-
-    it('Fail to get liquidation amount due to no collateral', async () => {
-      await expect(
-        depositManagementLogic
-          .attach(tokenVaultProxy.address)
-          .getLiquidationAmount(owner.address, targetCurrency, 1),
-      ).to.be.revertedWith('CollateralIsZero');
     });
 
     it('Deposit funds from Alice', async () => {

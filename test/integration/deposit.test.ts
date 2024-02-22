@@ -12,6 +12,7 @@ import {
   toBytes32,
 } from '../../utils/strings';
 import {
+  FULL_LIQUIDATION_THRESHOLD_RATE,
   HAIRCUT,
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
@@ -99,6 +100,7 @@ describe('Integration Test: Deposit', async () => {
 
     await tokenVault.updateLiquidationConfiguration(
       LIQUIDATION_THRESHOLD_RATE,
+      FULL_LIQUIDATION_THRESHOLD_RATE,
       LIQUIDATION_PROTOCOL_FEE_RATE,
       LIQUIDATOR_FEE_RATE,
     );

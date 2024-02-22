@@ -10,22 +10,26 @@ import {TokenVaultStorage as Storage} from "../storages/TokenVaultStorage.sol";
 
 contract MixinLiquidationConfiguration is Ownable {
     error InvalidLiquidationThresholdRate();
+    error InvalidFullLiquidationThresholdRate();
     error InvalidLiquidationProtocolFeeRate();
     error InvalidLiquidatorFeeRate();
 
-    event AutoLiquidationThresholdRateUpdated(uint256 previousRate, uint256 ratio);
+    event LiquidationThresholdRateUpdated(uint256 previousRate, uint256 ratio);
+    event FullLiquidationThresholdRateUpdated(uint256 previousRate, uint256 ratio);
     event LiquidationProtocolFeeRateUpdated(uint256 previousRate, uint256 ratio);
     event LiquidatorFeeRateUpdated(uint256 previousRate, uint256 ratio);
 
     function _initialize(
         address _owner,
         uint256 _liquidationThresholdRate,
+        uint256 _fullLiquidationThresholdRate,
         uint256 _liquidationProtocolFeeRate,
         uint256 _liquidatorFeeRate
     ) internal {
         _transferOwnership(_owner);
         _updateLiquidationConfiguration(
             _liquidationThresholdRate,
+            _fullLiquidationThresholdRate,
             _liquidationProtocolFeeRate,
             _liquidatorFeeRate
         );
@@ -34,6 +38,7 @@ contract MixinLiquidationConfiguration is Ownable {
     /**
      * @dev Gets the liquidation configuration
      * @return liquidationThresholdRate The liquidation threshold rate
+     * @return fullLiquidationThresholdRate The full liquidation threshold rate
      * @return liquidationProtocolFeeRate The liquidation fee received by liquidators
      * @return liquidatorFeeRate The liquidation protocol fee received by protocol
      */
@@ -42,11 +47,13 @@ contract MixinLiquidationConfiguration is Ownable {
         view
         returns (
             uint256 liquidationThresholdRate,
+            uint256 fullLiquidationThresholdRate,
             uint256 liquidationProtocolFeeRate,
             uint256 liquidatorFeeRate
         )
     {
         liquidationThresholdRate = Storage.slot().liquidationThresholdRate;
+        fullLiquidationThresholdRate = Storage.slot().fullLiquidationThresholdRate;
         liquidationProtocolFeeRate = Storage.slot().liquidationProtocolFeeRate;
         liquidatorFeeRate = Storage.slot().liquidatorFeeRate;
     }
@@ -60,11 +67,13 @@ contract MixinLiquidationConfiguration is Ownable {
      */
     function updateLiquidationConfiguration(
         uint256 _liquidationThresholdRate,
+        uint256 _fullLiquidationThresholdRate,
         uint256 _liquidationProtocolFeeRate,
         uint256 _liquidatorFeeRate
     ) external onlyOwner {
         _updateLiquidationConfiguration(
             _liquidationThresholdRate,
+            _fullLiquidationThresholdRate,
             _liquidationProtocolFeeRate,
             _liquidatorFeeRate
         );
@@ -79,21 +88,32 @@ contract MixinLiquidationConfiguration is Ownable {
      */
     function _updateLiquidationConfiguration(
         uint256 _liquidationThresholdRate,
+        uint256 _fullLiquidationThresholdRate,
         uint256 _liquidationProtocolFeeRate,
         uint256 _liquidatorFeeRate
     ) private {
         if (_liquidationThresholdRate <= Constants.PCT_DIGIT)
             revert InvalidLiquidationThresholdRate();
+        if (_fullLiquidationThresholdRate <= Constants.PCT_DIGIT)
+            revert InvalidFullLiquidationThresholdRate();
         if (_liquidationProtocolFeeRate > Constants.PCT_DIGIT)
             revert InvalidLiquidationProtocolFeeRate();
         if (_liquidatorFeeRate > Constants.PCT_DIGIT) revert InvalidLiquidatorFeeRate();
 
         if (_liquidationThresholdRate != Storage.slot().liquidationThresholdRate) {
-            emit AutoLiquidationThresholdRateUpdated(
+            emit LiquidationThresholdRateUpdated(
                 Storage.slot().liquidationThresholdRate,
                 _liquidationThresholdRate
             );
             Storage.slot().liquidationThresholdRate = _liquidationThresholdRate;
+        }
+
+        if (_fullLiquidationThresholdRate != Storage.slot().fullLiquidationThresholdRate) {
+            emit FullLiquidationThresholdRateUpdated(
+                Storage.slot().fullLiquidationThresholdRate,
+                _fullLiquidationThresholdRate
+            );
+            Storage.slot().fullLiquidationThresholdRate = _fullLiquidationThresholdRate;
         }
 
         if (_liquidationProtocolFeeRate != Storage.slot().liquidationProtocolFeeRate) {
