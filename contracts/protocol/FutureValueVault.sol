@@ -39,6 +39,11 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
         contracts[0] = Contracts.LENDING_MARKET_CONTROLLER;
     }
 
+    // @inheritdoc Proxyable
+    function getRevision() external pure override returns (uint256) {
+        return 0x2;
+    }
+
     /**
      * @notice Gets the total supply of lending orders.
      * @dev This function returns the total supply of only orders that have been added

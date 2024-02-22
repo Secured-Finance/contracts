@@ -169,6 +169,11 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         return OrderBookLogic.isPreOrderPeriod(_orderBookId);
     }
 
+    // @inheritdoc Proxyable
+    function getRevision() external pure override returns (uint256) {
+        return 0x2;
+    }
+
     /**
      * @notice Gets the order book detail.
      * @param _orderBookId The order book id
