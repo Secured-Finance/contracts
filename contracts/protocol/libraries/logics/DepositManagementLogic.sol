@@ -18,7 +18,6 @@ library DepositManagementLogic {
     using RoundingUint256 for uint256;
 
     error NotEnoughDeposit(bytes32 ccy);
-    error CollateralIsZero(bytes32 ccy);
     error ProtocolIsInsolvent(bytes32 ccy);
 
     struct CalculatedFundVars {
@@ -325,9 +324,15 @@ library DepositManagementLogic {
 
         ) = getTotalCollateralAmount(_user);
 
+        if (totalUsedCollateralInBaseCcy == 0) {
+            return (0, 0, 0);
+        }
+
         (uint256 collateralAmount, , ) = getCollateralAmount(_user, _liquidationCcy);
 
-        if (collateralAmount == 0) revert CollateralIsZero({ccy: _liquidationCcy});
+        if (collateralAmount == 0) {
+            return (0, 0, 0);
+        }
 
         uint256 liquidationAmountInBaseCcy = 0;
         uint256 coveredRatio = (totalCollateralInBaseCcy * Constants.PCT_DIGIT).div(

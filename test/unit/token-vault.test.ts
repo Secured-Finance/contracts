@@ -1248,6 +1248,18 @@ describe('TokenVault', () => {
       );
     });
 
+    it('Get liquidation amount with no collateral', async () => {
+      const liquidationAmounts = await tokenVaultProxy.getLiquidationAmount(
+        owner.address,
+        targetCurrency,
+        1,
+      );
+
+      expect(liquidationAmounts.liquidationAmount).equal(0);
+      expect(liquidationAmounts.protocolFee).equal(0);
+      expect(liquidationAmounts.liquidatorFee).equal(0);
+    });
+
     it('Fail to deposit token due to unregistered currency', async () => {
       await expect(
         tokenVaultProxy.deposit(ethers.utils.formatBytes32String('Dummy'), '1'),
@@ -1406,14 +1418,6 @@ describe('TokenVault', () => {
       await expect(
         tokenVaultProxy.withdraw(targetCurrency, '10000000000000'),
       ).to.be.revertedWith(`ProtocolIsInsolvent("${targetCurrency}")`);
-    });
-
-    it('Fail to get liquidation amount due to no collateral', async () => {
-      await expect(
-        depositManagementLogic
-          .attach(tokenVaultProxy.address)
-          .getLiquidationAmount(owner.address, targetCurrency, 1),
-      ).to.be.revertedWith('CollateralIsZero');
     });
 
     it('Deposit funds from Alice', async () => {
