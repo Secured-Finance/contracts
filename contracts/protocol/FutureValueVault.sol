@@ -153,6 +153,52 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
     }
 
     /**
+     * @notice Locks user's balance.
+     * @param _user User's address
+     * @param _amount The amount to lock
+     * @param _maturity The maturity of the market
+     */
+    function lock(
+        uint8 _orderBookId,
+        address _user,
+        uint256 _amount,
+        uint256 _maturity
+    ) public override onlyLendingMarketController {
+        int256 balance = Storage.slot().balances[_orderBookId][_user];
+
+        if (balance <= 0) revert InsufficientBalance();
+
+        if (_amount == 0) {
+            _amount = balance.toUint256();
+        }
+
+        if (balance.toUint256() < _amount) revert InsufficientBalance();
+
+        Storage.slot().balances[_orderBookId][_user] -= _amount.toInt256();
+        Storage.slot().totalLockedBalances[_orderBookId] += _amount.toInt256();
+
+        emit BalanceLocked(_orderBookId, _maturity, _user, _amount);
+    }
+
+    /**
+     * @notice Unlocks user's balance.
+     * @param _user User's address
+     * @param _amount The amount to lock
+     * @param _maturity The maturity of the market
+     */
+    function unlock(
+        uint8 _orderBookId,
+        address _user,
+        uint256 _amount,
+        uint256 _maturity
+    ) public override onlyLendingMarketController {
+        Storage.slot().balances[_orderBookId][_user] += _amount.toInt256();
+        Storage.slot().totalLockedBalances[_orderBookId] -= _amount.toInt256();
+
+        emit BalanceUnlocked(_orderBookId, _maturity, _user, _amount);
+    }
+
+    /**
      * @notice Transfers the future value from sender to receiver.
      * @param _sender Sender's address
      * @param _receiver Receiver's address

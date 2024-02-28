@@ -4,6 +4,7 @@ pragma solidity 0.8.19;
 // dependencies
 import {IERC20} from "../../../dependencies/openzeppelin/token/ERC20/IERC20.sol";
 import {SafeCast} from "../../../dependencies/openzeppelin/utils/math/SafeCast.sol";
+import {Strings} from "../../../dependencies/openzeppelin/utils/Strings.sol";
 // interfaces
 import {ILendingMarket} from "../../interfaces/ILendingMarket.sol";
 import {ILendingMarketController} from "../../interfaces/ILendingMarketController.sol";
@@ -39,6 +40,8 @@ library LendingMarketOperationLogic {
     error InvalidMinDebtUnitPrice();
     error LendingMarketNotInitialized();
     error NotEnoughOrderBooks();
+    error AlreadyZCTokenExists(address tokenAddress);
+    error InvalidMaturity(uint256 maturity);
 
     event LendingMarketInitialized(
         bytes32 indexed ccy,
@@ -62,6 +65,14 @@ library LendingMarketOperationLogic {
 
     event OrderBooksRotated(bytes32 ccy, uint256 oldMaturity, uint256 newMaturity);
     event EmergencyTerminationExecuted(uint256 timestamp);
+
+    event ZCTokenCreated(
+        bytes32 indexed ccy,
+        uint256 indexed maturity,
+        string name,
+        string symbol,
+        address tokenAddress
+    );
 
     function initializeLendingMarket(
         bytes32 _ccy,
@@ -98,6 +109,7 @@ library LendingMarketOperationLogic {
         Storage.slot().futureValueVaults[_ccy] = futureValueVault;
 
         updateMinDebtUnitPrice(_ccy, _minDebtUnitPrice);
+        createZCToken(_ccy, 0);
 
         emit LendingMarketInitialized(
             _ccy,
@@ -144,6 +156,8 @@ library LendingMarketOperationLogic {
 
         Storage.slot().orderBookIdLists[_ccy].push(orderBookId);
         Storage.slot().maturityOrderBookIds[_ccy][newMaturity] = orderBookId;
+
+        createZCToken(_ccy, newMaturity);
 
         emit OrderBookCreated(_ccy, orderBookId, _openingDate, _preOpeningDate, newMaturity);
     }
@@ -319,6 +333,38 @@ library LendingMarketOperationLogic {
         }
     }
 
+    function createZCToken(bytes32 _ccy, uint256 _maturity) public {
+        if (Storage.slot().zcTokens[_ccy][_maturity] != address(0)) {
+            revert AlreadyZCTokenExists(Storage.slot().zcTokens[_ccy][_maturity]);
+        }
+
+        if (_maturity != 0 && Storage.slot().maturityOrderBookIds[_ccy][_maturity] == 0) {
+            revert InvalidMaturity(_maturity);
+        }
+
+        address tokenAddress = AddressResolverLib.tokenVault().getTokenAddress(_ccy);
+        // string memory originalTokenName = IERC20Metadata(tokenAddress).name();
+        string memory originalTokenName = string(abi.encodePacked(_ccy));
+        string memory symbol = string(abi.encodePacked("zc", originalTokenName));
+        string memory name = string(abi.encodePacked("ZC ", originalTokenName));
+
+        if (_maturity != 0) {
+            symbol = string(abi.encodePacked(symbol, "-", Strings.toString(_maturity)));
+            name = string(abi.encodePacked(name, " ", _getShortMonthYearString(_maturity)));
+        }
+
+        address zcToken = AddressResolverLib.beaconProxyController().deployZCToken(
+            name,
+            symbol,
+            tokenAddress,
+            _maturity
+        );
+
+        Storage.slot().zcTokens[_ccy][_maturity] = zcToken;
+
+        emit ZCTokenCreated(_ccy, _maturity, name, symbol, zcToken);
+    }
+
     function calculateNextMaturity(
         uint256 _timestamp,
         uint256 _period
@@ -345,6 +391,25 @@ library LendingMarketOperationLogic {
         if (lastFridayTimestamp == 0) revert InvalidTimestamp();
 
         return lastFridayTimestamp;
+    }
+
+    function _getShortMonthYearString(uint256 timestamp) internal pure returns (string memory) {
+        (uint256 year, uint256 month, ) = TimeLibrary.timestampToDate(timestamp);
+        string[12] memory months = [
+            "JAN",
+            "FEB",
+            "MAR",
+            "APR",
+            "MAY",
+            "JUN",
+            "JUL",
+            "AUG",
+            "SEP",
+            "OCT",
+            "NOV",
+            "DEC"
+        ];
+        return string(abi.encodePacked(months[month - 1], Strings.toString(year)));
     }
 
     function _calculateAutoRollUnitPrice(

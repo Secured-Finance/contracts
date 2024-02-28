@@ -579,12 +579,11 @@ describe('LendingMarketController - Terminations', () => {
         lendingMarketControllerProxy.rotateOrderBooks(targetCurrency),
       ).to.emit(lendingMarketOperationLogic, 'OrderBooksRotated');
 
-      expect(
-        await lendingMarketControllerProxy.getGenesisValue(
-          targetCurrency,
-          alice.address,
-        ),
-      ).not.to.equal('0');
+      const { amount } = await lendingMarketControllerProxy.getGenesisValue(
+        targetCurrency,
+        alice.address,
+      );
+      expect(amount).not.to.equal('0');
 
       await expect(
         lendingMarketControllerProxy.executeEmergencyTermination(),
@@ -597,12 +596,11 @@ describe('LendingMarketController - Terminations', () => {
             .executeEmergencySettlement(),
         ).to.emit(fundManagementLogic, 'EmergencySettlementExecuted');
 
-        expect(
-          await lendingMarketControllerProxy.getGenesisValue(
-            targetCurrency,
-            user.address,
-          ),
-        ).to.equal('0');
+        const { amount } = await lendingMarketControllerProxy.getGenesisValue(
+          targetCurrency,
+          user.address,
+        );
+        expect(amount).to.equal('0');
       }
     });
 

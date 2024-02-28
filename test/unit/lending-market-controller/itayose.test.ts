@@ -75,6 +75,9 @@ describe('LendingMarketController - Itayose', () => {
     await mockTokenVault.mock.removeDepositAmount.returns();
     await mockTokenVault.mock.cleanUpUsedCurrencies.returns();
     await mockTokenVault.mock.depositWithPermitFrom.returns();
+    await mockTokenVault.mock.getTokenAddress.returns(
+      ethers.constants.AddressZero,
+    );
   });
 
   const initialize = async (currency: string, openingDate = genesisDate) => {

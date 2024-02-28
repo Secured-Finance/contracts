@@ -18,6 +18,8 @@ interface IBeaconProxyController {
 
     function setLendingMarketImpl(address newImpl) external;
 
+    function setZCTokenImpl(address newImpl) external;
+
     function deployFutureValueVault() external returns (address futureValueVault);
 
     function deployLendingMarket(
@@ -25,4 +27,11 @@ interface IBeaconProxyController {
         uint256 orderFeeRate,
         uint256 cbLimitRange
     ) external returns (address market);
+
+    function deployZCToken(
+        string memory name,
+        string memory symbol,
+        address asset,
+        uint256 maturity
+    ) external returns (address futureValueToken);
 }

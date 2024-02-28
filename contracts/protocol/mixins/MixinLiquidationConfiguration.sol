@@ -43,7 +43,7 @@ contract MixinLiquidationConfiguration is Ownable {
      * @return liquidatorFeeRate The liquidation protocol fee received by protocol
      */
     function getLiquidationConfiguration()
-        external
+        public
         view
         returns (
             uint256 liquidationThresholdRate,

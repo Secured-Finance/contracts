@@ -104,6 +104,9 @@ describe('LendingMarketController - Liquidations', () => {
     await mockTokenVault.mock.addDepositAmount.returns();
     await mockTokenVault.mock.removeDepositAmount.returns();
     await mockTokenVault.mock.cleanUpUsedCurrencies.returns();
+    await mockTokenVault.mock.getTokenAddress.returns(
+      ethers.constants.AddressZero,
+    );
   });
 
   beforeEach(async () => {

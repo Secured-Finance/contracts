@@ -13,4 +13,5 @@ library Contracts {
 library BeaconContracts {
     bytes32 internal constant FUTURE_VALUE_VAULT = "FutureValueVault";
     bytes32 internal constant LENDING_MARKET = "LendingMarket";
+    bytes32 internal constant ZC_TOKEN = "ZCToken";
 }

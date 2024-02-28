@@ -84,6 +84,14 @@ contract BeaconProxyController is
     }
 
     /**
+     * @notice Sets the implementation contract of ZCToken
+     * @param newImpl The address of implementation contract
+     */
+    function setZCTokenImpl(address newImpl) external override onlyOwner {
+        _updateBeaconImpl(BeaconContracts.ZC_TOKEN, newImpl);
+    }
+
+    /**
      * @notice Deploys new FutureValueVault
      * @notice Reverts on deployment market with existing currency and term
      */
@@ -117,6 +125,29 @@ contract BeaconProxyController is
             _cbLimitRange
         );
         market = _createProxy(BeaconContracts.LENDING_MARKET, data);
+    }
+
+    /**
+     * @notice Deploys new ZCToken
+     * @param _name The name of the future value token
+     * @param _symbol The symbol of the future value token
+     * @return futureValueToken The proxy contract address of created future value token
+     */
+    function deployZCToken(
+        string memory _name,
+        string memory _symbol,
+        address _asset,
+        uint256 _maturity
+    ) external override onlyLendingMarketController returns (address futureValueToken) {
+        bytes memory data = abi.encodeWithSignature(
+            "initialize(address,string,string,address,uint256)",
+            address(resolver()),
+            _name,
+            _symbol,
+            _asset,
+            _maturity
+        );
+        futureValueToken = _createProxy(BeaconContracts.ZC_TOKEN, data);
     }
 
     /**

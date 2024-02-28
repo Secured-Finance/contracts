@@ -54,6 +54,8 @@ interface ILendingMarketController {
         bool ignoreBorrowedAmount;
     }
 
+    function isValidMaturity(bytes32 _ccy, uint256 _maturity) external view returns (bool);
+
     function isTerminated() external view returns (bool);
 
     function isRedemptionRequired(address _user) external view returns (bool);
@@ -112,7 +114,10 @@ interface ILendingMarketController {
         address user
     ) external view returns (int256 totalPresentValue);
 
-    function getGenesisValue(bytes32 ccy, address user) external view returns (int256 genesisValue);
+    function getGenesisValue(
+        bytes32 ccy,
+        address user
+    ) external view returns (int256 amount, int256 amountInPV, int256 amountInFV);
 
     function getPosition(
         bytes32 _ccy,
@@ -240,4 +245,13 @@ interface ILendingMarketController {
     function cleanUpFunds(bytes32 ccy, address user) external returns (uint256 activeOrderCount);
 
     function updateMinDebtUnitPrice(bytes32 _ccy, uint256 _minDebtUnitPrice) external;
+
+    function mintZCToken(bytes32 _ccy, uint256 _maturity, uint256 _amount) external;
+
+    function burnZCToken(bytes32 _ccy, uint256 _maturity, uint256 _amount) external;
+
+    function getMintableZCTokenAmount(
+        bytes32 ccy,
+        uint256 maturity
+    ) external view returns (uint256 amount, bool isAll);
 }

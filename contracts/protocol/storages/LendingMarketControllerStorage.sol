@@ -40,6 +40,7 @@ library LendingMarketControllerStorage {
         // List of currency that the user has open orders or positions
         mapping(address user => EnumerableSet.Bytes32Set currency) usedCurrencies;
         mapping(address user => bool isRedeemed) isRedeemed;
+        mapping(bytes32 ccy => mapping(uint256 maturity => address token)) zcTokens;
     }
 
     function slot() internal pure returns (Storage storage r) {

@@ -83,6 +83,9 @@ describe('LendingMarketController - Rotations', () => {
     await mockTokenVault.mock.cleanUpUsedCurrencies.returns();
     await mockTokenVault.mock.depositFrom.returns();
     await mockTokenVault.mock.isCovered.returns(true, true);
+    await mockTokenVault.mock.getTokenAddress.returns(
+      ethers.constants.AddressZero,
+    );
   });
 
   const initialize = async (currency: string, openingDate = genesisDate) => {
@@ -107,12 +110,13 @@ describe('LendingMarketController - Rotations', () => {
 
   const getGenesisValues = (accounts: (SignerWithAddress | MockContract)[]) =>
     Promise.all(
-      accounts.map((account) =>
-        lendingMarketControllerProxy.getGenesisValue(
+      accounts.map(async (account) => {
+        const { amount } = await lendingMarketControllerProxy.getGenesisValue(
           targetCurrency,
           account.address,
-        ),
-      ),
+        );
+        return amount;
+      }),
     );
 
   afterEach(async () => {
@@ -324,7 +328,7 @@ describe('LendingMarketController - Rotations', () => {
 
       console.table(gvLog);
 
-      const reserveFundGVBefore =
+      const { amount: reserveFundGVBefore } =
         await lendingMarketControllerProxy.getGenesisValue(
           targetCurrency,
           mockReserveFund.address,
@@ -335,7 +339,7 @@ describe('LendingMarketController - Rotations', () => {
         alice.address,
       );
 
-      const reserveFundGVAfter =
+      const { amount: reserveFundGVAfter } =
         await lendingMarketControllerProxy.getGenesisValue(
           targetCurrency,
           mockReserveFund.address,

@@ -73,6 +73,9 @@ describe('LendingMarketController - Calculations', () => {
     await mockTokenVault.mock.isCovered.returns(true, true);
     await mockTokenVault.mock['isCollateral(bytes32[])'].returns([true]);
     await mockTokenVault.mock.calculateCoverage.returns('1000', false);
+    await mockTokenVault.mock.getTokenAddress.returns(
+      ethers.constants.AddressZero,
+    );
   });
 
   const initialize = async (currency: string) => {

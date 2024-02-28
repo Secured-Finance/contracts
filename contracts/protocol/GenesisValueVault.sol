@@ -415,6 +415,50 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
     }
 
     /**
+     * @notice Locks user's balance.
+     * @param _ccy Currency name in bytes32
+     * @param _user User's address
+     * @param _amount The amount to lock
+     */
+    function lock(
+        bytes32 _ccy,
+        address _user,
+        uint256 _amount
+    ) public override onlyLendingMarketController {
+        int256 balance = getBalance(_ccy, _user);
+
+        if (balance <= 0) revert InsufficientBalance();
+
+        if (_amount == 0) {
+            _amount = balance.toUint256();
+        }
+
+        if (balance.toUint256() < _amount) revert InsufficientBalance();
+
+        Storage.slot().balances[_ccy][_user] -= _amount.toInt256();
+        Storage.slot().totalLockedBalances[_ccy] += _amount.toInt256();
+
+        emit BalanceLocked(_ccy, _user, _amount);
+    }
+
+    /**
+     * @notice Unlocks user's balance.
+     * @param _ccy Currency name in bytes32
+     * @param _user User's address
+     * @param _amount The amount to lock
+     */
+    function unlock(
+        bytes32 _ccy,
+        address _user,
+        uint256 _amount
+    ) public override onlyLendingMarketController {
+        Storage.slot().balances[_ccy][_user] += _amount.toInt256();
+        Storage.slot().totalLockedBalances[_ccy] -= _amount.toInt256();
+
+        emit BalanceUnlocked(_ccy, _user, _amount);
+    }
+
+    /**
      * @notice Transfers the genesis value from sender to receiver.
      * @param _ccy Currency name in bytes32
      * @param _sender Sender's address

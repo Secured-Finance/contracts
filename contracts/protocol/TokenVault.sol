@@ -314,6 +314,14 @@ contract TokenVault is
     }
 
     /**
+     * @notice Gets the liquidation threshold rate.
+     * @return rate The liquidation threshold rate
+     */
+    function getLiquidationThresholdRate() public view override returns (uint256 rate) {
+        (rate, , , ) = getLiquidationConfiguration();
+    }
+
+    /**
      * @notice Calculates the collateral rate used when additional funds are had by the user.
      * @param _user User's address
      * @param _additionalFunds Additional funds for calculating the coverage

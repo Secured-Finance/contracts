@@ -56,6 +56,8 @@ library FundManagementLogic {
         uint256 workingBorrowOrdersAmount;
         uint256 borrowedAmount;
         int256 genesisValue;
+        int256 genesisValueInPV;
+        int256 genesisValueInFV;
     }
 
     struct CalculateActualFundsVars {
@@ -484,6 +486,7 @@ library FundManagementLogic {
             );
 
             actualFunds.presentValue += presentValue;
+            actualFunds.genesisValueInPV = presentValue;
 
             // Add GV to the claimable amount or debt amount.
             // Before that, offset the present value of the default market and the genesis value in addition.
@@ -512,6 +515,7 @@ library FundManagementLogic {
 
             if (!vars.isTotal) {
                 actualFunds.futureValue += futureValue;
+                actualFunds.genesisValueInFV = futureValue;
             }
         }
     }
@@ -674,6 +678,16 @@ library FundManagementLogic {
         if (maturities.length > 0) {
             maturities = QuickSort.sort(maturities);
         }
+    }
+
+    function getGenesisValue(
+        bytes32 _ccy,
+        address _user
+    ) public view returns (int256 amount, int256 amountInPV, int256 amountInFV) {
+        FundManagementLogic.ActualFunds memory funds = getActualFunds(_ccy, 0, _user, 0);
+        amount = funds.genesisValue;
+        amountInPV = funds.genesisValueInPV;
+        amountInFV = funds.genesisValueInFV;
     }
 
     function getPosition(
@@ -1043,6 +1057,17 @@ library FundManagementLogic {
         futureValue = _calculateFVFromPV(_presentValue, unitPrice);
     }
 
+    function calculateFVFromPV(
+        bytes32 _ccy,
+        uint256 _maturity,
+        uint256 _presentValue
+    ) public view returns (uint256 futureValue) {
+        uint256 unitPrice = ILendingMarket(Storage.slot().lendingMarkets[_ccy]).getMarketUnitPrice(
+            Storage.slot().maturityOrderBookIds[_ccy][_maturity]
+        );
+        futureValue = _calculateFVFromPV(_presentValue, unitPrice);
+    }
+
     function _convertToBaseCurrencyAtMarketTerminationPrice(
         bytes32 _ccy,
         int256 _amount
@@ -1169,5 +1194,14 @@ library FundManagementLogic {
         uint256 unitPrice = _unitPrice == 0 ? Constants.PRICE_DIGIT : _unitPrice;
         // NOTE: The formula is: futureValue = presentValue / unitPrice.
         return (_presentValue * Constants.PRICE_DIGIT.toInt256()).div(unitPrice.toInt256());
+    }
+
+    function _calculateFVFromPV(
+        uint256 _presentValue,
+        uint256 _unitPrice
+    ) internal pure returns (uint256) {
+        uint256 unitPrice = _unitPrice == 0 ? Constants.PRICE_DIGIT : _unitPrice;
+        // NOTE: The formula is: futureValue = presentValue / unitPrice.
+        return (_presentValue * Constants.PRICE_DIGIT).div(unitPrice);
     }
 }

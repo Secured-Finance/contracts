@@ -17,6 +17,7 @@ const GenesisValueVault = artifacts.require('GenesisValueVault');
 const MigrationAddressResolver = artifacts.require('MigrationAddressResolver');
 const ProxyController = artifacts.require('ProxyController');
 const ReserveFund = artifacts.require('ReserveFund');
+const ZCToken = artifacts.require('ZCToken');
 
 // external contracts
 const LendingMarketReader = artifacts.require('LendingMarketReader');
@@ -194,11 +195,13 @@ const deployContracts = async (owner: SignerWithAddress) => {
     })
     .then((factory) => factory.deploy(MINIMUM_RELIABLE_AMOUNT));
   const futureValueVault = await deployContract(owner, FutureValueVault);
+  const zcToken = await deployContract(owner, ZCToken);
 
   await beaconProxyControllerProxy.setLendingMarketImpl(lendingMarket.address);
   await beaconProxyControllerProxy.setFutureValueVaultImpl(
     futureValueVault.address,
   );
+  await beaconProxyControllerProxy.setZCTokenImpl(zcToken.address);
 
   // Deploy external contracts
   const lendingMarketReader = await deployContract(owner, LendingMarketReader, [

@@ -8,6 +8,8 @@ import {SafeCast} from "../../../dependencies/openzeppelin/utils/math/SafeCast.s
 import {ILendingMarket} from "../../interfaces/ILendingMarket.sol";
 import {ILendingMarketController} from "../../interfaces/ILendingMarketController.sol";
 import {IFutureValueVault} from "../../interfaces/IFutureValueVault.sol";
+import {IGenesisValueVault} from "../../interfaces/IGenesisValueVault.sol";
+import {IZCToken} from "../../interfaces/IZCToken.sol";
 // libraries
 import {AddressResolverLib} from "../AddressResolverLib.sol";
 import {Constants} from "../Constants.sol";
@@ -24,9 +26,11 @@ library LendingMarketUserLogic {
     using EnumerableSet for EnumerableSet.Bytes32Set;
     using EnumerableSet for EnumerableSet.UintSet;
     using SafeCast for int256;
+    using SafeCast for uint256;
     using RoundingUint256 for uint256;
 
     error InvalidAmount();
+    error AmountIsZero();
     error FutureValueIsZero();
     error TooManyActiveOrders();
     error NotEnoughCollateral();
@@ -304,6 +308,38 @@ library LendingMarketUserLogic {
         }
     }
 
+    function mintZCToken(bytes32 _ccy, uint256 _maturity, address _user, uint256 _amount) public {
+        FundManagementLogic.cleanUpFunds(_ccy, _user);
+
+        if (_maturity == 0) {
+            _mintZCPerpetualToken(_ccy, _user, _amount);
+        } else {
+            _mintZCToken(_ccy, _maturity, _user, _amount);
+        }
+    }
+
+    function burnZCToken(bytes32 _ccy, uint256 _maturity, address _user, uint256 _amount) public {
+        FundManagementLogic.cleanUpFunds(_ccy, _user);
+
+        if (_maturity == 0) {
+            _burnZCPerpetualToken(_ccy, _user, _amount);
+        } else {
+            _burnZCToken(_ccy, _maturity, _user, _amount);
+        }
+    }
+
+    function getMintableZCTokenAmount(
+        bytes32 _ccy,
+        uint256 _maturity,
+        address _user
+    ) public view returns (uint256 amount, bool isAll) {
+        if (_maturity == 0) {
+            return _getMintableZCPerpetualTokenAmount(_ccy, _user);
+        } else {
+            return _getMintableZCTokenAmount(_ccy, _maturity, _user);
+        }
+    }
+
     function _calculateFilledAmount(
         bytes32 _ccy,
         uint256 _maturity,
@@ -454,6 +490,174 @@ library LendingMarketUserLogic {
                     (-_futureValue).toUint256()
                 );
         }
+    }
+
+    function _mintZCToken(
+        bytes32 _ccy,
+        uint256 _maturity,
+        address _user,
+        uint256 _amount
+    ) internal {
+        uint8 orderBookId = Storage.slot().maturityOrderBookIds[_ccy][_maturity];
+        (uint256 maxMintableAmount, bool isAll) = _getMintableZCTokenAmount(_ccy, _maturity, _user);
+
+        if (maxMintableAmount == 0) revert AmountIsZero();
+
+        if (maxMintableAmount < _amount) {
+            _amount = maxMintableAmount;
+        }
+
+        IFutureValueVault(Storage.slot().futureValueVaults[_ccy]).lock(
+            orderBookId,
+            _user,
+            isAll ? 0 : _amount,
+            _maturity
+        );
+        IZCToken(Storage.slot().zcTokens[_ccy][_maturity]).mint(_user, _amount);
+    }
+
+    function _burnZCToken(
+        bytes32 _ccy,
+        uint256 _maturity,
+        address _user,
+        uint256 _amount
+    ) internal {
+        IZCToken token = IZCToken(Storage.slot().zcTokens[_ccy][_maturity]);
+        uint256 balance = token.balanceOf(_user);
+
+        if (balance == 0) {
+            revert AmountIsZero();
+        }
+
+        if (balance < _amount) {
+            _amount = balance;
+        }
+
+        token.burn(_user, _amount);
+        IFutureValueVault(Storage.slot().futureValueVaults[_ccy]).unlock(
+            Storage.slot().maturityOrderBookIds[_ccy][_maturity],
+            _user,
+            _amount,
+            _maturity
+        );
+    }
+
+    function _mintZCPerpetualToken(bytes32 _ccy, address _user, uint256 _amount) internal {
+        (uint256 maxMintableAmount, bool isAll) = _getMintableZCPerpetualTokenAmount(_ccy, _user);
+
+        if (maxMintableAmount == 0) revert AmountIsZero();
+
+        if (maxMintableAmount < _amount) {
+            _amount = maxMintableAmount;
+        }
+
+        AddressResolverLib.genesisValueVault().lock(_ccy, _user, isAll ? 0 : _amount);
+        IZCToken(Storage.slot().zcTokens[_ccy][0]).mint(_user, _amount);
+    }
+
+    function _burnZCPerpetualToken(bytes32 _ccy, address _user, uint256 _amount) internal {
+        IZCToken token = IZCToken(Storage.slot().zcTokens[_ccy][0]);
+        uint256 balance = token.balanceOf(_user);
+
+        if (balance == 0) {
+            revert AmountIsZero();
+        }
+
+        if (balance < _amount) {
+            _amount = balance;
+        }
+
+        token.burn(_user, _amount);
+        AddressResolverLib.genesisValueVault().unlock(_ccy, _user, _amount);
+    }
+
+    function _getMintableZCTokenAmount(
+        bytes32 _ccy,
+        uint256 _maturity,
+        address _user
+    ) internal view returns (uint256 amount, bool isAll) {
+        (uint256 unallocatedCollateralAmount, bool isAllocated) = _getUnallocatedCollateralAmount(
+            _ccy,
+            _user
+        );
+
+        FundManagementLogic.ActualFunds memory funds = FundManagementLogic.getActualFunds(
+            _ccy,
+            _maturity,
+            _user,
+            0
+        );
+        int256 presentValue = funds.presentValue - funds.genesisValueInPV;
+        int256 futureValue = funds.futureValue - funds.genesisValueInFV;
+
+        if (futureValue < 0) {
+            return (0, false);
+        } else if (!isAllocated || unallocatedCollateralAmount >= presentValue.toUint256()) {
+            return (futureValue.toUint256(), true);
+        } else {
+            return (
+                FundManagementLogic.calculateFVFromPV(_ccy, _maturity, unallocatedCollateralAmount),
+                false
+            );
+        }
+    }
+
+    function _getMintableZCPerpetualTokenAmount(
+        bytes32 _ccy,
+        address _user
+    ) internal view returns (uint256 amount, bool isAll) {
+        (uint256 unallocatedCollateralAmount, bool isAllocated) = _getUnallocatedCollateralAmount(
+            _ccy,
+            _user
+        );
+
+        FundManagementLogic.ActualFunds memory funds = FundManagementLogic.getActualFunds(
+            _ccy,
+            0,
+            _user,
+            0
+        );
+
+        if (funds.genesisValue < 0) {
+            return (0, false);
+        } else if (
+            !isAllocated || unallocatedCollateralAmount >= funds.genesisValueInPV.toUint256()
+        ) {
+            return (funds.genesisValue.toUint256(), true);
+        } else {
+            int256 unallocatedCollateralAmountInFV = FundManagementLogic.calculateFVFromPV(
+                _ccy,
+                AddressResolverLib.genesisValueVault().getCurrentMaturity(_ccy),
+                unallocatedCollateralAmount.toInt256()
+            );
+
+            return (
+                AddressResolverLib
+                    .genesisValueVault()
+                    .calculateGVFromFV(_ccy, 0, unallocatedCollateralAmountInFV)
+                    .toUint256(),
+                false
+            );
+        }
+    }
+
+    function _getUnallocatedCollateralAmount(
+        bytes32 _ccy,
+        address _user
+    ) internal view returns (uint256 unallocatedCollateralAmount, bool isAllocated) {
+        ILendingMarketController.AdditionalFunds memory emptyAdditionalFunds;
+        ILendingMarketController.CalculatedFunds memory funds = FundManagementLogic.calculateFunds(
+            _ccy,
+            _user,
+            emptyAdditionalFunds,
+            AddressResolverLib.tokenVault().getLiquidationThresholdRate()
+        );
+
+        unallocatedCollateralAmount = funds.claimableAmount > funds.collateralAmount
+            ? funds.claimableAmount - funds.collateralAmount
+            : 0;
+
+        isAllocated = funds.collateralAmount != 0;
     }
 
     function _isCovered(address _user, bytes32 _ccy) internal view {

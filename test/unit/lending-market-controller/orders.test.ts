@@ -90,6 +90,9 @@ describe('LendingMarketController - Orders', () => {
     await mockTokenVault.mock.cleanUpUsedCurrencies.returns();
     await mockTokenVault.mock.depositFrom.returns();
     await mockTokenVault.mock.depositWithPermitFrom.returns();
+    await mockTokenVault.mock.getTokenAddress.returns(
+      ethers.constants.AddressZero,
+    );
   });
 
   describe('Initialization', async () => {
@@ -640,12 +643,14 @@ describe('LendingMarketController - Orders', () => {
         );
 
         const genesisValues = await Promise.all(
-          accounts.map((account) =>
-            lendingMarketControllerProxy.getGenesisValue(
-              targetCurrency,
-              account.address,
-            ),
-          ),
+          accounts.map(async (account) => {
+            const { amount } =
+              await lendingMarketControllerProxy.getGenesisValue(
+                targetCurrency,
+                account.address,
+              );
+            return amount;
+          }),
         );
 
         console.table({

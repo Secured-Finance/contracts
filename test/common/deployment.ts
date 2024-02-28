@@ -312,10 +312,15 @@ const deployContracts = async () => {
     .getContractFactory('FutureValueVault')
     .then((factory) => factory.deploy());
 
+  const zcToken = await ethers
+    .getContractFactory('ZCToken')
+    .then((factory) => factory.deploy());
+
   await beaconProxyControllerProxy.setLendingMarketImpl(lendingMarket.address);
   await beaconProxyControllerProxy.setFutureValueVaultImpl(
     futureValueVault.address,
   );
+  await beaconProxyControllerProxy.setZCTokenImpl(zcToken.address);
 
   const { timestamp } = await ethers.provider.getBlock('latest');
   const genesisDate = moment(timestamp * 1000).unix();

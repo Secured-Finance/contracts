@@ -120,4 +120,6 @@ interface ITokenVault {
     function pause() external;
 
     function unpause() external;
+
+    function getLiquidationThresholdRate() external view returns (uint256 rate);
 }
