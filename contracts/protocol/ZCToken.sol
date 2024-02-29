@@ -44,9 +44,8 @@ contract ZCToken is IZCToken, MixinAddressResolver, ERC20PermitUpgradeable, Prox
 
     // @inheritdoc MixinAddressResolver
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {
-        contracts = new bytes32[](2);
-        contracts[0] = Contracts.CURRENCY_CONTROLLER;
-        contracts[1] = Contracts.LENDING_MARKET_CONTROLLER;
+        contracts = new bytes32[](1);
+        contracts[0] = Contracts.LENDING_MARKET_CONTROLLER;
     }
 
     /**

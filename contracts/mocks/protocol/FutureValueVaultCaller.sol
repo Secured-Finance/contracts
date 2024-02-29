@@ -9,7 +9,6 @@ import {ProtocolTypes} from "../../protocol/types/ProtocolTypes.sol";
 contract FutureValueVaultCaller {
     IBeaconProxyController public beaconProxyController;
     mapping(uint8 => address) public futureValueVaults;
-    mapping(bytes32 => uint8) public orderBookIdLists;
 
     constructor(address _beaconProxyController) {
         beaconProxyController = IBeaconProxyController(_beaconProxyController);
