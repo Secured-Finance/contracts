@@ -905,7 +905,14 @@ describe('TokenVault', () => {
       ).to.equal(valueInETH.add(borrowedAmount));
       expect(
         await tokenVaultProxy.getTotalCollateralAmount(carol.address),
-      ).to.equal(value.add(borrowedAmount));
+      ).to.equal(valueInETH.add(borrowedAmount));
+
+      const { totalCollateral, totalUsedCollateral, totalDeposit } =
+        await tokenVaultProxy.getCollateralDetail(carol.address);
+
+      expect(totalCollateral).to.equal(valueInETH.add(borrowedAmount));
+      expect(totalUsedCollateral).to.equal(0);
+      expect(totalDeposit).to.equal(value.add(borrowedAmount));
     });
 
     it('Get the withdrawable amount with with the debt amount', async () => {

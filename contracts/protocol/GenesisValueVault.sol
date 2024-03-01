@@ -470,6 +470,7 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         }
 
         Storage.slot().totalLockedBalances[_ccy] -= _amount;
+        Storage.slot().userMaturities[_ccy][_user] = getCurrentMaturity(_ccy);
         Storage.slot().balances[_ccy][_user] += _amount.toInt256();
 
         emit BalanceUnlocked(_ccy, _user, _amount);

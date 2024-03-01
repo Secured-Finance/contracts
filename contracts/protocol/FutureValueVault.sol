@@ -205,6 +205,7 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
         }
 
         Storage.slot().totalLockedBalances[_orderBookId] -= _amount;
+        Storage.slot().balanceMaturities[_orderBookId][_user] = _maturity;
         Storage.slot().balances[_orderBookId][_user] += _amount.toInt256();
 
         emit BalanceUnlocked(_orderBookId, _maturity, _user, _amount);

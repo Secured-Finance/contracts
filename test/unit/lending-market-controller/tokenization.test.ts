@@ -14,7 +14,6 @@ import {
   INITIAL_COMPOUND_FACTOR,
   MIN_DEBT_UNIT_PRICE,
   ORDER_FEE_RATE,
-  PCT_DIGIT,
 } from '../../common/constants';
 import { calculateFutureValue } from '../../common/orders';
 import { deployContracts } from './utils';
@@ -76,7 +75,7 @@ describe('LendingMarketController - Tokenization', () => {
     await mockTokenVault.mock.calculateCoverage.returns('1000', false);
     await mockTokenVault.mock.getTokenAddress.returns(mockERC20.address);
     await mockTokenVault.mock.getLiquidationThresholdRate.returns('12500');
-    await mockTokenVault.mock['getWithdrawableCollateral(address)'].returns(0);
+    await mockTokenVault.mock.getCollateralDetail.returns(2, 1, 1);
   });
 
   beforeEach(async () => {
@@ -320,9 +319,8 @@ describe('LendingMarketController - Tokenization', () => {
           alice.address,
         );
 
-      const estimatedAmount = calculateFutureValue(value.div(2), 8000)
-        .mul(PCT_DIGIT)
-        .div(HAIRCUT);
+      const estimatedAmount = calculateFutureValue(value.div(2), 8000);
+
       expect(mintableAmount).to.equal(estimatedAmount);
 
       await expect(
@@ -449,10 +447,7 @@ describe('LendingMarketController - Tokenization', () => {
 
       const estimatedAmount = calculateFutureValue(value.div(2), 8000)
         .mul(BigNumber.from(10).pow(36))
-        .div(compoundFactor)
-        .mul(PCT_DIGIT)
-        .div(HAIRCUT);
-
+        .div(compoundFactor);
       const mintableAmount =
         await lendingMarketControllerProxy.getMintableZCTokenAmount(
           targetCurrency,

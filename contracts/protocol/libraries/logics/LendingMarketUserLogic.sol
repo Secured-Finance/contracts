@@ -8,7 +8,6 @@ import {SafeCast} from "../../../dependencies/openzeppelin/utils/math/SafeCast.s
 import {ILendingMarket} from "../../interfaces/ILendingMarket.sol";
 import {ILendingMarketController} from "../../interfaces/ILendingMarketController.sol";
 import {IFutureValueVault} from "../../interfaces/IFutureValueVault.sol";
-import {IGenesisValueVault} from "../../interfaces/IGenesisValueVault.sol";
 import {IZCToken} from "../../interfaces/IZCToken.sol";
 // libraries
 import {AddressResolverLib} from "../AddressResolverLib.sol";
@@ -326,6 +325,8 @@ library LendingMarketUserLogic {
         } else {
             _burnZCToken(_ccy, _maturity, _user, _amount);
         }
+
+        FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, _user);
     }
 
     function getMintableZCTokenAmount(
@@ -594,7 +595,7 @@ library LendingMarketUserLogic {
         int256 presentValue = funds.presentValue - funds.genesisValueInPV;
         int256 futureValue = funds.futureValue - funds.genesisValueInFV;
 
-        if (futureValue < 0) {
+        if (futureValue <= 0) {
             return (0, false);
         } else if (!isAllocated || unallocatedCollateralAmount >= presentValue.toUint256()) {
             return (futureValue.toUint256(), true);
@@ -622,7 +623,7 @@ library LendingMarketUserLogic {
             0
         );
 
-        if (funds.genesisValue < 0) {
+        if (funds.genesisValue <= 0) {
             return (0, false);
         } else if (
             !isAllocated || unallocatedCollateralAmount >= funds.genesisValueInPV.toUint256()
@@ -650,29 +651,36 @@ library LendingMarketUserLogic {
         address _user
     ) internal view returns (uint256 unallocatedCollateralAmount, bool isAllocated) {
         ILendingMarketController.AdditionalFunds memory emptyAdditionalFunds;
+        uint256 liquidationThresholdRate = AddressResolverLib
+            .tokenVault()
+            .getLiquidationThresholdRate();
         ILendingMarketController.CalculatedFunds memory funds = FundManagementLogic.calculateFunds(
             _ccy,
             _user,
             emptyAdditionalFunds,
-            AddressResolverLib.tokenVault().getLiquidationThresholdRate()
+            liquidationThresholdRate
         );
 
         uint256 haircut = AddressResolverLib.currencyController().getHaircut(_ccy);
 
         if (haircut != 0 && funds.unallocatedCollateralAmount != 0) {
-            uint256 withdrawableCollateral = AddressResolverLib
+            (uint256 totalCollateral, uint256 totalUsedCollateral, ) = AddressResolverLib
+                .tokenVault()
+                .getCollateralDetail(_user);
+
+            // NOTE: The formula is:
+            // availableAmount = (totalCollateral - totalUsedCollateral * liquidationThresholdRate) / haircut
+            uint256 availableAmountInBaseCurrency = (totalCollateral *
+                Constants.PCT_DIGIT -
+                totalUsedCollateral *
+                liquidationThresholdRate).div(haircut);
+
+            uint256 availableAmount = AddressResolverLib
                 .currencyController()
-                .convertFromBaseCurrency(
-                    _ccy,
-                    AddressResolverLib.tokenVault().getWithdrawableCollateral(_user)
-                );
+                .convertFromBaseCurrency(_ccy, availableAmountInBaseCurrency);
 
-            uint256 availableCollateral = (withdrawableCollateral * Constants.PCT_DIGIT).div(
-                haircut
-            );
-
-            if (availableCollateral < funds.unallocatedCollateralAmount) {
-                return (availableCollateral, true);
+            if (availableAmount < funds.unallocatedCollateralAmount) {
+                return (availableAmount, true);
             }
         }
 

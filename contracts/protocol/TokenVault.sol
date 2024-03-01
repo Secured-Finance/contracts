@@ -234,6 +234,25 @@ contract TokenVault is
     }
 
     /**
+     * @notice Gets the collateral detail.
+     * @param _user User's address
+     * @return totalCollateral The total collateral amount in the base currency
+     * @return totalUsedCollateral The total used collateral amount in the base currency
+     * @return totalDeposit The total deposit amount in the base currency
+     */
+    function getCollateralDetail(
+        address _user
+    )
+        external
+        view
+        override
+        returns (uint256 totalCollateral, uint256 totalUsedCollateral, uint256 totalDeposit)
+    {
+        (totalCollateral, totalUsedCollateral, totalDeposit) = DepositManagementLogic
+            .getTotalCollateralAmount(_user);
+    }
+
+    /**
      * @notice Gets the total collateral amount of the selected currency.
      * @param _user User's address
      * @param _ccy Currency name in bytes32
