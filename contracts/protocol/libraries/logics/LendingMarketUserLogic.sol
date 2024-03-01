@@ -507,13 +507,13 @@ library LendingMarketUserLogic {
             _amount = maxMintableAmount;
         }
 
-        IFutureValueVault(Storage.slot().futureValueVaults[_ccy]).lock(
+        uint256 lockedAmount = IFutureValueVault(Storage.slot().futureValueVaults[_ccy]).lock(
             orderBookId,
             _user,
             isAll ? 0 : _amount,
             _maturity
         );
-        IZCToken(Storage.slot().zcTokens[_ccy][_maturity]).mint(_user, _amount);
+        IZCToken(Storage.slot().zcTokens[_ccy][_maturity]).mint(_user, lockedAmount);
     }
 
     function _burnZCToken(
@@ -551,8 +551,12 @@ library LendingMarketUserLogic {
             _amount = maxMintableAmount;
         }
 
-        AddressResolverLib.genesisValueVault().lock(_ccy, _user, isAll ? 0 : _amount);
-        IZCToken(Storage.slot().zcTokens[_ccy][0]).mint(_user, _amount);
+        uint256 lockedAmount = AddressResolverLib.genesisValueVault().lock(
+            _ccy,
+            _user,
+            isAll ? 0 : _amount
+        );
+        IZCToken(Storage.slot().zcTokens[_ccy][0]).mint(_user, lockedAmount);
     }
 
     function _burnZCPerpetualToken(bytes32 _ccy, address _user, uint256 _amount) internal {
@@ -653,11 +657,26 @@ library LendingMarketUserLogic {
             AddressResolverLib.tokenVault().getLiquidationThresholdRate()
         );
 
-        unallocatedCollateralAmount = funds.claimableAmount > funds.collateralAmount
-            ? funds.claimableAmount - funds.collateralAmount
-            : 0;
+        uint256 haircut = AddressResolverLib.currencyController().getHaircut(_ccy);
 
-        isAllocated = funds.collateralAmount != 0;
+        if (haircut != 0 && funds.unallocatedCollateralAmount != 0) {
+            uint256 withdrawableCollateral = AddressResolverLib
+                .currencyController()
+                .convertFromBaseCurrency(
+                    _ccy,
+                    AddressResolverLib.tokenVault().getWithdrawableCollateral(_user)
+                );
+
+            uint256 availableCollateral = (withdrawableCollateral * Constants.PCT_DIGIT).div(
+                haircut
+            );
+
+            if (availableCollateral < funds.unallocatedCollateralAmount) {
+                return (availableCollateral, true);
+            }
+        }
+
+        return (funds.unallocatedCollateralAmount, funds.unallocatedCollateralAmount != 0);
     }
 
     function _isCovered(address _user, bytes32 _ccy) internal view {

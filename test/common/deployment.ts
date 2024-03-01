@@ -325,6 +325,11 @@ const deployContracts = async () => {
   const { timestamp } = await ethers.provider.getBlock('latest');
   const genesisDate = moment(timestamp * 1000).unix();
 
+  await tokenVaultProxy.registerCurrency(hexETH, wETHToken.address, false);
+  await tokenVaultProxy.registerCurrency(hexUSDC, usdcToken.address, false);
+  await tokenVaultProxy.registerCurrency(hexWFIL, wFILToken.address, false);
+  await tokenVaultProxy.registerCurrency(hexWBTC, wBTCToken.address, false);
+
   for (const currency of [hexWBTC, hexETH, hexWFIL, hexUSDC]) {
     await lendingMarketControllerProxy.initializeLendingMarket(
       currency,

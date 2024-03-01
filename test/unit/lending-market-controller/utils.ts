@@ -23,6 +23,7 @@ const ZCToken = artifacts.require('ZCToken');
 const LendingMarketReader = artifacts.require('LendingMarketReader');
 
 // libraries
+const MockERC20 = artifacts.require('MockERC20');
 const OrderBookLogic = artifacts.require('OrderBookLogic');
 const OrderReaderLogic = artifacts.require('OrderReaderLogic');
 const LendingMarketOperationLogic = artifacts.require(
@@ -34,6 +35,7 @@ const { deployContract, deployMockContract } = waffle;
 
 const deployContracts = async (owner: SignerWithAddress) => {
   // Set up for the mocks
+  const mockERC20 = await deployMockContract(owner, MockERC20.abi);
   const mockCurrencyController = await deployMockContract(
     owner,
     CurrencyController.abi,
@@ -210,6 +212,7 @@ const deployContracts = async (owner: SignerWithAddress) => {
 
   return {
     // mocks
+    mockERC20,
     mockCurrencyController,
     mockTokenVault,
     mockReserveFund,

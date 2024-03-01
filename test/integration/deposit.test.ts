@@ -93,11 +93,6 @@ describe('Integration Test: Deposit', async () => {
       fundManagementLogic,
     } = await deployContracts());
 
-    await tokenVault.registerCurrency(hexETH, wETHToken.address, false);
-    await tokenVault.registerCurrency(hexUSDC, usdcToken.address, false);
-    await tokenVault.registerCurrency(hexWFIL, wFILToken.address, false);
-    await tokenVault.registerCurrency(hexWBTC, wBTCToken.address, false);
-
     await tokenVault.updateLiquidationConfiguration(
       LIQUIDATION_THRESHOLD_RATE,
       FULL_LIQUIDATION_THRESHOLD_RATE,

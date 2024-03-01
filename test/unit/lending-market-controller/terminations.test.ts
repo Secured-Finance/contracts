@@ -3,7 +3,7 @@ import { time } from '@openzeppelin/test-helpers';
 import { expect } from 'chai';
 import { MockContract } from 'ethereum-waffle';
 import { BigNumber, Contract } from 'ethers';
-import { artifacts, ethers, waffle } from 'hardhat';
+import { ethers } from 'hardhat';
 import { Side } from '../../../utils/constants';
 
 import { getGenesisDate } from '../../../utils/dates';
@@ -15,11 +15,6 @@ import {
 } from '../../common/constants';
 import { deployContracts } from './utils';
 
-// contracts
-const MockERC20 = artifacts.require('MockERC20');
-
-const { deployMockContract } = waffle;
-
 describe('LendingMarketController - Terminations', () => {
   let mockCurrencyController: MockContract;
   let mockTokenVault: MockContract;
@@ -30,6 +25,7 @@ describe('LendingMarketController - Terminations', () => {
   let fundManagementLogic: Contract;
 
   let maturities: BigNumber[];
+  let targetCurrencyName: string;
   let targetCurrency: string;
   let currencyIdx = 0;
   let genesisDate: number;
@@ -66,13 +62,15 @@ describe('LendingMarketController - Terminations', () => {
   });
 
   beforeEach(async () => {
-    targetCurrency = ethers.utils.formatBytes32String(`Test${currencyIdx}`);
+    targetCurrencyName = `Test${currencyIdx}`;
+    targetCurrency = ethers.utils.formatBytes32String(targetCurrencyName);
     currencyIdx++;
 
     const { timestamp } = await ethers.provider.getBlock('latest');
     genesisDate = getGenesisDate(timestamp * 1000);
 
     ({
+      mockERC20,
       mockCurrencyController,
       mockTokenVault,
       lendingMarketControllerProxy,
@@ -86,8 +84,6 @@ describe('LendingMarketController - Terminations', () => {
     fundManagementLogic = fundManagementLogic.attach(
       lendingMarketControllerProxy.address,
     );
-
-    mockERC20 = await deployMockContract(owner, MockERC20.abi);
 
     await mockCurrencyController.mock.getDecimals.returns(18);
     await mockCurrencyController.mock.currencyExists.returns(true);
@@ -109,6 +105,7 @@ describe('LendingMarketController - Terminations', () => {
     await mockTokenVault.mock.cleanUpUsedCurrencies.returns();
     await mockTokenVault.mock.depositFrom.returns();
     await mockERC20.mock.balanceOf.returns(1000000000);
+    await mockERC20.mock.name.returns(targetCurrencyName);
 
     await initialize(targetCurrency);
   });

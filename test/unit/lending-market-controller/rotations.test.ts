@@ -28,6 +28,7 @@ describe('LendingMarketController - Rotations', () => {
   let mockCurrencyController: MockContract;
   let mockTokenVault: MockContract;
   let mockReserveFund: MockContract;
+  let mockERC20: MockContract;
   let lendingMarketControllerProxy: Contract;
   let genesisValueVaultProxy: Contract;
 
@@ -35,6 +36,7 @@ describe('LendingMarketController - Rotations', () => {
   let lendingMarketOperationLogic: Contract;
 
   let maturities: BigNumber[];
+  let targetCurrencyName: string;
   let targetCurrency: string;
   let currencyIdx = 0;
   let genesisDate: number;
@@ -46,17 +48,21 @@ describe('LendingMarketController - Rotations', () => {
   let dave: SignerWithAddress;
 
   beforeEach(async () => {
-    targetCurrency = ethers.utils.formatBytes32String(`Test${currencyIdx}`);
+    targetCurrencyName = `Test${currencyIdx}`;
+    targetCurrency = ethers.utils.formatBytes32String(targetCurrencyName);
     currencyIdx++;
 
     const { timestamp } = await ethers.provider.getBlock('latest');
     genesisDate = getGenesisDate(timestamp * 1000);
+
+    await mockERC20.mock.name.returns(targetCurrencyName);
   });
 
   before(async () => {
     [owner, alice, bob, carol, dave] = await ethers.getSigners();
 
     ({
+      mockERC20,
       mockCurrencyController,
       mockTokenVault,
       mockReserveFund,
@@ -83,9 +89,7 @@ describe('LendingMarketController - Rotations', () => {
     await mockTokenVault.mock.cleanUpUsedCurrencies.returns();
     await mockTokenVault.mock.depositFrom.returns();
     await mockTokenVault.mock.isCovered.returns(true, true);
-    await mockTokenVault.mock.getTokenAddress.returns(
-      ethers.constants.AddressZero,
-    );
+    await mockTokenVault.mock.getTokenAddress.returns(mockERC20.address);
   });
 
   const initialize = async (currency: string, openingDate = genesisDate) => {

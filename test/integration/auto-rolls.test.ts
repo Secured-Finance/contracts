@@ -38,7 +38,6 @@ describe('Integration Test: Auto-rolls', async () => {
   let tokenVault: Contract;
   let lendingMarketController: Contract;
   let lendingMarket: Contract;
-  let wETHToken: Contract;
   let wFILToken: Contract;
 
   let fundManagementLogic: Contract;
@@ -114,13 +113,9 @@ describe('Integration Test: Auto-rolls', async () => {
       reserveFund,
       tokenVault,
       lendingMarketController,
-      wETHToken,
       wFILToken,
       fundManagementLogic,
     } = await deployContracts());
-
-    await tokenVault.registerCurrency(hexETH, wETHToken.address, false);
-    await tokenVault.registerCurrency(hexWFIL, wFILToken.address, false);
 
     await tokenVault.updateLiquidationConfiguration(
       LIQUIDATION_THRESHOLD_RATE,

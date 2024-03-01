@@ -20,6 +20,7 @@ import { deployContracts } from './utils';
 describe('LendingMarketController - Itayose', () => {
   let mockCurrencyController: MockContract;
   let mockTokenVault: MockContract;
+  let mockERC20: MockContract;
   let lendingMarketControllerProxy: Contract;
   let genesisValueVaultProxy: Contract;
   let lendingMarketProxy: Contract;
@@ -29,6 +30,7 @@ describe('LendingMarketController - Itayose', () => {
   let orderBookLogic: Contract;
 
   let maturities: BigNumber[];
+  let targetCurrencyName: string;
   let targetCurrency: string;
   let currencyIdx = 0;
   let genesisDate: number;
@@ -40,10 +42,12 @@ describe('LendingMarketController - Itayose', () => {
   let dave: SignerWithAddress;
 
   beforeEach(async () => {
-    targetCurrency = ethers.utils.formatBytes32String(`Test${currencyIdx}`);
+    targetCurrencyName = `Test${currencyIdx}`;
+    targetCurrency = ethers.utils.formatBytes32String(targetCurrencyName);
     currencyIdx++;
 
     await mockCurrencyController.mock.getCurrencies.returns([targetCurrency]);
+    await mockERC20.mock.name.returns(targetCurrencyName);
 
     const { timestamp } = await ethers.provider.getBlock('latest');
     genesisDate = getGenesisDate(timestamp * 1000);
@@ -53,6 +57,7 @@ describe('LendingMarketController - Itayose', () => {
     [owner, alice, bob, carol, dave] = await ethers.getSigners();
 
     ({
+      mockERC20,
       mockCurrencyController,
       mockTokenVault,
       lendingMarketControllerProxy,
@@ -75,9 +80,7 @@ describe('LendingMarketController - Itayose', () => {
     await mockTokenVault.mock.removeDepositAmount.returns();
     await mockTokenVault.mock.cleanUpUsedCurrencies.returns();
     await mockTokenVault.mock.depositWithPermitFrom.returns();
-    await mockTokenVault.mock.getTokenAddress.returns(
-      ethers.constants.AddressZero,
-    );
+    await mockTokenVault.mock.getTokenAddress.returns(mockERC20.address);
   });
 
   const initialize = async (currency: string, openingDate = genesisDate) => {

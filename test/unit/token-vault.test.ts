@@ -123,6 +123,7 @@ describe('TokenVault', () => {
       workingLendOrdersAmount: 0,
       claimableAmount: 0,
       collateralAmount: 0,
+      unallocatedCollateralAmount: 0,
       lentAmount: 0,
       workingBorrowOrdersAmount: 0,
       debtAmount: 0,
@@ -224,6 +225,13 @@ describe('TokenVault', () => {
   });
 
   describe('Initialize', async () => {
+    it('Get liquidation threshold rate', async () => {
+      const liquidationThresholdRate =
+        await tokenVaultProxy.getLiquidationThresholdRate();
+
+      expect(liquidationThresholdRate).to.equal(LIQUIDATION_THRESHOLD_RATE);
+    });
+
     it('Update the liquidation configuration', async () => {
       const updateLiquidationConfiguration = async (
         liquidationThresholdRate: number,
@@ -607,6 +615,7 @@ describe('TokenVault', () => {
         workingLendOrdersAmount: 0,
         claimableAmount: 0,
         collateralAmount: 0,
+        unallocatedCollateralAmount: 0,
         lentAmount: 0,
         workingBorrowOrdersAmount: 0,
         debtAmount: 0,
@@ -1199,6 +1208,7 @@ describe('TokenVault', () => {
         workingLendOrdersAmount: usedValue,
         claimableAmount: 0,
         collateralAmount: 0,
+        unallocatedCollateralAmount: 0,
         lentAmount: 0,
         workingBorrowOrdersAmount: 0,
         debtAmount: 0,
@@ -1645,6 +1655,7 @@ describe('TokenVault', () => {
         workingLendOrdersAmount: 0,
         claimableAmount: 0,
         collateralAmount: 0,
+        unallocatedCollateralAmount: 0,
         lentAmount: 0,
         workingBorrowOrdersAmount: 0,
         debtAmount: 0,
@@ -1715,6 +1726,7 @@ describe('TokenVault', () => {
         workingLendOrdersAmount: 0,
         claimableAmount: 0,
         collateralAmount: 0,
+        unallocatedCollateralAmount: 0,
         lentAmount,
         workingBorrowOrdersAmount: 0,
         debtAmount: 0,
@@ -1936,6 +1948,7 @@ describe('TokenVault', () => {
         funds: {
           claimableAmount: '0',
           collateralAmount: '0',
+          unallocatedCollateralAmount: '0',
         },
         result: '0',
       },
@@ -1946,6 +1959,7 @@ describe('TokenVault', () => {
         funds: {
           claimableAmount: '0',
           collateralAmount: '0',
+          unallocatedCollateralAmount: '0',
         },
         result: '8000000',
       },
@@ -1956,6 +1970,7 @@ describe('TokenVault', () => {
         funds: {
           claimableAmount: '0',
           collateralAmount: '0',
+          unallocatedCollateralAmount: '0',
         },
         result: '6000000',
       },
@@ -1966,6 +1981,7 @@ describe('TokenVault', () => {
         funds: {
           claimableAmount: '0',
           collateralAmount: '0',
+          unallocatedCollateralAmount: '0',
         },
         result: '0',
       },
@@ -1976,6 +1992,7 @@ describe('TokenVault', () => {
         funds: {
           claimableAmount: '5000000',
           collateralAmount: '0',
+          unallocatedCollateralAmount: '5000000',
         },
         result: '4000000',
       },
@@ -1986,6 +2003,7 @@ describe('TokenVault', () => {
         funds: {
           claimableAmount: '5000000',
           collateralAmount: '0',
+          unallocatedCollateralAmount: '5000000',
         },
         result: '12000000',
       },
@@ -1996,6 +2014,7 @@ describe('TokenVault', () => {
         funds: {
           claimableAmount: '5000000',
           collateralAmount: '1000000',
+          unallocatedCollateralAmount: '4000000',
         },
         result: '12000000',
       },
@@ -2006,6 +2025,7 @@ describe('TokenVault', () => {
         funds: {
           claimableAmount: '5000000',
           collateralAmount: '5000000',
+          unallocatedCollateralAmount: '0',
         },
         result: '12000000',
       },
@@ -2023,6 +2043,8 @@ describe('TokenVault', () => {
           workingLendOrdersAmount: '0',
           claimableAmount: condition.funds.claimableAmount,
           collateralAmount: condition.funds.collateralAmount,
+          unallocatedCollateralAmount:
+            condition.funds.unallocatedCollateralAmount,
           lentAmount: '0',
           workingBorrowOrdersAmount: '0',
           debtAmount: '0',

@@ -273,10 +273,6 @@ describe('Integration Test: Liquidations', async () => {
       usdcToUSDPriceFeed,
     } = await deployContracts());
 
-    await tokenVault.registerCurrency(hexETH, wETHToken.address, false);
-    await tokenVault.registerCurrency(hexWFIL, wFILToken.address, false);
-    await tokenVault.registerCurrency(hexUSDC, usdcToken.address, false);
-
     mockUniswapRouter = await ethers
       .getContractFactory('MockUniswapRouter')
       .then((factory) =>

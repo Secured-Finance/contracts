@@ -243,6 +243,150 @@ describe('FutureValueVault', () => {
     });
   });
 
+  describe('Lock and unlock balance', async () => {
+    const amount = 1000;
+    const maturity = 20;
+
+    it('Lock user balance', async () => {
+      const lockedBalanceBefore =
+        await futureValueVaultProxy.getTotalLockedBalance(currentOrderBookId);
+
+      await futureValueVaultCaller.increase(
+        currentOrderBookId,
+        alice.address,
+        amount,
+        maturity,
+      );
+
+      await expect(
+        futureValueVaultCaller.lock(
+          currentOrderBookId,
+          alice.address,
+          amount,
+          maturity,
+        ),
+      )
+        .emit(futureValueVaultProxy, 'BalanceLocked')
+        .withArgs(currentOrderBookId, maturity, alice.address, amount);
+
+      const lockedBalanceAfter =
+        await futureValueVaultProxy.getTotalLockedBalance(currentOrderBookId);
+
+      expect(lockedBalanceAfter.sub(lockedBalanceBefore)).to.equal(amount);
+    });
+
+    it('Unlock user balance', async () => {
+      await futureValueVaultCaller.increase(
+        currentOrderBookId,
+        alice.address,
+        amount,
+        maturity,
+      );
+
+      await futureValueVaultCaller.lock(
+        currentOrderBookId,
+        alice.address,
+        amount,
+        maturity,
+      );
+
+      const lockedBalanceBefore =
+        await futureValueVaultProxy.getTotalLockedBalance(currentOrderBookId);
+
+      await expect(
+        futureValueVaultCaller.unlock(
+          currentOrderBookId,
+          alice.address,
+          amount,
+          maturity,
+        ),
+      )
+        .emit(futureValueVaultProxy, 'BalanceUnlocked')
+        .withArgs(currentOrderBookId, maturity, alice.address, amount);
+
+      const lockedBalanceAfter =
+        await futureValueVaultProxy.getTotalLockedBalance(currentOrderBookId);
+
+      expect(lockedBalanceBefore.sub(lockedBalanceAfter)).to.equal(amount);
+    });
+
+    it('Fail to lock user balance if balance is minus', async () => {
+      await futureValueVaultCaller.decrease(
+        currentOrderBookId,
+        alice.address,
+        amount,
+        maturity,
+      );
+
+      await expect(
+        futureValueVaultCaller.lock(
+          currentOrderBookId,
+          alice.address,
+          amount,
+          maturity,
+        ),
+      ).revertedWith('InsufficientBalance');
+    });
+
+    it('Fail to lock user balance if balance is 0', async () => {
+      await expect(
+        futureValueVaultCaller.lock(
+          currentOrderBookId,
+          alice.address,
+          amount,
+          maturity,
+        ),
+      ).revertedWith('InsufficientBalance');
+    });
+
+    it('Fail to unlock user balance if total unlock balance is insufficient', async () => {
+      await futureValueVaultCaller.increase(
+        currentOrderBookId,
+        alice.address,
+        amount,
+        maturity,
+      );
+
+      await futureValueVaultCaller.lock(
+        currentOrderBookId,
+        alice.address,
+        amount,
+        maturity,
+      );
+
+      await expect(
+        futureValueVaultCaller.unlock(
+          currentOrderBookId,
+          alice.address,
+          amount + 1,
+          maturity,
+        ),
+      ).revertedWith('InsufficientLockedBalance');
+    });
+
+    it('Fail to lock balance due to execution by non-accepted contract', async () => {
+      await expect(
+        futureValueVaultProxy.lock(
+          currentOrderBookId,
+          alice.address,
+          amount,
+          maturity,
+        ),
+      ).revertedWith('OnlyAcceptedContract("LendingMarketController")');
+    });
+
+    it('Fail to unlock balance due to execution by non-accepted contract', async () => {
+      await expect(
+        futureValueVaultProxy.unlock(
+          currentOrderBookId,
+          alice.address,
+          amount,
+          maturity,
+        ),
+      ).revertedWith('OnlyAcceptedContract("LendingMarketController")');
+    });
+  });
+
   describe('Transfer balance', async () => {
     const amount = 1000;
     const maturity = 20;

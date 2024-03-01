@@ -19,12 +19,14 @@ import { deployContracts } from './utils';
 describe('LendingMarketController - Calculations', () => {
   let mockCurrencyController: MockContract;
   let mockTokenVault: MockContract;
+  let mockERC20: MockContract;
   let lendingMarketControllerProxy: Contract;
 
   let fundManagementLogic: Contract;
   let lendingMarketOperationLogic: Contract;
 
   let maturities: BigNumber[];
+  let targetCurrencyName: string;
   let targetCurrency: string;
   let currencyIdx = 0;
   let genesisDate: number;
@@ -34,11 +36,14 @@ describe('LendingMarketController - Calculations', () => {
   let bob: SignerWithAddress;
 
   beforeEach(async () => {
-    targetCurrency = ethers.utils.formatBytes32String(`Test${currencyIdx}`);
+    targetCurrencyName = `Test${currencyIdx}`;
+    targetCurrency = ethers.utils.formatBytes32String(targetCurrencyName);
     currencyIdx++;
 
     const { timestamp } = await ethers.provider.getBlock('latest');
     genesisDate = getGenesisDate(timestamp * 1000);
+
+    await mockERC20.mock.name.returns(targetCurrencyName);
 
     await initialize(targetCurrency);
   });
@@ -47,6 +52,7 @@ describe('LendingMarketController - Calculations', () => {
     [owner, alice, bob] = await ethers.getSigners();
 
     ({
+      mockERC20,
       mockCurrencyController,
       mockTokenVault,
       lendingMarketControllerProxy,
@@ -73,9 +79,7 @@ describe('LendingMarketController - Calculations', () => {
     await mockTokenVault.mock.isCovered.returns(true, true);
     await mockTokenVault.mock['isCollateral(bytes32[])'].returns([true]);
     await mockTokenVault.mock.calculateCoverage.returns('1000', false);
-    await mockTokenVault.mock.getTokenAddress.returns(
-      ethers.constants.AddressZero,
-    );
+    await mockTokenVault.mock.getTokenAddress.returns(mockERC20.address);
   });
 
   const initialize = async (currency: string) => {

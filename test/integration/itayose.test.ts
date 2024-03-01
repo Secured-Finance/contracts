@@ -24,7 +24,6 @@ describe('Integration Test: Itayose', async () => {
   let lendingMarketController: Contract;
   let lendingMarket: Contract;
   let lendingMarketReader: Contract;
-  let wETHToken: Contract;
 
   let fundManagementLogic: Contract;
 
@@ -88,12 +87,11 @@ describe('Integration Test: Itayose', async () => {
       tokenVault,
       lendingMarketController,
       lendingMarketReader,
-      wETHToken,
       lendingMarketOperationLogic,
       fundManagementLogic,
     } = await deployContracts());
 
-    await tokenVault.registerCurrency(hexETH, wETHToken.address, true);
+    await tokenVault.updateCurrency(hexETH, true);
 
     // Deploy active Lending Markets
     for (let i = 0; i < 8; i++) {

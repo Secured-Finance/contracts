@@ -37,6 +37,7 @@ interface ILendingMarketController {
         uint256 workingLendOrdersAmount;
         uint256 claimableAmount;
         uint256 collateralAmount;
+        uint256 unallocatedCollateralAmount;
         uint256 lentAmount;
         uint256 workingBorrowOrdersAmount;
         uint256 debtAmount;
@@ -124,6 +125,14 @@ interface ILendingMarketController {
         uint256 _maturity,
         address _user
     ) external view returns (int256 presentValue, int256 futureValue);
+
+    function getZCToken(bytes32 ccy, uint256 maturity) external view returns (address);
+
+    function getMintableZCTokenAmount(
+        bytes32 ccy,
+        uint256 maturity,
+        address user
+    ) external view returns (uint256 amount);
 
     function calculateFunds(
         bytes32 ccy,
@@ -249,9 +258,4 @@ interface ILendingMarketController {
     function mintZCToken(bytes32 _ccy, uint256 _maturity, uint256 _amount) external;
 
     function burnZCToken(bytes32 _ccy, uint256 _maturity, uint256 _amount) external;
-
-    function getMintableZCTokenAmount(
-        bytes32 ccy,
-        uint256 maturity
-    ) external view returns (uint256 amount, bool isAll);
 }

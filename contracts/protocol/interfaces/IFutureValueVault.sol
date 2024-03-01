@@ -7,6 +7,7 @@ interface IFutureValueVault {
     error TotalSupplyNotZero();
     error InvalidResetAmount();
     error InsufficientBalance();
+    error InsufficientLockedBalance();
 
     event Transfer(
         address indexed from,
@@ -37,6 +38,8 @@ interface IFutureValueVault {
         address user
     ) external view returns (int256 futureValue, uint256 maturity);
 
+    function getTotalLockedBalance(uint8 orderBookId) external view returns (uint256);
+
     function hasBalanceAtPastMaturity(
         uint8 orderBookId,
         address user,
@@ -47,7 +50,12 @@ interface IFutureValueVault {
 
     function decrease(uint8 orderBookId, address user, uint256 amount, uint256 maturity) external;
 
-    function lock(uint8 orderBookId, address user, uint256 amount, uint256 maturity) external;
+    function lock(
+        uint8 orderBookId,
+        address user,
+        uint256 amount,
+        uint256 maturity
+    ) external returns (uint256 lockedAmount);
 
     function unlock(uint8 orderBookId, address user, uint256 amount, uint256 maturity) external;
 

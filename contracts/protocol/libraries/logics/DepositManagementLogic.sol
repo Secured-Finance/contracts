@@ -127,11 +127,11 @@ library DepositManagementLogic {
             .lendingMarketController()
             .calculateFunds(_ccy, _user, liquidationThresholdRate);
 
-        uint256 unallocatedCollateralAmount = funds.claimableAmount > funds.collateralAmount
+        uint256 unusedCollateralAmount = funds.claimableAmount > funds.collateralAmount
             ? funds.claimableAmount - funds.collateralAmount
             : 0;
 
-        uint256 borrowableAmount = ((totalCollateralAmount + unallocatedCollateralAmount) *
+        uint256 borrowableAmount = ((totalCollateralAmount + unusedCollateralAmount) *
             Constants.PCT_DIGIT).div(liquidationThresholdRate);
 
         return borrowableAmount > totalUsedCollateral ? borrowableAmount - totalUsedCollateral : 0;

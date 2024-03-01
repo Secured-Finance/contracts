@@ -15,6 +15,7 @@ interface IGenesisValueVault {
     error InitialCompoundFactorAlreadyFinalized();
     error AutoRollLogAlreadyUpdated(uint256 currentMaturity, uint256 nextMaturity);
     error InsufficientBalance();
+    error InsufficientLockedBalance();
 
     event Transfer(bytes32 indexed ccy, address indexed from, address indexed to, int256 value);
     event AutoRollExecuted(
@@ -54,6 +55,8 @@ interface IGenesisValueVault {
     ) external view returns (AutoRollLog memory);
 
     function getLatestAutoRollLog(bytes32 ccy) external view returns (AutoRollLog memory);
+
+    function getTotalLockedBalance(bytes32 ccy) external view returns (uint256);
 
     function calculateFVFromFV(
         bytes32 ccy,
@@ -117,7 +120,11 @@ interface IGenesisValueVault {
         uint256 basisMaturity
     ) external;
 
-    function lock(bytes32 ccy, address user, uint256 amount) external;
+    function lock(
+        bytes32 ccy,
+        address user,
+        uint256 amount
+    ) external returns (uint256 lockedAmount);
 
     function unlock(bytes32 ccy, address user, uint256 amount) external;
 

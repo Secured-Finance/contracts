@@ -35,7 +35,7 @@ library GenesisValueVaultStorage {
         mapping(bytes32 ccy => mapping(uint256 maturity => AutoRollLog log)) autoRollLogs;
         // Maturity when the user receives the balance on the target currency
         mapping(bytes32 ccy => mapping(address user => uint256 maturity)) userMaturities;
-        mapping(bytes32 ccy => int256 balance) totalLockedBalances;
+        mapping(bytes32 ccy => uint256 balance) totalLockedBalances;
     }
 
     function slot() internal pure returns (Storage storage r) {

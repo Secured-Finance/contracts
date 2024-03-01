@@ -20,6 +20,7 @@ describe('LendingMarketController - Liquidations', () => {
   let mockCurrencyController: MockContract;
   let mockTokenVault: MockContract;
   let mockReserveFund: MockContract;
+  let mockERC20: MockContract;
   let lendingMarketControllerProxy: Contract;
   let maturities: BigNumber[];
 
@@ -27,6 +28,7 @@ describe('LendingMarketController - Liquidations', () => {
   let lendingMarketOperationLogic: Contract;
   let liquidationLogic: Contract;
 
+  let targetCurrencyName: string;
   let targetCurrency: string;
   let currencyIdx = 0;
   let genesisDate: number;
@@ -76,6 +78,7 @@ describe('LendingMarketController - Liquidations', () => {
     [owner, ...signers] = await ethers.getSigners();
 
     ({
+      mockERC20,
       mockCurrencyController,
       mockTokenVault,
       mockReserveFund,
@@ -110,18 +113,21 @@ describe('LendingMarketController - Liquidations', () => {
   });
 
   beforeEach(async () => {
-    targetCurrency = ethers.utils.formatBytes32String(`Test${currencyIdx}`);
+    targetCurrencyName = `Test${currencyIdx}`;
+    targetCurrency = ethers.utils.formatBytes32String(targetCurrencyName);
     currencyIdx++;
 
     const { timestamp } = await ethers.provider.getBlock('latest');
     genesisDate = getGenesisDate(timestamp * 1000);
 
     // Set up for the mocks
+    await mockERC20.mock.name.returns(targetCurrencyName);
     await mockTokenVault.mock.getLiquidationAmount.returns(1000, 20, 10);
     await mockTokenVault.mock.getDepositAmount.returns(100);
     await mockTokenVault.mock.transferFrom.returns(0);
     await mockTokenVault.mock.isCovered.returns(true, true);
     await mockTokenVault.mock.isCollateral.returns(true);
+    await mockTokenVault.mock.getTokenAddress.returns(mockERC20.address);
     await mockReserveFund.mock.isPaused.returns(true);
     await mockCurrencyController.mock[
       'convert(bytes32,bytes32,uint256)'
@@ -142,10 +148,6 @@ describe('LendingMarketController - Liquidations', () => {
 
     beforeEach(async () => {
       [alice] = getUsers(1);
-
-      await mockTokenVault.mock.getTokenAddress.returns(
-        ethers.constants.AddressZero,
-      );
 
       liquidator = await ethers
         .getContractFactory('Liquidator')

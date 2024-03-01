@@ -513,9 +513,9 @@ library FundManagementLogic {
                 actualFunds.debtAmount += (-presentValue).toUint256();
             }
 
+            actualFunds.genesisValueInFV = futureValue;
             if (!vars.isTotal) {
                 actualFunds.futureValue += futureValue;
-                actualFunds.genesisValueInFV = futureValue;
             }
         }
     }
@@ -572,13 +572,15 @@ library FundManagementLogic {
             // for the other currency after being multiplied by a haircut.
             if (funds.claimableAmount > maxAllocableCollateralAmountInSameCcy) {
                 uint256 haircut = AddressResolverLib.currencyController().getHaircut(_ccy);
+                funds.unallocatedCollateralAmount =
+                    funds.claimableAmount -
+                    maxAllocableCollateralAmountInSameCcy;
                 funds.collateralAmount =
                     maxAllocableCollateralAmountInSameCcy +
-                    (haircut * (funds.claimableAmount - maxAllocableCollateralAmountInSameCcy)).div(
-                        Constants.PCT_DIGIT
-                    );
+                    (haircut * (funds.unallocatedCollateralAmount)).div(Constants.PCT_DIGIT);
             } else {
                 funds.collateralAmount = funds.claimableAmount;
+                funds.unallocatedCollateralAmount = 0;
             }
         }
     }

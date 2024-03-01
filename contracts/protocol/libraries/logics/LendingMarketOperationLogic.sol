@@ -3,6 +3,7 @@ pragma solidity 0.8.19;
 
 // dependencies
 import {IERC20} from "../../../dependencies/openzeppelin/token/ERC20/IERC20.sol";
+import {IERC20Metadata} from "../../../dependencies/openzeppelin/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeCast} from "../../../dependencies/openzeppelin/utils/math/SafeCast.sol";
 import {Strings} from "../../../dependencies/openzeppelin/utils/Strings.sol";
 // interfaces
@@ -343,14 +344,15 @@ library LendingMarketOperationLogic {
         }
 
         address tokenAddress = AddressResolverLib.tokenVault().getTokenAddress(_ccy);
-        // string memory originalTokenName = IERC20Metadata(tokenAddress).name();
-        string memory originalTokenName = string(abi.encodePacked(_ccy));
-        string memory symbol = string(abi.encodePacked("zc", originalTokenName));
-        string memory name = string(abi.encodePacked("ZC ", originalTokenName));
+        string memory originalTokenName = IERC20Metadata(tokenAddress).name();
+        string memory symbol = string.concat("zc", originalTokenName);
+        string memory name = string.concat("ZC ", originalTokenName);
 
+        // If the maturity is 0, the ZCToken is created as a perpetual one.
+        // Otherwise, the ZCToken is created per maturity.
         if (_maturity != 0) {
-            symbol = string(abi.encodePacked(symbol, "-", Strings.toString(_maturity)));
-            name = string(abi.encodePacked(name, " ", _getShortMonthYearString(_maturity)));
+            symbol = string.concat(symbol, "-", Strings.toString(_maturity));
+            name = string.concat(name, " ", _getShortMonthYearString(_maturity));
         }
 
         address zcToken = AddressResolverLib.beaconProxyController().deployZCToken(

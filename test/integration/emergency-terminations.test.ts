@@ -26,7 +26,6 @@ describe('Integration Test: Emergency terminations', async () => {
   let lendingMarketOperationLogic: Contract;
   let fundManagementLogic: Contract;
 
-  let wETHToken: Contract;
   let usdcToken: Contract;
   let wFILToken: Contract;
   let wFilToETHPriceFeed: Contract;
@@ -136,7 +135,6 @@ describe('Integration Test: Emergency terminations', async () => {
       currencyController,
       lendingMarketController,
       reserveFund,
-      wETHToken,
       wFILToken,
       usdcToken,
       wFilToETHPriceFeed,
@@ -144,9 +142,8 @@ describe('Integration Test: Emergency terminations', async () => {
       fundManagementLogic,
     } = await deployContracts());
 
-    await tokenVault.registerCurrency(hexETH, wETHToken.address, true);
-    await tokenVault.registerCurrency(hexUSDC, usdcToken.address, true);
-    await tokenVault.registerCurrency(hexWFIL, wFILToken.address, false);
+    await tokenVault.updateCurrency(hexETH, true);
+    await tokenVault.updateCurrency(hexUSDC, true);
 
     // Deploy active Lending Markets
     for (let i = 0; i < 8; i++) {

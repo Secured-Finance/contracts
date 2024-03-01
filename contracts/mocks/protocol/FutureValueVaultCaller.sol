@@ -50,6 +50,29 @@ contract FutureValueVaultCaller {
         );
     }
 
+    function lock(uint8 _orderBookId, address _user, uint256 _amount, uint256 _maturity) external {
+        IFutureValueVault(futureValueVaults[_orderBookId]).lock(
+            _orderBookId,
+            _user,
+            _amount,
+            _maturity
+        );
+    }
+
+    function unlock(
+        uint8 _orderBookId,
+        address _user,
+        uint256 _amount,
+        uint256 _maturity
+    ) external {
+        IFutureValueVault(futureValueVaults[_orderBookId]).unlock(
+            _orderBookId,
+            _user,
+            _amount,
+            _maturity
+        );
+    }
+
     function transferFrom(
         uint8 _orderBookId,
         address _sender,

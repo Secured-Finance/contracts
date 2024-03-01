@@ -385,6 +385,32 @@ contract LendingMarketController is
     }
 
     /**
+     * @notice Gets zcToken address for the selected currency and maturity.
+     * @param _ccy Currency name in bytes32
+     * @param _maturity The maturity of the selected order book
+     * @return The zcToken address
+     */
+    function getZCToken(bytes32 _ccy, uint256 _maturity) external view override returns (address) {
+        return Storage.slot().zcTokens[_ccy][_maturity];
+    }
+
+    /**
+     * @notice Gets the total amount of ZCToken that can be minted for the selected currency and maturity.
+     * ZC perpetual token amount is returned only when the maturity is 0.
+     * @param _ccy Currency name in bytes32
+     * @param _maturity The maturity of the order book
+     * @param _user User's address
+     * @return amount The total amount of ZCToken that can be minted
+     */
+    function getMintableZCTokenAmount(
+        bytes32 _ccy,
+        uint256 _maturity,
+        address _user
+    ) external view override returns (uint256 amount) {
+        (amount, ) = LendingMarketUserLogic.getMintableZCTokenAmount(_ccy, _maturity, _user);
+    }
+
+    /**
      * @notice Gets the funds that are calculated from the user's lending and borrowing order list
      * for the selected currency.
      * @param _ccy Currency name in bytes32
@@ -996,25 +1022,12 @@ contract LendingMarketController is
     }
 
     /**
-     * @notice Gets the total amount of ZCToken that can be minted for the selected currency and maturity.
-     * ZC perpetual token amount is returned only when the maturity is 0.
-     * @param _ccy Currency name in bytes32
-     * @param _maturity The maturity of the order book
-     */
-    function getMintableZCTokenAmount(
-        bytes32 _ccy,
-        uint256 _maturity
-    ) external view override returns (uint256 amount, bool isAll) {
-        return LendingMarketUserLogic.getMintableZCTokenAmount(_ccy, _maturity, msg.sender);
-    }
-
-    /**
      * @notice Creates a future value token for the selected currency and maturity.
-     * @dev Future Value Tokens do not exist in markets that were deployed before the contract upgrade,
+     * @dev ZCTokens do not exist in markets that were deployed before the contract upgrade,
      * so they must be configured individually.
      * This function can be deleted once the future value token is created for all currencies and maturities.
      * @param _ccy Currency name in bytes32
-     * @param _maturity The maturity of the future value token
+     * @param _maturity The maturity of the ZCToken
      */
     function createZCToken(bytes32 _ccy, uint256 _maturity) external onlyOwner {
         LendingMarketOperationLogic.createZCToken(_ccy, _maturity);
