@@ -70,6 +70,11 @@ const func: DeployFunction = async function ({
 };
 
 func.tags = ['Proposal'];
-func.dependencies = ['Migration', 'LendingMarkets', 'FutureValueVault'];
+func.dependencies = [
+  'Migration',
+  'LendingMarkets',
+  'FutureValueVault',
+  'ZCToken',
+];
 
 export default func;
