@@ -111,6 +111,9 @@ describe('LendingMarketController - Tokenization', () => {
 
   describe('Token Deployments', async () => {
     it('Create a new zc perpetual token', async () => {
+      const tokenName = `ZC ${targetCurrencyName}`;
+      const tokenSymbol = `zc${targetCurrencyName}`;
+
       await expect(
         lendingMarketControllerProxy.initializeLendingMarket(
           targetCurrency,
@@ -122,24 +125,23 @@ describe('LendingMarketController - Tokenization', () => {
         ),
       )
         .to.emit(lendingMarketOperationLogic, 'ZCTokenCreated')
-        .withArgs(
-          targetCurrency,
-          0,
-          `ZC ${targetCurrencyName}`,
-          `zc${targetCurrencyName}`,
-          () => true,
-        );
+        .withArgs(targetCurrency, 0, tokenName, tokenSymbol, () => true);
 
       const zcTokenAddress = await lendingMarketControllerProxy.getZCToken(
         targetCurrency,
         0,
       );
+      const zcTokenInfo = await lendingMarketControllerProxy.getZCTokenInfo(
+        zcTokenAddress,
+      );
 
       const zcToken = await ethers.getContractAt('ZCToken', zcTokenAddress);
 
       expect(zcTokenAddress).to.not.equal(ethers.constants.AddressZero);
-      expect(await zcToken.name()).to.equal(`ZC ${targetCurrencyName}`);
-      expect(await zcToken.symbol()).to.equal(`zc${targetCurrencyName}`);
+      expect(zcTokenInfo.ccy).to.equal(targetCurrency);
+      expect(zcTokenInfo.maturity).to.equal(0);
+      expect(await zcToken.name()).to.equal(tokenName);
+      expect(await zcToken.symbol()).to.equal(tokenSymbol);
     });
 
     it('Create a new zc token with maturity', async () => {
@@ -152,6 +154,10 @@ describe('LendingMarketController - Tokenization', () => {
       const nextMaturity = getLastFriday(
         moment(maturities[maturities.length - 1] * 1000).add(3, 'M'),
       );
+      const tokenName = `ZC ${targetCurrencyName} ${nextMaturity
+        .format('MMMYYYY')
+        .toUpperCase()}`;
+      const tokenSymbol = `zc${targetCurrencyName}-${nextMaturity.unix()}`;
 
       await expect(
         lendingMarketControllerProxy.createOrderBook(
@@ -164,23 +170,26 @@ describe('LendingMarketController - Tokenization', () => {
         .withArgs(
           targetCurrency,
           nextMaturity.unix(),
-          `ZC ${targetCurrencyName} ${nextMaturity
-            .format('MMMYYYY')
-            .toUpperCase()}`,
-          `zc${targetCurrencyName}-${nextMaturity.unix()}`,
+          tokenName,
+          tokenSymbol,
           () => true,
         );
 
       const zcTokenAddress = await lendingMarketControllerProxy.getZCToken(
         targetCurrency,
-        0,
+        nextMaturity.unix(),
+      );
+      const zcTokenInfo = await lendingMarketControllerProxy.getZCTokenInfo(
+        zcTokenAddress,
       );
 
       const zcToken = await ethers.getContractAt('ZCToken', zcTokenAddress);
 
       expect(zcTokenAddress).to.not.equal(ethers.constants.AddressZero);
-      expect(await zcToken.name()).to.equal(`ZC ${targetCurrencyName}`);
-      expect(await zcToken.symbol()).to.equal(`zc${targetCurrencyName}`);
+      expect(zcTokenInfo.ccy).to.equal(targetCurrency);
+      expect(zcTokenInfo.maturity).to.equal(nextMaturity.unix());
+      expect(await zcToken.name()).to.equal(tokenName);
+      expect(await zcToken.symbol()).to.equal(tokenSymbol);
     });
 
     it('Create a new zc token manually', async () => {

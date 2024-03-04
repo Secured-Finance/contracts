@@ -25,7 +25,7 @@ import {ProtocolTypes} from "./types/ProtocolTypes.sol";
 import {Proxyable} from "./utils/Proxyable.sol";
 import {LockAndMsgSender} from "./utils/LockAndMsgSender.sol";
 // storages
-import {LendingMarketControllerStorage as Storage, TerminationCurrencyCache} from "./storages/LendingMarketControllerStorage.sol";
+import {LendingMarketControllerStorage as Storage, ZCTokenInfo, TerminationCurrencyCache} from "./storages/LendingMarketControllerStorage.sol";
 
 /**
  * @notice Implements the module to manage separated lending market contracts per currency.
@@ -385,13 +385,22 @@ contract LendingMarketController is
     }
 
     /**
-     * @notice Gets zcToken address for the selected currency and maturity.
+     * @notice Gets ZC Token address for the selected currency and maturity.
      * @param _ccy Currency name in bytes32
      * @param _maturity The maturity of the selected order book
      * @return The zcToken address
      */
     function getZCToken(bytes32 _ccy, uint256 _maturity) external view override returns (address) {
         return Storage.slot().zcTokens[_ccy][_maturity];
+    }
+
+    /**
+     * @notice Gets ZC Token info for the selected ZC Token address.
+     * @param _zcToken The zcToken address
+     * @return The zcToken data
+     */
+    function getZCTokenInfo(address _zcToken) external view override returns (ZCTokenInfo memory) {
+        return Storage.slot().zcTokenInfo[_zcToken];
     }
 
     /**

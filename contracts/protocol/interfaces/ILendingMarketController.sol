@@ -2,7 +2,7 @@
 pragma solidity 0.8.19;
 
 import {ProtocolTypes} from "../types/ProtocolTypes.sol";
-import {TerminationCurrencyCache} from "../storages/LendingMarketControllerStorage.sol";
+import {ZCTokenInfo, TerminationCurrencyCache} from "../storages/LendingMarketControllerStorage.sol";
 
 interface ILendingMarketController {
     error InvalidMaturity();
@@ -127,6 +127,8 @@ interface ILendingMarketController {
     ) external view returns (int256 presentValue, int256 futureValue);
 
     function getZCToken(bytes32 ccy, uint256 maturity) external view returns (address);
+
+    function getZCTokenInfo(address zcToken) external view returns (ZCTokenInfo memory);
 
     function getWithdrawableZCTokenAmount(
         bytes32 ccy,

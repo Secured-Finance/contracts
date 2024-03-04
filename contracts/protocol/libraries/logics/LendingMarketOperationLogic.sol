@@ -21,7 +21,7 @@ import {RoundingInt256} from "../math/RoundingInt256.sol";
 // types
 import {ProtocolTypes} from "../../types/ProtocolTypes.sol";
 // storages
-import {LendingMarketControllerStorage as Storage, TerminationCurrencyCache, ObservationPeriodLog} from "../../storages/LendingMarketControllerStorage.sol";
+import {LendingMarketControllerStorage as Storage, ZCTokenInfo, TerminationCurrencyCache, ObservationPeriodLog} from "../../storages/LendingMarketControllerStorage.sol";
 
 library LendingMarketOperationLogic {
     using SafeCast for uint256;
@@ -363,6 +363,7 @@ library LendingMarketOperationLogic {
         );
 
         Storage.slot().zcTokens[_ccy][_maturity] = zcToken;
+        Storage.slot().zcTokenInfo[zcToken] = ZCTokenInfo({ccy: _ccy, maturity: _maturity});
 
         emit ZCTokenCreated(_ccy, _maturity, name, symbol, zcToken);
     }
