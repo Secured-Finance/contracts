@@ -7,7 +7,7 @@ import {TerminationCurrencyCache} from "../storages/LendingMarketControllerStora
 interface ILendingMarketController {
     error InvalidMaturity();
     error InvalidCurrency();
-    error AlreadyTerminated();
+    error MarketTerminated();
     error NotTerminated();
     error AlreadyInitialized();
 
@@ -128,7 +128,7 @@ interface ILendingMarketController {
 
     function getZCToken(bytes32 ccy, uint256 maturity) external view returns (address);
 
-    function getMintableZCTokenAmount(
+    function getWithdrawableZCTokenAmount(
         bytes32 ccy,
         uint256 maturity,
         address user
@@ -255,7 +255,7 @@ interface ILendingMarketController {
 
     function updateMinDebtUnitPrice(bytes32 _ccy, uint256 _minDebtUnitPrice) external;
 
-    function mintZCToken(bytes32 _ccy, uint256 _maturity, uint256 _amount) external;
+    function withdrawZCToken(bytes32 _ccy, uint256 _maturity, uint256 _amount) external;
 
-    function burnZCToken(bytes32 _ccy, uint256 _maturity, uint256 _amount) external;
+    function depositZCToken(bytes32 _ccy, uint256 _maturity, uint256 _amount) external;
 }

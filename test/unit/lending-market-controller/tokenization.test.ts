@@ -220,7 +220,7 @@ describe('LendingMarketController - Tokenization', () => {
     });
   });
 
-  describe('Minting and burning', async () => {
+  describe('Withdraw and Deposit', async () => {
     const value = BigNumber.from('100000000000000000');
 
     beforeEach(async () => {
@@ -231,7 +231,7 @@ describe('LendingMarketController - Tokenization', () => {
       ].returns(value.mul(2));
     });
 
-    it('Mint zc tokens without allocated collaterals ', async () => {
+    it('Withdraw zc tokens without allocated collaterals ', async () => {
       const zcTokenAddress = await lendingMarketControllerProxy.getZCToken(
         targetCurrency,
         maturities[0],
@@ -247,19 +247,19 @@ describe('LendingMarketController - Tokenization', () => {
         .executeOrder(targetCurrency, maturities[0], Side.BORROW, value, '0');
 
       const estimatedAmount = calculateFutureValue(value, 8000);
-      const mintableAmount =
-        await lendingMarketControllerProxy.getMintableZCTokenAmount(
+      const withdrawableAmount =
+        await lendingMarketControllerProxy.getWithdrawableZCTokenAmount(
           targetCurrency,
           maturities[0],
           alice.address,
         );
 
-      expect(mintableAmount).to.equal(estimatedAmount);
+      expect(withdrawableAmount).to.equal(estimatedAmount);
 
       await expect(
         lendingMarketControllerProxy
           .connect(alice)
-          .mintZCToken(targetCurrency, maturities[0], estimatedAmount),
+          .withdrawZCToken(targetCurrency, maturities[0], estimatedAmount),
       )
         .to.emit(zcToken, 'Transfer')
         .withArgs(ethers.constants.AddressZero, alice.address, estimatedAmount);
@@ -267,7 +267,7 @@ describe('LendingMarketController - Tokenization', () => {
       expect(await zcToken.balanceOf(alice.address)).to.equal(estimatedAmount);
     });
 
-    it('Mint zc tokens under allocated collateral existence', async () => {
+    it('Withdraw zc tokens under allocated collateral existence', async () => {
       await mockCurrencyController.mock[
         'convertFromBaseCurrency(bytes32,uint256)'
       ].returns(value.div(2));
@@ -312,8 +312,8 @@ describe('LendingMarketController - Tokenization', () => {
         .connect(bob)
         .executeOrder(targetCurrency, maturities[1], Side.LEND, value, '0');
 
-      const mintableAmount =
-        await lendingMarketControllerProxy.getMintableZCTokenAmount(
+      const withdrawableAmount =
+        await lendingMarketControllerProxy.getWithdrawableZCTokenAmount(
           targetCurrency,
           maturities[0],
           alice.address,
@@ -321,12 +321,12 @@ describe('LendingMarketController - Tokenization', () => {
 
       const estimatedAmount = calculateFutureValue(value.div(2), 8000);
 
-      expect(mintableAmount).to.equal(estimatedAmount);
+      expect(withdrawableAmount).to.equal(estimatedAmount);
 
       await expect(
         lendingMarketControllerProxy
           .connect(alice)
-          .mintZCToken(targetCurrency, maturities[0], value),
+          .withdrawZCToken(targetCurrency, maturities[0], value),
       )
         .to.emit(zcToken, 'Transfer')
         .withArgs(ethers.constants.AddressZero, alice.address, estimatedAmount);
@@ -334,7 +334,7 @@ describe('LendingMarketController - Tokenization', () => {
       expect(await zcToken.balanceOf(alice.address)).to.equal(estimatedAmount);
     });
 
-    it('Mint zc perpetual tokens without allocated collaterals', async () => {
+    it('Withdraw zc perpetual tokens without allocated collaterals', async () => {
       const zcTokenAddress = await lendingMarketControllerProxy.getZCToken(
         targetCurrency,
         0,
@@ -349,14 +349,14 @@ describe('LendingMarketController - Tokenization', () => {
         .connect(bob)
         .executeOrder(targetCurrency, maturities[0], Side.BORROW, value, '0');
 
-      const mintableAmountBefore =
-        await lendingMarketControllerProxy.getMintableZCTokenAmount(
+      const withdrawableAmountBefore =
+        await lendingMarketControllerProxy.getWithdrawableZCTokenAmount(
           targetCurrency,
           0,
           alice.address,
         );
 
-      expect(mintableAmountBefore).to.equal(0);
+      expect(withdrawableAmountBefore).to.equal(0);
 
       await time.increaseTo(maturities[0].toString());
       await expect(
@@ -372,19 +372,19 @@ describe('LendingMarketController - Tokenization', () => {
         .mul(BigNumber.from(10).pow(36))
         .div(autoRollLog.lendingCompoundFactor);
 
-      const mintableAmountAfter =
-        await lendingMarketControllerProxy.getMintableZCTokenAmount(
+      const withdrawableAmountAfter =
+        await lendingMarketControllerProxy.getWithdrawableZCTokenAmount(
           targetCurrency,
           0,
           alice.address,
         );
 
-      expect(mintableAmountAfter).to.equal(estimatedAmount);
+      expect(withdrawableAmountAfter).to.equal(estimatedAmount);
 
       await expect(
         lendingMarketControllerProxy
           .connect(alice)
-          .mintZCToken(targetCurrency, 0, estimatedAmount),
+          .withdrawZCToken(targetCurrency, 0, estimatedAmount),
       )
         .to.emit(zcToken, 'Transfer')
         .withArgs(ethers.constants.AddressZero, alice.address, estimatedAmount);
@@ -392,7 +392,7 @@ describe('LendingMarketController - Tokenization', () => {
       expect(await zcToken.balanceOf(alice.address)).to.equal(estimatedAmount);
     });
 
-    it('Mint zc perpetual tokens under allocated collateral existence', async () => {
+    it('Withdraw zc perpetual tokens under allocated collateral existence', async () => {
       await mockCurrencyController.mock[
         'convertFromBaseCurrency(bytes32,uint256)'
       ].returns(value.div(2));
@@ -448,27 +448,33 @@ describe('LendingMarketController - Tokenization', () => {
       const estimatedAmount = calculateFutureValue(value.div(2), 8000)
         .mul(BigNumber.from(10).pow(36))
         .div(compoundFactor);
-      const mintableAmount =
-        await lendingMarketControllerProxy.getMintableZCTokenAmount(
+      const withdrawableAmount =
+        await lendingMarketControllerProxy.getWithdrawableZCTokenAmount(
           targetCurrency,
           0,
           alice.address,
         );
 
-      expect(mintableAmount.sub(estimatedAmount).abs()).to.lte(1);
+      expect(withdrawableAmount.sub(estimatedAmount).abs()).to.lte(1);
 
       await expect(
         lendingMarketControllerProxy
           .connect(alice)
-          .mintZCToken(targetCurrency, 0, mintableAmount.add(1)),
+          .withdrawZCToken(targetCurrency, 0, withdrawableAmount.add(1)),
       )
         .to.emit(zcToken, 'Transfer')
-        .withArgs(ethers.constants.AddressZero, alice.address, mintableAmount);
+        .withArgs(
+          ethers.constants.AddressZero,
+          alice.address,
+          withdrawableAmount,
+        );
 
-      expect(await zcToken.balanceOf(alice.address)).to.equal(mintableAmount);
+      expect(await zcToken.balanceOf(alice.address)).to.equal(
+        withdrawableAmount,
+      );
     });
 
-    it('Burn zc tokens', async () => {
+    it('Deposit zc tokens', async () => {
       const zcTokenAddress = await lendingMarketControllerProxy.getZCToken(
         targetCurrency,
         maturities[0],
@@ -485,7 +491,7 @@ describe('LendingMarketController - Tokenization', () => {
 
       await lendingMarketControllerProxy
         .connect(alice)
-        .mintZCToken(targetCurrency, maturities[0], 0);
+        .withdrawZCToken(targetCurrency, maturities[0], 0);
 
       const currentBalance = await zcToken.balanceOf(alice.address);
       expect(currentBalance).to.equal(calculateFutureValue(value, 8000));
@@ -493,13 +499,13 @@ describe('LendingMarketController - Tokenization', () => {
       await expect(
         lendingMarketControllerProxy
           .connect(alice)
-          .burnZCToken(targetCurrency, maturities[0], currentBalance),
+          .depositZCToken(targetCurrency, maturities[0], currentBalance),
       )
         .to.emit(zcToken, 'Transfer')
         .withArgs(alice.address, ethers.constants.AddressZero, currentBalance);
     });
 
-    it('Burn zc tokens with exceeded amount', async () => {
+    it('Deposit zc tokens with exceeded amount', async () => {
       const zcTokenAddress = await lendingMarketControllerProxy.getZCToken(
         targetCurrency,
         maturities[0],
@@ -516,7 +522,7 @@ describe('LendingMarketController - Tokenization', () => {
 
       await lendingMarketControllerProxy
         .connect(alice)
-        .mintZCToken(targetCurrency, maturities[0], 0);
+        .withdrawZCToken(targetCurrency, maturities[0], 0);
 
       const currentBalance = await zcToken.balanceOf(alice.address);
       expect(currentBalance).to.equal(calculateFutureValue(value, 8000));
@@ -524,7 +530,7 @@ describe('LendingMarketController - Tokenization', () => {
       await expect(
         lendingMarketControllerProxy
           .connect(alice)
-          .burnZCToken(targetCurrency, maturities[0], currentBalance.add(1)),
+          .depositZCToken(targetCurrency, maturities[0], currentBalance.add(1)),
       )
         .to.emit(zcToken, 'Transfer')
         .withArgs(alice.address, ethers.constants.AddressZero, currentBalance);
@@ -532,7 +538,7 @@ describe('LendingMarketController - Tokenization', () => {
       expect(await zcToken.balanceOf(alice.address)).to.equal(0);
     });
 
-    it('Burn zc perpetual tokens', async () => {
+    it('Deposit zc perpetual tokens', async () => {
       const zcTokenAddress = await lendingMarketControllerProxy.getZCToken(
         targetCurrency,
         0,
@@ -554,7 +560,7 @@ describe('LendingMarketController - Tokenization', () => {
 
       await lendingMarketControllerProxy
         .connect(alice)
-        .mintZCToken(targetCurrency, 0, 0);
+        .withdrawZCToken(targetCurrency, 0, 0);
 
       const autoRollLog = await genesisValueVaultProxy.getAutoRollLog(
         targetCurrency,
@@ -570,7 +576,7 @@ describe('LendingMarketController - Tokenization', () => {
       await expect(
         lendingMarketControllerProxy
           .connect(alice)
-          .burnZCToken(targetCurrency, 0, currentBalance),
+          .depositZCToken(targetCurrency, 0, currentBalance),
       )
         .to.emit(zcToken, 'Transfer')
         .withArgs(alice.address, ethers.constants.AddressZero, currentBalance);
@@ -578,7 +584,7 @@ describe('LendingMarketController - Tokenization', () => {
       expect(await zcToken.balanceOf(alice.address)).to.equal(0);
     });
 
-    it('Burn zc perpetual tokens with exceeded amount', async () => {
+    it('Deposit zc perpetual tokens with exceeded amount', async () => {
       const zcTokenAddress = await lendingMarketControllerProxy.getZCToken(
         targetCurrency,
         0,
@@ -600,14 +606,14 @@ describe('LendingMarketController - Tokenization', () => {
 
       await lendingMarketControllerProxy
         .connect(alice)
-        .mintZCToken(targetCurrency, 0, 0);
+        .withdrawZCToken(targetCurrency, 0, 0);
 
       const currentBalance = await zcToken.balanceOf(alice.address);
 
       await expect(
         lendingMarketControllerProxy
           .connect(alice)
-          .burnZCToken(targetCurrency, 0, currentBalance.add(1)),
+          .depositZCToken(targetCurrency, 0, currentBalance.add(1)),
       )
         .to.emit(zcToken, 'Transfer')
         .withArgs(alice.address, ethers.constants.AddressZero, currentBalance);
@@ -615,15 +621,21 @@ describe('LendingMarketController - Tokenization', () => {
       expect(await zcToken.balanceOf(alice.address)).to.equal(0);
     });
 
-    it('Fail to mint zc tokens if the maturity is invalid', async () => {
+    it('Fail to withdraw zc tokens if the maturity is invalid', async () => {
       await expect(
-        lendingMarketControllerProxy.mintZCToken(targetCurrency, 1, value),
+        lendingMarketControllerProxy.withdrawZCToken(targetCurrency, 1, value),
       ).to.be.revertedWith('InvalidMaturity');
     });
 
-    it('Fail to mint zc tokens if the caller has no balance of zc tokens', async () => {
+    it('Fail to deposit zc tokens if the maturity is invalid', async () => {
       await expect(
-        lendingMarketControllerProxy.mintZCToken(
+        lendingMarketControllerProxy.depositZCToken(targetCurrency, 1, value),
+      ).to.be.revertedWith('InvalidMaturity');
+    });
+
+    it('Fail to withdraw zc tokens if the caller has no balance of zc tokens', async () => {
+      await expect(
+        lendingMarketControllerProxy.withdrawZCToken(
           targetCurrency,
           maturities[0],
           value,
@@ -631,9 +643,25 @@ describe('LendingMarketController - Tokenization', () => {
       ).to.be.revertedWith('AmountIsZero');
     });
 
-    it('Fail to mint zc tokens if the caller has no balance of zc perpetual tokens', async () => {
+    it('Fail to deposit zc tokens if the caller has no balance of zc tokens', async () => {
       await expect(
-        lendingMarketControllerProxy.mintZCToken(targetCurrency, 0, value),
+        lendingMarketControllerProxy.depositZCToken(
+          targetCurrency,
+          maturities[0],
+          value,
+        ),
+      ).to.be.revertedWith('AmountIsZero');
+    });
+
+    it('Fail to withdraw zc tokens if the caller has no balance of zc perpetual tokens', async () => {
+      await expect(
+        lendingMarketControllerProxy.withdrawZCToken(targetCurrency, 0, value),
+      ).to.be.revertedWith('AmountIsZero');
+    });
+
+    it('Fail to deposit zc tokens if the caller has no balance of zc perpetual tokens', async () => {
+      await expect(
+        lendingMarketControllerProxy.depositZCToken(targetCurrency, 0, value),
       ).to.be.revertedWith('AmountIsZero');
     });
   });

@@ -67,7 +67,7 @@ contract LendingMarketController is
      * @notice Modifier to check if the protocol is active.
      */
     modifier ifActive() {
-        if (isTerminated()) revert AlreadyTerminated();
+        if (isTerminated()) revert MarketTerminated();
         _;
     }
 
@@ -395,19 +395,19 @@ contract LendingMarketController is
     }
 
     /**
-     * @notice Gets the total amount of ZCToken that can be minted for the selected currency and maturity.
+     * @notice Gets the withdrawable ZCToken amount for the selected currency and maturity.
      * ZC perpetual token amount is returned only when the maturity is 0.
      * @param _ccy Currency name in bytes32
      * @param _maturity The maturity of the order book
      * @param _user User's address
      * @return amount The total amount of ZCToken that can be minted
      */
-    function getMintableZCTokenAmount(
+    function getWithdrawableZCTokenAmount(
         bytes32 _ccy,
         uint256 _maturity,
         address _user
     ) external view override returns (uint256 amount) {
-        (amount, ) = LendingMarketUserLogic.getMintableZCTokenAmount(_ccy, _maturity, _user);
+        (amount, ) = LendingMarketUserLogic.getWithdrawableZCTokenAmount(_ccy, _maturity, _user);
     }
 
     /**
@@ -988,37 +988,38 @@ contract LendingMarketController is
     }
 
     /**
-     * @notice Mints ZCToken for the selected currency and maturity.
-     * ZC perpetual token can be minted only when the maturity is 0.
+     * @notice Withdraws ZCToken for the selected currency and maturity.
+     * ZC perpetual token can be withdrawn only when the maturity is 0.
      * @param _ccy Currency name in bytes32
      * @param _maturity The maturity of the order book
      * @param _amount The amount of ZCToken to mint
      */
-    function mintZCToken(
+    function withdrawZCToken(
         bytes32 _ccy,
         uint256 _maturity,
         uint256 _amount
     ) external override nonReentrant ifActive {
         if (_maturity != 0 && isValidMaturity(_ccy, _maturity)) revert InvalidMaturity();
 
-        LendingMarketUserLogic.mintZCToken(_ccy, _maturity, msg.sender, _amount);
+        LendingMarketUserLogic.withdrawZCToken(_ccy, _maturity, msg.sender, _amount);
     }
 
     /**
-     * @notice Burns ZCToken for the selected currency and maturity.
-     * ZC perpetual token can be burned only when the maturity is 0.
+     * @notice Deposits ZCToken for the selected currency and maturity.
+     * ZC perpetual token can be deposited only when the maturity is 0.
+     * This function is not inactivated after the emergency termination to allow users to redeem ZCToken.
      * @param _ccy Currency name in bytes32
      * @param _maturity The maturity of the order book
      * @param _amount The amount of ZCToken to burn
      */
-    function burnZCToken(
+    function depositZCToken(
         bytes32 _ccy,
         uint256 _maturity,
         uint256 _amount
-    ) external override nonReentrant ifActive {
+    ) external override nonReentrant {
         if (_maturity != 0 && isValidMaturity(_ccy, _maturity)) revert InvalidMaturity();
 
-        LendingMarketUserLogic.burnZCToken(_ccy, _maturity, msg.sender, _amount);
+        LendingMarketUserLogic.depositZCToken(_ccy, _maturity, msg.sender, _amount);
     }
 
     /**
