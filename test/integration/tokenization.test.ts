@@ -11,7 +11,7 @@ import {
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATOR_FEE_RATE,
-  PRICE_DIGIT,
+  PCT_DIGIT,
 } from '../common/constants';
 import { deployContracts } from '../common/deployment';
 import { Signers } from '../common/signers';
@@ -732,7 +732,248 @@ describe('Integration Test: Tokenization', async () => {
     });
   });
 
-  describe('Withdraw ZC tokens after using as collateral', async () => {
+  describe('Withdraw ZC tokens with deposits after using as collateral', async () => {
+    const orderAmount = BigNumber.from('100000000000000000');
+    let zcToken: Contract;
+
+    before(async () => {
+      [alice, bob] = await getUsers(2);
+
+      await resetContractInstances();
+
+      zcToken = await ethers.getContractAt(
+        'ZCToken',
+        await lendingMarketController.getZCToken(hexETH, maturities[0]),
+      );
+    });
+
+    it('Fill an order', async () => {
+      await tokenVault.connect(bob).deposit(hexETH, orderAmount.mul(2), {
+        value: orderAmount.mul(2),
+      });
+
+      await expect(
+        lendingMarketController
+          .connect(alice)
+          .depositAndExecuteOrder(
+            hexETH,
+            maturities[0],
+            Side.LEND,
+            orderAmount,
+            9600,
+            { value: orderAmount },
+          ),
+      ).to.not.emit(fundManagementLogic, 'OrderFilled');
+
+      await expect(
+        lendingMarketController
+          .connect(bob)
+          .executeOrder(hexETH, maturities[0], Side.BORROW, orderAmount, 0),
+      ).to.emit(fundManagementLogic, 'OrderFilled');
+
+      // Check future value
+      const { presentValue: alicePV } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[0],
+          alice.address,
+        );
+
+      expect(alicePV).to.equal(orderAmount);
+    });
+
+    it('Fill an order using ZC bonds', async () => {
+      await expect(
+        lendingMarketController
+          .connect(alice)
+          .executeOrder(
+            hexETH,
+            maturities[1],
+            Side.BORROW,
+            orderAmount.div(2),
+            9600,
+          ),
+      ).to.not.emit(fundManagementLogic, 'OrderFilled');
+
+      await expect(
+        lendingMarketController
+          .connect(bob)
+          .depositAndExecuteOrder(
+            hexETH,
+            maturities[1],
+            Side.LEND,
+            orderAmount.div(2),
+            0,
+            { value: orderAmount.div(2) },
+          ),
+      ).to.emit(fundManagementLogic, 'OrderFilled');
+
+      // Check future value
+      const { presentValue: alicePV } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[1],
+          alice.address,
+        );
+
+      expect(alicePV.abs()).to.equal(orderAmount.div(2));
+    });
+
+    it('Withdraw ZC token', async () => {
+      const { futureValue: alicePV } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[0],
+          alice.address,
+        );
+
+      const withdrawableAmount =
+        await lendingMarketController.getWithdrawableZCTokenAmount(
+          hexETH,
+          maturities[0],
+          alice.address,
+        );
+
+      expect(withdrawableAmount).lt(alicePV);
+
+      await lendingMarketController
+        .connect(alice)
+        .withdrawZCToken(hexETH, maturities[0], withdrawableAmount);
+
+      const coverage = await tokenVault.getCoverage(alice.address);
+      expect(coverage.sub('7999').abs()).lte(1);
+
+      const balance = await zcToken.balanceOf(alice.address);
+      expect(balance).to.equal(withdrawableAmount);
+    });
+  });
+
+  describe('Withdraw ZC tokens with additional deposits after using as collateral', async () => {
+    const orderAmount = BigNumber.from('100000000000000000');
+    let zcToken: Contract;
+
+    before(async () => {
+      [alice, bob] = await getUsers(2);
+
+      await resetContractInstances();
+
+      zcToken = await ethers.getContractAt(
+        'ZCToken',
+        await lendingMarketController.getZCToken(hexETH, maturities[0]),
+      );
+    });
+
+    it('Fill an order', async () => {
+      await tokenVault.connect(bob).deposit(hexETH, orderAmount.mul(2), {
+        value: orderAmount.mul(2),
+      });
+
+      await expect(
+        lendingMarketController
+          .connect(alice)
+          .depositAndExecuteOrder(
+            hexETH,
+            maturities[0],
+            Side.LEND,
+            orderAmount,
+            9600,
+            { value: orderAmount },
+          ),
+      ).to.not.emit(fundManagementLogic, 'OrderFilled');
+
+      await expect(
+        lendingMarketController
+          .connect(bob)
+          .executeOrder(hexETH, maturities[0], Side.BORROW, orderAmount, 0),
+      ).to.emit(fundManagementLogic, 'OrderFilled');
+
+      // Check future value
+      const { presentValue: alicePV } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[0],
+          alice.address,
+        );
+
+      expect(alicePV).to.equal(orderAmount);
+    });
+
+    it('Fill an order using ZC bonds', async () => {
+      await expect(
+        lendingMarketController
+          .connect(alice)
+          .executeOrder(
+            hexETH,
+            maturities[1],
+            Side.BORROW,
+            orderAmount.div(2),
+            9600,
+          ),
+      ).to.not.emit(fundManagementLogic, 'OrderFilled');
+
+      await expect(
+        lendingMarketController
+          .connect(bob)
+          .depositAndExecuteOrder(
+            hexETH,
+            maturities[1],
+            Side.LEND,
+            orderAmount.div(2),
+            0,
+            { value: orderAmount.div(2) },
+          ),
+      ).to.emit(fundManagementLogic, 'OrderFilled');
+
+      // Check future value
+      const { presentValue: alicePV } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[1],
+          alice.address,
+        );
+
+      expect(alicePV.abs()).to.equal(orderAmount.div(2));
+    });
+
+    it('Deposit additional collateral', async () => {
+      await tokenVault.connect(alice).deposit(hexETH, orderAmount.div(2), {
+        value: orderAmount.div(2),
+      });
+
+      const deposit = await tokenVault.getDepositAmount(alice.address, hexETH);
+      expect(deposit).to.equal(orderAmount);
+    });
+
+    it('Withdraw ZC token', async () => {
+      const { futureValue: alicePV } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[0],
+          alice.address,
+        );
+
+      const withdrawableAmount =
+        await lendingMarketController.getWithdrawableZCTokenAmount(
+          hexETH,
+          maturities[0],
+          alice.address,
+        );
+
+      expect(withdrawableAmount).to.equal(alicePV);
+
+      await lendingMarketController
+        .connect(alice)
+        .withdrawZCToken(hexETH, maturities[0], withdrawableAmount);
+
+      const coverage = await tokenVault.getCoverage(alice.address);
+      expect(coverage.sub('5000').abs()).lte(1);
+
+      const balance = await zcToken.balanceOf(alice.address);
+      expect(balance).to.equal(withdrawableAmount);
+    });
+  });
+
+  describe('Withdraw ZC tokens without deposits after using as collateral', async () => {
     const orderAmount = BigNumber.from('100000000000000000');
     let zcToken: Contract;
 
@@ -834,13 +1075,19 @@ describe('Integration Test: Tokenization', async () => {
     });
 
     it('Withdraw ZC token', async () => {
-      const aliceFVs = await Promise.all(
-        [0, 1].map(async (maturityIdx) =>
-          lendingMarketController
-            .getPosition(hexETH, maturities[maturityIdx], alice.address)
-            .then(({ futureValue }) => futureValue),
-        ),
-      );
+      const { futureValue: alicePV } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[0],
+          alice.address,
+        );
+
+      const { futureValue: alicePV2 } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[1],
+          alice.address,
+        );
 
       const withdrawableAmount =
         await lendingMarketController.getWithdrawableZCTokenAmount(
@@ -850,13 +1097,14 @@ describe('Integration Test: Tokenization', async () => {
         );
 
       expect(
-        aliceFVs[1]
+        alicePV2
           .abs()
-          .mul(PRICE_DIGIT)
-          .div(aliceFVs[0].sub(withdrawableAmount))
-          .sub('7999')
-          .abs(),
+          .mul(PCT_DIGIT)
+          .div(alicePV.sub(withdrawableAmount))
+          .sub('7999'),
       ).lte(1);
+
+      expect(withdrawableAmount).lt(alicePV);
 
       await lendingMarketController
         .connect(alice)

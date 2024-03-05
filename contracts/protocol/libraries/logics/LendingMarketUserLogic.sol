@@ -516,11 +516,11 @@ library LendingMarketUserLogic {
             _user
         );
 
-        if (maxWithdrawableAmount == 0) revert AmountIsZero();
-
         if (maxWithdrawableAmount < _amount) {
             _amount = maxWithdrawableAmount;
         }
+
+        if (_amount == 0) revert AmountIsZero();
 
         uint256 lockedAmount = IFutureValueVault(Storage.slot().futureValueVaults[_ccy]).lock(
             orderBookId,
@@ -563,11 +563,11 @@ library LendingMarketUserLogic {
             _user
         );
 
-        if (maxWithdrawableAmount == 0) revert AmountIsZero();
-
         if (maxWithdrawableAmount < _amount) {
             _amount = maxWithdrawableAmount;
         }
+
+        if (_amount == 0) revert AmountIsZero();
 
         uint256 lockedAmount = AddressResolverLib.genesisValueVault().lock(
             _ccy,
@@ -598,7 +598,7 @@ library LendingMarketUserLogic {
         uint256 _maturity,
         address _user
     ) internal view returns (uint256 amount, bool isAll) {
-        (uint256 unallocatedCollateralAmount, bool isAllocated) = _getUnallocatedCollateralAmount(
+        (uint256 withdrawableAmount, bool hasAllocatedCollateral) = _getWithdrawableAmount(
             _ccy,
             _user
         );
@@ -614,11 +614,11 @@ library LendingMarketUserLogic {
 
         if (futureValue <= 0) {
             return (0, false);
-        } else if (!isAllocated || unallocatedCollateralAmount >= presentValue.toUint256()) {
+        } else if (!hasAllocatedCollateral || withdrawableAmount >= presentValue.toUint256()) {
             return (futureValue.toUint256(), true);
         } else {
             return (
-                FundManagementLogic.calculateFVFromPV(_ccy, _maturity, unallocatedCollateralAmount),
+                FundManagementLogic.calculateFVFromPV(_ccy, _maturity, withdrawableAmount),
                 false
             );
         }
@@ -628,7 +628,7 @@ library LendingMarketUserLogic {
         bytes32 _ccy,
         address _user
     ) internal view returns (uint256 amount, bool isAll) {
-        (uint256 unallocatedCollateralAmount, bool isAllocated) = _getUnallocatedCollateralAmount(
+        (uint256 withdrawableAmount, bool hasAllocatedCollateral) = _getWithdrawableAmount(
             _ccy,
             _user
         );
@@ -643,30 +643,30 @@ library LendingMarketUserLogic {
         if (funds.genesisValue <= 0) {
             return (0, false);
         } else if (
-            !isAllocated || unallocatedCollateralAmount >= funds.genesisValueInPV.toUint256()
+            !hasAllocatedCollateral || withdrawableAmount >= funds.genesisValueInPV.toUint256()
         ) {
             return (funds.genesisValue.toUint256(), true);
         } else {
-            int256 unallocatedCollateralAmountInFV = FundManagementLogic.calculateFVFromPV(
+            int256 withdrawableAmountInFV = FundManagementLogic.calculateFVFromPV(
                 _ccy,
                 AddressResolverLib.genesisValueVault().getCurrentMaturity(_ccy),
-                unallocatedCollateralAmount.toInt256()
+                withdrawableAmount.toInt256()
             );
 
             return (
                 AddressResolverLib
                     .genesisValueVault()
-                    .calculateGVFromFV(_ccy, 0, unallocatedCollateralAmountInFV)
+                    .calculateGVFromFV(_ccy, 0, withdrawableAmountInFV)
                     .toUint256(),
                 false
             );
         }
     }
 
-    function _getUnallocatedCollateralAmount(
+    function _getWithdrawableAmount(
         bytes32 _ccy,
         address _user
-    ) internal view returns (uint256 unallocatedCollateralAmount, bool isAllocated) {
+    ) internal view returns (uint256 withdrawableAmount, bool hasAllocatedCollateral) {
         ILendingMarketController.AdditionalFunds memory emptyAdditionalFunds;
         uint256 liquidationThresholdRate = AddressResolverLib
             .tokenVault()
@@ -678,30 +678,49 @@ library LendingMarketUserLogic {
             liquidationThresholdRate
         );
 
-        uint256 haircut = AddressResolverLib.currencyController().getHaircut(_ccy);
+        uint256[] memory amounts = new uint256[](2);
+        (amounts[0], amounts[1], ) = AddressResolverLib.tokenVault().getCollateralDetail(_user);
+        amounts = AddressResolverLib.currencyController().convertFromBaseCurrency(_ccy, amounts);
 
-        if (haircut != 0 && funds.unallocatedCollateralAmount != 0) {
-            (uint256 totalCollateral, uint256 totalUsedCollateral, ) = AddressResolverLib
-                .tokenVault()
-                .getCollateralDetail(_user);
+        uint256 totalCollateral = amounts[0];
+        uint256 totalUsedCollateral = amounts[1];
 
-            // NOTE: The formula is:
-            // availableAmount = (totalCollateral - totalUsedCollateral * liquidationThresholdRate) / haircut
-            uint256 availableAmountInBaseCurrency = (totalCollateral *
-                Constants.PCT_DIGIT -
-                totalUsedCollateral *
-                liquidationThresholdRate).div(haircut);
-
-            uint256 availableAmount = AddressResolverLib
-                .currencyController()
-                .convertFromBaseCurrency(_ccy, availableAmountInBaseCurrency);
-
-            if (availableAmount < funds.unallocatedCollateralAmount) {
-                return (availableAmount, true);
-            }
+        if (totalUsedCollateral == 0) {
+            return (totalCollateral, false);
         }
 
-        return (funds.unallocatedCollateralAmount, funds.unallocatedCollateralAmount != 0);
+        uint256 haircut = AddressResolverLib.currencyController().getHaircut(_ccy);
+        uint256 discountedUnallocatedCollateralAmount = (funds.unallocatedCollateralAmount *
+            haircut).div(Constants.PCT_DIGIT);
+
+        uint256 availableAmount = (totalCollateral *
+            Constants.PCT_DIGIT -
+            totalUsedCollateral *
+            liquidationThresholdRate).div(Constants.PCT_DIGIT);
+
+        if (haircut != 0 && funds.unallocatedCollateralAmount != 0) {
+            uint256 allocatedAmount = funds.claimableAmount - funds.unallocatedCollateralAmount;
+
+            if (availableAmount <= discountedUnallocatedCollateralAmount) {
+                return ((availableAmount * Constants.PCT_DIGIT).div(haircut), true);
+            } else if (availableAmount <= discountedUnallocatedCollateralAmount + allocatedAmount) {
+                // If the available amount is insufficient, unallocated collateral, which is discounted by a haircut and used between different currencies,
+                // is used first. Then, the allocated collateral, which is used to offset positions in the same currency, is used for the rest of the amount.
+                // NOTE: The formula is:
+                // allocatedCollateralAmount = availableAmount - discountedUnallocatedCollateralAmount
+                // totalWithdrawableAmount = allocatedCollateralAmount + unallocatedCollateralAmount
+                return (
+                    funds.unallocatedCollateralAmount +
+                        availableAmount -
+                        discountedUnallocatedCollateralAmount,
+                    true
+                );
+            } else {
+                return (availableAmount, true);
+            }
+        } else {
+            return (availableAmount, funds.unallocatedCollateralAmount != 0);
+        }
     }
 
     function _isCovered(address _user, bytes32 _ccy) internal view {
