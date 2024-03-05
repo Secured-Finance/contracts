@@ -34,6 +34,7 @@ describe('LendingMarketController - Tokenization', () => {
 
   let maturities: BigNumber[];
   let targetCurrencyName: string;
+  let targetCurrencySymbol: string;
   let targetCurrency: string;
   let currencyIdx = 0;
   let genesisDate: number;
@@ -80,20 +81,23 @@ describe('LendingMarketController - Tokenization', () => {
     await mockTokenVault.mock.getTokenAddress.returns(mockERC20.address);
     await mockTokenVault.mock.getLiquidationThresholdRate.returns('12500');
     await mockTokenVault.mock.getCollateralDetail.returns(2, 1, 1);
+    await mockERC20.mock.decimals.returns(6);
   });
 
   beforeEach(async () => {
-    targetCurrencyName = `Test${currencyIdx}`;
-    targetCurrency = ethers.utils.formatBytes32String(targetCurrencyName);
+    targetCurrencyName = `Test ${currencyIdx}`;
+    targetCurrencySymbol = `Test${currencyIdx}`;
+    targetCurrency = ethers.utils.formatBytes32String(targetCurrencySymbol);
     currencyIdx++;
 
     const { timestamp } = await ethers.provider.getBlock('latest');
     genesisDate = getGenesisDate(timestamp * 1000);
 
     await mockERC20.mock.name.returns(targetCurrencyName);
+    await mockERC20.mock.symbol.returns(targetCurrencySymbol);
   });
 
-  const initialize = async (currency: string) => {
+  const initialize = async (currency: string, marketCount = 4) => {
     await lendingMarketControllerProxy.initializeLendingMarket(
       currency,
       genesisDate,
@@ -102,7 +106,7 @@ describe('LendingMarketController - Tokenization', () => {
       CIRCUIT_BREAKER_LIMIT_RANGE,
       0,
     );
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < marketCount; i++) {
       await lendingMarketControllerProxy.createOrderBook(
         currency,
         genesisDate,
@@ -116,7 +120,7 @@ describe('LendingMarketController - Tokenization', () => {
   describe('Token Deployments', async () => {
     it('Create a new zc perpetual token', async () => {
       const tokenName = `ZC ${targetCurrencyName}`;
-      const tokenSymbol = `zc${targetCurrencyName}`;
+      const tokenSymbol = `zc${targetCurrencySymbol}`;
 
       await expect(
         lendingMarketControllerProxy.initializeLendingMarket(
@@ -129,7 +133,7 @@ describe('LendingMarketController - Tokenization', () => {
         ),
       )
         .to.emit(lendingMarketOperationLogic, 'ZCTokenCreated')
-        .withArgs(targetCurrency, 0, tokenName, tokenSymbol, () => true);
+        .withArgs(targetCurrency, 0, tokenName, tokenSymbol, 24, () => true);
 
       const zcTokenAddress = await lendingMarketControllerProxy.getZCToken(
         targetCurrency,
@@ -161,7 +165,9 @@ describe('LendingMarketController - Tokenization', () => {
       const tokenName = `ZC ${targetCurrencyName} ${nextMaturity
         .format('MMMYYYY')
         .toUpperCase()}`;
-      const tokenSymbol = `zc${targetCurrencyName}-${nextMaturity.unix()}`;
+      const tokenSymbol = `zc${targetCurrencySymbol}-${nextMaturity.format(
+        'YYYY-MM',
+      )}`;
 
       await expect(
         lendingMarketControllerProxy.createOrderBook(
@@ -176,6 +182,58 @@ describe('LendingMarketController - Tokenization', () => {
           nextMaturity.unix(),
           tokenName,
           tokenSymbol,
+          24,
+          () => true,
+        );
+
+      const zcTokenAddress = await lendingMarketControllerProxy.getZCToken(
+        targetCurrency,
+        nextMaturity.unix(),
+      );
+      const zcTokenInfo = await lendingMarketControllerProxy.getZCTokenInfo(
+        zcTokenAddress,
+      );
+
+      const zcToken = await ethers.getContractAt('ZCToken', zcTokenAddress);
+
+      expect(zcTokenAddress).to.not.equal(ethers.constants.AddressZero);
+      expect(zcTokenInfo.ccy).to.equal(targetCurrency);
+      expect(zcTokenInfo.maturity).to.equal(nextMaturity.unix());
+      expect(await zcToken.name()).to.equal(tokenName);
+      expect(await zcToken.symbol()).to.equal(tokenSymbol);
+    });
+
+    it('Create a new zc token with maturity(+ 9 month)', async () => {
+      await initialize(targetCurrency, 7);
+
+      const maturities = await lendingMarketControllerProxy.getMaturities(
+        targetCurrency,
+      );
+
+      const nextMaturity = getLastFriday(
+        moment(maturities[maturities.length - 1] * 1000).add(3, 'M'),
+      );
+      const tokenName = `ZC ${targetCurrencyName} ${nextMaturity
+        .format('MMMYYYY')
+        .toUpperCase()}`;
+      const tokenSymbol = `zc${targetCurrencySymbol}-${nextMaturity.format(
+        'YYYY-MM',
+      )}`;
+
+      await expect(
+        lendingMarketControllerProxy.createOrderBook(
+          targetCurrency,
+          genesisDate,
+          genesisDate,
+        ),
+      )
+        .to.emit(lendingMarketOperationLogic, 'ZCTokenCreated')
+        .withArgs(
+          targetCurrency,
+          nextMaturity.unix(),
+          tokenName,
+          tokenSymbol,
+          24,
           () => true,
         );
 
@@ -205,7 +263,8 @@ describe('LendingMarketController - Tokenization', () => {
           targetCurrency,
           0,
           `ZC ${targetCurrencyName}`,
-          `zc${targetCurrencyName}`,
+          `zc${targetCurrencySymbol}`,
+          24,
           () => true,
         );
     });

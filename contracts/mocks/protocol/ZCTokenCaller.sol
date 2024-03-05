@@ -17,10 +17,11 @@ contract ZCTokenCaller {
     function deployZCToken(
         string memory name,
         string memory symbol,
+        uint8 decimals,
         address asset,
         uint256 maturity
     ) external {
-        zcToken = beaconProxyController.deployZCToken(name, symbol, asset, maturity);
+        zcToken = beaconProxyController.deployZCToken(name, symbol, decimals, asset, maturity);
     }
 
     function mint(address to, uint256 amount) external {

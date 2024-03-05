@@ -29,6 +29,7 @@ describe('LendingMarketController - Liquidations', () => {
   let liquidationLogic: Contract;
 
   let targetCurrencyName: string;
+  let targetCurrencySymbol: string;
   let targetCurrency: string;
   let currencyIdx = 0;
   let genesisDate: number;
@@ -110,11 +111,13 @@ describe('LendingMarketController - Liquidations', () => {
     await mockTokenVault.mock.getTokenAddress.returns(
       ethers.constants.AddressZero,
     );
+    await mockERC20.mock.decimals.returns(18);
   });
 
   beforeEach(async () => {
-    targetCurrencyName = `Test${currencyIdx}`;
-    targetCurrency = ethers.utils.formatBytes32String(targetCurrencyName);
+    targetCurrencyName = `Test ${currencyIdx}`;
+    targetCurrencySymbol = `Test${currencyIdx}`;
+    targetCurrency = ethers.utils.formatBytes32String(targetCurrencySymbol);
     currencyIdx++;
 
     const { timestamp } = await ethers.provider.getBlock('latest');
@@ -122,6 +125,7 @@ describe('LendingMarketController - Liquidations', () => {
 
     // Set up for the mocks
     await mockERC20.mock.name.returns(targetCurrencyName);
+    await mockERC20.mock.symbol.returns(targetCurrencySymbol);
     await mockTokenVault.mock.getLiquidationAmount.returns(1000, 20, 10);
     await mockTokenVault.mock.getDepositAmount.returns(100);
     await mockTokenVault.mock.transferFrom.returns(0);

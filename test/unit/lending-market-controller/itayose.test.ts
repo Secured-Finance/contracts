@@ -31,6 +31,7 @@ describe('LendingMarketController - Itayose', () => {
 
   let maturities: BigNumber[];
   let targetCurrencyName: string;
+  let targetCurrencySymbol: string;
   let targetCurrency: string;
   let currencyIdx = 0;
   let genesisDate: number;
@@ -42,12 +43,14 @@ describe('LendingMarketController - Itayose', () => {
   let dave: SignerWithAddress;
 
   beforeEach(async () => {
-    targetCurrencyName = `Test${currencyIdx}`;
-    targetCurrency = ethers.utils.formatBytes32String(targetCurrencyName);
+    targetCurrencyName = `Test ${currencyIdx}`;
+    targetCurrencySymbol = `Test${currencyIdx}`;
+    targetCurrency = ethers.utils.formatBytes32String(targetCurrencySymbol);
     currencyIdx++;
 
     await mockCurrencyController.mock.getCurrencies.returns([targetCurrency]);
     await mockERC20.mock.name.returns(targetCurrencyName);
+    await mockERC20.mock.symbol.returns(targetCurrencySymbol);
 
     const { timestamp } = await ethers.provider.getBlock('latest');
     genesisDate = getGenesisDate(timestamp * 1000);
@@ -81,6 +84,7 @@ describe('LendingMarketController - Itayose', () => {
     await mockTokenVault.mock.cleanUpUsedCurrencies.returns();
     await mockTokenVault.mock.depositWithPermitFrom.returns();
     await mockTokenVault.mock.getTokenAddress.returns(mockERC20.address);
+    await mockERC20.mock.decimals.returns(18);
   });
 
   const initialize = async (currency: string, openingDate = genesisDate) => {

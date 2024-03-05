@@ -27,6 +27,7 @@ describe('ZCToken', () => {
 
   const name = 'Zero Coupon Token';
   const symbol = 'ZCT';
+  const decimals = 24;
   const maturity = Math.floor(Date.now() / 1000) + 86400; // 1 day from now
 
   before(async () => {
@@ -112,6 +113,7 @@ describe('ZCToken', () => {
     await zcTokenCaller.deployZCToken(
       name,
       symbol,
+      decimals,
       mockERC20.address,
       maturity,
     );
@@ -125,6 +127,7 @@ describe('ZCToken', () => {
     it('Get correct name, symbol, asset, and maturity', async () => {
       expect(await zcTokenProxy.name()).to.equal(name);
       expect(await zcTokenProxy.symbol()).to.equal(symbol);
+      expect(await zcTokenProxy.decimals()).to.equal(decimals);
       expect(await zcTokenProxy.asset()).to.equal(mockERC20.address);
       expect(await zcTokenProxy.maturity()).to.equal(maturity);
     });

@@ -31,6 +31,7 @@ interface IBeaconProxyController {
     function deployZCToken(
         string memory name,
         string memory symbol,
+        uint8 decimals,
         address asset,
         uint256 maturity
     ) external returns (address futureValueToken);

@@ -5,6 +5,7 @@ library ZCTokenStorage {
     bytes32 internal constant STORAGE_SLOT = bytes32(uint256(keccak256("sf.storage.zcToken")) - 1);
 
     struct Storage {
+        uint8 decimals;
         address asset;
         uint256 maturity;
     }

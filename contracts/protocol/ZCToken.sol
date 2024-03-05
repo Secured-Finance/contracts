@@ -22,6 +22,7 @@ contract ZCToken is IZCToken, MixinAddressResolver, ERC20PermitUpgradeable, Prox
      * @param _resolver The address resolver to be used.
      * @param _name The name of the token
      * @param _symbol The symbol of the token
+     * @param _decimals The number of decimals the token uses
      * @param _asset The address of the token's underlying asset
      * @param _maturity The maturity of the token
      */
@@ -29,11 +30,13 @@ contract ZCToken is IZCToken, MixinAddressResolver, ERC20PermitUpgradeable, Prox
         address _resolver,
         string memory _name,
         string memory _symbol,
+        uint8 _decimals,
         address _asset,
         uint256 _maturity
     ) external initializer onlyBeacon {
         Storage.slot().asset = _asset;
         Storage.slot().maturity = _maturity;
+        Storage.slot().decimals = _decimals;
 
         registerAddressResolver(_resolver);
         __ERC20_initialize(_name, _symbol);
@@ -46,6 +49,11 @@ contract ZCToken is IZCToken, MixinAddressResolver, ERC20PermitUpgradeable, Prox
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](1);
         contracts[0] = Contracts.LENDING_MARKET_CONTROLLER;
+    }
+
+    // @inheritdoc ERC20Upgradeable
+    function decimals() public view virtual override returns (uint8) {
+        return Storage.slot().decimals;
     }
 
     /**

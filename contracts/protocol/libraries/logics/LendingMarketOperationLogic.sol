@@ -31,6 +31,7 @@ library LendingMarketOperationLogic {
 
     uint256 public constant OBSERVATION_PERIOD = 6 hours;
     uint8 public constant COMPOUND_FACTOR_DECIMALS = 36;
+    uint8 public constant GENESIS_VALUE_BASE_DECIMALS = 18;
     uint256 public constant PRE_ORDER_BASE_PERIOD = 7 days;
 
     error InvalidCompoundFactor();
@@ -72,6 +73,7 @@ library LendingMarketOperationLogic {
         uint256 indexed maturity,
         string name,
         string symbol,
+        uint8 decimals,
         address tokenAddress
     );
 
@@ -344,20 +346,29 @@ library LendingMarketOperationLogic {
         }
 
         address tokenAddress = AddressResolverLib.tokenVault().getTokenAddress(_ccy);
-        string memory originalTokenName = IERC20Metadata(tokenAddress).name();
-        string memory symbol = string.concat("zc", originalTokenName);
-        string memory name = string.concat("ZC ", originalTokenName);
+        string memory symbol = string.concat("zc", IERC20Metadata(tokenAddress).symbol());
+        string memory name = string.concat("ZC ", IERC20Metadata(tokenAddress).name());
+        uint8 decimals = IERC20Metadata(tokenAddress).decimals() + GENESIS_VALUE_BASE_DECIMALS;
 
         // If the maturity is 0, the ZCToken is created as a perpetual one.
         // Otherwise, the ZCToken is created per maturity.
         if (_maturity != 0) {
-            symbol = string.concat(symbol, "-", Strings.toString(_maturity));
+            (uint256 year, uint256 month, ) = TimeLibrary.timestampToDate(_maturity);
+
+            string memory formattedMaturity = string.concat(
+                Strings.toString(year),
+                "-",
+                month < 10 ? string.concat("0", Strings.toString(month)) : Strings.toString(month)
+            );
+
+            symbol = string.concat(symbol, "-", formattedMaturity);
             name = string.concat(name, " ", _getShortMonthYearString(_maturity));
         }
 
         address zcToken = AddressResolverLib.beaconProxyController().deployZCToken(
             name,
             symbol,
+            decimals,
             tokenAddress,
             _maturity
         );
@@ -365,7 +376,7 @@ library LendingMarketOperationLogic {
         Storage.slot().zcTokens[_ccy][_maturity] = zcToken;
         Storage.slot().zcTokenInfo[zcToken] = ZCTokenInfo({ccy: _ccy, maturity: _maturity});
 
-        emit ZCTokenCreated(_ccy, _maturity, name, symbol, zcToken);
+        emit ZCTokenCreated(_ccy, _maturity, name, symbol, decimals, zcToken);
     }
 
     function calculateNextMaturity(

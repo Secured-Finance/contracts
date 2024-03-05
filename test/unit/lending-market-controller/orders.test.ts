@@ -40,6 +40,7 @@ describe('LendingMarketController - Orders', () => {
   let futureValueVault: Contract;
 
   let targetCurrencyName: string;
+  let targetCurrencySymbol: string;
   let targetCurrency: string;
   let currencyIdx = 0;
   let genesisDate: number;
@@ -52,8 +53,9 @@ describe('LendingMarketController - Orders', () => {
   let ellen: SignerWithAddress;
 
   beforeEach(async () => {
-    targetCurrencyName = `Test${currencyIdx}`;
-    targetCurrency = ethers.utils.formatBytes32String(targetCurrencyName);
+    targetCurrencyName = `Test ${currencyIdx}`;
+    targetCurrencySymbol = `Test${currencyIdx}`;
+    targetCurrency = ethers.utils.formatBytes32String(targetCurrencySymbol);
     currencyIdx++;
 
     const { timestamp } = await ethers.provider.getBlock('latest');
@@ -61,6 +63,7 @@ describe('LendingMarketController - Orders', () => {
 
     await mockCurrencyController.mock.currencyExists.returns(true);
     await mockERC20.mock.name.returns(targetCurrencyName);
+    await mockERC20.mock.symbol.returns(targetCurrencySymbol);
   });
 
   before(async () => {
@@ -96,6 +99,7 @@ describe('LendingMarketController - Orders', () => {
     await mockTokenVault.mock.depositFrom.returns();
     await mockTokenVault.mock.depositWithPermitFrom.returns();
     await mockTokenVault.mock.getTokenAddress.returns(mockERC20.address);
+    await mockERC20.mock.decimals.returns(18);
   });
 
   describe('Initialization', async () => {

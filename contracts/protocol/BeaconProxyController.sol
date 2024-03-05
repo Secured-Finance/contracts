@@ -131,19 +131,24 @@ contract BeaconProxyController is
      * @notice Deploys new ZCToken
      * @param _name The name of the future value token
      * @param _symbol The symbol of the future value token
+     * @param _decimals The number of decimals the token uses
+     * @param _asset The address of the token's underlying asset
+     * @param _maturity The maturity of the token
      * @return futureValueToken The proxy contract address of created future value token
      */
     function deployZCToken(
         string memory _name,
         string memory _symbol,
+        uint8 _decimals,
         address _asset,
         uint256 _maturity
     ) external override onlyLendingMarketController returns (address futureValueToken) {
         bytes memory data = abi.encodeWithSignature(
-            "initialize(address,string,string,address,uint256)",
+            "initialize(address,string,string,uint8,address,uint256)",
             address(resolver()),
             _name,
             _symbol,
+            _decimals,
             _asset,
             _maturity
         );
