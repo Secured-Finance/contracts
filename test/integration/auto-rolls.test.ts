@@ -38,7 +38,6 @@ describe('Integration Test: Auto-rolls', async () => {
   let tokenVault: Contract;
   let lendingMarketController: Contract;
   let lendingMarket: Contract;
-  let wETHToken: Contract;
   let wFILToken: Contract;
 
   let fundManagementLogic: Contract;
@@ -114,13 +113,9 @@ describe('Integration Test: Auto-rolls', async () => {
       reserveFund,
       tokenVault,
       lendingMarketController,
-      wETHToken,
       wFILToken,
       fundManagementLogic,
     } = await deployContracts());
-
-    await tokenVault.registerCurrency(hexETH, wETHToken.address, false);
-    await tokenVault.registerCurrency(hexWFIL, wFILToken.address, false);
 
     await tokenVault.updateLiquidationConfiguration(
       LIQUIDATION_THRESHOLD_RATE,
@@ -295,10 +290,8 @@ describe('Integration Test: Auto-rolls', async () => {
           alice.address,
         );
 
-      const aliceGVAfter = await lendingMarketController.getGenesisValue(
-        hexETH,
-        alice.address,
-      );
+      const { amount: aliceGVAfter } =
+        await lendingMarketController.getGenesisValue(hexETH, alice.address);
 
       const { lendingCompoundFactor: lendingCF0 } =
         await genesisValueVault.getAutoRollLog(hexETH, maturities[0]);
@@ -974,9 +967,13 @@ describe('Integration Test: Auto-rolls', async () => {
         daveGVAmount,
         reserveFundGVAmount,
       ] = await Promise.all(
-        users.map(({ address }) =>
-          lendingMarketController.getGenesisValue(hexETH, address),
-        ),
+        users.map(async ({ address }) => {
+          const { amount } = await lendingMarketController.getGenesisValue(
+            hexETH,
+            address,
+          );
+          return amount;
+        }),
       );
 
       expect(

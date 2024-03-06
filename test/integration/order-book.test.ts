@@ -32,7 +32,6 @@ describe('Integration Test: Order Book', async () => {
   let tokenVault: Contract;
   let lendingMarketController: Contract;
   let lendingMarketReader: Contract;
-  let wETHToken: Contract;
   let wFILToken: Contract;
 
   let fundManagementLogic: Contract;
@@ -67,13 +66,9 @@ describe('Integration Test: Order Book', async () => {
       tokenVault,
       lendingMarketController,
       lendingMarketReader,
-      wETHToken,
       wFILToken,
       orderActionLogic,
     } = await deployContracts());
-
-    await tokenVault.registerCurrency(hexETH, wETHToken.address, false);
-    await tokenVault.registerCurrency(hexWFIL, wFILToken.address, false);
 
     await tokenVault.updateLiquidationConfiguration(
       LIQUIDATION_THRESHOLD_RATE,

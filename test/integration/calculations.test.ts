@@ -25,7 +25,6 @@ describe('Integration Test: Calculations', async () => {
   let tokenVault: Contract;
   let lendingMarketController: Contract;
   let lendingMarketReader: Contract;
-  let wETHToken: Contract;
 
   let genesisDate: number;
   let ethMaturities: BigNumber[];
@@ -45,10 +44,7 @@ describe('Integration Test: Calculations', async () => {
       tokenVault,
       lendingMarketController,
       lendingMarketReader,
-      wETHToken,
     } = await deployContracts());
-
-    await tokenVault.registerCurrency(hexETH, wETHToken.address, false);
 
     await tokenVault.updateLiquidationConfiguration(
       LIQUIDATION_THRESHOLD_RATE,

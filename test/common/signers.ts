@@ -34,7 +34,7 @@ const getPermitSignature = async (
   owner: SignerWithAddress,
   spender: SignerWithAddress | Contract,
   value: BigNumber,
-  deadline: number,
+  deadline: number | BigNumber,
 ) => {
   const nonce = await token.nonces(owner.address);
 
@@ -60,7 +60,7 @@ const getPermitSignature = async (
     spender: spender.address,
     value: value.toString(),
     nonce: nonce.toString(),
-    deadline: deadline,
+    deadline: deadline.toString(),
   };
 
   const signature = await owner._signTypedData(domain, types, message);

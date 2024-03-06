@@ -41,6 +41,14 @@ contract GenesisValueVaultCaller {
         genesisValueVault.updateGenesisValueWithResidualAmount(ccy, user, basisMaturity);
     }
 
+    function lock(bytes32 _ccy, address _user, uint256 _amount) external {
+        genesisValueVault.lock(_ccy, _user, _amount);
+    }
+
+    function unlock(bytes32 _ccy, address _user, uint256 _amount) external {
+        genesisValueVault.unlock(_ccy, _user, _amount);
+    }
+
     function transferFrom(
         bytes32 _ccy,
         address _sender,

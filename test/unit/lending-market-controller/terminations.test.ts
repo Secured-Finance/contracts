@@ -3,7 +3,7 @@ import { time } from '@openzeppelin/test-helpers';
 import { expect } from 'chai';
 import { MockContract } from 'ethereum-waffle';
 import { BigNumber, Contract } from 'ethers';
-import { artifacts, ethers, waffle } from 'hardhat';
+import { ethers } from 'hardhat';
 import { Side } from '../../../utils/constants';
 
 import { getGenesisDate } from '../../../utils/dates';
@@ -14,11 +14,6 @@ import {
   ORDER_FEE_RATE,
 } from '../../common/constants';
 import { deployContracts } from './utils';
-
-// contracts
-const MockERC20 = artifacts.require('MockERC20');
-
-const { deployMockContract } = waffle;
 
 describe('LendingMarketController - Terminations', () => {
   let mockCurrencyController: MockContract;
@@ -73,6 +68,7 @@ describe('LendingMarketController - Terminations', () => {
     genesisDate = getGenesisDate(timestamp * 1000);
 
     ({
+      mockERC20,
       mockCurrencyController,
       mockTokenVault,
       lendingMarketControllerProxy,
@@ -86,8 +82,6 @@ describe('LendingMarketController - Terminations', () => {
     fundManagementLogic = fundManagementLogic.attach(
       lendingMarketControllerProxy.address,
     );
-
-    mockERC20 = await deployMockContract(owner, MockERC20.abi);
 
     await mockCurrencyController.mock.getDecimals.returns(18);
     await mockCurrencyController.mock.currencyExists.returns(true);
@@ -109,6 +103,7 @@ describe('LendingMarketController - Terminations', () => {
     await mockTokenVault.mock.cleanUpUsedCurrencies.returns();
     await mockTokenVault.mock.depositFrom.returns();
     await mockERC20.mock.balanceOf.returns(1000000000);
+    await mockERC20.mock.decimals.returns(18);
 
     await initialize(targetCurrency);
   });
@@ -138,7 +133,7 @@ describe('LendingMarketController - Terminations', () => {
       expect(terminationCollateralRatio).to.equal(0);
     });
 
-    it('Execute an emergency termination without an order', async () => {
+    it('Execute an emergency termination without an order and check all inactivated functions', async () => {
       await mockTokenVault.mock.executeForcedReset.returns('50000000000000000');
       await mockTokenVault.mock.isCollateral.returns(true);
 
@@ -148,7 +143,7 @@ describe('LendingMarketController - Terminations', () => {
 
       await expect(
         lendingMarketControllerProxy.createOrderBook(targetCurrency, '1', '1'),
-      ).to.revertedWith('AlreadyTerminated');
+      ).to.revertedWith('MarketTerminated');
 
       await expect(
         lendingMarketControllerProxy.executeOrder(
@@ -158,7 +153,7 @@ describe('LendingMarketController - Terminations', () => {
           '1',
           '0',
         ),
-      ).to.revertedWith('AlreadyTerminated');
+      ).to.revertedWith('MarketTerminated');
 
       await expect(
         lendingMarketControllerProxy.depositAndExecuteOrder(
@@ -168,7 +163,7 @@ describe('LendingMarketController - Terminations', () => {
           '1',
           '0',
         ),
-      ).to.revertedWith('AlreadyTerminated');
+      ).to.revertedWith('MarketTerminated');
 
       await expect(
         lendingMarketControllerProxy.depositWithPermitAndExecuteOrder(
@@ -182,7 +177,7 @@ describe('LendingMarketController - Terminations', () => {
           ethers.utils.formatBytes32String('dummy'),
           ethers.utils.formatBytes32String('dummy'),
         ),
-      ).to.revertedWith('AlreadyTerminated');
+      ).to.revertedWith('MarketTerminated');
 
       await expect(
         lendingMarketControllerProxy.executePreOrder(
@@ -192,7 +187,7 @@ describe('LendingMarketController - Terminations', () => {
           '1',
           '0',
         ),
-      ).to.revertedWith('AlreadyTerminated');
+      ).to.revertedWith('MarketTerminated');
 
       await expect(
         lendingMarketControllerProxy.depositAndExecutesPreOrder(
@@ -202,7 +197,7 @@ describe('LendingMarketController - Terminations', () => {
           '1',
           '0',
         ),
-      ).to.revertedWith('AlreadyTerminated');
+      ).to.revertedWith('MarketTerminated');
 
       await expect(
         lendingMarketControllerProxy.depositWithPermitAndExecuteOrder(
@@ -216,28 +211,28 @@ describe('LendingMarketController - Terminations', () => {
           ethers.utils.formatBytes32String('dummy'),
           ethers.utils.formatBytes32String('dummy'),
         ),
-      ).to.revertedWith('AlreadyTerminated');
+      ).to.revertedWith('MarketTerminated');
 
       await expect(
         lendingMarketControllerProxy.unwindPosition(
           targetCurrency,
           maturities[0],
         ),
-      ).to.revertedWith('AlreadyTerminated');
+      ).to.revertedWith('MarketTerminated');
 
       await expect(
         lendingMarketControllerProxy.executeRedemption(
           targetCurrency,
           maturities[0],
         ),
-      ).to.revertedWith('AlreadyTerminated');
+      ).to.revertedWith('MarketTerminated');
 
       await expect(
         lendingMarketControllerProxy.executeRepayment(
           targetCurrency,
           maturities[0],
         ),
-      ).to.revertedWith('AlreadyTerminated');
+      ).to.revertedWith('MarketTerminated');
 
       await expect(
         lendingMarketControllerProxy.cancelOrder(
@@ -245,14 +240,14 @@ describe('LendingMarketController - Terminations', () => {
           maturities[0],
           '1',
         ),
-      ).to.revertedWith('AlreadyTerminated');
+      ).to.revertedWith('MarketTerminated');
 
       await expect(
         lendingMarketControllerProxy.executeItayoseCall(
           targetCurrency,
           maturities[0],
         ),
-      ).to.revertedWith('AlreadyTerminated');
+      ).to.revertedWith('MarketTerminated');
 
       await expect(
         lendingMarketControllerProxy.executeLiquidationCall(
@@ -261,7 +256,7 @@ describe('LendingMarketController - Terminations', () => {
           maturities[0],
           alice.address,
         ),
-      ).to.revertedWith('AlreadyTerminated');
+      ).to.revertedWith('MarketTerminated');
 
       await expect(
         lendingMarketControllerProxy.executeForcedRepayment(
@@ -270,30 +265,38 @@ describe('LendingMarketController - Terminations', () => {
           maturities[0],
           alice.address,
         ),
-      ).to.revertedWith('AlreadyTerminated');
+      ).to.revertedWith('MarketTerminated');
 
       await expect(
         lendingMarketControllerProxy.updateMinDebtUnitPrice(
           targetCurrency,
           '1',
         ),
-      ).to.revertedWith('AlreadyTerminated');
+      ).to.revertedWith('MarketTerminated');
 
       await expect(
         lendingMarketControllerProxy.rotateOrderBooks(targetCurrency),
-      ).to.revertedWith('AlreadyTerminated');
+      ).to.revertedWith('MarketTerminated');
 
       await expect(
         lendingMarketControllerProxy.executeEmergencyTermination(),
-      ).to.revertedWith('AlreadyTerminated');
+      ).to.revertedWith('MarketTerminated');
 
       await expect(
         lendingMarketControllerProxy.pauseLendingMarket(targetCurrency),
-      ).to.revertedWith('AlreadyTerminated');
+      ).to.revertedWith('MarketTerminated');
 
       await expect(
         lendingMarketControllerProxy.unpauseLendingMarket(targetCurrency),
-      ).to.revertedWith('AlreadyTerminated');
+      ).to.revertedWith('MarketTerminated');
+
+      await expect(
+        lendingMarketControllerProxy.withdrawZCToken(targetCurrency, '1', '1'),
+      ).to.revertedWith('MarketTerminated');
+
+      await expect(
+        lendingMarketControllerProxy.depositZCToken(targetCurrency, '1', '1'),
+      ).to.not.revertedWith('MarketTerminated');
     });
 
     it('Execute an emergency termination with orders of single market', async () => {
@@ -579,12 +582,11 @@ describe('LendingMarketController - Terminations', () => {
         lendingMarketControllerProxy.rotateOrderBooks(targetCurrency),
       ).to.emit(lendingMarketOperationLogic, 'OrderBooksRotated');
 
-      expect(
-        await lendingMarketControllerProxy.getGenesisValue(
-          targetCurrency,
-          alice.address,
-        ),
-      ).not.to.equal('0');
+      const { amount } = await lendingMarketControllerProxy.getGenesisValue(
+        targetCurrency,
+        alice.address,
+      );
+      expect(amount).not.to.equal('0');
 
       await expect(
         lendingMarketControllerProxy.executeEmergencyTermination(),
@@ -597,12 +599,11 @@ describe('LendingMarketController - Terminations', () => {
             .executeEmergencySettlement(),
         ).to.emit(fundManagementLogic, 'EmergencySettlementExecuted');
 
-        expect(
-          await lendingMarketControllerProxy.getGenesisValue(
-            targetCurrency,
-            user.address,
-          ),
-        ).to.equal('0');
+        const { amount } = await lendingMarketControllerProxy.getGenesisValue(
+          targetCurrency,
+          user.address,
+        );
+        expect(amount).to.equal('0');
       }
     });
 

@@ -54,25 +54,16 @@ describe('Performance Test: Auto-rolls', async () => {
     await wFILToken.connect(user).approve(tokenVault.address, '3000000');
     await tokenVault.connect(user).deposit(hexWFIL, '3000000');
 
-    await lendingMarketController
-      .connect(user)
-      .executeOrder(
-        hexWFIL,
-        maturity,
-        Side.BORROW,
-        '1000000',
-        BigNumber.from(unitPrice).add('100'),
-      );
+    // Move to 6 hours (21600 sec) before maturity.
+    await time.increaseTo(maturities[0].sub('21600').toString());
 
     await lendingMarketController
       .connect(user)
-      .executeOrder(
-        hexWFIL,
-        maturity,
-        Side.LEND,
-        '1000000',
-        BigNumber.from(unitPrice).sub('100'),
-      );
+      .executeOrder(hexWFIL, maturity, Side.BORROW, '1000000', unitPrice);
+
+    await lendingMarketController
+      .connect(user)
+      .executeOrder(hexWFIL, maturity, Side.LEND, '1000000', unitPrice);
   };
 
   before('Deploy Contracts', async () => {
@@ -87,8 +78,6 @@ describe('Performance Test: Auto-rolls', async () => {
       wFILToken,
       fundManagementLogic,
     } = await deployContracts());
-
-    await tokenVault.registerCurrency(hexWFIL, wFILToken.address, false);
 
     await tokenVault.updateLiquidationConfiguration(
       LIQUIDATION_THRESHOLD_RATE,

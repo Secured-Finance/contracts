@@ -234,6 +234,25 @@ contract TokenVault is
     }
 
     /**
+     * @notice Gets the collateral detail.
+     * @param _user User's address
+     * @return totalCollateral The total collateral amount in the base currency
+     * @return totalUsedCollateral The total used collateral amount in the base currency
+     * @return totalDeposit The total deposit amount in the base currency
+     */
+    function getCollateralDetail(
+        address _user
+    )
+        external
+        view
+        override
+        returns (uint256 totalCollateral, uint256 totalUsedCollateral, uint256 totalDeposit)
+    {
+        (totalCollateral, totalUsedCollateral, totalDeposit) = DepositManagementLogic
+            .getTotalCollateralAmount(_user);
+    }
+
+    /**
      * @notice Gets the total collateral amount of the selected currency.
      * @param _user User's address
      * @param _ccy Currency name in bytes32
@@ -311,6 +330,14 @@ contract TokenVault is
      */
     function getUsedCurrencies(address _user) public view override returns (bytes32[] memory) {
         return DepositManagementLogic.getUsedCurrencies(_user);
+    }
+
+    /**
+     * @notice Gets the liquidation threshold rate.
+     * @return rate The liquidation threshold rate
+     */
+    function getLiquidationThresholdRate() public view override returns (uint256 rate) {
+        (rate, , , ) = getLiquidationConfiguration();
     }
 
     /**

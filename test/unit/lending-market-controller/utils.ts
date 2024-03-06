@@ -17,11 +17,13 @@ const GenesisValueVault = artifacts.require('GenesisValueVault');
 const MigrationAddressResolver = artifacts.require('MigrationAddressResolver');
 const ProxyController = artifacts.require('ProxyController');
 const ReserveFund = artifacts.require('ReserveFund');
+const ZCToken = artifacts.require('ZCToken');
 
 // external contracts
 const LendingMarketReader = artifacts.require('LendingMarketReader');
 
 // libraries
+const MockERC20 = artifacts.require('MockERC20');
 const OrderBookLogic = artifacts.require('OrderBookLogic');
 const OrderReaderLogic = artifacts.require('OrderReaderLogic');
 const LendingMarketOperationLogic = artifacts.require(
@@ -33,6 +35,7 @@ const { deployContract, deployMockContract } = waffle;
 
 const deployContracts = async (owner: SignerWithAddress) => {
   // Set up for the mocks
+  const mockERC20 = await deployMockContract(owner, MockERC20.abi);
   const mockCurrencyController = await deployMockContract(
     owner,
     CurrencyController.abi,
@@ -194,11 +197,13 @@ const deployContracts = async (owner: SignerWithAddress) => {
     })
     .then((factory) => factory.deploy(MINIMUM_RELIABLE_AMOUNT));
   const futureValueVault = await deployContract(owner, FutureValueVault);
+  const zcToken = await deployContract(owner, ZCToken);
 
   await beaconProxyControllerProxy.setLendingMarketImpl(lendingMarket.address);
   await beaconProxyControllerProxy.setFutureValueVaultImpl(
     futureValueVault.address,
   );
+  await beaconProxyControllerProxy.setZCTokenImpl(zcToken.address);
 
   // Deploy external contracts
   const lendingMarketReader = await deployContract(owner, LendingMarketReader, [
@@ -207,6 +212,7 @@ const deployContracts = async (owner: SignerWithAddress) => {
 
   return {
     // mocks
+    mockERC20,
     mockCurrencyController,
     mockTokenVault,
     mockReserveFund,

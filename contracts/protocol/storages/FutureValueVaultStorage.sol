@@ -20,6 +20,9 @@ library FutureValueVaultStorage {
         mapping(uint256 maturity => uint256 amount) removedLendingSupply;
         // Total borrowing amount removed per maturity
         mapping(uint256 maturity => uint256 amount) removedBorrowingSupply;
+        // Mapping from user to tokenized balances per order book id
+        // NOTE: This mapping data doesn't use maturity because this field was added after contract upgrades.
+        mapping(uint8 orderBookId => uint256 balance) totalLockedBalances;
     }
 
     function slot() internal pure returns (Storage storage r) {

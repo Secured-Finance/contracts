@@ -9,7 +9,6 @@ import {ProtocolTypes} from "../../protocol/types/ProtocolTypes.sol";
 contract FutureValueVaultCaller {
     IBeaconProxyController public beaconProxyController;
     mapping(uint8 => address) public futureValueVaults;
-    mapping(bytes32 => uint8) public orderBookIdLists;
 
     constructor(address _beaconProxyController) {
         beaconProxyController = IBeaconProxyController(_beaconProxyController);
@@ -44,6 +43,29 @@ contract FutureValueVaultCaller {
         uint256 _maturity
     ) external {
         IFutureValueVault(futureValueVaults[_orderBookId]).decrease(
+            _orderBookId,
+            _user,
+            _amount,
+            _maturity
+        );
+    }
+
+    function lock(uint8 _orderBookId, address _user, uint256 _amount, uint256 _maturity) external {
+        IFutureValueVault(futureValueVaults[_orderBookId]).lock(
+            _orderBookId,
+            _user,
+            _amount,
+            _maturity
+        );
+    }
+
+    function unlock(
+        uint8 _orderBookId,
+        address _user,
+        uint256 _amount,
+        uint256 _maturity
+    ) external {
+        IFutureValueVault(futureValueVaults[_orderBookId]).unlock(
             _orderBookId,
             _user,
             _amount,

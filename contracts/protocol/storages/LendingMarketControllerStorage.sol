@@ -13,6 +13,11 @@ struct TerminationCurrencyCache {
     uint8 decimals;
 }
 
+struct ZCTokenInfo {
+    bytes32 ccy;
+    uint256 maturity;
+}
+
 library LendingMarketControllerStorage {
     using EnumerableSet for EnumerableSet.Bytes32Set;
     using EnumerableSet for EnumerableSet.UintSet;
@@ -40,6 +45,8 @@ library LendingMarketControllerStorage {
         // List of currency that the user has open orders or positions
         mapping(address user => EnumerableSet.Bytes32Set currency) usedCurrencies;
         mapping(address user => bool isRedeemed) isRedeemed;
+        mapping(bytes32 ccy => mapping(uint256 maturity => address token)) zcTokens;
+        mapping(address token => ZCTokenInfo) zcTokenInfo;
     }
 
     function slot() internal pure returns (Storage storage r) {

@@ -20,6 +20,7 @@ import { deployContracts } from './utils';
 describe('LendingMarketController - Itayose', () => {
   let mockCurrencyController: MockContract;
   let mockTokenVault: MockContract;
+  let mockERC20: MockContract;
   let lendingMarketControllerProxy: Contract;
   let genesisValueVaultProxy: Contract;
   let lendingMarketProxy: Contract;
@@ -53,6 +54,7 @@ describe('LendingMarketController - Itayose', () => {
     [owner, alice, bob, carol, dave] = await ethers.getSigners();
 
     ({
+      mockERC20,
       mockCurrencyController,
       mockTokenVault,
       lendingMarketControllerProxy,
@@ -75,6 +77,8 @@ describe('LendingMarketController - Itayose', () => {
     await mockTokenVault.mock.removeDepositAmount.returns();
     await mockTokenVault.mock.cleanUpUsedCurrencies.returns();
     await mockTokenVault.mock.depositWithPermitFrom.returns();
+    await mockTokenVault.mock.getTokenAddress.returns(mockERC20.address);
+    await mockERC20.mock.decimals.returns(18);
   });
 
   const initialize = async (currency: string, openingDate = genesisDate) => {

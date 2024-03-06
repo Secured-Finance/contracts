@@ -30,6 +30,7 @@ describe('LendingMarketController - Operations', () => {
   let mockCurrencyController: MockContract;
   let mockTokenVault: MockContract;
   let mockReserveFund: MockContract;
+  let mockERC20: MockContract;
   let beaconProxyControllerProxy: Contract;
   let lendingMarketControllerProxy: Contract;
   let genesisValueVaultProxy: Contract;
@@ -64,6 +65,7 @@ describe('LendingMarketController - Operations', () => {
     [owner, alice, bob, carol] = await ethers.getSigners();
 
     ({
+      mockERC20,
       mockCurrencyController,
       mockTokenVault,
       mockReserveFund,
@@ -92,6 +94,8 @@ describe('LendingMarketController - Operations', () => {
     await mockTokenVault.mock.cleanUpUsedCurrencies.returns();
     await mockTokenVault.mock.depositFrom.returns();
     await mockTokenVault.mock.isCovered.returns(true, true);
+    await mockTokenVault.mock.getTokenAddress.returns(mockERC20.address);
+    await mockERC20.mock.decimals.returns(18);
   });
 
   const initialize = async (currency: string) => {
@@ -725,12 +729,14 @@ describe('LendingMarketController - Operations', () => {
           const accounts = [alice, bob, carol, mockReserveFund];
 
           const genesisValues = await Promise.all(
-            accounts.map((account) =>
-              lendingMarketControllerProxy.getGenesisValue(
-                targetCurrency,
-                account.address,
-              ),
-            ),
+            accounts.map(async (account) => {
+              const { amount } =
+                await lendingMarketControllerProxy.getGenesisValue(
+                  targetCurrency,
+                  account.address,
+                );
+              return amount;
+            }),
           );
 
           const totalSupplies = await Promise.all([

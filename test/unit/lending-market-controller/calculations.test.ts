@@ -19,6 +19,7 @@ import { deployContracts } from './utils';
 describe('LendingMarketController - Calculations', () => {
   let mockCurrencyController: MockContract;
   let mockTokenVault: MockContract;
+  let mockERC20: MockContract;
   let lendingMarketControllerProxy: Contract;
 
   let fundManagementLogic: Contract;
@@ -47,6 +48,7 @@ describe('LendingMarketController - Calculations', () => {
     [owner, alice, bob] = await ethers.getSigners();
 
     ({
+      mockERC20,
       mockCurrencyController,
       mockTokenVault,
       lendingMarketControllerProxy,
@@ -73,6 +75,8 @@ describe('LendingMarketController - Calculations', () => {
     await mockTokenVault.mock.isCovered.returns(true, true);
     await mockTokenVault.mock['isCollateral(bytes32[])'].returns([true]);
     await mockTokenVault.mock.calculateCoverage.returns('1000', false);
+    await mockTokenVault.mock.getTokenAddress.returns(mockERC20.address);
+    await mockERC20.mock.decimals.returns(18);
   });
 
   const initialize = async (currency: string) => {

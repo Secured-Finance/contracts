@@ -39,4 +39,4 @@ const getLastFriday = (input: moment.Moment): moment.Moment => {
   return lastFriday;
 };
 
-export { getAdjustedGenesisDate, getGenesisDate };
+export { getAdjustedGenesisDate, getGenesisDate, getLastFriday };

@@ -81,6 +81,15 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
     }
 
     /**
+     * @notice Gets the total locked balance.
+     * @param _orderBookId The order book id
+     * @return The total locked balance
+     */
+    function getTotalLockedBalance(uint8 _orderBookId) external view override returns (uint256) {
+        return Storage.slot().totalLockedBalances[_orderBookId];
+    }
+
+    /**
      * @notice Gets if the account has past maturity balance at the selected maturity.
      * @param _user User's address
      * @param _maturity The maturity of the market
@@ -150,6 +159,56 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
         emit Transfer(address(0), _user, _orderBookId, _maturity, -(_amount.toInt256()));
 
         _updateTotalSupply(_maturity, -_amount.toInt256(), previousBalance);
+    }
+
+    /**
+     * @notice Locks user's balance.
+     * @param _user User's address
+     * @param _amount The amount to lock
+     * @param _maturity The maturity of the market
+     * @return lockedAmount The amount locked
+     */
+    function lock(
+        uint8 _orderBookId,
+        address _user,
+        uint256 _amount,
+        uint256 _maturity
+    ) public override onlyLendingMarketController returns (uint256 lockedAmount) {
+        int256 balance = Storage.slot().balances[_orderBookId][_user];
+
+        if (balance <= 0) revert InsufficientBalance();
+
+        lockedAmount = _amount == 0 ? balance.toUint256() : _amount;
+
+        if (balance.toUint256() < lockedAmount) revert InsufficientBalance();
+
+        Storage.slot().balances[_orderBookId][_user] -= lockedAmount.toInt256();
+        Storage.slot().totalLockedBalances[_orderBookId] += lockedAmount;
+
+        emit BalanceLocked(_orderBookId, _maturity, _user, lockedAmount);
+    }
+
+    /**
+     * @notice Unlocks user's balance.
+     * @param _user User's address
+     * @param _amount The amount to lock
+     * @param _maturity The maturity of the market
+     */
+    function unlock(
+        uint8 _orderBookId,
+        address _user,
+        uint256 _amount,
+        uint256 _maturity
+    ) public override onlyLendingMarketController {
+        if (_amount > Storage.slot().totalLockedBalances[_orderBookId]) {
+            revert InsufficientLockedBalance();
+        }
+
+        Storage.slot().totalLockedBalances[_orderBookId] -= _amount;
+        Storage.slot().balanceMaturities[_orderBookId][_user] = _maturity;
+        Storage.slot().balances[_orderBookId][_user] += _amount.toInt256();
+
+        emit BalanceUnlocked(_orderBookId, _maturity, _user, _amount);
     }
 
     /**

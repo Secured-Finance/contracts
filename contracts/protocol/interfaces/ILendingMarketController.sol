@@ -2,12 +2,12 @@
 pragma solidity 0.8.19;
 
 import {ProtocolTypes} from "../types/ProtocolTypes.sol";
-import {TerminationCurrencyCache} from "../storages/LendingMarketControllerStorage.sol";
+import {ZCTokenInfo, TerminationCurrencyCache} from "../storages/LendingMarketControllerStorage.sol";
 
 interface ILendingMarketController {
     error InvalidMaturity();
     error InvalidCurrency();
-    error AlreadyTerminated();
+    error MarketTerminated();
     error NotTerminated();
     error AlreadyInitialized();
 
@@ -37,6 +37,7 @@ interface ILendingMarketController {
         uint256 workingLendOrdersAmount;
         uint256 claimableAmount;
         uint256 collateralAmount;
+        uint256 unallocatedCollateralAmount;
         uint256 lentAmount;
         uint256 workingBorrowOrdersAmount;
         uint256 debtAmount;
@@ -53,6 +54,8 @@ interface ILendingMarketController {
         uint256 additionalDepositAmount;
         bool ignoreBorrowedAmount;
     }
+
+    function isValidMaturity(bytes32 _ccy, uint256 _maturity) external view returns (bool);
 
     function isTerminated() external view returns (bool);
 
@@ -112,13 +115,26 @@ interface ILendingMarketController {
         address user
     ) external view returns (int256 totalPresentValue);
 
-    function getGenesisValue(bytes32 ccy, address user) external view returns (int256 genesisValue);
+    function getGenesisValue(
+        bytes32 ccy,
+        address user
+    ) external view returns (int256 amount, int256 amountInPV, int256 amountInFV);
 
     function getPosition(
         bytes32 _ccy,
         uint256 _maturity,
         address _user
     ) external view returns (int256 presentValue, int256 futureValue);
+
+    function getZCToken(bytes32 ccy, uint256 maturity) external view returns (address);
+
+    function getZCTokenInfo(address zcToken) external view returns (ZCTokenInfo memory);
+
+    function getWithdrawableZCTokenAmount(
+        bytes32 ccy,
+        uint256 maturity,
+        address user
+    ) external view returns (uint256 amount);
 
     function calculateFunds(
         bytes32 ccy,
@@ -240,4 +256,8 @@ interface ILendingMarketController {
     function cleanUpFunds(bytes32 ccy, address user) external returns (uint256 activeOrderCount);
 
     function updateMinDebtUnitPrice(bytes32 _ccy, uint256 _minDebtUnitPrice) external;
+
+    function withdrawZCToken(bytes32 _ccy, uint256 _maturity, uint256 _amount) external;
+
+    function depositZCToken(bytes32 _ccy, uint256 _maturity, uint256 _amount) external;
 }

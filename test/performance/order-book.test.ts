@@ -39,9 +39,6 @@ describe('Performance Test: Order Book', async () => {
       orderActionLogic,
     } = await deployContracts());
 
-    await tokenVault.registerCurrency(hexETH, wETHToken.address, false);
-    await tokenVault.registerCurrency(hexUSDC, usdcToken.address, false);
-
     await tokenVault.updateLiquidationConfiguration(
       LIQUIDATION_THRESHOLD_RATE,
       FULL_LIQUIDATION_THRESHOLD_RATE,

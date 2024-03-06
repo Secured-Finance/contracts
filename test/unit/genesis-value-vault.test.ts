@@ -581,6 +581,141 @@ describe('GenesisValueVault', () => {
       });
     });
 
+    describe('Lock and unlock balance', async () => {
+      it('Lock user balance', async () => {
+        const lockedBalanceBefore =
+          await genesisValueVaultProxy.getTotalLockedBalance(targetCurrency);
+
+        await genesisValueVaultCaller.updateGenesisValueWithFutureValue(
+          targetCurrency,
+          alice.address,
+          maturity,
+          fvAmount,
+        );
+
+        const aliceBalance = await genesisValueVaultProxy.getBalance(
+          targetCurrency,
+          alice.address,
+        );
+
+        await expect(
+          genesisValueVaultCaller.lock(
+            targetCurrency,
+            alice.address,
+            aliceBalance,
+          ),
+        )
+          .emit(genesisValueVaultProxy, 'BalanceLocked')
+          .withArgs(targetCurrency, alice.address, aliceBalance);
+
+        const lockedBalanceAfter =
+          await genesisValueVaultProxy.getTotalLockedBalance(targetCurrency);
+
+        expect(lockedBalanceAfter.sub(lockedBalanceBefore)).to.equals(
+          aliceBalance,
+        );
+      });
+
+      it('Unlock user balance', async () => {
+        await genesisValueVaultCaller.updateGenesisValueWithFutureValue(
+          targetCurrency,
+          alice.address,
+          maturity,
+          fvAmount,
+        );
+
+        const aliceBalance = await genesisValueVaultProxy.getBalance(
+          targetCurrency,
+          alice.address,
+        );
+
+        await genesisValueVaultCaller.lock(
+          targetCurrency,
+          alice.address,
+          aliceBalance,
+        );
+
+        const lockedBalanceBefore =
+          await genesisValueVaultProxy.getTotalLockedBalance(targetCurrency);
+
+        await expect(
+          genesisValueVaultCaller.unlock(
+            targetCurrency,
+            alice.address,
+            aliceBalance,
+          ),
+        )
+          .emit(genesisValueVaultProxy, 'BalanceUnlocked')
+          .withArgs(targetCurrency, alice.address, aliceBalance);
+
+        const lockedBalanceAfter =
+          await genesisValueVaultProxy.getTotalLockedBalance(targetCurrency);
+
+        expect(lockedBalanceBefore.sub(lockedBalanceAfter)).to.equals(
+          aliceBalance,
+        );
+      });
+
+      it('Fail to lock user balance if balance is minus', async () => {
+        await genesisValueVaultCaller.updateGenesisValueWithFutureValue(
+          targetCurrency,
+          alice.address,
+          maturity,
+          -fvAmount,
+        );
+
+        await expect(
+          genesisValueVaultCaller.lock(targetCurrency, alice.address, 100),
+        ).revertedWith('InsufficientBalance');
+      });
+
+      it('Fail to lock user balance if balance is 0', async () => {
+        await expect(
+          genesisValueVaultCaller.lock(targetCurrency, alice.address, 100),
+        ).revertedWith('InsufficientBalance');
+      });
+
+      it('Fail to unlock user balance if if total unlock balance is insufficient', async () => {
+        await genesisValueVaultCaller.updateGenesisValueWithFutureValue(
+          targetCurrency,
+          alice.address,
+          maturity,
+          fvAmount,
+        );
+
+        const aliceBalance = await genesisValueVaultProxy.getBalance(
+          targetCurrency,
+          alice.address,
+        );
+
+        await genesisValueVaultCaller.lock(
+          targetCurrency,
+          alice.address,
+          aliceBalance,
+        );
+
+        await expect(
+          genesisValueVaultCaller.unlock(
+            targetCurrency,
+            alice.address,
+            aliceBalance.add(1),
+          ),
+        ).revertedWith('InsufficientLockedBalance');
+      });
+
+      it('Fail to lock user balance due to execution by non-accepted contract', async () => {
+        await expect(
+          genesisValueVaultProxy.lock(targetCurrency, alice.address, 100),
+        ).revertedWith('OnlyAcceptedContract("LendingMarketController")');
+      });
+
+      it('Fail to unlock user balance due to execution by non-accepted contract', async () => {
+        await expect(
+          genesisValueVaultProxy.unlock(targetCurrency, alice.address, 100),
+        ).revertedWith('OnlyAcceptedContract("LendingMarketController")');
+      });
+    });
+
     describe('Transfer balance', async () => {
       it('Transfer balance to another user', async () => {
         await genesisValueVaultCaller.updateGenesisValueWithFutureValue(

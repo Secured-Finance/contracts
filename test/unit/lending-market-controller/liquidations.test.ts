@@ -20,6 +20,7 @@ describe('LendingMarketController - Liquidations', () => {
   let mockCurrencyController: MockContract;
   let mockTokenVault: MockContract;
   let mockReserveFund: MockContract;
+  let mockERC20: MockContract;
   let lendingMarketControllerProxy: Contract;
   let maturities: BigNumber[];
 
@@ -76,6 +77,7 @@ describe('LendingMarketController - Liquidations', () => {
     [owner, ...signers] = await ethers.getSigners();
 
     ({
+      mockERC20,
       mockCurrencyController,
       mockTokenVault,
       mockReserveFund,
@@ -104,6 +106,10 @@ describe('LendingMarketController - Liquidations', () => {
     await mockTokenVault.mock.addDepositAmount.returns();
     await mockTokenVault.mock.removeDepositAmount.returns();
     await mockTokenVault.mock.cleanUpUsedCurrencies.returns();
+    await mockTokenVault.mock.getTokenAddress.returns(
+      ethers.constants.AddressZero,
+    );
+    await mockERC20.mock.decimals.returns(18);
   });
 
   beforeEach(async () => {
@@ -119,6 +125,7 @@ describe('LendingMarketController - Liquidations', () => {
     await mockTokenVault.mock.transferFrom.returns(0);
     await mockTokenVault.mock.isCovered.returns(true, true);
     await mockTokenVault.mock.isCollateral.returns(true);
+    await mockTokenVault.mock.getTokenAddress.returns(mockERC20.address);
     await mockReserveFund.mock.isPaused.returns(true);
     await mockCurrencyController.mock[
       'convert(bytes32,bytes32,uint256)'
@@ -139,10 +146,6 @@ describe('LendingMarketController - Liquidations', () => {
 
     beforeEach(async () => {
       [alice] = getUsers(1);
-
-      await mockTokenVault.mock.getTokenAddress.returns(
-        ethers.constants.AddressZero,
-      );
 
       liquidator = await ethers
         .getContractFactory('Liquidator')

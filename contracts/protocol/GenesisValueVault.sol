@@ -43,6 +43,11 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         contracts[1] = Contracts.RESERVE_FUND;
     }
 
+    // @inheritdoc Proxyable
+    function getRevision() external pure override returns (uint256) {
+        return 0x2;
+    }
+
     /**
      * @notice Gets if the currency is initialized.
      * @param _ccy Currency name in bytes32
@@ -174,6 +179,15 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         bytes32 _ccy
     ) external view override returns (AutoRollLog memory) {
         return Storage.slot().autoRollLogs[_ccy][Storage.slot().currentMaturity[_ccy]];
+    }
+
+    /**
+     * @notice Gets the total locked balance.
+     * @param _ccy Currency name in bytes32
+     * @return The total locked balance
+     */
+    function getTotalLockedBalance(bytes32 _ccy) external view override returns (uint256) {
+        return Storage.slot().totalLockedBalances[_ccy];
     }
 
     /**
@@ -412,6 +426,54 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         if (Storage.slot().maturityBalances[_ccy][_basisMaturity] != 0) {
             revert ResidualAmountIsNotZero();
         }
+    }
+
+    /**
+     * @notice Locks user's balance.
+     * @param _ccy Currency name in bytes32
+     * @param _user User's address
+     * @param _amount The amount to lock
+     * @return lockedAmount The amount locked
+     */
+    function lock(
+        bytes32 _ccy,
+        address _user,
+        uint256 _amount
+    ) public override onlyLendingMarketController returns (uint256 lockedAmount) {
+        int256 balance = getBalance(_ccy, _user);
+
+        if (balance <= 0) revert InsufficientBalance();
+
+        lockedAmount = _amount == 0 ? balance.toUint256() : _amount;
+
+        if (balance.toUint256() < lockedAmount) revert InsufficientBalance();
+
+        Storage.slot().balances[_ccy][_user] -= lockedAmount.toInt256();
+        Storage.slot().totalLockedBalances[_ccy] += lockedAmount;
+
+        emit BalanceLocked(_ccy, _user, lockedAmount);
+    }
+
+    /**
+     * @notice Unlocks user's balance.
+     * @param _ccy Currency name in bytes32
+     * @param _user User's address
+     * @param _amount The amount to lock
+     */
+    function unlock(
+        bytes32 _ccy,
+        address _user,
+        uint256 _amount
+    ) public override onlyLendingMarketController {
+        if (_amount > Storage.slot().totalLockedBalances[_ccy]) {
+            revert InsufficientLockedBalance();
+        }
+
+        Storage.slot().totalLockedBalances[_ccy] -= _amount;
+        Storage.slot().userMaturities[_ccy][_user] = getCurrentMaturity(_ccy);
+        Storage.slot().balances[_ccy][_user] += _amount.toInt256();
+
+        emit BalanceUnlocked(_ccy, _user, _amount);
     }
 
     /**
