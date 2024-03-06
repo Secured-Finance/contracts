@@ -154,10 +154,10 @@ describe('Integration Test: Tokenization', async () => {
       expect(await token.asset()).to.equal(wETHToken.address);
       expect(await token.maturity()).to.equal(maturities[0]);
       expect(await token.name()).to.equal(
-        `ZC Wrapped Ether ${maturity.format('MMMYYYY').toUpperCase()}`,
+        `ZC ETH ${maturity.format('MMMYYYY').toUpperCase()}`,
       );
       expect(await token.symbol()).to.equal(
-        `zcWETH-${maturity.format('YYYY-MM')}`,
+        `zcETH-${maturity.format('YYYY-MM')}`,
       );
     });
 
@@ -175,8 +175,8 @@ describe('Integration Test: Tokenization', async () => {
       );
       expect(await token.asset()).to.equal(wETHToken.address);
       expect(await token.maturity()).to.equal(0);
-      expect(await token.name()).to.equal('ZC Wrapped Ether');
-      expect(await token.symbol()).to.equal('zcWETH');
+      expect(await token.name()).to.equal('ZC ETH');
+      expect(await token.symbol()).to.equal('zcETH');
     });
 
     it('Check ZC token info of USDC', async () => {
@@ -198,7 +198,7 @@ describe('Integration Test: Tokenization', async () => {
       expect(await token.asset()).to.equal(usdcToken.address);
       expect(await token.maturity()).to.equal(maturities[0]);
       expect(await token.name()).to.equal(
-        `ZC USD Coin ${maturity.format('MMMYYYY').toUpperCase()}`,
+        `ZC USDC ${maturity.format('MMMYYYY').toUpperCase()}`,
       );
       expect(await token.symbol()).to.equal(
         `zcUSDC-${maturity.format('YYYY-MM')}`,

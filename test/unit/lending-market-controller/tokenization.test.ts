@@ -33,7 +33,6 @@ describe('LendingMarketController - Tokenization', () => {
   let lendingMarketOperationLogic: Contract;
 
   let maturities: BigNumber[];
-  let targetCurrencyName: string;
   let targetCurrencySymbol: string;
   let targetCurrency: string;
   let currencyIdx = 0;
@@ -85,16 +84,12 @@ describe('LendingMarketController - Tokenization', () => {
   });
 
   beforeEach(async () => {
-    targetCurrencyName = `Test ${currencyIdx}`;
     targetCurrencySymbol = `Test${currencyIdx}`;
     targetCurrency = ethers.utils.formatBytes32String(targetCurrencySymbol);
     currencyIdx++;
 
     const { timestamp } = await ethers.provider.getBlock('latest');
     genesisDate = getGenesisDate(timestamp * 1000);
-
-    await mockERC20.mock.name.returns(targetCurrencyName);
-    await mockERC20.mock.symbol.returns(targetCurrencySymbol);
   });
 
   const initialize = async (currency: string, marketCount = 4) => {
@@ -119,7 +114,7 @@ describe('LendingMarketController - Tokenization', () => {
 
   describe('Token Deployments', async () => {
     it('Create a new zc perpetual token', async () => {
-      const tokenName = `ZC ${targetCurrencyName}`;
+      const tokenName = `ZC ${targetCurrencySymbol}`;
       const tokenSymbol = `zc${targetCurrencySymbol}`;
 
       await expect(
@@ -162,7 +157,7 @@ describe('LendingMarketController - Tokenization', () => {
       const nextMaturity = getLastFriday(
         moment(maturities[maturities.length - 1] * 1000).add(3, 'M'),
       );
-      const tokenName = `ZC ${targetCurrencyName} ${nextMaturity
+      const tokenName = `ZC ${targetCurrencySymbol} ${nextMaturity
         .format('MMMYYYY')
         .toUpperCase()}`;
       const tokenSymbol = `zc${targetCurrencySymbol}-${nextMaturity.format(
@@ -213,7 +208,7 @@ describe('LendingMarketController - Tokenization', () => {
       const nextMaturity = getLastFriday(
         moment(maturities[maturities.length - 1] * 1000).add(3, 'M'),
       );
-      const tokenName = `ZC ${targetCurrencyName} ${nextMaturity
+      const tokenName = `ZC ${targetCurrencySymbol} ${nextMaturity
         .format('MMMYYYY')
         .toUpperCase()}`;
       const tokenSymbol = `zc${targetCurrencySymbol}-${nextMaturity.format(
@@ -262,7 +257,7 @@ describe('LendingMarketController - Tokenization', () => {
         .withArgs(
           targetCurrency,
           0,
-          `ZC ${targetCurrencyName}`,
+          `ZC ${targetCurrencySymbol}`,
           `zc${targetCurrencySymbol}`,
           24,
           () => true,

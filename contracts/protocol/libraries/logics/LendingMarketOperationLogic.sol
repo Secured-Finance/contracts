@@ -346,8 +346,10 @@ library LendingMarketOperationLogic {
         }
 
         address tokenAddress = AddressResolverLib.tokenVault().getTokenAddress(_ccy);
-        string memory symbol = string.concat("zc", IERC20Metadata(tokenAddress).symbol());
-        string memory name = string.concat("ZC ", IERC20Metadata(tokenAddress).name());
+        string memory tokenSymbol = bytes32ToString(_ccy);
+
+        string memory symbol = string.concat("zc", tokenSymbol);
+        string memory name = string.concat("ZC ", tokenSymbol);
         uint8 decimals = IERC20Metadata(tokenAddress).decimals() + GENESIS_VALUE_BASE_DECIMALS;
 
         // If the maturity is 0, the ZCToken is created as a perpetual one.
@@ -388,6 +390,20 @@ library LendingMarketOperationLogic {
         } else {
             return _getLastFridayAfterMonths(_timestamp, _period);
         }
+    }
+
+    function bytes32ToString(bytes32 _bytes32) public pure returns (string memory) {
+        uint256 i = 0;
+        while (i < 32 && _bytes32[i] != 0) {
+            i++;
+        }
+
+        bytes memory bytesArray = new bytes(i);
+        for (i = 0; i < 32 && _bytes32[i] != 0; i++) {
+            bytesArray[i] = _bytes32[i];
+        }
+
+        return string(bytesArray);
     }
 
     function _getLastFridayAfterMonths(

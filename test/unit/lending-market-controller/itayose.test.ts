@@ -30,8 +30,6 @@ describe('LendingMarketController - Itayose', () => {
   let orderBookLogic: Contract;
 
   let maturities: BigNumber[];
-  let targetCurrencyName: string;
-  let targetCurrencySymbol: string;
   let targetCurrency: string;
   let currencyIdx = 0;
   let genesisDate: number;
@@ -43,14 +41,10 @@ describe('LendingMarketController - Itayose', () => {
   let dave: SignerWithAddress;
 
   beforeEach(async () => {
-    targetCurrencyName = `Test ${currencyIdx}`;
-    targetCurrencySymbol = `Test${currencyIdx}`;
-    targetCurrency = ethers.utils.formatBytes32String(targetCurrencySymbol);
+    targetCurrency = ethers.utils.formatBytes32String(`Test${currencyIdx}`);
     currencyIdx++;
 
     await mockCurrencyController.mock.getCurrencies.returns([targetCurrency]);
-    await mockERC20.mock.name.returns(targetCurrencyName);
-    await mockERC20.mock.symbol.returns(targetCurrencySymbol);
 
     const { timestamp } = await ethers.provider.getBlock('latest');
     genesisDate = getGenesisDate(timestamp * 1000);
