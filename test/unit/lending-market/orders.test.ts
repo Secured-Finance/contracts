@@ -359,6 +359,98 @@ describe('LendingMarket - Orders', () => {
         ),
       ).revertedWith('OnlyAcceptedContract("LendingMarketController")');
     });
+
+    it('Fail to create a order due to an existing order with a past maturity', async () => {
+      const orderBookIdBefore = currentOrderBookId;
+
+      await lendingMarketCaller
+        .connect(alice)
+        .executeOrder(
+          targetCurrency,
+          currentOrderBookId,
+          Side.BORROW,
+          '100000000000000000',
+          '9000',
+        );
+      await lendingMarketCaller
+        .connect(bob)
+        .executeOrder(
+          targetCurrency,
+          currentOrderBookId,
+          Side.LEND,
+          '100000000000000000',
+          '8000',
+        );
+
+      // Create the order book 255 times for testing of the circulated `lastOrderBookId`
+      // to avoid exceeding the maximum value of uint8.
+      const calls: (() => void)[] = [];
+
+      for (let i = 0; i < 255; i++) {
+        await time.increaseTo(maturity - 172800);
+
+        const { timestamp: newTimestamp } = await ethers.provider.getBlock(
+          'latest',
+        );
+        const newMaturity = moment(newTimestamp * 1000)
+          .add(1, 'M')
+          .unix();
+        const newOpeningDate = moment(newTimestamp * 1000).unix();
+
+        calls.push(() => {
+          lendingMarketCaller.executeAutoRoll(
+            targetCurrency,
+            currentOrderBookId,
+            currentOrderBookId,
+            10000,
+          );
+        });
+
+        calls.push(() =>
+          lendingMarketCaller.createOrderBook(
+            targetCurrency,
+            newMaturity,
+            newOpeningDate,
+            newOpeningDate - 604800,
+          ),
+        );
+
+        maturity = newMaturity;
+      }
+
+      await Promise.all(calls.map((call) => call()));
+
+      // Get the circulated current order book id.
+      currentOrderBookId = await lendingMarketCaller.getOrderBookId(
+        targetCurrency,
+      );
+
+      expect(currentOrderBookId).to.equal(orderBookIdBefore);
+
+      await expect(
+        lendingMarketCaller
+          .connect(alice)
+          .executeOrder(
+            targetCurrency,
+            currentOrderBookId,
+            Side.LEND,
+            '100000000000000000',
+            '9000',
+          ),
+      ).to.be.revertedWith('PastMaturityOrderExists');
+
+      await expect(
+        lendingMarketCaller
+          .connect(bob)
+          .executeOrder(
+            targetCurrency,
+            currentOrderBookId,
+            Side.BORROW,
+            '100000000000000000',
+            '8000',
+          ),
+      ).to.be.revertedWith('PastMaturityOrderExists');
+    });
   });
 
   describe('Execute pre-orders', async () => {

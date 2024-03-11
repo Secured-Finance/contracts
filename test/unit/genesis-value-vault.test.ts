@@ -18,7 +18,6 @@ describe('GenesisValueVault', () => {
   let mockReserveFund: MockContract;
 
   let genesisValueVaultProxy: Contract;
-  ReserveFund;
   let genesisValueVaultCaller: Contract;
 
   let owner: SignerWithAddress;
@@ -380,16 +379,20 @@ describe('GenesisValueVault', () => {
           await genesisValueVaultProxy.getTotalLendingSupply(targetCurrency);
         const totalBorrowingSupply =
           await genesisValueVaultProxy.getTotalBorrowingSupply(targetCurrency);
-        const aliceBalanceInFV =
-          await genesisValueVaultProxy.getBalanceInFutureValue(
-            targetCurrency,
-            alice.address,
-          );
         const maturityBalance =
           await genesisValueVaultProxy.getMaturityGenesisValue(
             targetCurrency,
             maturity,
           );
+        const aliceBalance = await genesisValueVaultProxy.getBalance(
+          targetCurrency,
+          alice.address,
+        );
+        const aliceBalanceInFV = await genesisValueVaultProxy.calculateFVFromGV(
+          targetCurrency,
+          0,
+          aliceBalance,
+        );
 
         expect(totalLendingSupply).to.equals(
           fvAmount

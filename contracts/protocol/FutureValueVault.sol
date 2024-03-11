@@ -257,7 +257,7 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
         currentAmount = Storage.slot().balances[_orderBookId][_user];
         maturity = Storage.slot().balanceMaturities[_orderBookId][_user];
 
-        if (maturity < block.timestamp && currentAmount != 0) {
+        if (maturity <= block.timestamp && currentAmount != 0) {
             removedAmount = currentAmount;
 
             isAllRemoved = false;

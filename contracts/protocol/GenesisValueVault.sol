@@ -100,24 +100,6 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
     }
 
     /**
-     * @notice Gets the future value of the user balance.
-     * @param _ccy Currency name in bytes32
-     * @param _user User's address
-     * @return The future value of the user balance
-     */
-    function getBalanceInFutureValue(
-        bytes32 _ccy,
-        address _user
-    ) external view override returns (int256) {
-        // NOTE: The formula is:
-        // futureValue = genesisValue * currentCompoundFactor.
-        return
-            (getBalance(_ccy, _user) * getLendingCompoundFactor(_ccy).toInt256()).div(
-                (10 ** decimals(_ccy)).toInt256()
-            );
-    }
-
-    /**
      * @notice Gets the current total supply per maturity
      * @param _ccy Currency name in bytes32
      * @param _maturity The maturity

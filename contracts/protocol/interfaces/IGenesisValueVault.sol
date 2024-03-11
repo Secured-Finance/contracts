@@ -39,8 +39,6 @@ interface IGenesisValueVault {
 
     function getBalance(bytes32 ccy, address user) external view returns (int256);
 
-    function getBalanceInFutureValue(bytes32 ccy, address user) external view returns (int256);
-
     function getMaturityGenesisValue(bytes32 ccy, uint256 maturity) external view returns (int256);
 
     function getCurrentMaturity(bytes32 ccy) external view returns (uint256);

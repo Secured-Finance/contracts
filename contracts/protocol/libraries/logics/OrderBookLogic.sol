@@ -327,7 +327,14 @@ library OrderBookLogic {
     }
 
     function _nextOrderBookId() internal returns (uint8) {
-        Storage.slot().lastOrderBookId++;
+        // NOTE: Originally, matured ordebooks were reused as new orderbooks after auto-rolls, but this reusing logic has been removed.
+        // This means that `orderBookId` is increased in proportion to the number of auto-rolls executed. To avoid overflow of `orderBookId`,
+        // `orderBookId` circulate between 1 and 255.
+        if (Storage.slot().lastOrderBookId == type(uint8).max) {
+            Storage.slot().lastOrderBookId = 1;
+        } else {
+            Storage.slot().lastOrderBookId++;
+        }
         return Storage.slot().lastOrderBookId;
     }
 
