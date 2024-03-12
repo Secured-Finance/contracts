@@ -152,6 +152,10 @@ describe('GenesisValueVault', () => {
       );
       expect(autoRollLog.next).to.equals(0);
       expect(autoRollLog.prev).to.equals(0);
+
+      expect(
+        await genesisValueVaultProxy.isAutoRolled(targetCurrency, maturity),
+      ).to.false;
     });
 
     it('Fail to call initialization due to duplicate execution', async () => {
@@ -954,6 +958,10 @@ describe('GenesisValueVault', () => {
     });
 
     it('Execute auto-roll', async () => {
+      expect(
+        await genesisValueVaultProxy.isAutoRolled(targetCurrency, maturity),
+      ).to.false;
+
       await genesisValueVaultCaller.updateGenesisValueWithFutureValue(
         targetCurrency,
         alice.address,
@@ -1028,6 +1036,10 @@ describe('GenesisValueVault', () => {
       expect(autoRollLog.borrowingCompoundFactor).to.equals(
         borrowingCompoundFactor,
       );
+
+      expect(
+        await genesisValueVaultProxy.isAutoRolled(targetCurrency, maturity),
+      ).to.true;
     });
 
     it('Calculate the balance fluctuation of auto-rolls by on the current maturity', async () => {

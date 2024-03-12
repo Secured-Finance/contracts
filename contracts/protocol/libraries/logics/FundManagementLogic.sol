@@ -150,9 +150,17 @@ library FundManagementLogic {
     function convertFutureValueToGenesisValue(
         bytes32 _ccy,
         uint8 _orderBookId,
+        uint256 _maturity,
         address _user
     ) public returns (int256) {
         address futureValueVault = Storage.slot().futureValueVaults[_ccy];
+        bool isAutoRolled = AddressResolverLib.genesisValueVault().isAutoRolled(_ccy, _maturity);
+
+        if (!isAutoRolled) {
+            (int256 amount, ) = IFutureValueVault(futureValueVault).getBalance(_orderBookId, _user);
+            return amount;
+        }
+
         (
             int256 removedAmount,
             int256 currentAmount,
@@ -377,10 +385,10 @@ library FundManagementLogic {
         for (uint256 i; i < vars.maturities.length; i++) {
             uint256 currentMaturity = vars.maturities[i];
             uint8 currentOrderBookId = Storage.slot().maturityOrderBookIds[_ccy][currentMaturity];
-            bool isAutoRolled = AddressResolverLib
-                .genesisValueVault()
-                .getAutoRollLog(_ccy, currentMaturity)
-                .next != 0;
+            bool isAutoRolled = AddressResolverLib.genesisValueVault().isAutoRolled(
+                _ccy,
+                currentMaturity
+            );
 
             if (vars.isDefaultMarket || currentOrderBookId == vars.orderBookId) {
                 {
@@ -721,18 +729,24 @@ library FundManagementLogic {
         uint256[] memory maturities = getUsedMaturities(_ccy, _user);
 
         for (uint256 i; i < maturities.length; i++) {
-            uint8 orderBookId = Storage.slot().maturityOrderBookIds[_ccy][maturities[i]];
+            uint256 maturity = maturities[i];
+            uint8 orderBookId = Storage.slot().maturityOrderBookIds[_ccy][maturity];
             uint256 activeOrderCount = _cleanUpOrders(_ccy, orderBookId, _user);
             totalActiveOrderCount += activeOrderCount;
 
-            int256 currentFutureValue = convertFutureValueToGenesisValue(_ccy, orderBookId, _user);
+            int256 currentFutureValue = convertFutureValueToGenesisValue(
+                _ccy,
+                orderBookId,
+                maturity,
+                _user
+            );
 
             if (currentFutureValue != 0) {
                 futureValueExists = true;
             }
 
             if (currentFutureValue == 0 && activeOrderCount == 0) {
-                Storage.slot().usedMaturities[_ccy][_user].remove(maturities[i]);
+                Storage.slot().usedMaturities[_ccy][_user].remove(maturity);
             }
 
             AddressResolverLib.genesisValueVault().cleanUpBalance(
