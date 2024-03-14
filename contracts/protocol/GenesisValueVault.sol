@@ -227,7 +227,13 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         // NOTE: The formula is: genesisValue = featureValue / compoundFactor.
         bool isPlus = _futureValue > 0;
         uint256 absFv = (isPlus ? _futureValue : -_futureValue).toUint256();
-        uint256 absGv = (absFv * 10 ** decimals(_ccy)).div(compoundFactor);
+        uint256 absGv = Math.mulDiv(
+            absFv,
+            10 ** decimals(_ccy),
+            compoundFactor,
+            Math.Rounding.Down
+        );
+
         return isPlus ? absGv.toInt256() : -(absGv.toInt256());
     }
 
@@ -248,9 +254,10 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
 
         if (compoundFactor == 0) revert NoCompoundFactorExists({maturity: _basisMaturity});
 
+        // NOTE: The formula is: featureValue = genesisValue * compoundFactor.
         bool isPlus = _genesisValue > 0;
         uint256 absGv = (isPlus ? _genesisValue : -_genesisValue).toUint256();
-        uint256 absFv = (absGv * compoundFactor).div(10 ** decimals(_ccy));
+        uint256 absFv = Math.mulDiv(absGv, compoundFactor, 10 ** decimals(_ccy), Math.Rounding.Up);
 
         return isPlus ? absFv.toInt256() : -(absFv.toInt256());
     }
@@ -528,6 +535,7 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
     /**
      * @notice Forces a reset of the user's genesis value.
      * @param _ccy Currency name in bytes32
+     * @param _maturity The maturity
      * @param _user User's address
      * @param _amountInFV The amount in the future value to reset
      */

@@ -135,3 +135,39 @@ export const calculateAutoRolledBorrowingCompoundFactor = (
       .toFixed(),
   );
 };
+
+export const calculateFVFromFV = (
+  futureValue: BigNumber,
+  compoundFactorFrom: BigNumber,
+  compoundFactorTo: BigNumber,
+  gvDecimals: number,
+) => {
+  const gvDigit = BigNumberJS(10).pow(gvDecimals.toString());
+
+  return BigNumber.from(
+    BigNumberJS(futureValue.toString())
+      .times(gvDigit)
+      .div(compoundFactorFrom.toString())
+      .dp(0, BigNumberJS.ROUND_DOWN)
+      .times(compoundFactorTo.toString())
+      .div(gvDigit)
+      .dp(0, BigNumberJS.ROUND_UP)
+      .toFixed(),
+  );
+};
+
+export const calculateGVFromFV = (
+  futureValue: BigNumber,
+  compoundFactor: BigNumber,
+  gvDecimals: number,
+) => {
+  const gvDigit = BigNumberJS(10).pow(gvDecimals.toString());
+
+  return BigNumber.from(
+    BigNumberJS(futureValue.toString())
+      .times(gvDigit)
+      .div(compoundFactor.toString())
+      .dp(0, BigNumberJS.ROUND_DOWN)
+      .toFixed(),
+  );
+};

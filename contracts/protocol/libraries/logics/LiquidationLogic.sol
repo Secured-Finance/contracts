@@ -21,7 +21,6 @@ library LiquidationLogic {
     error NoDebt(address user, bytes32 ccy, uint256 maturity);
     error NoLiquidationAmount(address user, bytes32 ccy);
     error InvalidLiquidation();
-    error InvalidRepaymentAmount();
     error InvalidCurrency(bytes32 ccy);
     error NotRepaymentPeriod();
 
@@ -326,14 +325,12 @@ library LiquidationLogic {
             liquidationAmountInDebtCcy
         );
 
-        if (repaymentAmount != liquidationAmountInDebtCcy) revert InvalidRepaymentAmount();
-
         emit ForcedRepaymentExecuted(
             _user,
             _collateralCcy,
             _debtCcy,
             _debtMaturity,
-            liquidationAmountInDebtCcy
+            repaymentAmount
         );
     }
 
