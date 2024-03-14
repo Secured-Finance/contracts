@@ -1,6 +1,5 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { time } from '@openzeppelin/test-helpers';
-import BigNumberJS from 'bignumber.js';
 import { expect } from 'chai';
 import { MockContract } from 'ethereum-waffle';
 import { BigNumber, Contract } from 'ethers';
@@ -19,6 +18,7 @@ import {
 import {
   calculateAutoRolledBorrowingCompoundFactor,
   calculateAutoRolledLendingCompoundFactor,
+  calculateFVFromFV,
 } from '../../common/orders';
 import { deployContracts } from './utils';
 
@@ -523,33 +523,32 @@ describe('LendingMarketController - Rotations', () => {
             .then(({ futureValue }) => futureValue),
         ),
       );
+      const gvDecimals = await genesisValueVaultProxy.decimals(targetCurrency);
 
       expect(aliceFVAfter).to.equal(
-        BigNumberJS(aliceFVBefore.toString())
-          .times(
-            calculateAutoRolledLendingCompoundFactor(
-              autoRollLogBefore.lendingCompoundFactor,
-              maturities[1].sub(maturities[0]),
-              8571,
-            ).toString(),
-          )
-          .div(autoRollLogBefore.lendingCompoundFactor.toString())
-          .dp(0)
-          .toFixed(),
+        calculateFVFromFV(
+          aliceFVBefore,
+          autoRollLogBefore.lendingCompoundFactor,
+          calculateAutoRolledLendingCompoundFactor(
+            autoRollLogBefore.lendingCompoundFactor,
+            maturities[1].sub(maturities[0]),
+            8571,
+          ),
+          gvDecimals,
+        ),
       );
 
       expect(bobFVAfter).to.equal(
-        BigNumberJS(bobFVBefore.toString())
-          .times(
-            calculateAutoRolledBorrowingCompoundFactor(
-              autoRollLogBefore.borrowingCompoundFactor,
-              maturities[1].sub(maturities[0]),
-              8571,
-            ).toString(),
-          )
-          .div(autoRollLogBefore.borrowingCompoundFactor.toString())
-          .dp(0)
-          .toFixed(),
+        calculateFVFromFV(
+          bobFVBefore,
+          autoRollLogBefore.borrowingCompoundFactor,
+          calculateAutoRolledBorrowingCompoundFactor(
+            autoRollLogBefore.borrowingCompoundFactor,
+            maturities[1].sub(maturities[0]),
+            8571,
+          ),
+          gvDecimals,
+        ),
       );
     });
 

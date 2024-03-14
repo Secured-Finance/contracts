@@ -1,6 +1,5 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { time } from '@openzeppelin/test-helpers';
-import BigNumberJS from 'bignumber.js';
 import { expect } from 'chai';
 import { BigNumber, Contract } from 'ethers';
 import { ethers } from 'hardhat';
@@ -18,7 +17,9 @@ import { deployContracts } from '../common/deployment';
 import { formatOrdinals } from '../common/format';
 import {
   calculateAutoRolledLendingCompoundFactor,
+  calculateFVFromFV,
   calculateFutureValue,
+  calculateGVFromFV,
   calculateOrderFee,
 } from '../common/orders';
 import { Signers } from '../common/signers';
@@ -300,18 +301,10 @@ describe('Integration Test: Auto-rolls', async () => {
       const gvDecimals = await genesisValueVault.decimals(hexETH);
 
       expect(aliceFVAfter).to.equal(
-        BigNumberJS(aliceFVBefore.toString())
-          .times(lendingCF1.toString())
-          .div(lendingCF0.toString())
-          .dp(0)
-          .toFixed(),
+        calculateFVFromFV(aliceFVBefore, lendingCF0, lendingCF1, gvDecimals),
       );
       expect(aliceGVAfter).to.equal(
-        BigNumberJS(aliceFVBefore.toString())
-          .times(BigNumberJS(10).pow(gvDecimals.toString()))
-          .div(lendingCF0.toString())
-          .dp(0)
-          .toFixed(),
+        calculateGVFromFV(aliceFVBefore, lendingCF0, gvDecimals),
       );
 
       // Check the saved unit price and compound factor per maturity
@@ -360,15 +353,17 @@ describe('Integration Test: Auto-rolls', async () => {
         await genesisValueVault.getAutoRollLog(hexETH, maturities[0]);
       const { lendingCompoundFactor: lendingCF1 } =
         await genesisValueVault.getAutoRollLog(hexETH, maturities[1]);
+      const gvDecimals = await genesisValueVault.decimals(hexETH);
 
       expect(
         aliceFVAfter
           .sub(
-            BigNumberJS(aliceFVBefore.toString())
-              .times(lendingCF1.toString())
-              .div(lendingCF0.toString())
-              .dp(0)
-              .toFixed(),
+            calculateFVFromFV(
+              aliceFVBefore,
+              lendingCF0,
+              lendingCF1,
+              gvDecimals,
+            ),
           )
           .abs(),
       ).lte(1);
@@ -581,12 +576,14 @@ describe('Integration Test: Auto-rolls', async () => {
       expect(
         aliceFV1After
           .sub(
-            BigNumberJS(aliceFV0Before.toString())
-              .times(lendingCF1.toString())
-              .div(lendingCF0.toString())
-              .plus(aliceFV1Before.toString())
-              .dp(0)
-              .toFixed(),
+            aliceFV1Before.add(
+              calculateFVFromFV(
+                aliceFV0Before,
+                lendingCF0,
+                lendingCF1,
+                await genesisValueVault.decimals(hexETH),
+              ),
+            ),
           )
           .abs(),
       ).lte(1);
@@ -726,12 +723,14 @@ describe('Integration Test: Auto-rolls', async () => {
       expect(
         aliceFV1After
           .sub(
-            BigNumberJS(aliceFV0Before.toString())
-              .times(lendingCF1.toString())
-              .div(lendingCF0.toString())
-              .plus(aliceFV1Before.toString())
-              .dp(0)
-              .toFixed(),
+            aliceFV1Before.add(
+              calculateFVFromFV(
+                aliceFV0Before,
+                lendingCF0,
+                lendingCF1,
+                await genesisValueVault.decimals(hexETH),
+              ),
+            ),
           )
           .abs(),
       ).lte(1);
@@ -836,12 +835,14 @@ describe('Integration Test: Auto-rolls', async () => {
         expect(
           aliceFV1After
             .sub(
-              BigNumberJS(aliceFV0Before.toString())
-                .times(lendingCF1.toString())
-                .div(lendingCF0.toString())
-                .plus(aliceFV1Before.toString())
-                .dp(0)
-                .toFixed(),
+              aliceFV1Before.add(
+                calculateFVFromFV(
+                  aliceFV0Before,
+                  lendingCF0,
+                  lendingCF1,
+                  await genesisValueVault.decimals(hexETH),
+                ),
+              ),
             )
             .abs(),
         ).lte(1);
@@ -1137,12 +1138,14 @@ describe('Integration Test: Auto-rolls', async () => {
       expect(
         aliceFV1After
           .sub(
-            BigNumberJS(aliceFV0Before.toString())
-              .times(lendingCF1.toString())
-              .div(lendingCF0.toString())
-              .plus(aliceFV1Before.toString())
-              .dp(0)
-              .toFixed(),
+            aliceFV1Before.add(
+              calculateFVFromFV(
+                aliceFV0Before,
+                lendingCF0,
+                lendingCF1,
+                await genesisValueVault.decimals(hexETH),
+              ),
+            ),
           )
           .abs(),
       ).lte(1);
