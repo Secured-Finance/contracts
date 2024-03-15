@@ -29,6 +29,8 @@ interface IGenesisValueVault {
     event BalanceLocked(bytes32 indexed ccy, address indexed user, uint256 value);
     event BalanceUnlocked(bytes32 indexed ccy, address indexed user, uint256 value);
 
+    function isAutoRolled(bytes32 _ccy, uint256 _maturity) external view returns (bool);
+
     function isInitialized(bytes32 ccy) external view returns (bool);
 
     function decimals(bytes32 ccy) external view returns (uint8);
@@ -38,8 +40,6 @@ interface IGenesisValueVault {
     function getTotalBorrowingSupply(bytes32 ccy) external view returns (uint256);
 
     function getBalance(bytes32 ccy, address user) external view returns (int256);
-
-    function getBalanceInFutureValue(bytes32 ccy, address user) external view returns (int256);
 
     function getMaturityGenesisValue(bytes32 ccy, uint256 maturity) external view returns (int256);
 

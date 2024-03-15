@@ -3,7 +3,7 @@ import { time } from '@openzeppelin/test-helpers';
 import BigNumberJS from 'bignumber.js';
 import { expect } from 'chai';
 import { BigNumber, Contract } from 'ethers';
-import { ethers } from 'hardhat';
+import { ethers, waffle } from 'hardhat';
 
 import { Side } from '../../utils/constants';
 import { hexWFIL } from '../../utils/strings';
@@ -23,7 +23,6 @@ describe('Performance Test: Auto-rolls', async () => {
   let bob: SignerWithAddress;
   let carol: SignerWithAddress;
   let dave: SignerWithAddress;
-  let ellen: SignerWithAddress;
 
   let genesisValueVault: Contract;
   let tokenVault: Contract;
@@ -39,20 +38,33 @@ describe('Performance Test: Auto-rolls', async () => {
 
   const initialFILBalance = BigNumber.from('10000000000000000000000000');
 
-  const getUsers = async (count: number) =>
+  const getUsers = async (count: number, ignoreToken?: boolean) =>
     signers.get(count, async (signer) => {
-      await wFILToken
-        .connect(owner)
-        .transfer(signer.address, initialFILBalance);
+      if (!ignoreToken) {
+        await wFILToken
+          .connect(owner)
+          .transfer(signer.address, initialFILBalance);
+      }
     });
 
   const createSampleFILOrders = async (
-    user: SignerWithAddress,
     maturity: BigNumber,
     unitPrice: string,
   ) => {
-    await wFILToken.connect(user).approve(tokenVault.address, '3000000');
-    await tokenVault.connect(user).deposit(hexWFIL, '3000000');
+    const user = waffle.provider.createEmptyWallet();
+    await wFILToken.connect(owner).transfer(user.address, '2000000');
+
+    if ((await owner.getBalance()).lt('1000000000000000000')) {
+      [owner] = await getUsers(1, true);
+    }
+
+    await owner.sendTransaction({
+      to: user.address,
+      value: BigNumber.from('100000000000000000'),
+    });
+
+    await wFILToken.connect(user).approve(tokenVault.address, '2000000');
+    await tokenVault.connect(user).deposit(hexWFIL, '2000000');
 
     // Move to 6 hours (21600 sec) before maturity.
     await time.increaseTo(maturities[0].sub('21600').toString());
@@ -128,7 +140,7 @@ describe('Performance Test: Auto-rolls', async () => {
     const orderAmount = BigNumber.from('1000000000000000000000000');
 
     before(async () => {
-      [alice, bob, carol, dave, ellen] = await getUsers(5);
+      [alice, bob, carol, dave] = await getUsers(5);
       await wFILToken
         .connect(alice)
         .approve(tokenVault.address, initialFILBalance);
@@ -136,10 +148,10 @@ describe('Performance Test: Auto-rolls', async () => {
         .connect(bob)
         .approve(tokenVault.address, initialFILBalance);
       await wFILToken
-        .connect(dave)
+        .connect(carol)
         .approve(tokenVault.address, initialFILBalance);
       await wFILToken
-        .connect(ellen)
+        .connect(dave)
         .approve(tokenVault.address, initialFILBalance);
     });
 
@@ -163,6 +175,18 @@ describe('Performance Test: Auto-rolls', async () => {
           .connect(bob)
           .executeOrder(hexWFIL, maturities[0], Side.BORROW, orderAmount, 0),
       ).to.emit(fundManagementLogic, 'OrderFilled');
+
+      await expect(
+        lendingMarketController
+          .connect(dave)
+          .depositAndExecuteOrder(
+            hexWFIL,
+            maturities[0],
+            Side.LEND,
+            orderAmount,
+            '9523',
+          ),
+      ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
       // Check future value
       const { futureValue: aliceActualFV } =
@@ -191,7 +215,7 @@ describe('Performance Test: Auto-rolls', async () => {
           );
 
         // Auto-roll
-        await createSampleFILOrders(carol, maturities[1], '9523');
+        await createSampleFILOrders(maturities[1], '9523');
         await time.increaseTo(maturities[0].toString());
         await lendingMarketController.connect(owner).rotateOrderBooks(hexWFIL);
         await lendingMarketController.executeItayoseCall(
@@ -243,12 +267,40 @@ describe('Performance Test: Auto-rolls', async () => {
       });
     }
 
+    it('Check the orders', async () => {
+      // Check future value
+      const { futureValue: daveFV } = await lendingMarketController.getPosition(
+        hexWFIL,
+        maturities[0],
+        dave.address,
+      );
+
+      expect(daveFV).to.equal(0);
+
+      const { futureValue: aliceFV } =
+        await lendingMarketController.getPosition(
+          hexWFIL,
+          maturities[0],
+          alice.address,
+        );
+
+      expect(aliceFV).gt('1250000000000000000000000');
+    });
+
+    it('Clean up orders', async () => {
+      await expect(
+        lendingMarketController
+          .connect(alice)
+          .cleanUpFunds(hexWFIL, alice.address),
+      ).to.emit(fundManagementLogic, 'OrdersFilledInAsync');
+    });
+
     it('Fill an order', async () => {
-      await tokenVault.connect(dave).deposit(hexWFIL, orderAmount.mul(2));
+      await tokenVault.connect(carol).deposit(hexWFIL, orderAmount.mul(2));
 
       await expect(
         lendingMarketController
-          .connect(ellen)
+          .connect(dave)
           .depositAndExecuteOrder(
             hexWFIL,
             maturities[0],
@@ -260,19 +312,18 @@ describe('Performance Test: Auto-rolls', async () => {
 
       await expect(
         lendingMarketController
-          .connect(dave)
+          .connect(carol)
           .executeOrder(hexWFIL, maturities[0], Side.BORROW, orderAmount, 0),
       ).to.emit(fundManagementLogic, 'OrderFilled');
 
       // Check future value
-      const { futureValue: ellenActualFV } =
-        await lendingMarketController.getPosition(
-          hexWFIL,
-          maturities[0],
-          ellen.address,
-        );
+      const { futureValue: daveFV } = await lendingMarketController.getPosition(
+        hexWFIL,
+        maturities[0],
+        dave.address,
+      );
 
-      expect(ellenActualFV).to.equal('1050089257586894886065316');
+      expect(daveFV).to.equal('1050089257586894886065316');
     });
   });
 });

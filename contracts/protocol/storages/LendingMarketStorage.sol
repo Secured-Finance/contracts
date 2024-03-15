@@ -22,8 +22,6 @@ library LendingMarketStorage {
         // Rate limit range of yield for the circuit breaker
         uint256 circuitBreakerLimitRange;
         // Mapping from order book id to order book
-        // NOTE: Now maturities can be a key to order books instead of order book ids because order books don't be reused by auto rolls.
-        // However, this storage must be kept to be used as it is for backward compatibility due to contract upgrade limitations.
         mapping(uint8 orderBookId => OrderBookLib.OrderBook orderBook) orderBooks;
         mapping(uint256 maturity => bool isReady) isReady;
         mapping(uint256 maturity => ItayoseLog log) itayoseLogs;

@@ -17,6 +17,7 @@ describe('LendingMarket - Itayose', () => {
 
   let owner: SignerWithAddress;
   let alice: SignerWithAddress;
+  let bob: SignerWithAddress;
   let signers: SignerWithAddress[];
 
   let lendingMarket: Contract;
@@ -36,7 +37,7 @@ describe('LendingMarket - Itayose', () => {
   };
 
   before(async () => {
-    [owner, alice, ...signers] = await ethers.getSigners();
+    [owner, alice, bob, ...signers] = await ethers.getSigners();
     targetCurrency = ethers.utils.formatBytes32String('Test');
 
     ({ lendingMarketCaller, lendingMarket, orderActionLogic, orderBookLogic } =
@@ -226,6 +227,109 @@ describe('LendingMarket - Itayose', () => {
         currentOrderBookId,
       ),
     ).to.not.emit(orderBookLogic, 'ItayoseExecuted');
+  });
+
+  it('Fail to create a pre-order due to an existing order with a past maturity', async () => {
+    const orderBookIdBefore = currentOrderBookId;
+
+    await lendingMarketCaller
+      .connect(alice)
+      .executePreOrder(
+        targetCurrency,
+        currentOrderBookId,
+        Side.BORROW,
+        '100000000000000000',
+        '8000',
+      );
+    await lendingMarketCaller
+      .connect(bob)
+      .executePreOrder(
+        targetCurrency,
+        currentOrderBookId,
+        Side.LEND,
+        '100000000000000000',
+        '8000',
+      );
+
+    // Increase 48 hours
+    await time.increase(172800);
+
+    await lendingMarketCaller
+      .executeItayoseCall(targetCurrency, currentOrderBookId)
+      .then(async (tx) => {
+        await expect(tx).to.emit(orderBookLogic, 'ItayoseExecuted');
+      });
+
+    // Create the order book 255 times for testing of the circulated `lastOrderBookId`
+    // to avoid exceeding the maximum value of uint8.
+    const calls: (() => void)[] = [];
+
+    for (let i = 0; i < 255; i++) {
+      await time.increaseTo(maturity - 172800);
+
+      const { timestamp: newTimestamp } = await ethers.provider.getBlock(
+        'latest',
+      );
+      const newMaturity = moment(newTimestamp * 1000)
+        .add(1, 'M')
+        .unix();
+      const newOpeningDate = moment(newTimestamp * 1000)
+        .add(48, 'h')
+        .unix();
+
+      calls.push(() => {
+        lendingMarketCaller.executeAutoRoll(
+          targetCurrency,
+          currentOrderBookId,
+          currentOrderBookId,
+          10000,
+        );
+      });
+
+      calls.push(() =>
+        lendingMarketCaller.createOrderBook(
+          targetCurrency,
+          newMaturity,
+          newOpeningDate,
+          newTimestamp,
+        ),
+      );
+
+      maturity = newMaturity;
+    }
+
+    await Promise.all(calls.map((call) => call()));
+
+    // Get the circulated current order book id.
+    currentOrderBookId = await lendingMarketCaller.getOrderBookId(
+      targetCurrency,
+    );
+
+    expect(currentOrderBookId).to.equal(orderBookIdBefore);
+
+    await expect(
+      lendingMarketCaller
+        .connect(alice)
+        .executePreOrder(
+          targetCurrency,
+          currentOrderBookId,
+          Side.LEND,
+          '100000000000000000',
+          '8000',
+        ),
+    ).to.be.revertedWith('PastMaturityOrderExists');
+
+    await expect(
+      lendingMarketCaller
+        .connect(bob)
+        .executePreOrder(
+          targetCurrency,
+          currentOrderBookId,
+          Side.BORROW,
+          '100000000000000000',
+          '8000',
+        ),
+    ).to.be.revertedWith('PastMaturityOrderExists');
   });
 
   it('Fail to create a pre-order due to not in the pre-order period', async () => {

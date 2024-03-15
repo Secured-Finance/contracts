@@ -43,6 +43,15 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         contracts[1] = Contracts.RESERVE_FUND;
     }
 
+    /**
+     * @notice Gets if auto-roll is executed at the maturity.
+     * @param _ccy Currency name in bytes32
+     * @param _maturity The maturity
+     */
+    function isAutoRolled(bytes32 _ccy, uint256 _maturity) public view override returns (bool) {
+        return Storage.slot().autoRollLogs[_ccy][_maturity].next != 0;
+    }
+
     // @inheritdoc Proxyable
     function getRevision() external pure override returns (uint256) {
         return 0x2;
@@ -97,24 +106,6 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
             getCurrentMaturity(_ccy)
         );
         return balance + fluctuation;
-    }
-
-    /**
-     * @notice Gets the future value of the user balance.
-     * @param _ccy Currency name in bytes32
-     * @param _user User's address
-     * @return The future value of the user balance
-     */
-    function getBalanceInFutureValue(
-        bytes32 _ccy,
-        address _user
-    ) external view override returns (int256) {
-        // NOTE: The formula is:
-        // futureValue = genesisValue * currentCompoundFactor.
-        return
-            (getBalance(_ccy, _user) * getLendingCompoundFactor(_ccy).toInt256()).div(
-                (10 ** decimals(_ccy)).toInt256()
-            );
     }
 
     /**
@@ -362,15 +353,7 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         uint256 _nextMaturity,
         uint256 _unitPrice
     ) private {
-        AutoRollLog memory currentLog = Storage.slot().autoRollLogs[_ccy][_maturity];
-        AutoRollLog memory nextLog = Storage.slot().autoRollLogs[_ccy][_nextMaturity];
-
-        if (
-            currentLog.next != 0 ||
-            currentLog.lendingCompoundFactor == 0 ||
-            currentLog.borrowingCompoundFactor == 0 ||
-            nextLog.lendingCompoundFactor != 0
-        ) {
+        if (isAutoRolled(_ccy, _maturity)) {
             revert AutoRollLogAlreadyUpdated({
                 currentMaturity: _maturity,
                 nextMaturity: _nextMaturity

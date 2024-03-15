@@ -146,7 +146,7 @@ library OrderActionLogic {
         )
     {
         OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
-        maturity = orderBook.maturity;
+        maturity = orderBook.userCurrentMaturities[_user];
 
         uint48[] memory lendOrderIds;
         uint48[] memory borrowOrderIds;
@@ -208,6 +208,7 @@ library OrderActionLogic {
         if (_amount == 0) revert InvalidAmount();
 
         OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
+        orderBook.updateUserMaturity(_user);
 
         ExecuteOrderVars memory vars;
         vars.maturity = orderBook.maturity;
@@ -299,6 +300,7 @@ library OrderActionLogic {
         if (_amount == 0) revert InvalidAmount();
 
         OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
+        orderBook.updateUserMaturity(_user);
 
         if (
             (_side == ProtocolTypes.Side.LEND && orderBook.hasBorrowOrder(_user)) ||

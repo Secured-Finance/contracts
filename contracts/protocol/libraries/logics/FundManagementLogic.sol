@@ -150,9 +150,17 @@ library FundManagementLogic {
     function convertFutureValueToGenesisValue(
         bytes32 _ccy,
         uint8 _orderBookId,
+        uint256 _maturity,
         address _user
     ) public returns (int256) {
         address futureValueVault = Storage.slot().futureValueVaults[_ccy];
+        bool isAutoRolled = AddressResolverLib.genesisValueVault().isAutoRolled(_ccy, _maturity);
+
+        if (!isAutoRolled) {
+            (int256 amount, ) = IFutureValueVault(futureValueVault).getBalance(_orderBookId, _user);
+            return amount;
+        }
+
         (
             int256 removedAmount,
             int256 currentAmount,
@@ -377,7 +385,10 @@ library FundManagementLogic {
         for (uint256 i; i < vars.maturities.length; i++) {
             uint256 currentMaturity = vars.maturities[i];
             uint8 currentOrderBookId = Storage.slot().maturityOrderBookIds[_ccy][currentMaturity];
-            bool isMatured = vars.defaultOrderBookId > currentOrderBookId;
+            bool isAutoRolled = AddressResolverLib.genesisValueVault().isAutoRolled(
+                _ccy,
+                currentMaturity
+            );
 
             if (vars.isDefaultMarket || currentOrderBookId == vars.orderBookId) {
                 {
@@ -391,7 +402,7 @@ library FundManagementLogic {
                             vars,
                             currentOrderBookId,
                             isDefaultMarket,
-                            isMatured
+                            isAutoRolled
                         );
                     // Get current funds from borrowing orders by lazy evaluations.
                     InactiveBorrowOrdersFunds
@@ -402,7 +413,7 @@ library FundManagementLogic {
                             currentOrderBookId,
                             currentMaturity,
                             isDefaultMarket,
-                            isMatured
+                            isAutoRolled
                         );
                     // Get current funds from lending orders by lazy evaluations.
                     InactiveLendOrdersFunds
@@ -412,7 +423,7 @@ library FundManagementLogic {
                             vars,
                             currentOrderBookId,
                             isDefaultMarket,
-                            isMatured
+                            isAutoRolled
                         );
 
                     // Set genesis value.
@@ -718,18 +729,24 @@ library FundManagementLogic {
         uint256[] memory maturities = getUsedMaturities(_ccy, _user);
 
         for (uint256 i; i < maturities.length; i++) {
-            uint8 orderBookId = Storage.slot().maturityOrderBookIds[_ccy][maturities[i]];
+            uint256 maturity = maturities[i];
+            uint8 orderBookId = Storage.slot().maturityOrderBookIds[_ccy][maturity];
             uint256 activeOrderCount = _cleanUpOrders(_ccy, orderBookId, _user);
             totalActiveOrderCount += activeOrderCount;
 
-            int256 currentFutureValue = convertFutureValueToGenesisValue(_ccy, orderBookId, _user);
+            int256 currentFutureValue = convertFutureValueToGenesisValue(
+                _ccy,
+                orderBookId,
+                maturity,
+                _user
+            );
 
             if (currentFutureValue != 0) {
                 futureValueExists = true;
             }
 
             if (currentFutureValue == 0 && activeOrderCount == 0) {
-                Storage.slot().usedMaturities[_ccy][_user].remove(maturities[i]);
+                Storage.slot().usedMaturities[_ccy][_user].remove(maturity);
             }
 
             AddressResolverLib.genesisValueVault().cleanUpBalance(
@@ -827,7 +844,7 @@ library FundManagementLogic {
         CalculateActualFundsVars memory vars,
         uint8 currentOrderBookId,
         bool isDefaultMarket,
-        bool isMatured
+        bool isAutoRolled
     ) internal view returns (FutureValueVaultFunds memory funds) {
         (int256 futureValueInMaturity, uint256 fvMaturity) = vars.futureValueVault.getBalance(
             currentOrderBookId,
@@ -835,7 +852,7 @@ library FundManagementLogic {
         );
 
         if (futureValueInMaturity != 0) {
-            if (isMatured) {
+            if (isAutoRolled) {
                 if (vars.isDefaultMarket) {
                     funds.genesisValue = AddressResolverLib.genesisValueVault().calculateGVFromFV(
                         _ccy,
@@ -899,7 +916,7 @@ library FundManagementLogic {
         uint8 currentOrderBookId,
         uint256 currentMaturity,
         bool isDefaultMarket,
-        bool isMatured
+        bool isAutoRolled
     ) internal view returns (InactiveBorrowOrdersFunds memory funds) {
         uint256 filledFutureValue;
         uint256 orderMaturity;
@@ -912,12 +929,12 @@ library FundManagementLogic {
             .market
             .getTotalAmountFromBorrowOrders(currentOrderBookId, _user, currentMinDebtUnitPrice);
 
-        if (isMatured) {
+        if (isAutoRolled) {
             funds.workingOrdersAmount = 0;
         }
 
         if (filledFutureValue != 0) {
-            if (isMatured) {
+            if (isAutoRolled) {
                 if (vars.isDefaultMarket) {
                     funds.genesisValue = AddressResolverLib.genesisValueVault().calculateGVFromFV(
                         _ccy,
@@ -966,7 +983,7 @@ library FundManagementLogic {
         CalculateActualFundsVars memory vars,
         uint8 currentOrderBookId,
         bool isDefaultMarket,
-        bool isMatured
+        bool isAutoRolled
     ) internal view returns (InactiveLendOrdersFunds memory funds) {
         uint256 filledFutureValue;
         uint256 orderMaturity;
@@ -974,12 +991,12 @@ library FundManagementLogic {
             .market
             .getTotalAmountFromLendOrders(currentOrderBookId, _user);
 
-        if (isMatured) {
+        if (isAutoRolled) {
             funds.workingOrdersAmount = 0;
         }
 
         if (filledFutureValue != 0) {
-            if (isMatured) {
+            if (isAutoRolled) {
                 if (vars.isDefaultMarket) {
                     funds.genesisValue = AddressResolverLib.genesisValueVault().calculateGVFromFV(
                         _ccy,
