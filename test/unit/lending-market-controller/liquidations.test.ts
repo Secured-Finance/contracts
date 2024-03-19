@@ -52,11 +52,14 @@ describe('LendingMarketController - Liquidations', () => {
     return users;
   };
 
-  const initialize = async (currency: string) => {
+  const initialize = async (
+    currency: string,
+    compoundFactor: string | BigNumber = INITIAL_COMPOUND_FACTOR,
+  ) => {
     await lendingMarketControllerProxy.initializeLendingMarket(
       currency,
       genesisDate,
-      INITIAL_COMPOUND_FACTOR,
+      compoundFactor,
       ORDER_FEE_RATE,
       CIRCUIT_BREAKER_LIMIT_RANGE,
       MIN_DEBT_UNIT_PRICE,
@@ -100,9 +103,6 @@ describe('LendingMarketController - Liquidations', () => {
     // Set up for the mocks
     await mockCurrencyController.mock.currencyExists.returns(true);
     await mockCurrencyController.mock.getHaircut.returns(8000);
-    await mockCurrencyController.mock[
-      'convertFromBaseCurrency(bytes32,uint256)'
-    ].returns('10');
     await mockTokenVault.mock.addDepositAmount.returns();
     await mockTokenVault.mock.removeDepositAmount.returns();
     await mockTokenVault.mock.cleanUpUsedCurrencies.returns();
@@ -823,6 +823,23 @@ describe('LendingMarketController - Liquidations', () => {
       )
         .to.emit(fundManagementLogic, 'RedemptionExecuted')
         .withArgs(bob.address, targetCurrency, maturities[0], () => true);
+
+      const { futureValue: aliceFV } =
+        await lendingMarketControllerProxy.getPosition(
+          targetCurrency,
+          maturities[1],
+          alice.address,
+        );
+
+      const { futureValue: bobFV } =
+        await lendingMarketControllerProxy.getPosition(
+          targetCurrency,
+          maturities[1],
+          bob.address,
+        );
+
+      expect(aliceFV).to.be.equal(0);
+      expect(bobFV).to.be.equal(0);
     });
 
     it('Execute repayment & redemption after auto-roll', async () => {
@@ -859,7 +876,7 @@ describe('LendingMarketController - Liquidations', () => {
       await time.increaseTo(maturities[1].toString());
       await mockCurrencyController.mock.currencyExists.returns(false);
 
-      const { futureValue: aliceFV } =
+      const { futureValue: aliceFVBefore } =
         await lendingMarketControllerProxy.getPosition(
           targetCurrency,
           maturities[1],
@@ -872,7 +889,12 @@ describe('LendingMarketController - Liquidations', () => {
           .executeRepayment(targetCurrency, maturities[1]),
       )
         .to.emit(fundManagementLogic, 'RepaymentExecuted')
-        .withArgs(alice.address, targetCurrency, maturities[1], aliceFV.abs());
+        .withArgs(
+          alice.address,
+          targetCurrency,
+          maturities[1],
+          aliceFVBefore.abs(),
+        );
 
       // Move to 1 weeks after maturity.
       await time.increaseTo(maturities[1].add(604800).toString());
@@ -884,6 +906,23 @@ describe('LendingMarketController - Liquidations', () => {
       )
         .to.emit(fundManagementLogic, 'RedemptionExecuted')
         .withArgs(bob.address, targetCurrency, maturities[1], () => true);
+
+      const { futureValue: aliceFV } =
+        await lendingMarketControllerProxy.getPosition(
+          targetCurrency,
+          maturities[1],
+          alice.address,
+        );
+
+      const { futureValue: bobFV } =
+        await lendingMarketControllerProxy.getPosition(
+          targetCurrency,
+          maturities[1],
+          bob.address,
+        );
+
+      expect(aliceFV).to.be.equal(0);
+      expect(bobFV).to.be.equal(0);
     });
 
     it('Force repayment of overdue borrowing positions', async () => {
@@ -1169,97 +1208,126 @@ describe('LendingMarketController - Liquidations', () => {
       expect(aliceFV).to.be.equal('-25000000000000000');
     });
 
-    it('Force a insolvent user to repay after auto roll', async () => {
-      const orderAmount = ethers.BigNumber.from('100000000000000000');
-      const orderRate = ethers.BigNumber.from('10000');
+    const compoundFactors = [
+      BigNumber.from(10).pow(6),
+      BigNumber.from(10).pow(18),
+      BigNumber.from(10).pow(38),
+    ];
 
-      await mockTokenVault.mock.getLiquidationAmount.returns(0, 0, 0);
-      await mockTokenVault.mock.transferFrom.returns(100);
-      await mockTokenVault.mock.calculateLiquidationFees.returns(
-        '100000000',
-        '50000000',
-      );
-      await mockCurrencyController.mock.convert.returns('100000000');
-      await mockCurrencyController.mock[
-        'convert(bytes32,bytes32,uint256[])'
-      ].returns([
-        '26000000000000000',
-        '104000000000000000',
-        '4000000000000000',
-      ]);
-
-      [alice, bob] = getUsers(2);
-
-      await lendingMarketControllerProxy
-        .connect(alice)
-        .executeOrder(
-          targetCurrency,
-          maturities[0],
-          Side.BORROW,
-          orderAmount,
-          orderRate,
+    for (const compoundFactor of compoundFactors) {
+      it(`Force a insolvent user to repay after auto roll using ${compoundFactor.toString()} as a compound factor`, async () => {
+        const targetCurrency = ethers.utils.formatBytes32String(
+          `RepaymentTest${currencyIdx}`,
         );
+        initialize(targetCurrency, compoundFactor);
 
-      await expect(
-        lendingMarketControllerProxy
-          .connect(bob)
+        const orderAmount = ethers.BigNumber.from('100000000000000000');
+        const orderRate = ethers.BigNumber.from('10000');
+
+        await mockTokenVault.mock.getLiquidationAmount.returns(0, 0, 0);
+        await mockTokenVault.mock.transferFrom.returns(100);
+        await mockTokenVault.mock.calculateLiquidationFees.returns(
+          '100000000',
+          '50000000',
+        );
+        await mockCurrencyController.mock.convert.returns('100000000');
+        await mockCurrencyController.mock[
+          'convert(bytes32,bytes32,uint256[])'
+        ].returns([
+          '26000000000000000',
+          '104000000000000000',
+          '4000000000000000',
+        ]);
+
+        [alice, bob] = getUsers(2);
+
+        await lendingMarketControllerProxy
+          .connect(alice)
           .executeOrder(
             targetCurrency,
             maturities[0],
-            Side.LEND,
+            Side.BORROW,
             orderAmount,
             orderRate,
-          ),
-      ).to.emit(fundManagementLogic, 'OrderFilled');
+          );
 
-      await time.increaseTo(maturities[0].toString());
-      await lendingMarketControllerProxy.rotateOrderBooks(targetCurrency);
-      await mockCurrencyController.mock.currencyExists
-        .withArgs(targetCurrency)
-        .returns(false);
-      await mockCurrencyController.mock.currencyExists
-        .withArgs(collateralCurrency)
-        .returns(true);
+        await expect(
+          lendingMarketControllerProxy
+            .connect(bob)
+            .executeOrder(
+              targetCurrency,
+              maturities[0],
+              Side.LEND,
+              orderAmount,
+              orderRate,
+            ),
+        ).to.emit(fundManagementLogic, 'OrderFilled');
 
-      // Move to 1 weeks after maturity.
-      await time.increaseTo(maturities[1].add(604800).toString());
+        await time.increaseTo(maturities[0].toString());
+        await lendingMarketControllerProxy.rotateOrderBooks(targetCurrency);
+        await mockCurrencyController.mock.currencyExists
+          .withArgs(targetCurrency)
+          .returns(false);
+        await mockCurrencyController.mock.currencyExists
+          .withArgs(collateralCurrency)
+          .returns(true);
 
-      const { futureValue: aliceFVBefore } =
-        await lendingMarketControllerProxy.getPosition(
-          targetCurrency,
-          maturities[1],
-          alice.address,
-        );
+        // Move to 1 weeks after maturity.
+        await time.increaseTo(maturities[1].add(604800).toString());
 
-      await expect(
-        lendingMarketControllerProxy
+        const { futureValue: aliceFVBefore } =
+          await lendingMarketControllerProxy.getPosition(
+            targetCurrency,
+            maturities[1],
+            alice.address,
+          );
+
+        const tx = await lendingMarketControllerProxy
           .connect(owner)
           .executeForcedRepayment(
             collateralCurrency,
             targetCurrency,
             maturities[1],
             alice.address,
-          ),
-      )
-        .to.emit(liquidationLogic, 'ForcedRepaymentExecuted')
-        .withArgs(
-          alice.address,
-          collateralCurrency,
-          targetCurrency,
-          maturities[1],
-          '75000000000000000',
+          );
+
+        const events = await liquidationLogic.queryFilter(
+          liquidationLogic.filters.ForcedRepaymentExecuted(),
+          tx.blockNumber,
         );
 
-      const { futureValue: aliceFVAfter } =
-        await lendingMarketControllerProxy.getPosition(
-          targetCurrency,
-          maturities[1],
-          alice.address,
-        );
+        const eventResult = events.find(
+          ({ event }) => event === 'ForcedRepaymentExecuted',
+        )?.args;
 
-      expect(aliceFVAfter).not.to.equal(0);
-      expect(aliceFVAfter.sub(aliceFVBefore)).to.be.equal('75000000000000000');
-    });
+        // In calculating the future value from the genesis value, rounding errors can occur
+        // between the expected and actual values if the compound factor digits are larger than 36.
+        // It means that the repayment amount can be slightly less than the expected value.
+        const cfLength = compoundFactor.toString().length;
+        const maxRoundingErrorValue =
+          cfLength > 36 ? BigNumber.from(10).pow(cfLength - 36) : '0';
+
+        expect(eventResult?.collateralCcy).to.equal(collateralCurrency);
+        expect(eventResult?.debtCcy).to.equal(targetCurrency);
+        expect(eventResult?.debtMaturity).to.equal(maturities[1]);
+        expect(eventResult?.debtAmount.sub('75000000000000000')).lte(
+          maxRoundingErrorValue,
+        );
+        expect(eventResult?.user).to.equal(alice.address);
+
+        const { futureValue: aliceFVAfter } =
+          await lendingMarketControllerProxy.getPosition(
+            targetCurrency,
+            maturities[1],
+            alice.address,
+          );
+
+        expect(aliceFVAfter).not.to.equal(0);
+        expect(aliceFVAfter.sub(aliceFVBefore).sub('75000000000000000')).lte(
+          maxRoundingErrorValue,
+        );
+      });
+    }
 
     it('Fail to repay due to active market', async () => {
       await expect(
