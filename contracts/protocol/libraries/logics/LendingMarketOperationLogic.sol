@@ -350,11 +350,13 @@ library LendingMarketOperationLogic {
 
         string memory symbol = string.concat("zc", tokenSymbol);
         string memory name = string.concat("ZC ", tokenSymbol);
-        uint8 decimals = IERC20Metadata(tokenAddress).decimals() + GENESIS_VALUE_BASE_DECIMALS;
+        uint8 decimals = IERC20Metadata(tokenAddress).decimals();
 
         // If the maturity is 0, the ZCToken is created as a perpetual one.
         // Otherwise, the ZCToken is created per maturity.
-        if (_maturity != 0) {
+        if (_maturity == 0) {
+            decimals += GENESIS_VALUE_BASE_DECIMALS;
+        } else {
             (uint256 year, uint256 month, ) = TimeLibrary.timestampToDate(_maturity);
 
             string memory formattedMaturity = string.concat(

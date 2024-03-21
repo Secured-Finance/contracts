@@ -9,7 +9,7 @@
     "!/contracts/mocks/**/*"
   ],
   "scripts": {
-    "test": "hardhat test",
+    "test": "DOTENV_CONFIG_PATH=.env.test hardhat test",
     "test:unit": "DOTENV_CONFIG_PATH=.env.test hardhat test ./test/unit/*.test.ts ./test/unit/**/*.test.ts",
     "test:integration": "DOTENV_CONFIG_PATH=.env.test hardhat test ./test/integration/*.test.ts",
     "test:performance": "DOTENV_CONFIG_PATH=.env.test hardhat test ./test/performance/*.test.ts",

@@ -177,7 +177,7 @@ describe('LendingMarketController - Tokenization', () => {
           nextMaturity.unix(),
           tokenName,
           tokenSymbol,
-          24,
+          6,
           () => true,
         );
 
@@ -228,7 +228,7 @@ describe('LendingMarketController - Tokenization', () => {
           nextMaturity.unix(),
           tokenName,
           tokenSymbol,
-          24,
+          6,
           () => true,
         );
 

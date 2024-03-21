@@ -148,9 +148,7 @@ describe('Integration Test: Tokenization', async () => {
 
       expect(tokenInfo.ccy).to.equal(hexETH);
       expect(tokenInfo.maturity).to.equal(maturities[0]);
-      expect(await token.decimals()).to.equal(
-        (await wETHToken.decimals()) + 18,
-      );
+      expect(await token.decimals()).to.equal(await wETHToken.decimals());
       expect(await token.asset()).to.equal(wETHToken.address);
       expect(await token.maturity()).to.equal(maturities[0]);
       expect(await token.name()).to.equal(
@@ -192,9 +190,7 @@ describe('Integration Test: Tokenization', async () => {
 
       expect(tokenInfo.ccy).to.equal(hexUSDC);
       expect(tokenInfo.maturity).to.equal(maturities[0]);
-      expect(await token.decimals()).to.equal(
-        (await usdcToken.decimals()) + 18,
-      );
+      expect(await token.decimals()).to.equal(await usdcToken.decimals());
       expect(await token.asset()).to.equal(usdcToken.address);
       expect(await token.maturity()).to.equal(maturities[0]);
       expect(await token.name()).to.equal(
