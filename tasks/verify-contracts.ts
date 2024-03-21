@@ -2,6 +2,7 @@ import fs from 'fs';
 import { task } from 'hardhat/config';
 import {
   BASE_CURRENCY_DECIMALS,
+  FULL_LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATOR_FEE_RATE,
@@ -12,6 +13,8 @@ import { getNativeTokenAddress } from '../utils/currencies';
 const externalContracts = [
   'ItayoseCallResolver',
   'OrderBookRotationResolver',
+  'Liquidator_Implementation',
+  'Liquidator_Proxy',
   'Liquidator',
   'LendingMarketReader',
 ];
@@ -30,7 +33,10 @@ task(
   const constructorArguments = {
     CurrencyController: [BASE_CURRENCY_DECIMALS],
     LendingMarket: [MINIMUM_RELIABLE_AMOUNT],
-    ProxyController: [ethers.constants.AddressZero],
+    // NOTE: Arguments of the ProxyController will be AddressZero for the initial deployment
+    // When it is updated, the AddressResolver address will be set as an argument.
+    // ProxyController: [ethers.constants.AddressZero],
+    ProxyController: [addressResolver],
     ItayoseCallResolver: [addressResolver],
     OrderBookRotationResolver: [addressResolver],
   };
@@ -41,6 +47,7 @@ task(
       owner,
       addressResolver,
       LIQUIDATION_THRESHOLD_RATE,
+      FULL_LIQUIDATION_THRESHOLD_RATE,
       LIQUIDATION_PROTOCOL_FEE_RATE,
       LIQUIDATOR_FEE_RATE,
       nativeToken,
@@ -63,7 +70,7 @@ task(
     .map(({ name }) => name.replace('.json', ''));
 
   for (const fileName of fileNames) {
-    if (externalContracts.includes(fileName)) {
+    if (externalContracts.includes(fileName) || fileName.includes('Mock')) {
       continue;
     }
 

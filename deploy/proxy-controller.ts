@@ -73,10 +73,12 @@ const func: DeployFunction = async function ({
         .then((contract) => contract.getAddresses());
 
       if (process.env.ENABLE_AUTO_UPDATE === 'true') {
-        await prevProxyController.changeProxyAdmins(deployResult.address, [
-          addressResolverAddress,
-          ...addresses,
-        ]);
+        await prevProxyController
+          .changeProxyAdmins(deployResult.address, [
+            addressResolverAddress,
+            ...addresses,
+          ])
+          .then((tx) => tx.wait());
 
         console.log(
           `Changed admin address of all proxy contracts to ${deployResult.address}`,
