@@ -294,7 +294,7 @@ describe('LendingMarketController - Tokenization', () => {
       await initialize(targetCurrency);
     });
 
-    it('Withdraw zc tokens without used collaterals ', async () => {
+    it('Withdraw zc tokens without used collaterals', async () => {
       await mockCurrencyController.mock[
         'convertFromBaseCurrency(bytes32,uint256[])'
       ].returns([0, 0]);
@@ -888,6 +888,97 @@ describe('LendingMarketController - Tokenization', () => {
       expect(await zcToken.balanceOf(alice.address)).to.equal(
         withdrawableAmount,
       );
+    });
+
+    it('Withdraw zc tokens partially', async () => {
+      await mockCurrencyController.mock[
+        'convertFromBaseCurrency(bytes32,uint256[])'
+      ].returns([0, 0]);
+
+      const zcTokenAddress = await lendingMarketControllerProxy.getZCToken(
+        targetCurrency,
+        maturities[0],
+      );
+      const zcToken = await ethers.getContractAt('ZCToken', zcTokenAddress);
+
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .executeOrder(targetCurrency, maturities[0], Side.LEND, value, '8000');
+
+      await lendingMarketControllerProxy
+        .connect(bob)
+        .executeOrder(targetCurrency, maturities[0], Side.BORROW, value, '0');
+
+      const withdrawableAmount =
+        await lendingMarketControllerProxy.getWithdrawableZCTokenAmount(
+          targetCurrency,
+          maturities[0],
+          alice.address,
+        );
+
+      const withdrawalAmount = withdrawableAmount.div(2);
+
+      await expect(
+        lendingMarketControllerProxy
+          .connect(alice)
+          .withdrawZCToken(targetCurrency, maturities[0], withdrawalAmount),
+      )
+        .to.emit(zcToken, 'Transfer')
+        .withArgs(
+          ethers.constants.AddressZero,
+          alice.address,
+          withdrawalAmount,
+        );
+
+      expect(await zcToken.balanceOf(alice.address)).to.equal(withdrawalAmount);
+    });
+
+    it('Withdraw zc perpetual tokens partially', async () => {
+      await mockCurrencyController.mock[
+        'convertFromBaseCurrency(bytes32,uint256[])'
+      ].returns([0, 0]);
+
+      const zcTokenAddress = await lendingMarketControllerProxy.getZCToken(
+        targetCurrency,
+        0,
+      );
+      const zcToken = await ethers.getContractAt('ZCToken', zcTokenAddress);
+
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .executeOrder(targetCurrency, maturities[0], Side.LEND, value, '8000');
+
+      await lendingMarketControllerProxy
+        .connect(bob)
+        .executeOrder(targetCurrency, maturities[0], Side.BORROW, value, '0');
+
+      await time.increaseTo(maturities[0].toString());
+      await expect(
+        lendingMarketControllerProxy.rotateOrderBooks(targetCurrency),
+      ).to.emit(lendingMarketOperationLogic, 'OrderBooksRotated');
+
+      const withdrawableAmount =
+        await lendingMarketControllerProxy.getWithdrawableZCTokenAmount(
+          targetCurrency,
+          0,
+          alice.address,
+        );
+
+      const withdrawalAmount = withdrawableAmount.div(2);
+
+      await expect(
+        lendingMarketControllerProxy
+          .connect(alice)
+          .withdrawZCToken(targetCurrency, 0, withdrawalAmount),
+      )
+        .to.emit(zcToken, 'Transfer')
+        .withArgs(
+          ethers.constants.AddressZero,
+          alice.address,
+          withdrawalAmount,
+        );
+
+      expect(await zcToken.balanceOf(alice.address)).to.equal(withdrawalAmount);
     });
 
     it('Deposit zc tokens', async () => {

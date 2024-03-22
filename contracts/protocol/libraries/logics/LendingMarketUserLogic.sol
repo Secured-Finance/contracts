@@ -343,7 +343,7 @@ library LendingMarketUserLogic {
         bytes32 _ccy,
         uint256 _maturity,
         address _user
-    ) public view returns (uint256 amount, bool isAll) {
+    ) public view returns (uint256 amount) {
         if (_maturity == 0) {
             return _getWithdrawableZCPerpetualTokenAmount(_ccy, _user);
         } else {
@@ -510,11 +510,7 @@ library LendingMarketUserLogic {
         uint256 _amount
     ) internal {
         uint8 orderBookId = Storage.slot().maturityOrderBookIds[_ccy][_maturity];
-        (uint256 maxWithdrawableAmount, bool isAll) = _getWithdrawableZCTokenAmount(
-            _ccy,
-            _maturity,
-            _user
-        );
+        uint256 maxWithdrawableAmount = _getWithdrawableZCTokenAmount(_ccy, _maturity, _user);
 
         if (maxWithdrawableAmount < _amount) {
             _amount = maxWithdrawableAmount;
@@ -525,7 +521,7 @@ library LendingMarketUserLogic {
         uint256 lockedAmount = IFutureValueVault(Storage.slot().futureValueVaults[_ccy]).lock(
             orderBookId,
             _user,
-            isAll ? 0 : _amount,
+            _amount,
             _maturity
         );
         IZCToken(Storage.slot().zcTokens[_ccy][_maturity]).mint(_user, lockedAmount);
@@ -558,10 +554,7 @@ library LendingMarketUserLogic {
     }
 
     function _withdrawZCPerpetualToken(bytes32 _ccy, address _user, uint256 _amount) internal {
-        (uint256 maxWithdrawableAmount, bool isAll) = _getWithdrawableZCPerpetualTokenAmount(
-            _ccy,
-            _user
-        );
+        uint256 maxWithdrawableAmount = _getWithdrawableZCPerpetualTokenAmount(_ccy, _user);
 
         if (maxWithdrawableAmount < _amount) {
             _amount = maxWithdrawableAmount;
@@ -569,11 +562,7 @@ library LendingMarketUserLogic {
 
         if (_amount == 0) revert AmountIsZero();
 
-        uint256 lockedAmount = AddressResolverLib.genesisValueVault().lock(
-            _ccy,
-            _user,
-            isAll ? 0 : _amount
-        );
+        uint256 lockedAmount = AddressResolverLib.genesisValueVault().lock(_ccy, _user, _amount);
         IZCToken(Storage.slot().zcTokens[_ccy][0]).mint(_user, lockedAmount);
     }
 
@@ -597,7 +586,7 @@ library LendingMarketUserLogic {
         bytes32 _ccy,
         uint256 _maturity,
         address _user
-    ) internal view returns (uint256 amount, bool isAll) {
+    ) internal view returns (uint256 amount) {
         (uint256 withdrawableAmount, bool hasAllocatedCollateral) = _getWithdrawableAmount(
             _ccy,
             _user
@@ -613,21 +602,18 @@ library LendingMarketUserLogic {
         int256 futureValue = funds.futureValue - funds.genesisValueInFV;
 
         if (futureValue <= 0) {
-            return (0, false);
+            return 0;
         } else if (!hasAllocatedCollateral || withdrawableAmount >= presentValue.toUint256()) {
-            return (futureValue.toUint256(), true);
+            return futureValue.toUint256();
         } else {
-            return (
-                FundManagementLogic.calculateFVFromPV(_ccy, _maturity, withdrawableAmount),
-                false
-            );
+            return FundManagementLogic.calculateFVFromPV(_ccy, _maturity, withdrawableAmount);
         }
     }
 
     function _getWithdrawableZCPerpetualTokenAmount(
         bytes32 _ccy,
         address _user
-    ) internal view returns (uint256 amount, bool isAll) {
+    ) internal view returns (uint256 amount) {
         (uint256 withdrawableAmount, bool hasAllocatedCollateral) = _getWithdrawableAmount(
             _ccy,
             _user
@@ -641,11 +627,11 @@ library LendingMarketUserLogic {
         );
 
         if (funds.genesisValue <= 0) {
-            return (0, false);
+            return 0;
         } else if (
             !hasAllocatedCollateral || withdrawableAmount >= funds.genesisValueInPV.toUint256()
         ) {
-            return (funds.genesisValue.toUint256(), true);
+            return funds.genesisValue.toUint256();
         } else {
             int256 withdrawableAmountInFV = FundManagementLogic.calculateFVFromPV(
                 _ccy,
@@ -653,13 +639,11 @@ library LendingMarketUserLogic {
                 withdrawableAmount.toInt256()
             );
 
-            return (
+            return
                 AddressResolverLib
                     .genesisValueVault()
                     .calculateGVFromFV(_ccy, 0, withdrawableAmountInFV)
-                    .toUint256(),
-                false
-            );
+                    .toUint256();
         }
     }
 

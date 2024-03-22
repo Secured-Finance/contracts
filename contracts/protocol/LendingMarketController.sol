@@ -416,7 +416,7 @@ contract LendingMarketController is
         uint256 _maturity,
         address _user
     ) external view override returns (uint256 amount) {
-        (amount, ) = LendingMarketUserLogic.getWithdrawableZCTokenAmount(_ccy, _maturity, _user);
+        return LendingMarketUserLogic.getWithdrawableZCTokenAmount(_ccy, _maturity, _user);
     }
 
     /**
