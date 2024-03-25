@@ -30,11 +30,12 @@ library LendingMarketOperationLogic {
     using RoundingInt256 for int256;
 
     uint256 public constant OBSERVATION_PERIOD = 6 hours;
-    uint8 public constant COMPOUND_FACTOR_DECIMALS = 36;
-    uint8 public constant GENESIS_VALUE_BASE_DECIMALS = 18;
+    uint8 public constant COMPOUND_FACTOR_DECIMALS = 18;
+    uint8 public constant ZC_TOKEN_BASE_DECIMALS = 26;
     uint256 public constant PRE_ORDER_BASE_PERIOD = 7 days;
 
     error InvalidCompoundFactor();
+    error TooManyTokenDecimals(address tokenAddress, uint8 decimals);
     error InvalidCurrency();
     error InvalidOpeningDate();
     error InvalidPreOpeningDate();
@@ -44,6 +45,7 @@ library LendingMarketOperationLogic {
     error NotEnoughOrderBooks();
     error AlreadyZCTokenExists(address tokenAddress);
     error InvalidMaturity(uint256 maturity);
+    error ZcTokenIsZero();
 
     event LendingMarketInitialized(
         bytes32 indexed ccy,
@@ -91,9 +93,16 @@ library LendingMarketOperationLogic {
 
         if (_compoundFactor == 0) revert InvalidCompoundFactor();
 
+        address tokenAddress = AddressResolverLib.tokenVault().getTokenAddress(_ccy);
+        uint8 tokenDecimals = IERC20Metadata(tokenAddress).decimals();
+
+        if (tokenDecimals > COMPOUND_FACTOR_DECIMALS + ZC_TOKEN_BASE_DECIMALS) {
+            revert TooManyTokenDecimals(tokenAddress, tokenDecimals);
+        }
+
         AddressResolverLib.genesisValueVault().initializeCurrencySetting(
             _ccy,
-            COMPOUND_FACTOR_DECIMALS,
+            COMPOUND_FACTOR_DECIMALS + ZC_TOKEN_BASE_DECIMALS - tokenDecimals,
             _compoundFactor,
             calculateNextMaturity(_genesisDate, Storage.slot().marketBasePeriod)
         );
@@ -112,7 +121,7 @@ library LendingMarketOperationLogic {
         Storage.slot().futureValueVaults[_ccy] = futureValueVault;
 
         updateMinDebtUnitPrice(_ccy, _minDebtUnitPrice);
-        createZCToken(_ccy, 0);
+        createZCToken(_ccy, 0, tokenAddress);
 
         emit LendingMarketInitialized(
             _ccy,
@@ -160,7 +169,8 @@ library LendingMarketOperationLogic {
         Storage.slot().orderBookIdLists[_ccy].push(orderBookId);
         Storage.slot().maturityOrderBookIds[_ccy][newMaturity] = orderBookId;
 
-        createZCToken(_ccy, newMaturity);
+        address tokenAddress = AddressResolverLib.tokenVault().getTokenAddress(_ccy);
+        createZCToken(_ccy, newMaturity, tokenAddress);
 
         emit OrderBookCreated(_ccy, orderBookId, _openingDate, _preOpeningDate, newMaturity);
     }
@@ -216,6 +226,14 @@ library LendingMarketOperationLogic {
     }
 
     function rotateOrderBooks(bytes32 _ccy) external {
+        // NOTE: Before the contract upgrade, the ZCToken did not exist, but the upgrade added it.
+        // This check is to prevent the error that occurs when the ZCToken is not created by the
+        // `migrateLendingMarket` function. After ZCTokens are added for all currencies and maturities,
+        // this check can be removed.
+        if (Storage.slot().zcTokens[_ccy][0] == address(0)) {
+            revert ZcTokenIsZero();
+        }
+
         if (!AddressResolverLib.currencyController().currencyExists(_ccy)) {
             revert InvalidCurrency();
         }
@@ -336,7 +354,26 @@ library LendingMarketOperationLogic {
         }
     }
 
-    function createZCToken(bytes32 _ccy, uint256 _maturity) public {
+    function migrateLendingMarket(bytes32 _ccy, uint256 _maturity) external {
+        address tokenAddress = AddressResolverLib.tokenVault().getTokenAddress(_ccy);
+
+        if (_maturity == 0) {
+            uint8 tokenDecimals = IERC20Metadata(tokenAddress).decimals();
+
+            if (tokenDecimals > COMPOUND_FACTOR_DECIMALS + ZC_TOKEN_BASE_DECIMALS) {
+                revert TooManyTokenDecimals(tokenAddress, tokenDecimals);
+            }
+
+            AddressResolverLib.genesisValueVault().updateDecimals(
+                _ccy,
+                COMPOUND_FACTOR_DECIMALS + ZC_TOKEN_BASE_DECIMALS - tokenDecimals
+            );
+        }
+
+        createZCToken(_ccy, _maturity, tokenAddress);
+    }
+
+    function createZCToken(bytes32 _ccy, uint256 _maturity, address _tokenAddress) public {
         if (Storage.slot().zcTokens[_ccy][_maturity] != address(0)) {
             revert AlreadyZCTokenExists(Storage.slot().zcTokens[_ccy][_maturity]);
         }
@@ -345,18 +382,19 @@ library LendingMarketOperationLogic {
             revert InvalidMaturity(_maturity);
         }
 
-        address tokenAddress = AddressResolverLib.tokenVault().getTokenAddress(_ccy);
         string memory tokenSymbol = bytes32ToString(_ccy);
 
         string memory symbol = string.concat("zc", tokenSymbol);
         string memory name = string.concat("ZC ", tokenSymbol);
-        uint8 decimals = IERC20Metadata(tokenAddress).decimals();
+        // NOTE: The amount of genesis value generated gradually decreases as the compound factor increases.
+        // The values of ZCToken decimals are subtracted by 2 to prevent the display from becoming too small.
+        // Therefore, if the lending position is 1ETH and the compound factor is 10^18, the amount of ZCToken
+        // will be 100zcETH.
+        uint8 decimals = ZC_TOKEN_BASE_DECIMALS - 2;
 
         // If the maturity is 0, the ZCToken is created as a perpetual one.
         // Otherwise, the ZCToken is created per maturity.
-        if (_maturity == 0) {
-            decimals += GENESIS_VALUE_BASE_DECIMALS;
-        } else {
+        if (_maturity != 0) {
             (uint256 year, uint256 month, ) = TimeLibrary.timestampToDate(_maturity);
 
             string memory formattedMaturity = string.concat(
@@ -367,13 +405,14 @@ library LendingMarketOperationLogic {
 
             symbol = string.concat(symbol, "-", formattedMaturity);
             name = string.concat(name, " ", _getShortMonthYearString(_maturity));
+            decimals = IERC20Metadata(_tokenAddress).decimals();
         }
 
         address zcToken = AddressResolverLib.beaconProxyController().deployZCToken(
             name,
             symbol,
             decimals,
-            tokenAddress,
+            _tokenAddress,
             _maturity
         );
 

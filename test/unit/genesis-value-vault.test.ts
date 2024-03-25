@@ -1,4 +1,5 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
+import BigNumberJS from 'bignumber.js';
 import { expect } from 'chai';
 import { MockContract } from 'ethereum-waffle';
 import { BigNumber, Contract } from 'ethers';
@@ -27,10 +28,10 @@ describe('GenesisValueVault', () => {
   let targetCurrency: string;
   let currencyIdx = 0;
 
-  const initialCompoundFactor = BigNumber.from(1000000);
+  const initialCompoundFactor = BigNumber.from('1000000000000000000');
   const maturity = 1;
   const nextMaturity = 86401;
-  const decimals = 4;
+  const decimals = 26;
   const fvAmount = BigNumber.from(2000000);
   const unitPrice = 8000;
 
@@ -115,8 +116,6 @@ describe('GenesisValueVault', () => {
 
   describe('Initialize', async () => {
     it('Initialize contract settings', async () => {
-      // const unitPrice = 5000;
-
       await genesisValueVaultCaller.initializeCurrencySetting(
         targetCurrency,
         decimals,
@@ -326,7 +325,11 @@ describe('GenesisValueVault', () => {
           await genesisValueVaultProxy.getLendingCompoundFactor(targetCurrency);
 
         expect(amount).to.equals(
-          gvAmount.mul(compoundFactor).div(BigNumber.from(10).pow(decimals)),
+          BigNumberJS(gvAmount.toString())
+            .times(compoundFactor.toString())
+            .div(10 ** decimals)
+            .dp(0, BigNumberJS.ROUND_UP)
+            .toFixed(),
         );
       });
 
@@ -343,7 +346,11 @@ describe('GenesisValueVault', () => {
           await genesisValueVaultProxy.getLendingCompoundFactor(targetCurrency);
 
         expect(amount).to.equals(
-          gvAmount.mul(compoundFactor).div(BigNumber.from(10).pow(decimals)),
+          BigNumberJS(gvAmount.toString())
+            .times(compoundFactor.toString())
+            .div(10 ** decimals)
+            .dp(0, BigNumberJS.ROUND_UP)
+            .toFixed(),
         );
       });
 

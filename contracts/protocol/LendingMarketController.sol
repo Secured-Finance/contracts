@@ -1032,14 +1032,14 @@ contract LendingMarketController is
     }
 
     /**
-     * @notice Creates a future value token for the selected currency and maturity.
+     * @notice Migrate the lending market to the new version.
      * @dev ZCTokens do not exist in markets that were deployed before the contract upgrade,
      * so they must be configured individually.
-     * This function can be deleted once the future value token is created for all currencies and maturities.
+     * This function can be deleted after executing for all currencies and maturities.
      * @param _ccy Currency name in bytes32
      * @param _maturity The maturity of the ZCToken
      */
-    function createZCToken(bytes32 _ccy, uint256 _maturity) external onlyOwner {
-        LendingMarketOperationLogic.createZCToken(_ccy, _maturity);
+    function migrateLendingMarket(bytes32 _ccy, uint256 _maturity) external onlyOwner {
+        LendingMarketOperationLogic.migrateLendingMarket(_ccy, _maturity);
     }
 }

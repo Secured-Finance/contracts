@@ -251,7 +251,7 @@ describe('LendingMarketController - Tokenization', () => {
 
     it('Create a new zc token manually', async () => {
       await expect(
-        lendingMarketControllerProxy.createZCToken(targetCurrency, 0),
+        lendingMarketControllerProxy.migrateLendingMarket(targetCurrency, 0),
       )
         .to.emit(lendingMarketOperationLogic, 'ZCTokenCreated')
         .withArgs(
@@ -264,25 +264,28 @@ describe('LendingMarketController - Tokenization', () => {
         );
     });
 
-    it('Fail to create a new zc token manually if it already exists', async () => {
-      await lendingMarketControllerProxy.createZCToken(targetCurrency, 0);
+    it('Fail to migrate a lending market manually if it already exists', async () => {
+      await lendingMarketControllerProxy.migrateLendingMarket(
+        targetCurrency,
+        0,
+      );
 
       await expect(
-        lendingMarketControllerProxy.createZCToken(targetCurrency, 0),
+        lendingMarketControllerProxy.migrateLendingMarket(targetCurrency, 0),
       ).to.be.revertedWith('AlreadyZCTokenExists');
     });
 
-    it('Fail to create a new zc token manually if the maturity is invalid', async () => {
+    it('Fail to migrate a lending market manually if the maturity is invalid', async () => {
       await expect(
-        lendingMarketControllerProxy.createZCToken(targetCurrency, 1),
+        lendingMarketControllerProxy.migrateLendingMarket(targetCurrency, 1),
       ).to.be.revertedWith('InvalidMaturity');
     });
 
-    it('Fail to create a new zc token manually if the caller is not owner', async () => {
+    it('Fail to migrate a lending market manually if the caller is not owner', async () => {
       await expect(
         lendingMarketControllerProxy
           .connect(alice)
-          .createZCToken(targetCurrency, 0),
+          .migrateLendingMarket(targetCurrency, 0),
       ).to.be.revertedWith('Ownable: caller is not the owner');
     });
   });
@@ -660,7 +663,7 @@ describe('LendingMarketController - Tokenization', () => {
       );
 
       const estimatedAmount = calculateFutureValue(value, 8000)
-        .mul(BigNumber.from(10).pow(36))
+        .mul(BigNumber.from(10).pow(38))
         .div(autoRollLog.lendingCompoundFactor);
 
       const withdrawableAmountAfter =
@@ -755,7 +758,7 @@ describe('LendingMarketController - Tokenization', () => {
         totalUnusedCollateral.mul(PCT_DIGIT).div(HAIRCUT),
         8000,
       )
-        .mul(BigNumber.from(10).pow(36))
+        .mul(BigNumber.from(10).pow(38))
         .div(compoundFactor);
       const withdrawableAmount =
         await lendingMarketControllerProxy.getWithdrawableZCTokenAmount(
@@ -1095,7 +1098,7 @@ describe('LendingMarketController - Tokenization', () => {
         maturities[0],
       );
       const estimatedAmount = calculateFutureValue(value, 8000)
-        .mul(BigNumber.from(10).pow(36))
+        .mul(BigNumber.from(10).pow(38))
         .div(autoRollLog.lendingCompoundFactor);
       const currentBalance = await zcToken.balanceOf(alice.address);
 
