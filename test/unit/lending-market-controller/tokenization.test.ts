@@ -80,7 +80,6 @@ describe('LendingMarketController - Tokenization', () => {
     await mockTokenVault.mock.getTokenAddress.returns(mockERC20.address);
     await mockTokenVault.mock.getLiquidationThresholdRate.returns('12500');
     await mockTokenVault.mock.getCollateralDetail.returns(2, 1, 1);
-    await mockERC20.mock.decimals.returns(6);
   });
 
   beforeEach(async () => {
@@ -90,6 +89,8 @@ describe('LendingMarketController - Tokenization', () => {
 
     const { timestamp } = await ethers.provider.getBlock('latest');
     genesisDate = getGenesisDate(timestamp * 1000);
+
+    await mockERC20.mock.decimals.returns(6);
   });
 
   const initialize = async (currency: string, marketCount = 4) => {
@@ -287,6 +288,14 @@ describe('LendingMarketController - Tokenization', () => {
           .connect(alice)
           .migrateLendingMarket(targetCurrency, 0),
       ).to.be.revertedWith('Ownable: caller is not the owner');
+    });
+
+    it('Fail to migrate a lending market manually due to too many token decimals', async () => {
+      await mockERC20.mock.decimals.returns(45);
+
+      await expect(
+        lendingMarketControllerProxy.migrateLendingMarket(targetCurrency, 0),
+      ).revertedWith(`TooManyTokenDecimals("${mockERC20.address}", 45)`);
     });
   });
 
