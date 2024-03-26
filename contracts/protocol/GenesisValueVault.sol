@@ -324,6 +324,21 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
     }
 
     /**
+     * @notice Updates the decimals of the genesis value.
+     * @dev The decimals of ZCTokens were always 36 before the contract upgrade, but they were fixed
+     * to be configured individually. This is a tentative function that configures them manually.
+     * So, this function can be deleted once the decimals of ZCTokens are updated for all currencies.
+     * @param _ccy Currency name in bytes32
+     * @param _decimals Compound factor decimals
+     */
+    function updateDecimals(
+        bytes32 _ccy,
+        uint8 _decimals
+    ) external override onlyLendingMarketController {
+        Storage.slot().decimals[_ccy] = _decimals;
+    }
+
+    /**
      * @notice Executes the auto-roll.
      * @param _ccy Currency name in bytes32
      * @param _maturity Current maturity

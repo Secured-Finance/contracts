@@ -58,6 +58,7 @@ describe('LendingMarketController - Orders', () => {
     genesisDate = getGenesisDate(timestamp * 1000);
 
     await mockCurrencyController.mock.currencyExists.returns(true);
+    await mockERC20.mock.decimals.returns(18);
   });
 
   before(async () => {
@@ -93,7 +94,6 @@ describe('LendingMarketController - Orders', () => {
     await mockTokenVault.mock.depositFrom.returns();
     await mockTokenVault.mock.depositWithPermitFrom.returns();
     await mockTokenVault.mock.getTokenAddress.returns(mockERC20.address);
-    await mockERC20.mock.decimals.returns(18);
   });
 
   describe('Initialization', async () => {
@@ -149,6 +149,21 @@ describe('LendingMarketController - Orders', () => {
             MIN_DEBT_UNIT_PRICE,
           ),
       ).revertedWith('Ownable: caller is not the owner');
+    });
+
+    it('Fail to initialize the lending market due to too many token decimals', async () => {
+      await mockERC20.mock.decimals.returns(45);
+
+      await expect(
+        lendingMarketControllerProxy.initializeLendingMarket(
+          targetCurrency,
+          genesisDate,
+          INITIAL_COMPOUND_FACTOR,
+          ORDER_FEE_RATE,
+          CIRCUIT_BREAKER_LIMIT_RANGE,
+          MIN_DEBT_UNIT_PRICE,
+        ),
+      ).revertedWith(`TooManyTokenDecimals("${mockERC20.address}", 45)`);
     });
 
     it('Get genesisDate', async () => {

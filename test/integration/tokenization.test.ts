@@ -36,7 +36,7 @@ describe('Integration Test: Tokenization', async () => {
 
   let signers: Signers;
 
-  const initialUSDCBalance = BigNumber.from('100000000');
+  const initialUSDCBalance = BigNumber.from('10000000000');
 
   const getUsers = async (count: number) =>
     signers.get(count, async (signer) => {
@@ -63,25 +63,24 @@ describe('Integration Test: Tokenization', async () => {
       .executeOrder(hexETH, maturity, Side.LEND, '1000000', unitPrice);
   };
 
-  const executeAutoRoll = async (unitPrice?: string) => {
-    if (unitPrice) {
-      // Move to 6 hours (21600 sec) before maturity.
-      await time.increaseTo(maturities[0].sub('21600').toString());
-      await createSampleETHOrders(owner, maturities[1], unitPrice);
-    }
+  const executeAutoRoll = async (unitPrice: string, currency = hexETH) => {
+    // Move to 6 hours (21600 sec) before maturity.
+    await time.increaseTo(maturities[0].sub('21600').toString());
+    await createSampleETHOrders(owner, maturities[1], unitPrice);
+
     await time.increaseTo(maturities[0].toString());
-    await lendingMarketController.connect(owner).rotateOrderBooks(hexETH);
+    await lendingMarketController.connect(owner).rotateOrderBooks(currency);
 
     await lendingMarketController
       .connect(owner)
-      .executeItayoseCall(hexETH, maturities[maturities.length - 1]);
+      .executeItayoseCall(currency, maturities[maturities.length - 1]);
   };
 
-  const resetContractInstances = async () => {
-    maturities = await lendingMarketController.getMaturities(hexETH);
+  const resetContractInstances = async (currency = hexETH) => {
+    maturities = await lendingMarketController.getMaturities(currency);
   };
 
-  before('Deploy Contracts', async () => {
+  const initializeContracts = async () => {
     signers = new Signers(await ethers.getSigners());
     [owner] = await signers.get(1);
 
@@ -103,6 +102,7 @@ describe('Integration Test: Tokenization', async () => {
     );
 
     await tokenVault.updateCurrency(hexETH, true);
+    await tokenVault.updateCurrency(hexUSDC, true);
 
     // Deploy active Lending Markets
     for (let i = 0; i < 8; i++) {
@@ -132,6 +132,10 @@ describe('Integration Test: Tokenization', async () => {
       maturities[0],
       preOpeningDate,
     );
+  };
+
+  before('Deploy Contracts', async () => {
+    await initializeContracts();
   });
 
   describe('Settings', async () => {
@@ -168,9 +172,7 @@ describe('Integration Test: Tokenization', async () => {
 
       expect(tokenInfo.ccy).to.equal(hexETH);
       expect(tokenInfo.maturity).to.equal(0);
-      expect(await token.decimals()).to.equal(
-        (await wETHToken.decimals()) + 18,
-      );
+      expect(await token.decimals()).to.equal(24);
       expect(await token.asset()).to.equal(wETHToken.address);
       expect(await token.maturity()).to.equal(0);
       expect(await token.name()).to.equal('ZC ETH');
@@ -200,9 +202,25 @@ describe('Integration Test: Tokenization', async () => {
         `zcUSDC-${maturity.format('YYYY-MM')}`,
       );
     });
+
+    it('Check ZC perpetual token info of USDC', async () => {
+      const tokenAddress = await lendingMarketController.getZCToken(hexUSDC, 0);
+      const tokenInfo = await lendingMarketController.getZCTokenInfo(
+        tokenAddress,
+      );
+      const token = await ethers.getContractAt('ZCToken', tokenAddress);
+
+      expect(tokenInfo.ccy).to.equal(hexUSDC);
+      expect(tokenInfo.maturity).to.equal(0);
+      expect(await token.decimals()).to.equal(24);
+      expect(await token.asset()).to.equal(usdcToken.address);
+      expect(await token.maturity()).to.equal(0);
+      expect(await token.name()).to.equal('ZC USDC');
+      expect(await token.symbol()).to.equal('zcUSDC');
+    });
   });
 
-  describe('Deposit and Withdraw', async () => {
+  describe('Deposit and Withdraw(ETH)', async () => {
     describe('Withdraw and deposit ZC tokens by the same user', async () => {
       const orderAmount = BigNumber.from('100000000000000000');
       let zcToken: Contract;
@@ -488,6 +506,9 @@ describe('Integration Test: Tokenization', async () => {
           await lendingMarketController.getGenesisValue(hexETH, alice.address);
 
         expect(aliceFV).to.equal(aliceGVInFV);
+        expect(aliceGVInFV.toString().length + 8).to.equal(
+          aliceGVBefore.toString().length,
+        );
 
         const withdrawableAmount =
           await lendingMarketController.getWithdrawableZCTokenAmount(
@@ -772,7 +793,7 @@ describe('Integration Test: Tokenization', async () => {
         expect(aliceGVAfter).to.not.equal(0);
       });
 
-      it('Withdraw ZC perpetual token', async () => {
+      it('Withdraw ZC token', async () => {
         const { futureValue: aliceFV } =
           await lendingMarketController.getPosition(
             hexETH,
@@ -1320,6 +1341,239 @@ describe('Integration Test: Tokenization', async () => {
         )
           .to.emit(fundManagementLogic, 'EmergencySettlementExecuted')
           .withArgs(alice.address, alicePV);
+      });
+    });
+  });
+
+  describe('Deposit and Withdraw(USDC)', async () => {
+    before(async () => {
+      await initializeContracts();
+    });
+
+    describe('Withdraw and deposit ZC tokens by the same user', async () => {
+      const orderAmount = BigNumber.from('1000000000');
+      let zcToken: Contract;
+
+      before(async () => {
+        [alice, bob] = await getUsers(2);
+
+        await resetContractInstances(hexUSDC);
+        zcToken = await ethers.getContractAt(
+          'ZCToken',
+          await lendingMarketController.getZCToken(hexUSDC, maturities[0]),
+        );
+      });
+
+      it('Fill an order', async () => {
+        await usdcToken
+          .connect(alice)
+          .approve(tokenVault.address, orderAmount.mul(2));
+        await usdcToken
+          .connect(bob)
+          .approve(tokenVault.address, orderAmount.mul(2));
+        await tokenVault.connect(bob).deposit(hexUSDC, orderAmount.mul(2), {});
+
+        await expect(
+          lendingMarketController
+            .connect(alice)
+            .depositAndExecuteOrder(
+              hexUSDC,
+              maturities[0],
+              Side.LEND,
+              orderAmount,
+              9600,
+            ),
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
+
+        await expect(
+          lendingMarketController
+            .connect(bob)
+            .executeOrder(hexUSDC, maturities[0], Side.BORROW, orderAmount, 0),
+        ).to.emit(fundManagementLogic, 'OrderFilled');
+
+        // Check future value
+        const { presentValue: alicePV } =
+          await lendingMarketController.getPosition(
+            hexUSDC,
+            maturities[0],
+            alice.address,
+          );
+
+        expect(alicePV).to.equal(orderAmount);
+      });
+
+      it('Withdraw ZC token', async () => {
+        const { futureValue: aliceFVBefore } =
+          await lendingMarketController.getPosition(
+            hexUSDC,
+            maturities[0],
+            alice.address,
+          );
+
+        const withdrawableAmount =
+          await lendingMarketController.getWithdrawableZCTokenAmount(
+            hexUSDC,
+            maturities[0],
+            alice.address,
+          );
+
+        expect(withdrawableAmount).to.equal(aliceFVBefore);
+
+        await lendingMarketController
+          .connect(alice)
+          .withdrawZCToken(hexUSDC, maturities[0], aliceFVBefore);
+
+        expect(await zcToken.balanceOf(alice.address)).to.equal(aliceFVBefore);
+        expect(await zcToken.totalSupply()).to.equal(aliceFVBefore);
+
+        const { futureValue: aliceFVAfter } =
+          await lendingMarketController.getPosition(
+            hexUSDC,
+            maturities[0],
+            alice.address,
+          );
+
+        expect(aliceFVAfter).to.equal(0);
+      });
+
+      it('Deposit ZC token', async () => {
+        const balance = await zcToken.balanceOf(alice.address);
+        await lendingMarketController
+          .connect(alice)
+          .depositZCToken(hexUSDC, maturities[0], balance);
+
+        expect(await zcToken.balanceOf(alice.address)).to.equal(0);
+
+        const { futureValue: aliceFVAfter } =
+          await lendingMarketController.getPosition(
+            hexUSDC,
+            maturities[0],
+            alice.address,
+          );
+
+        expect(aliceFVAfter).to.equal(balance);
+        expect(await zcToken.totalSupply()).to.equal(0);
+      });
+    });
+
+    describe('Withdraw and deposit ZC perpetual tokens by the same user', async () => {
+      const orderAmount = BigNumber.from('1000000000');
+      let zcPerpetualToken: Contract;
+
+      before(async () => {
+        [alice, bob] = await getUsers(2);
+
+        await resetContractInstances(hexUSDC);
+        zcPerpetualToken = await ethers.getContractAt(
+          'ZCToken',
+          await lendingMarketController.getZCToken(hexUSDC, 0),
+        );
+      });
+
+      it('Fill an order', async () => {
+        await usdcToken
+          .connect(alice)
+          .approve(tokenVault.address, orderAmount.mul(2));
+        await usdcToken
+          .connect(bob)
+          .approve(tokenVault.address, orderAmount.mul(2));
+        await tokenVault.connect(bob).deposit(hexUSDC, orderAmount.mul(2));
+
+        await expect(
+          lendingMarketController
+            .connect(alice)
+            .depositAndExecuteOrder(
+              hexUSDC,
+              maturities[0],
+              Side.LEND,
+              orderAmount,
+              9600,
+            ),
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
+
+        await expect(
+          lendingMarketController
+            .connect(bob)
+            .executeOrder(hexUSDC, maturities[0], Side.BORROW, orderAmount, 0),
+        ).to.emit(fundManagementLogic, 'OrderFilled');
+
+        // Check future value
+        const { presentValue: alicePV } =
+          await lendingMarketController.getPosition(
+            hexUSDC,
+            maturities[0],
+            alice.address,
+          );
+
+        expect(alicePV).to.equal(orderAmount);
+      });
+
+      it('Execute auto roll', async () => {
+        // Auto-roll
+        await executeAutoRoll('9600', hexUSDC);
+
+        const withdrawableAmount =
+          await lendingMarketController.getWithdrawableZCTokenAmount(
+            hexUSDC,
+            maturities[0],
+            alice.address,
+          );
+
+        expect(withdrawableAmount).to.equal(0);
+      });
+
+      it('Withdraw ZC perpetual token', async () => {
+        const { futureValue: aliceFV } =
+          await lendingMarketController.getPosition(
+            hexUSDC,
+            maturities[1],
+            alice.address,
+          );
+        const { amount: aliceGVBefore, amountInFV: aliceGVInFV } =
+          await lendingMarketController.getGenesisValue(hexUSDC, alice.address);
+
+        expect(aliceFV).to.equal(aliceGVInFV);
+        expect(aliceGVInFV.toString().length + 20).to.equal(
+          aliceGVBefore.toString().length,
+        );
+
+        const withdrawableAmount =
+          await lendingMarketController.getWithdrawableZCTokenAmount(
+            hexUSDC,
+            0,
+            alice.address,
+          );
+
+        expect(withdrawableAmount).to.equal(aliceGVBefore);
+
+        await lendingMarketController
+          .connect(alice)
+          .withdrawZCToken(hexUSDC, 0, aliceGVBefore);
+
+        expect(await zcPerpetualToken.balanceOf(alice.address)).to.equal(
+          aliceGVBefore,
+        );
+        expect(await zcPerpetualToken.totalSupply()).to.equal(aliceGVBefore);
+
+        const { amount: aliceGVAfter } =
+          await lendingMarketController.getGenesisValue(hexUSDC, alice.address);
+
+        expect(aliceGVAfter).to.equal(0);
+      });
+
+      it('Deposit ZC perpetual token', async () => {
+        const balance = await zcPerpetualToken.balanceOf(alice.address);
+        await lendingMarketController
+          .connect(alice)
+          .depositZCToken(hexUSDC, 0, balance);
+
+        expect(await zcPerpetualToken.balanceOf(alice.address)).to.equal(0);
+        expect(await zcPerpetualToken.totalSupply()).to.equal(0);
+
+        const { amount: aliceGVAfter } =
+          await lendingMarketController.getGenesisValue(hexUSDC, alice.address);
+
+        expect(aliceGVAfter).to.equal(balance);
       });
     });
   });
