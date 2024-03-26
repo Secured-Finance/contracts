@@ -53,7 +53,7 @@ error RedemptionIsRequired()
 ### Deposit
 
 ```solidity
-event Deposit(address user, bytes32 ccy, uint256 amount)
+event Deposit(address user, bytes32 ccy, uint256 amount, address caller)
 ```
 
 ### Withdraw
@@ -146,6 +146,12 @@ function getTotalUnusedCollateralAmount(address user) external view returns (uin
 function getTotalCollateralAmount(address user) external view returns (uint256)
 ```
 
+### getCollateralDetail
+
+```solidity
+function getCollateralDetail(address user) external view returns (uint256 totalCollateral, uint256 totalUsedCollateral, uint256 totalDeposit)
+```
+
 ### getCollateralAmount
 
 ```solidity
@@ -212,10 +218,28 @@ function updateCurrency(bytes32 ccy, bool isCollateral) external
 function deposit(bytes32 ccy, uint256 amount) external payable
 ```
 
+### depositTo
+
+```solidity
+function depositTo(bytes32 ccy, uint256 amount, address onBehalfOf) external payable
+```
+
 ### depositFrom
 
 ```solidity
 function depositFrom(address user, bytes32 ccy, uint256 amount) external payable
+```
+
+### depositWithPermitTo
+
+```solidity
+function depositWithPermitTo(bytes32 ccy, uint256 amount, address onBehalfOf, uint256 deadline, uint8 permitV, bytes32 permitR, bytes32 permitS) external
+```
+
+### depositWithPermitFrom
+
+```solidity
+function depositWithPermitFrom(address user, bytes32 ccy, uint256 amount, uint256 deadline, uint8 permitV, bytes32 permitR, bytes32 permitS) external
 ```
 
 ### withdraw
@@ -264,5 +288,11 @@ function pause() external
 
 ```solidity
 function unpause() external
+```
+
+### getLiquidationThresholdRate
+
+```solidity
+function getLiquidationThresholdRate() external view returns (uint256 rate)
 ```
 

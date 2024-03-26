@@ -212,7 +212,7 @@ function setInitialBlockUnitPrice(struct OrderBookLib.OrderBook self, uint256 _u
 ### updateBlockUnitPriceHistory
 
 ```solidity
-function updateBlockUnitPriceHistory(struct OrderBookLib.OrderBook self, uint256 _filledAmount, uint256 _filledFutureValue, uint256 _minimumReliableAmount) internal
+function updateBlockUnitPriceHistory(struct OrderBookLib.OrderBook self, uint256 _filledAmount, uint256 _filledFutureValue, uint256 _minimumReliableAmount) internal returns (uint256 latestBlockUnitPrice, bool isUpdated)
 ```
 
 ### removeOrder

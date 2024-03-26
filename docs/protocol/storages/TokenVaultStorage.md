@@ -20,6 +20,7 @@ struct Storage {
   mapping(address => struct EnumerableSet.Bytes32Set) usedCurrencies;
   mapping(bytes32 => uint256) totalDepositAmount;
   mapping(address => mapping(bytes32 => uint256)) depositAmounts;
+  uint256 fullLiquidationThresholdRate;
 }
 ```
 

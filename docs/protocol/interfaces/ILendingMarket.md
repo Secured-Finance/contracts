@@ -233,7 +233,7 @@ function createOrderBook(uint256 maturity, uint256 openingDate, uint256 preOpeni
 ### executeAutoRoll
 
 ```solidity
-function executeAutoRoll(uint8 maturedOrderBookId, uint8 newNearestOrderBookId, uint256 newMaturity, uint256 openingDate, uint256 autoRollUnitPrice) external
+function executeAutoRoll(uint8 maturedOrderBookId, uint8 newNearestOrderBookId, uint256 autoRollUnitPrice) external
 ```
 
 ### cancelOrder

@@ -98,6 +98,12 @@ event PreOrderExecuted(address user, enum ProtocolTypes.Side side, bytes32 ccy, 
 event PositionUnwound(address user, enum ProtocolTypes.Side side, bytes32 ccy, uint256 maturity, uint256 inputFutureValue, uint256 filledAmount, uint256 filledUnitPrice, uint256 filledAmountInFV, uint256 feeInFV, bool isCircuitBreakerTriggered)
 ```
 
+### BlockUnitPriceHistoryUpdated
+
+```solidity
+event BlockUnitPriceHistoryUpdated(bytes32 ccy, uint256 maturity, uint256 blockUnitPrice)
+```
+
 ### cancelOrder
 
 ```solidity

@@ -28,6 +28,18 @@ Returns the contract names used in this contract.
 
 _The contract name list is in `./libraries/Contracts.sol`._
 
+### getRevision
+
+```solidity
+function getRevision() external pure returns (uint256)
+```
+
+Gets the revision number of the contract
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | uint256 | The revision number |
+
 ### getTotalLendingSupply
 
 ```solidity
@@ -75,6 +87,22 @@ Gets the user balance.
 | ---- | ---- | ----------- |
 | balance | int256 | The user balance |
 | maturity | uint256 | The maturity of the market that the future value was added |
+
+### getTotalLockedBalance
+
+```solidity
+function getTotalLockedBalance(uint8 _orderBookId) external view returns (uint256)
+```
+
+Gets the total locked balance.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _orderBookId | uint8 | The order book id |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | uint256 | The total locked balance |
 
 ### hasBalanceAtPastMaturity
 
@@ -132,6 +160,40 @@ is the taker._
 | _amount | uint256 | The amount to add |
 | _maturity | uint256 | The maturity of the market |
 
+### lock
+
+```solidity
+function lock(uint8 _orderBookId, address _user, uint256 _amount, uint256 _maturity) public returns (uint256 lockedAmount)
+```
+
+Locks user's balance.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _orderBookId | uint8 |  |
+| _user | address | User's address |
+| _amount | uint256 | The amount to lock |
+| _maturity | uint256 | The maturity of the market |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| lockedAmount | uint256 | The amount locked |
+
+### unlock
+
+```solidity
+function unlock(uint8 _orderBookId, address _user, uint256 _amount, uint256 _maturity) public
+```
+
+Unlocks user's balance.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _orderBookId | uint8 |  |
+| _user | address | User's address |
+| _amount | uint256 | The amount to lock |
+| _maturity | uint256 | The maturity of the market |
+
 ### transferFrom
 
 ```solidity
@@ -151,7 +213,7 @@ Transfers the future value from sender to receiver.
 ### reset
 
 ```solidity
-function reset(uint8 _orderBookId, address _user, uint256 _activeMaturity) external returns (int256 removedAmount, int256 currentAmount, uint256 maturity, bool isAllRemoved)
+function reset(uint8 _orderBookId, address _user) external returns (int256 removedAmount, int256 currentAmount, uint256 maturity, bool isAllRemoved)
 ```
 
 Reset all amount if there is an amount in the past maturity.
@@ -160,7 +222,6 @@ Reset all amount if there is an amount in the past maturity.
 | ---- | ---- | ----------- |
 | _orderBookId | uint8 |  |
 | _user | address | User's address |
-| _activeMaturity | uint256 |  |
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |

@@ -38,6 +38,12 @@ function setFutureValueVaultImpl(address newImpl) external
 function setLendingMarketImpl(address newImpl) external
 ```
 
+### setZCTokenImpl
+
+```solidity
+function setZCTokenImpl(address newImpl) external
+```
+
 ### deployFutureValueVault
 
 ```solidity
@@ -48,5 +54,11 @@ function deployFutureValueVault() external returns (address futureValueVault)
 
 ```solidity
 function deployLendingMarket(bytes32 ccy, uint256 orderFeeRate, uint256 cbLimitRange) external returns (address market)
+```
+
+### deployZCToken
+
+```solidity
+function deployZCToken(string name, string symbol, uint8 decimals, address asset, uint256 maturity) external returns (address futureValueToken)
 ```
 

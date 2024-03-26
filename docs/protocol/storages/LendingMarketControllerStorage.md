@@ -18,6 +18,15 @@ struct TerminationCurrencyCache {
 }
 ```
 
+## ZCTokenInfo
+
+```solidity
+struct ZCTokenInfo {
+  bytes32 ccy;
+  uint256 maturity;
+}
+```
+
 ## LendingMarketControllerStorage
 
 ### STORAGE_SLOT
@@ -45,6 +54,8 @@ struct Storage {
   mapping(bytes32 => mapping(uint256 => struct ObservationPeriodLog)) observationPeriodLogs;
   mapping(address => struct EnumerableSet.Bytes32Set) usedCurrencies;
   mapping(address => bool) isRedeemed;
+  mapping(bytes32 => mapping(uint256 => address)) zcTokens;
+  mapping(address => struct ZCTokenInfo) zcTokenInfo;
 }
 ```
 

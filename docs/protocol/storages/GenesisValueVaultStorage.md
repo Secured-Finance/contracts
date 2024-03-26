@@ -47,6 +47,7 @@ struct Storage {
   mapping(bytes32 => mapping(uint256 => int256)) maturityBalances;
   mapping(bytes32 => mapping(uint256 => struct AutoRollLog)) autoRollLogs;
   mapping(bytes32 => mapping(address => uint256)) userMaturities;
+  mapping(bytes32 => uint256) totalLockedBalances;
 }
 ```
 

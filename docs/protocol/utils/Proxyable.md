@@ -32,6 +32,12 @@ modifier onlyBeacon()
 function getRevision() external pure virtual returns (uint256)
 ```
 
+Gets the revision number of the contract
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | uint256 | The revision number |
+
 ### _getImplementation
 
 ```solidity

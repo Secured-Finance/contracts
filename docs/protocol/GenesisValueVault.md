@@ -28,6 +28,31 @@ Returns the contract names used in this contract.
 
 _The contract name list is in `./libraries/Contracts.sol`._
 
+### isAutoRolled
+
+```solidity
+function isAutoRolled(bytes32 _ccy, uint256 _maturity) public view returns (bool)
+```
+
+Gets if auto-roll is executed at the maturity.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 |
+| _maturity | uint256 | The maturity |
+
+### getRevision
+
+```solidity
+function getRevision() external pure returns (uint256)
+```
+
+Gets the revision number of the contract
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | uint256 | The revision number |
+
 ### isInitialized
 
 ```solidity
@@ -108,23 +133,6 @@ Gets the user balance.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | [0] | int256 | The user balance |
-
-### getBalanceInFutureValue
-
-```solidity
-function getBalanceInFutureValue(bytes32 _ccy, address _user) external view returns (int256)
-```
-
-Gets the future value of the user balance.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _ccy | bytes32 | Currency name in bytes32 |
-| _user | address | User's address |
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| [0] | int256 | The future value of the user balance |
 
 ### getMaturityGenesisValue
 
@@ -224,6 +232,22 @@ Gets the latest auto-roll log
 | ---- | ---- | ----------- |
 | [0] | struct AutoRollLog | The auto-roll log |
 
+### getTotalLockedBalance
+
+```solidity
+function getTotalLockedBalance(bytes32 _ccy) external view returns (uint256)
+```
+
+Gets the total locked balance.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | uint256 | The total locked balance |
+
 ### calculateFVFromFV
 
 ```solidity
@@ -309,6 +333,23 @@ _This function is allowed to be called only before the initial compound factor i
 | _ccy | bytes32 | Currency name in bytes32 |
 | _unitPrice | uint256 | The unit price used to calculate the compound factor |
 
+### updateDecimals
+
+```solidity
+function updateDecimals(bytes32 _ccy, uint8 _decimals) external
+```
+
+Updates the decimals of the genesis value.
+
+_The decimals of ZCTokens were always 36 before the contract upgrade, but they were fixed
+to be configured individually. This is a tentative function that configures them manually.
+So, this function can be deleted once the decimals of ZCTokens are updated for all currencies._
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 |
+| _decimals | uint8 | Compound factor decimals |
+
 ### executeAutoRoll
 
 ```solidity
@@ -362,6 +403,38 @@ and called only one time per maturity._
 | _ccy | bytes32 | Currency name in bytes32 |
 | _user | address | User's address |
 | _basisMaturity | uint256 | The basis maturity |
+
+### lock
+
+```solidity
+function lock(bytes32 _ccy, address _user, uint256 _amount) public returns (uint256 lockedAmount)
+```
+
+Locks user's balance.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 |
+| _user | address | User's address |
+| _amount | uint256 | The amount to lock |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| lockedAmount | uint256 | The amount locked |
+
+### unlock
+
+```solidity
+function unlock(bytes32 _ccy, address _user, uint256 _amount) public
+```
+
+Unlocks user's balance.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 |
+| _user | address | User's address |
+| _amount | uint256 | The amount to lock |
 
 ### transferFrom
 
@@ -419,7 +492,7 @@ Forces a reset of the user's genesis value.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _ccy | bytes32 | Currency name in bytes32 |
-| _maturity | uint256 |  |
+| _maturity | uint256 | The maturity |
 | _user | address | User's address |
 | _amountInFV | int256 | The amount in the future value to reset |
 

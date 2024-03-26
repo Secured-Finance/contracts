@@ -90,7 +90,7 @@ Sets the implementation contract of CurrencyController
 ### setTokenVaultImpl
 
 ```solidity
-function setTokenVaultImpl(address newImpl, uint256 liquidationThresholdRate, uint256 liquidationProtocolFeeRate, uint256 liquidatorFeeRate, address nativeToken) external
+function setTokenVaultImpl(address newImpl, uint256 liquidationThresholdRate, uint256 fullLiquidationThresholdRate, uint256 liquidationProtocolFeeRate, uint256 liquidatorFeeRate, address nativeToken) external
 ```
 
 Sets the implementation contract of TokenVault
@@ -98,7 +98,8 @@ Sets the implementation contract of TokenVault
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | newImpl | address | The address of implementation contract |
-| liquidationThresholdRate | uint256 | The rate used as the auto liquidation threshold |
+| liquidationThresholdRate | uint256 | The liquidation threshold rate |
+| fullLiquidationThresholdRate | uint256 | The full liquidation threshold rate |
 | liquidationProtocolFeeRate | uint256 | The liquidation fee rate received by protocol |
 | liquidatorFeeRate | uint256 | The liquidation fee rate received by liquidators |
 | nativeToken | address | The address of wrapped token of native currency |

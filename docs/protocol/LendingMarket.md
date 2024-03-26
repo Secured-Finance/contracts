@@ -198,6 +198,18 @@ Gets if the market is under the pre-order period.
 | ---- | ---- | ----------- |
 | [0] | bool | The boolean if the market is under the pre-order period. |
 
+### getRevision
+
+```solidity
+function getRevision() external pure returns (uint256)
+```
+
+Gets the revision number of the contract
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | uint256 | The revision number |
+
 ### getOrderBookDetail
 
 ```solidity
@@ -651,7 +663,7 @@ Creates a new order book.
 ### executeAutoRoll
 
 ```solidity
-function executeAutoRoll(uint8 _maturedOrderBookId, uint8 _newNearestOrderBookId, uint256 _newMaturity, uint256 _openingDate, uint256 _autoRollUnitPrice) external
+function executeAutoRoll(uint8 _maturedOrderBookId, uint8 _newNearestOrderBookId, uint256 _autoRollUnitPrice) external
 ```
 
 ### cancelOrder

@@ -14,10 +14,28 @@ uint256 OBSERVATION_PERIOD
 uint8 COMPOUND_FACTOR_DECIMALS
 ```
 
+### ZC_TOKEN_BASE_DECIMALS
+
+```solidity
+uint8 ZC_TOKEN_BASE_DECIMALS
+```
+
+### PRE_ORDER_BASE_PERIOD
+
+```solidity
+uint256 PRE_ORDER_BASE_PERIOD
+```
+
 ### InvalidCompoundFactor
 
 ```solidity
 error InvalidCompoundFactor()
+```
+
+### TooManyTokenDecimals
+
+```solidity
+error TooManyTokenDecimals(address tokenAddress, uint8 decimals)
 ```
 
 ### InvalidCurrency
@@ -62,6 +80,24 @@ error LendingMarketNotInitialized()
 error NotEnoughOrderBooks()
 ```
 
+### AlreadyZCTokenExists
+
+```solidity
+error AlreadyZCTokenExists(address tokenAddress)
+```
+
+### InvalidMaturity
+
+```solidity
+error InvalidMaturity(uint256 maturity)
+```
+
+### ZcTokenIsZero
+
+```solidity
+error ZcTokenIsZero()
+```
+
 ### LendingMarketInitialized
 
 ```solidity
@@ -92,6 +128,12 @@ event OrderBooksRotated(bytes32 ccy, uint256 oldMaturity, uint256 newMaturity)
 event EmergencyTerminationExecuted(uint256 timestamp)
 ```
 
+### ZCTokenCreated
+
+```solidity
+event ZCTokenCreated(bytes32 ccy, uint256 maturity, string name, string symbol, uint8 decimals, address tokenAddress)
+```
+
 ### initializeLendingMarket
 
 ```solidity
@@ -107,7 +149,7 @@ function updateMinDebtUnitPrice(bytes32 _ccy, uint256 _minDebtUnitPrice) public
 ### createOrderBook
 
 ```solidity
-function createOrderBook(bytes32 _ccy, uint256 _openingDate, uint256 _preOpeningDate) external
+function createOrderBook(bytes32 _ccy, uint256 _openingDate, uint256 _preOpeningDate) public
 ```
 
 ### executeItayoseCall
@@ -146,16 +188,40 @@ function unpauseLendingMarket(bytes32 _ccy) public
 function updateOrderLogs(bytes32 _ccy, uint256 _maturity, uint256 _filledAmount, uint256 _filledFutureValue) external
 ```
 
+### migrateLendingMarket
+
+```solidity
+function migrateLendingMarket(bytes32 _ccy, uint256 _maturity) external
+```
+
+### createZCToken
+
+```solidity
+function createZCToken(bytes32 _ccy, uint256 _maturity, address _tokenAddress) public
+```
+
 ### calculateNextMaturity
 
 ```solidity
 function calculateNextMaturity(uint256 _timestamp, uint256 _period) public pure returns (uint256)
 ```
 
+### bytes32ToString
+
+```solidity
+function bytes32ToString(bytes32 _bytes32) public pure returns (string)
+```
+
 ### _getLastFridayAfterMonths
 
 ```solidity
 function _getLastFridayAfterMonths(uint256 _timestamp, uint256 _months) internal pure returns (uint256 lastFridayTimestamp)
+```
+
+### _getShortMonthYearString
+
+```solidity
+function _getShortMonthYearString(uint256 timestamp) internal pure returns (string)
 ```
 
 ### _calculateAutoRollUnitPrice

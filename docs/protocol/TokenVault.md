@@ -34,7 +34,7 @@ Modifier to check if the protocol is active.
 ### initialize
 
 ```solidity
-function initialize(address _owner, address _resolver, uint256 _liquidationThresholdRate, uint256 _liquidationProtocolFeeRate, uint256 _liquidatorFeeRate, address _nativeToken) public
+function initialize(address _owner, address _resolver, uint256 _liquidationThresholdRate, uint256 _fullLiquidationThresholdRate, uint256 _liquidationProtocolFeeRate, uint256 _liquidatorFeeRate, address _nativeToken) public
 ```
 
 Initializes the contract.
@@ -46,6 +46,7 @@ _Function is invoked by the proxy contract when the contract is added to the Pro
 | _owner | address | The address of the contract owner |
 | _resolver | address | The address of the Address Resolver contract |
 | _liquidationThresholdRate | uint256 | The liquidation threshold rate |
+| _fullLiquidationThresholdRate | uint256 | The full liquidation threshold rate |
 | _liquidationProtocolFeeRate | uint256 | The liquidation fee rate received by protocol |
 | _liquidatorFeeRate | uint256 | The liquidation fee rate received by liquidators |
 | _nativeToken | address | The address of wrapped token of native currency |
@@ -131,6 +132,18 @@ Gets if the currency has been registered
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | [0] | bool | The boolean if the currency has been registered or not |
+
+### getRevision
+
+```solidity
+function getRevision() external pure returns (uint256)
+```
+
+Gets the revision number of the contract
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | uint256 | The revision number |
 
 ### getTokenAddress
 
@@ -241,6 +254,24 @@ Gets the total collateral amount.
 | ---- | ---- | ----------- |
 | totalCollateralAmount | uint256 | The total collateral amount in the base currency |
 
+### getCollateralDetail
+
+```solidity
+function getCollateralDetail(address _user) external view returns (uint256 totalCollateral, uint256 totalUsedCollateral, uint256 totalDeposit)
+```
+
+Gets the collateral detail.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _user | address | User's address |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| totalCollateral | uint256 | The total collateral amount in the base currency |
+| totalUsedCollateral | uint256 | The total used collateral amount in the base currency |
+| totalDeposit | uint256 | The total deposit amount in the base currency |
+
 ### getCollateralAmount
 
 ```solidity
@@ -344,6 +375,18 @@ Gets the currencies that the user used as collateral.
 | ---- | ---- | ----------- |
 | [0] | bytes32[] | The currency names in bytes32 |
 
+### getLiquidationThresholdRate
+
+```solidity
+function getLiquidationThresholdRate() public view returns (uint256 rate)
+```
+
+Gets the liquidation threshold rate.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| rate | uint256 | The liquidation threshold rate |
+
 ### calculateCoverage
 
 ```solidity
@@ -419,6 +462,20 @@ _Deposits funds by the caller into collateral._
 | _ccy | bytes32 | Currency name in bytes32 |
 | _amount | uint256 | Amount of funds to deposit |
 
+### depositTo
+
+```solidity
+function depositTo(bytes32 _ccy, uint256 _amount, address _onBehalfOf) external payable
+```
+
+_Deposits funds by the caller into collateral._
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 |
+| _amount | uint256 | Amount of funds to deposit |
+| _onBehalfOf | address | The beneficiary of the supplied deposits |
+
 ### depositFrom
 
 ```solidity
@@ -429,9 +486,45 @@ _Deposits funds by the `from` into collateral._
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| _from | address | user's address |
+| _from | address | Address of the user |
 | _ccy | bytes32 | Currency name in bytes32 |
 | _amount | uint256 | Amount of funds to deposit |
+
+### depositWithPermitTo
+
+```solidity
+function depositWithPermitTo(bytes32 _ccy, uint256 _amount, address _onBehalfOf, uint256 _deadline, uint8 _permitV, bytes32 _permitR, bytes32 _permitS) external
+```
+
+_Deposits funds by the caller into collateral with transfer approval of asset via permit function_
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 |
+| _amount | uint256 | Amount of funds to deposit |
+| _onBehalfOf | address | The beneficiary of the supplied deposits |
+| _deadline | uint256 | The deadline timestamp that the permit is valid |
+| _permitV | uint8 | The V parameter of ERC712 permit sig |
+| _permitR | bytes32 | The R parameter of ERC712 permit sig |
+| _permitS | bytes32 | The S parameter of ERC712 permit sig |
+
+### depositWithPermitFrom
+
+```solidity
+function depositWithPermitFrom(address _from, bytes32 _ccy, uint256 _amount, uint256 _deadline, uint8 _permitV, bytes32 _permitR, bytes32 _permitS) external
+```
+
+_Deposits funds by the `from` into collateral with transfer approval of asset via permit function_
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _from | address | Address of the user |
+| _ccy | bytes32 | Currency name in bytes32 |
+| _amount | uint256 | Amount of funds to deposit |
+| _deadline | uint256 | The deadline timestamp that the permit is valid |
+| _permitV | uint8 | The V parameter of ERC712 permit sig |
+| _permitR | bytes32 | The R parameter of ERC712 permit sig |
+| _permitS | bytes32 | The S parameter of ERC712 permit sig |
 
 ### withdraw
 
@@ -534,7 +627,7 @@ Unpauses the token vault.
 ### _deposit
 
 ```solidity
-function _deposit(address _user, bytes32 _ccy, uint256 _amount) internal
+function _deposit(address _caller, bytes32 _ccy, uint256 _amount, address _onBehalfOf) internal
 ```
 
 ### _withdraw

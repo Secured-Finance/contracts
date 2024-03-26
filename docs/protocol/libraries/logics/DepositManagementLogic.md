@@ -8,12 +8,6 @@
 error NotEnoughDeposit(bytes32 ccy)
 ```
 
-### CollateralIsZero
-
-```solidity
-error CollateralIsZero(bytes32 ccy)
-```
-
 ### ProtocolIsInsolvent
 
 ```solidity
@@ -128,7 +122,7 @@ function executeForcedReset(address _user, bytes32 _ccy) external returns (uint2
 ### deposit
 
 ```solidity
-function deposit(address _user, bytes32 _ccy, uint256 _amount) public
+function deposit(address _caller, bytes32 _ccy, uint256 _amount, address _onBehalfOf) public
 ```
 
 ### withdraw

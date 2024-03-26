@@ -62,6 +62,18 @@ error InitialCompoundFactorAlreadyFinalized()
 error AutoRollLogAlreadyUpdated(uint256 currentMaturity, uint256 nextMaturity)
 ```
 
+### InsufficientBalance
+
+```solidity
+error InsufficientBalance()
+```
+
+### InsufficientLockedBalance
+
+```solidity
+error InsufficientLockedBalance()
+```
+
 ### Transfer
 
 ```solidity
@@ -72,6 +84,24 @@ event Transfer(bytes32 ccy, address from, address to, int256 value)
 
 ```solidity
 event AutoRollExecuted(bytes32 ccy, uint256 lendingCompoundFactor, uint256 borrowingCompoundFactor, uint256 unitPrice, uint256 currentMaturity, uint256 previousMaturity)
+```
+
+### BalanceLocked
+
+```solidity
+event BalanceLocked(bytes32 ccy, address user, uint256 value)
+```
+
+### BalanceUnlocked
+
+```solidity
+event BalanceUnlocked(bytes32 ccy, address user, uint256 value)
+```
+
+### isAutoRolled
+
+```solidity
+function isAutoRolled(bytes32 _ccy, uint256 _maturity) external view returns (bool)
 ```
 
 ### isInitialized
@@ -102,12 +132,6 @@ function getTotalBorrowingSupply(bytes32 ccy) external view returns (uint256)
 
 ```solidity
 function getBalance(bytes32 ccy, address user) external view returns (int256)
-```
-
-### getBalanceInFutureValue
-
-```solidity
-function getBalanceInFutureValue(bytes32 ccy, address user) external view returns (int256)
 ```
 
 ### getMaturityGenesisValue
@@ -144,6 +168,12 @@ function getAutoRollLog(bytes32 ccy, uint256 maturity) external view returns (st
 
 ```solidity
 function getLatestAutoRollLog(bytes32 ccy) external view returns (struct AutoRollLog)
+```
+
+### getTotalLockedBalance
+
+```solidity
+function getTotalLockedBalance(bytes32 ccy) external view returns (uint256)
 ```
 
 ### calculateFVFromFV
@@ -188,6 +218,12 @@ function initializeCurrencySetting(bytes32 ccy, uint8 decimals, uint256 compound
 function updateInitialCompoundFactor(bytes32 ccy, uint256 unitPrice) external
 ```
 
+### updateDecimals
+
+```solidity
+function updateDecimals(bytes32 _ccy, uint8 _decimals) external
+```
+
 ### executeAutoRoll
 
 ```solidity
@@ -204,6 +240,18 @@ function updateGenesisValueWithFutureValue(bytes32 ccy, address user, uint256 ba
 
 ```solidity
 function updateGenesisValueWithResidualAmount(bytes32 ccy, address user, uint256 basisMaturity) external
+```
+
+### lock
+
+```solidity
+function lock(bytes32 ccy, address user, uint256 amount) external returns (uint256 lockedAmount)
+```
+
+### unlock
+
+```solidity
+function unlock(bytes32 ccy, address user, uint256 amount) external
 ```
 
 ### transferFrom

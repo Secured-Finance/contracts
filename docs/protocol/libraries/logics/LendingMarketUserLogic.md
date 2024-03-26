@@ -8,6 +8,12 @@
 error InvalidAmount()
 ```
 
+### AmountIsZero
+
+```solidity
+error AmountIsZero()
+```
+
 ### FutureValueIsZero
 
 ```solidity
@@ -30,6 +36,24 @@ error NotEnoughCollateral()
 
 ```solidity
 error NotEnoughDeposit(bytes32 ccy)
+```
+
+### EstimateCollateralCoverageParams
+
+```solidity
+struct EstimateCollateralCoverageParams {
+  bytes32 ccy;
+  uint256 maturity;
+  address user;
+  enum ProtocolTypes.Side side;
+  uint256 unitPrice;
+  uint256 additionalDepositAmount;
+  bool ignoreBorrowedAmount;
+  uint256 filledAmount;
+  uint256 filledAmountInFV;
+  uint256 orderFeeInFV;
+  uint256 placedAmount;
+}
 ```
 
 ### getOrderEstimation
@@ -68,6 +92,24 @@ function updateFundsForTaker(bytes32 _ccy, uint256 _maturity, address _user, enu
 function updateFundsForMaker(bytes32 _ccy, uint256 _maturity, enum ProtocolTypes.Side _side, struct PartiallyFilledOrder partiallyFilledOrder) public
 ```
 
+### withdrawZCToken
+
+```solidity
+function withdrawZCToken(bytes32 _ccy, uint256 _maturity, address _user, uint256 _amount) public
+```
+
+### depositZCToken
+
+```solidity
+function depositZCToken(bytes32 _ccy, uint256 _maturity, address _user, uint256 _amount) public
+```
+
+### getWithdrawableZCTokenAmount
+
+```solidity
+function getWithdrawableZCTokenAmount(bytes32 _ccy, uint256 _maturity, address _user) public view returns (uint256 amount)
+```
+
 ### _calculateFilledAmount
 
 ```solidity
@@ -77,7 +119,7 @@ function _calculateFilledAmount(bytes32 _ccy, uint256 _maturity, enum ProtocolTy
 ### _estimateCollateralCoverage
 
 ```solidity
-function _estimateCollateralCoverage(bytes32 _ccy, uint256 _maturity, address _user, enum ProtocolTypes.Side _side, uint256 _unitPrice, uint256 _additionalDepositAmount, bool _ignoreBorrowedAmount, uint256 _filledAmount, uint256 _filledAmountInFV, uint256 _orderFeeInFV, uint256 _placedAmount) internal view returns (uint256 coverage, bool isInsufficientDepositAmount)
+function _estimateCollateralCoverage(struct LendingMarketUserLogic.EstimateCollateralCoverageParams _params) internal view returns (uint256 coverage, bool isInsufficientDepositAmount)
 ```
 
 ### _estimatePVFromFV
@@ -90,6 +132,48 @@ function _estimatePVFromFV(bytes32 _ccy, uint256 _maturity, uint256 _amount, uin
 
 ```solidity
 function _unwindPosition(bytes32 _ccy, uint256 _maturity, address _user, int256 _futureValue) internal returns (struct FilledOrder filledOrder, struct PartiallyFilledOrder partiallyFilledOrder, uint256 feeInFV, enum ProtocolTypes.Side side)
+```
+
+### _withdrawZCToken
+
+```solidity
+function _withdrawZCToken(bytes32 _ccy, uint256 _maturity, address _user, uint256 _amount) internal
+```
+
+### _depositZCToken
+
+```solidity
+function _depositZCToken(bytes32 _ccy, uint256 _maturity, address _user, uint256 _amount) internal
+```
+
+### _withdrawZCPerpetualToken
+
+```solidity
+function _withdrawZCPerpetualToken(bytes32 _ccy, address _user, uint256 _amount) internal
+```
+
+### _depositZCPerpetualToken
+
+```solidity
+function _depositZCPerpetualToken(bytes32 _ccy, address _user, uint256 _amount) internal
+```
+
+### _getWithdrawableZCTokenAmount
+
+```solidity
+function _getWithdrawableZCTokenAmount(bytes32 _ccy, uint256 _maturity, address _user) internal view returns (uint256 amount)
+```
+
+### _getWithdrawableZCPerpetualTokenAmount
+
+```solidity
+function _getWithdrawableZCPerpetualTokenAmount(bytes32 _ccy, address _user) internal view returns (uint256 amount)
+```
+
+### _getWithdrawableAmount
+
+```solidity
+function _getWithdrawableAmount(bytes32 _ccy, address _user) internal view returns (uint256 withdrawableAmount, bool hasAllocatedCollateral)
 ```
 
 ### _isCovered

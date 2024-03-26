@@ -72,6 +72,18 @@ Sets the implementation contract of LendingMarket
 | ---- | ---- | ----------- |
 | newImpl | address | The address of implementation contract |
 
+### setZCTokenImpl
+
+```solidity
+function setZCTokenImpl(address newImpl) external
+```
+
+Sets the implementation contract of ZCToken
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| newImpl | address | The address of implementation contract |
+
 ### deployFutureValueVault
 
 ```solidity
@@ -98,6 +110,26 @@ Deploys new LendingMarket
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | market | address | The proxy contract address of created lending market |
+
+### deployZCToken
+
+```solidity
+function deployZCToken(string _name, string _symbol, uint8 _decimals, address _asset, uint256 _maturity) external returns (address futureValueToken)
+```
+
+Deploys new ZCToken
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _name | string | The name of the future value token |
+| _symbol | string | The symbol of the future value token |
+| _decimals | uint8 | The number of decimals the token uses |
+| _asset | address | The address of the token's underlying asset |
+| _maturity | uint256 | The maturity of the token |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| futureValueToken | address | The proxy contract address of created future value token |
 
 ### changeBeaconProxyAdmins
 

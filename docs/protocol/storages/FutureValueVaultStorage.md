@@ -18,6 +18,7 @@ struct Storage {
   mapping(uint256 => uint256) totalBorrowingSupplies;
   mapping(uint256 => uint256) removedLendingSupply;
   mapping(uint256 => uint256) removedBorrowingSupply;
+  mapping(uint8 => uint256) totalLockedBalances;
 }
 ```
 

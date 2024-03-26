@@ -14,10 +14,10 @@ error InvalidMaturity()
 error InvalidCurrency()
 ```
 
-### AlreadyTerminated
+### MarketTerminated
 
 ```solidity
-error AlreadyTerminated()
+error MarketTerminated()
 ```
 
 ### NotTerminated
@@ -69,6 +69,7 @@ struct CalculatedFunds {
   uint256 workingLendOrdersAmount;
   uint256 claimableAmount;
   uint256 collateralAmount;
+  uint256 unallocatedCollateralAmount;
   uint256 lentAmount;
   uint256 workingBorrowOrdersAmount;
   uint256 debtAmount;
@@ -89,6 +90,12 @@ struct GetOrderEstimationParams {
   uint256 additionalDepositAmount;
   bool ignoreBorrowedAmount;
 }
+```
+
+### isValidMaturity
+
+```solidity
+function isValidMaturity(bytes32 _ccy, uint256 _maturity) external view returns (bool)
 ```
 
 ### isTerminated
@@ -208,13 +215,31 @@ function getTotalPresentValueInBaseCurrency(address user) external view returns 
 ### getGenesisValue
 
 ```solidity
-function getGenesisValue(bytes32 ccy, address user) external view returns (int256 genesisValue)
+function getGenesisValue(bytes32 ccy, address user) external view returns (int256 amount, int256 amountInPV, int256 amountInFV)
 ```
 
 ### getPosition
 
 ```solidity
 function getPosition(bytes32 _ccy, uint256 _maturity, address _user) external view returns (int256 presentValue, int256 futureValue)
+```
+
+### getZCToken
+
+```solidity
+function getZCToken(bytes32 ccy, uint256 maturity) external view returns (address)
+```
+
+### getZCTokenInfo
+
+```solidity
+function getZCTokenInfo(address zcToken) external view returns (struct ZCTokenInfo)
+```
+
+### getWithdrawableZCTokenAmount
+
+```solidity
+function getWithdrawableZCTokenAmount(bytes32 ccy, uint256 maturity, address user) external view returns (uint256 amount)
 ```
 
 ### calculateFunds
@@ -259,6 +284,12 @@ function executeOrder(bytes32 ccy, uint256 maturity, enum ProtocolTypes.Side sid
 function depositAndExecuteOrder(bytes32 ccy, uint256 maturity, enum ProtocolTypes.Side side, uint256 amount, uint256 unitPrice) external payable returns (bool)
 ```
 
+### depositWithPermitAndExecuteOrder
+
+```solidity
+function depositWithPermitAndExecuteOrder(bytes32 ccy, uint256 maturity, enum ProtocolTypes.Side side, uint256 amount, uint256 unitPrice, uint256 deadline, uint8 permitV, bytes32 permitR, bytes32 permitS) external returns (bool)
+```
+
 ### executePreOrder
 
 ```solidity
@@ -269,6 +300,12 @@ function executePreOrder(bytes32 ccy, uint256 maturity, enum ProtocolTypes.Side 
 
 ```solidity
 function depositAndExecutesPreOrder(bytes32 ccy, uint256 maturity, enum ProtocolTypes.Side side, uint256 amount, uint256 unitPrice) external payable returns (bool)
+```
+
+### depositWithPermitAndExecutePreOrder
+
+```solidity
+function depositWithPermitAndExecutePreOrder(bytes32 _ccy, uint256 _maturity, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice, uint256 _deadline, uint8 _permitV, bytes32 _permitR, bytes32 _permitS) external returns (bool)
 ```
 
 ### unwindPosition
@@ -359,5 +396,17 @@ function cleanUpFunds(bytes32 ccy, address user) external returns (uint256 activ
 
 ```solidity
 function updateMinDebtUnitPrice(bytes32 _ccy, uint256 _minDebtUnitPrice) external
+```
+
+### withdrawZCToken
+
+```solidity
+function withdrawZCToken(bytes32 _ccy, uint256 _maturity, uint256 _amount) external
+```
+
+### depositZCToken
+
+```solidity
+function depositZCToken(bytes32 _ccy, uint256 _maturity, uint256 _amount) external
 ```
 

@@ -52,3 +52,9 @@ bytes32 FUTURE_VALUE_VAULT
 bytes32 LENDING_MARKET
 ```
 
+### ZC_TOKEN
+
+```solidity
+bytes32 ZC_TOKEN
+```
+

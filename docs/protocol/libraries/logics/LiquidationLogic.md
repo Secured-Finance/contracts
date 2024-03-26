@@ -20,22 +20,16 @@ error NoLiquidationAmount(address user, bytes32 ccy)
 error InvalidLiquidation()
 ```
 
-### InvalidRepaymentAmount
+### InvalidCurrency
 
 ```solidity
-error InvalidRepaymentAmount()
+error InvalidCurrency(bytes32 ccy)
 ```
 
 ### NotRepaymentPeriod
 
 ```solidity
 error NotRepaymentPeriod()
-```
-
-### NotCollateralCurrency
-
-```solidity
-error NotCollateralCurrency(bytes32 ccy)
 ```
 
 ### ExecuteLiquidationVars

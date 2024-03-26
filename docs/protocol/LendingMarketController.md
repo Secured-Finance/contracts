@@ -70,6 +70,23 @@ Returns the contract names used in this contract.
 
 _The contract name list is in `./libraries/Contracts.sol`._
 
+### isValidMaturity
+
+```solidity
+function isValidMaturity(bytes32 _ccy, uint256 _maturity) public view returns (bool)
+```
+
+Gets if the maturity is valid.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 |
+| _maturity | uint256 | The maturity of the order book |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | bool | The boolean if the maturity is valid |
+
 ### isTerminated
 
 ```solidity
@@ -93,6 +110,18 @@ Gets if the user needs to redeem the funds.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | [0] | bool | The boolean if the user needs to redeem the funds |
+
+### getRevision
+
+```solidity
+function getRevision() external pure returns (uint256)
+```
+
+Gets the revision number of the contract
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | uint256 | The revision number |
 
 ### getMarketBasePeriod
 
@@ -373,7 +402,7 @@ Gets the total present value of the account converted to base currency.
 ### getGenesisValue
 
 ```solidity
-function getGenesisValue(bytes32 _ccy, address _user) external view returns (int256 genesisValue)
+function getGenesisValue(bytes32 _ccy, address _user) external view returns (int256 amount, int256 amountInPV, int256 amountInFV)
 ```
 
 Gets the genesis value of the account.
@@ -385,7 +414,9 @@ Gets the genesis value of the account.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| genesisValue | int256 | The genesis value |
+| amount | int256 | The genesis value amount |
+| amountInPV | int256 | The genesis value amount in present value |
+| amountInFV | int256 | The genesis value amount in future value |
 
 ### getPosition
 
@@ -405,6 +436,58 @@ Gets user's active position from the future value vault
 | ---- | ---- | ----------- |
 | presentValue | int256 | The present value of the position |
 | futureValue | int256 | The future value of the position |
+
+### getZCToken
+
+```solidity
+function getZCToken(bytes32 _ccy, uint256 _maturity) external view returns (address)
+```
+
+Gets ZC Token address for the selected currency and maturity.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 |
+| _maturity | uint256 | The maturity of the selected order book |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | address | The zcToken address |
+
+### getZCTokenInfo
+
+```solidity
+function getZCTokenInfo(address _zcToken) external view returns (struct ZCTokenInfo)
+```
+
+Gets ZC Token info for the selected ZC Token address.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _zcToken | address | The zcToken address |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | struct ZCTokenInfo | The zcToken data |
+
+### getWithdrawableZCTokenAmount
+
+```solidity
+function getWithdrawableZCTokenAmount(bytes32 _ccy, uint256 _maturity, address _user) external view returns (uint256 amount)
+```
+
+Gets the withdrawable ZCToken amount for the selected currency and maturity.
+ZC perpetual token amount is returned only when the maturity is 0.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 |
+| _maturity | uint256 | The maturity of the order book |
+| _user | address | User's address |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| amount | uint256 | The total amount of ZCToken that can be minted |
 
 ### calculateFunds
 
@@ -535,6 +618,31 @@ Deposits funds and executes an order at the same time.
 | ---- | ---- | ----------- |
 | [0] | bool | True if the execution of the operation succeeds |
 
+### depositWithPermitAndExecuteOrder
+
+```solidity
+function depositWithPermitAndExecuteOrder(bytes32 _ccy, uint256 _maturity, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice, uint256 _deadline, uint8 _permitV, bytes32 _permitR, bytes32 _permitS) external returns (bool)
+```
+
+Deposits funds with transfer approval of asset via permit function
+and executes an order at the same time.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 of the selected order book |
+| _maturity | uint256 | The maturity of the selected order book |
+| _side | enum ProtocolTypes.Side | Order position type, Borrow or Lend |
+| _amount | uint256 | Amount of funds the maker wants to borrow/lend |
+| _unitPrice | uint256 | Amount of unit price taker wish to borrow/lend |
+| _deadline | uint256 | The deadline timestamp that the permit is valid |
+| _permitV | uint8 | The V parameter of ERC712 permit sig |
+| _permitR | bytes32 | The R parameter of ERC712 permit sig |
+| _permitS | bytes32 | The S parameter of ERC712 permit sig |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | bool | True if the execution of the operation succeeds |
+
 ### executePreOrder
 
 ```solidity
@@ -571,6 +679,31 @@ Deposits funds and executes a pre-order at the same time.
 | _side | enum ProtocolTypes.Side | Order position type, Borrow or Lend |
 | _amount | uint256 | Amount of funds the maker wants to borrow/lend |
 | _unitPrice | uint256 | Amount of unit price taker wish to borrow/lend |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | bool | True if the execution of the operation succeeds |
+
+### depositWithPermitAndExecutePreOrder
+
+```solidity
+function depositWithPermitAndExecutePreOrder(bytes32 _ccy, uint256 _maturity, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice, uint256 _deadline, uint8 _permitV, bytes32 _permitR, bytes32 _permitS) external returns (bool)
+```
+
+Deposits funds with transfer approval of asset via permit function
+and executes a pre-order at the same time.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 of the selected order book |
+| _maturity | uint256 | The maturity of the selected order book |
+| _side | enum ProtocolTypes.Side | Order position type, Borrow or Lend |
+| _amount | uint256 | Amount of funds the maker wants to borrow/lend |
+| _unitPrice | uint256 | Amount of unit price taker wish to borrow/lend |
+| _deadline | uint256 | The deadline timestamp that the permit is valid |
+| _permitV | uint8 | The V parameter of ERC712 permit sig |
+| _permitR | bytes32 | The R parameter of ERC712 permit sig |
+| _permitS | bytes32 | The S parameter of ERC712 permit sig |
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -791,4 +924,52 @@ Updates the min debt unit price for the selected currency.
 | ---- | ---- | ----------- |
 | _ccy | bytes32 | Currency name in bytes32 |
 | _minDebtUnitPrice | uint256 | The min debt unit price |
+
+### withdrawZCToken
+
+```solidity
+function withdrawZCToken(bytes32 _ccy, uint256 _maturity, uint256 _amount) external
+```
+
+Withdraws ZCToken for the selected currency and maturity.
+ZC perpetual token can be withdrawn only when the maturity is 0.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 |
+| _maturity | uint256 | The maturity of the order book |
+| _amount | uint256 | The amount of ZCToken to mint |
+
+### depositZCToken
+
+```solidity
+function depositZCToken(bytes32 _ccy, uint256 _maturity, uint256 _amount) external
+```
+
+Deposits ZCToken for the selected currency and maturity.
+ZC perpetual token can be deposited only when the maturity is 0.
+This function is not inactivated after the emergency termination to allow users to redeem ZCToken.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 |
+| _maturity | uint256 | The maturity of the order book |
+| _amount | uint256 | The amount of ZCToken to burn |
+
+### migrateLendingMarket
+
+```solidity
+function migrateLendingMarket(bytes32 _ccy, uint256 _maturity) external
+```
+
+Migrate the lending market to the new version.
+
+_ZCTokens do not exist in markets that were deployed before the contract upgrade,
+so they must be configured individually.
+This function can be deleted after executing for all currencies and maturities._
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 |
+| _maturity | uint256 | The maturity of the ZCToken |
 

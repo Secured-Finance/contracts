@@ -69,6 +69,8 @@ struct ActualFunds {
   uint256 workingBorrowOrdersAmount;
   uint256 borrowedAmount;
   int256 genesisValue;
+  int256 genesisValueInPV;
+  int256 genesisValueInFV;
 }
 ```
 
@@ -245,6 +247,12 @@ function calculateTotalFundsInBaseCurrency(address _user, struct ILendingMarketC
 function getUsedMaturities(bytes32 _ccy, address _user) public view returns (uint256[] maturities)
 ```
 
+### getGenesisValue
+
+```solidity
+function getGenesisValue(bytes32 _ccy, address _user) public view returns (int256 amount, int256 amountInPV, int256 amountInFV)
+```
+
 ### getPosition
 
 ```solidity
@@ -266,25 +274,25 @@ function cleanUpFunds(bytes32 _ccy, address _user) public returns (uint256 total
 ### _cleanUpOrders
 
 ```solidity
-function _cleanUpOrders(bytes32 _ccy, uint256 _maturity, address _user) internal returns (uint256 activeOrderCount)
+function _cleanUpOrders(bytes32 _ccy, uint8 _orderBookId, address _user) internal returns (uint256 activeOrderCount)
 ```
 
 ### _getFundsFromFutureValueVault
 
 ```solidity
-function _getFundsFromFutureValueVault(bytes32 _ccy, address _user, struct FundManagementLogic.CalculateActualFundsVars vars, uint8 currentOrderBookId, uint256 currentMaturity, bool isDefaultMarket) internal view returns (struct FundManagementLogic.FutureValueVaultFunds funds)
+function _getFundsFromFutureValueVault(bytes32 _ccy, address _user, struct FundManagementLogic.CalculateActualFundsVars vars, uint8 currentOrderBookId, bool isDefaultMarket, bool isAutoRolled) internal view returns (struct FundManagementLogic.FutureValueVaultFunds funds)
 ```
 
 ### _getFundsFromInactiveBorrowOrders
 
 ```solidity
-function _getFundsFromInactiveBorrowOrders(bytes32 _ccy, address _user, struct FundManagementLogic.CalculateActualFundsVars vars, uint8 currentOrderBookId, uint256 currentMaturity, bool isDefaultMarket) internal view returns (struct FundManagementLogic.InactiveBorrowOrdersFunds funds)
+function _getFundsFromInactiveBorrowOrders(bytes32 _ccy, address _user, struct FundManagementLogic.CalculateActualFundsVars vars, uint8 currentOrderBookId, uint256 currentMaturity, bool isDefaultMarket, bool isAutoRolled) internal view returns (struct FundManagementLogic.InactiveBorrowOrdersFunds funds)
 ```
 
 ### _getFundsFromInactiveLendOrders
 
 ```solidity
-function _getFundsFromInactiveLendOrders(bytes32 _ccy, address _user, struct FundManagementLogic.CalculateActualFundsVars vars, uint8 currentOrderBookId, uint256 currentMaturity, bool isDefaultMarket) internal view returns (struct FundManagementLogic.InactiveLendOrdersFunds funds)
+function _getFundsFromInactiveLendOrders(bytes32 _ccy, address _user, struct FundManagementLogic.CalculateActualFundsVars vars, uint8 currentOrderBookId, bool isDefaultMarket, bool isAutoRolled) internal view returns (struct FundManagementLogic.InactiveLendOrdersFunds funds)
 ```
 
 ### _convertFVtoOtherMaturity
@@ -303,6 +311,12 @@ function calculatePVFromFV(bytes32 _ccy, uint256 _maturity, int256 _futureValue)
 
 ```solidity
 function calculateFVFromPV(bytes32 _ccy, uint256 _maturity, int256 _presentValue) public view returns (int256 futureValue)
+```
+
+### calculateFVFromPV
+
+```solidity
+function calculateFVFromPV(bytes32 _ccy, uint256 _maturity, uint256 _presentValue) public view returns (uint256 futureValue)
 ```
 
 ### _convertToBaseCurrencyAtMarketTerminationPrice
@@ -363,5 +377,11 @@ function _calculatePVFromFV(uint256 _futureValue, uint256 _unitPrice) internal p
 
 ```solidity
 function _calculateFVFromPV(int256 _presentValue, uint256 _unitPrice) internal pure returns (int256)
+```
+
+### _calculateFVFromPV
+
+```solidity
+function _calculateFVFromPV(uint256 _presentValue, uint256 _unitPrice) internal pure returns (uint256)
 ```
 
