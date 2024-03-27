@@ -1197,15 +1197,6 @@ library FundManagementLogic {
         return (_futureValue * unitPrice.toInt256()).div(Constants.PRICE_DIGIT.toInt256());
     }
 
-    function _calculatePVFromFV(
-        uint256 _futureValue,
-        uint256 _unitPrice
-    ) internal pure returns (uint256) {
-        uint256 unitPrice = _unitPrice == 0 ? Constants.PRICE_DIGIT : _unitPrice;
-        // NOTE: The formula is: presentValue = futureValue * unitPrice.
-        return (_futureValue * unitPrice).div(Constants.PRICE_DIGIT);
-    }
-
     function _calculateFVFromPV(
         int256 _presentValue,
         uint256 _unitPrice
