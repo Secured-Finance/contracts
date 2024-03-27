@@ -238,7 +238,7 @@ describe('TokenVault', () => {
       ) => {
         await tokenVaultProxy.updateLiquidationConfiguration(
           liquidationThresholdRate,
-          FULL_LIQUIDATION_THRESHOLD_RATE,
+          liquidationThresholdRate,
           LIQUIDATION_PROTOCOL_FEE_RATE,
           LIQUIDATOR_FEE_RATE,
         );
@@ -266,6 +266,14 @@ describe('TokenVault', () => {
         tokenVaultProxy.updateLiquidationConfiguration(
           PCT_DIGIT + 1,
           PCT_DIGIT,
+          PCT_DIGIT,
+          PCT_DIGIT,
+        ),
+      ).to.be.revertedWith('InvalidFullLiquidationThresholdRate');
+      await expect(
+        tokenVaultProxy.updateLiquidationConfiguration(
+          PCT_DIGIT + 1,
+          PCT_DIGIT + 2,
           PCT_DIGIT,
           PCT_DIGIT,
         ),
