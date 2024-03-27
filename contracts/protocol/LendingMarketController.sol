@@ -59,7 +59,7 @@ contract LendingMarketController is
      * @param _maturity The maturity of the order book
      */
     modifier ifValidMaturity(bytes32 _ccy, uint256 _maturity) {
-        if (isValidMaturity(_ccy, _maturity)) revert InvalidMaturity();
+        if (!isValidMaturity(_ccy, _maturity)) revert InvalidMaturity();
         _;
     }
 
@@ -114,7 +114,7 @@ contract LendingMarketController is
      * @return The boolean if the maturity is valid
      */
     function isValidMaturity(bytes32 _ccy, uint256 _maturity) public view override returns (bool) {
-        return Storage.slot().maturityOrderBookIds[_ccy][_maturity] == 0;
+        return Storage.slot().maturityOrderBookIds[_ccy][_maturity] != 0;
     }
 
     /**
@@ -1008,7 +1008,7 @@ contract LendingMarketController is
         uint256 _maturity,
         uint256 _amount
     ) external override nonReentrant ifActive {
-        if (_maturity != 0 && isValidMaturity(_ccy, _maturity)) revert InvalidMaturity();
+        if (_maturity != 0 && !isValidMaturity(_ccy, _maturity)) revert InvalidMaturity();
 
         LendingMarketUserLogic.withdrawZCToken(_ccy, _maturity, msg.sender, _amount);
     }
@@ -1026,7 +1026,7 @@ contract LendingMarketController is
         uint256 _maturity,
         uint256 _amount
     ) external override nonReentrant {
-        if (_maturity != 0 && isValidMaturity(_ccy, _maturity)) revert InvalidMaturity();
+        if (_maturity != 0 && !isValidMaturity(_ccy, _maturity)) revert InvalidMaturity();
 
         LendingMarketUserLogic.depositZCToken(_ccy, _maturity, msg.sender, _amount);
     }
