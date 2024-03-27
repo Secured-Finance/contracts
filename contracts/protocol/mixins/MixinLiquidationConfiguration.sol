@@ -125,8 +125,8 @@ contract MixinLiquidationConfiguration is Ownable {
         }
 
         if (_liquidatorFeeRate != Storage.slot().liquidatorFeeRate) {
-            Storage.slot().liquidatorFeeRate = _liquidatorFeeRate;
             emit LiquidatorFeeRateUpdated(Storage.slot().liquidatorFeeRate, _liquidatorFeeRate);
+            Storage.slot().liquidatorFeeRate = _liquidatorFeeRate;
         }
     }
 }
