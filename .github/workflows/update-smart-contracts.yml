@@ -27,7 +27,6 @@ jobs:
     name: Test on a Fork
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.network }}
-    if: ${{ vars.SKIP_TEST_ON_FORK != 'true' }}
     outputs:
       diff: ${{ steps.diff.outputs.count }}
     steps:
@@ -100,7 +99,7 @@ jobs:
         run: |
           echo "count=$(git diff --name-only . | wc -l)" >> $GITHUB_OUTPUT
       - name: Run a Loan Test on fork environment
-        if: ${{ steps.diff.outputs.count > 0 }}
+        if: ${{ steps.diff.outputs.count > 0 && vars.SKIP_TEST_ON_FORK != 'true' }}
         env:
           USE_DEFAULT_ACCOUNTS: true
           FORK_RPC_ENDPOINT: https://rpc.tenderly.co/fork/${{ env.FORK_ID }}
