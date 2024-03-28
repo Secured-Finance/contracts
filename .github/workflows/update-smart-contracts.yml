@@ -21,12 +21,17 @@ on:
           - arbitrum-one
           - avalanche-mainnet
           - polygon-zkevm-mainnet
+      skip_test:
+        description: 'True to bypass testing on the fork'
+        required: false
+        type: boolean
 
 jobs:
   test:
     name: Test on a Fork
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.network }}
+    if: ${{ github.event.inputs.skip_test == 'false' }}
     outputs:
       diff: ${{ steps.diff.outputs.count }}
     steps:
@@ -99,7 +104,7 @@ jobs:
         run: |
           echo "count=$(git diff --name-only . | wc -l)" >> $GITHUB_OUTPUT
       - name: Run a Loan Test on fork environment
-        if: ${{ steps.diff.outputs.count > 0 && vars.SKIP_TEST_ON_FORK != 'true' }}
+        if: ${{ steps.diff.outputs.count > 0 }}
         env:
           USE_DEFAULT_ACCOUNTS: true
           FORK_RPC_ENDPOINT: https://rpc.tenderly.co/fork/${{ env.FORK_ID }}
