@@ -12,6 +12,7 @@ on:
           - development
           - development-arb
           - development-ava
+          - development-fil
           - staging
           - staging-arb
           - staging-ava
@@ -59,7 +60,6 @@ jobs:
           echo "ENABLE_AUTO_UPDATE=true" >> $GITHUB_ENV
           echo "NATIVE_CURRENCY_SYMBOL=${{ vars.NATIVE_CURRENCY_SYMBOL }}" >> $GITHUB_ENV
           echo "NATIVE_TOKEN_ADDRESS=${{ vars.NATIVE_TOKEN_ADDRESS }}" >> $GITHUB_ENV
-          echo "NATIVE_TOKEN_SYMBOL=${{ vars.NATIVE_TOKEN_SYMBOL }}" >> $GITHUB_ENV
           echo "TOKEN_SYMBOL_USDC=${{ vars.TOKEN_SYMBOL_USDC }}" >> $GITHUB_ENV
           echo "TOKEN_SYMBOL_WBTC=${{ vars.TOKEN_SYMBOL_WBTC }}" >> $GITHUB_ENV
           echo "TOKEN_SYMBOL_WETH=${{ vars.TOKEN_SYMBOL_WETH }}" >> $GITHUB_ENV

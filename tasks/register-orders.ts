@@ -28,6 +28,8 @@ const ERC20_ABI = [
   },
 ];
 
+const NATIVE_CURRENCY_SYMBOL = process.env.NATIVE_CURRENCY_SYMBOL || 'ETH';
+
 task('register-orders', 'Registers order data into the selected lending market')
   .addParam('collateralCurrency', 'Target collateral currency with short name')
   .addParam('marketCurrency', 'Target market currency with short name')
@@ -149,7 +151,7 @@ task('register-orders', 'Registers order data into the selected lending market')
         'getWithdrawableCollateral(address)'
       ](owner.address);
 
-      if (marketCurrency !== 'ETH') {
+      if (marketCurrency !== NATIVE_CURRENCY_SYMBOL) {
         const currency = currencyIterator().find(
           ({ key }) => key === marketCurrencyName,
         );
@@ -171,7 +173,7 @@ task('register-orders', 'Registers order data into the selected lending market')
         }
       }
 
-      if (collateralCurrency !== 'ETH') {
+      if (collateralCurrency !== NATIVE_CURRENCY_SYMBOL) {
         const currency = currencyIterator().find(
           ({ key }) => key === collateralCurrencyName,
         );
@@ -212,7 +214,7 @@ task('register-orders', 'Registers order data into the selected lending market')
         await tokenVault
           .deposit(collateralCurrencyName, depositValueInCollateralCurrency, {
             value:
-              collateralCurrency === 'ETH'
+              collateralCurrency === NATIVE_CURRENCY_SYMBOL
                 ? depositValueInCollateralCurrency
                 : 0,
           })
@@ -239,7 +241,8 @@ task('register-orders', 'Registers order data into the selected lending market')
               order.amount,
               order.unitPrice,
               {
-                value: marketCurrency === 'ETH' ? order.amount : 0,
+                value:
+                  marketCurrency === NATIVE_CURRENCY_SYMBOL ? order.amount : 0,
               },
             )
             .then((tx) => tx.wait());

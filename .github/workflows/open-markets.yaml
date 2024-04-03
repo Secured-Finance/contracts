@@ -12,6 +12,7 @@ on:
           - development
           - development-arb
           - development-ava
+          - development-fil
           - staging
           - staging-arb
           - staging-ava

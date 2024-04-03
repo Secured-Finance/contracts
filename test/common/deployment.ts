@@ -142,7 +142,7 @@ const deployContracts = async () => {
   const wFILToken = tokens['WFIL'];
   const usdcToken = tokens['USDC'];
   const wBTCToken = tokens['WBTC'];
-  const wETHToken = tokens['WETH'];
+  const wETHToken = tokens['ETH'];
 
   const proxyController = await ethers
     .getContractFactory('ProxyController')

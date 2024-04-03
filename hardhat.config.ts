@@ -37,9 +37,16 @@ const infuraNetworkKeys = {
   43113: 'avalanche-fuji',
 };
 
+const ankrNetworkKeys = {
+  314159: 'filecoin_testnet',
+  314: 'filecoin',
+};
+
 const getNodeEndpoint = (chainId: number): string => {
   if (process.env.ALCHEMY_API_KEY && alchemyNetworkKeys[chainId]) {
     return `https://${alchemyNetworkKeys[chainId]}.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`;
+  } else if (process.env.ANKR_API_KEY && ankrNetworkKeys[chainId]) {
+    return `https://rpc.ankr.com/${ankrNetworkKeys[chainId]}/${process.env.ANKR_API_KEY}`;
   } else if (process.env.INFURA_API_KEY && infuraNetworkKeys[chainId]) {
     return `https://${infuraNetworkKeys[chainId]}.infura.io/v3/${process.env.INFURA_API_KEY}`;
   } else {
@@ -73,6 +80,7 @@ const config: HardhatUserConfig = {
     development: networkConfig(11155111),
     'development-arb': networkConfig(421614),
     'development-ava': networkConfig(43113),
+    'development-fil': networkConfig(314159),
     staging: networkConfig(11155111),
     'staging-arb': networkConfig(421614),
     'staging-ava': networkConfig(43113),
