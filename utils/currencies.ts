@@ -46,15 +46,14 @@ export interface MockPriceFeed {
 }
 
 const INITIAL_CURRENCIES = (
-  process.env.INITIAL_CURRENCIES || 'USDC,WBTC,WETH,WFIL'
+  process.env.INITIAL_CURRENCIES || 'USDC,WBTC,ETH,WFIL'
 ).split(',');
 const SYMBOLS = {
   USDC: process.env.TOKEN_SYMBOL_USDC || 'USDC',
   WBTC: process.env.TOKEN_SYMBOL_WBTC || 'WBTC',
-  WETH: process.env.TOKEN_SYMBOL_WETH || 'WETH',
+  WETH: process.env.TOKEN_SYMBOL_WETH || 'ETH',
   WFIL: process.env.TOKEN_SYMBOL_WFIL || 'WFIL',
 };
-const NATIVE_TOKEN_SYMBOL = process.env.NATIVE_TOKEN_SYMBOL || 'WETH';
 const NATIVE_CURRENCY_SYMBOL = process.env.NATIVE_CURRENCY_SYMBOL || 'ETH';
 
 const currencies: Record<string, Currency> = {
@@ -71,7 +70,7 @@ const currencies: Record<string, Currency> = {
       heartbeats:
         process.env.PRICE_FEED_HEARTBEATS_USDC?.split(',').map(Number) || [],
     },
-    isNative: SYMBOLS.USDC === NATIVE_TOKEN_SYMBOL,
+    isNative: SYMBOLS.USDC === NATIVE_CURRENCY_SYMBOL,
   },
   [SYMBOLS.WBTC]: {
     symbol: SYMBOLS.WBTC,
@@ -86,7 +85,7 @@ const currencies: Record<string, Currency> = {
       heartbeats:
         process.env.PRICE_FEED_HEARTBEATS_WBTC?.split(',').map(Number) || [],
     },
-    isNative: SYMBOLS.WBTC === NATIVE_TOKEN_SYMBOL,
+    isNative: SYMBOLS.WBTC === NATIVE_CURRENCY_SYMBOL,
   },
   [SYMBOLS.WETH]: {
     symbol: SYMBOLS.WETH,
@@ -101,7 +100,7 @@ const currencies: Record<string, Currency> = {
       heartbeats:
         process.env.PRICE_FEED_HEARTBEATS_WETH?.split(',').map(Number) || [],
     },
-    isNative: SYMBOLS.WETH === NATIVE_TOKEN_SYMBOL,
+    isNative: SYMBOLS.WETH === NATIVE_CURRENCY_SYMBOL,
   },
   [SYMBOLS.WFIL]: {
     symbol: SYMBOLS.WFIL,
@@ -109,14 +108,14 @@ const currencies: Record<string, Currency> = {
     tokenAddress: process.env.TOKEN_ADDRESS_WFIL,
     haircut: 0,
     minDebtUnitPrice: 8100,
-    isCollateral: false,
+    isCollateral: SYMBOLS.WFIL === NATIVE_CURRENCY_SYMBOL ? true : false,
     args: ['250000000000000000000000000'], // 250,000,000 WFIL
     priceFeed: {
       addresses: process.env.PRICE_FEED_ADDRESSES_WFIL?.split(',') || [],
       heartbeats:
         process.env.PRICE_FEED_HEARTBEATS_WFIL?.split(',').map(Number) || [],
     },
-    isNative: SYMBOLS.WFIL === NATIVE_TOKEN_SYMBOL,
+    isNative: SYMBOLS.WFIL === NATIVE_CURRENCY_SYMBOL,
   },
 };
 
@@ -161,7 +160,7 @@ const mocks: Record<string, Mock> = {
     ],
   },
   [SYMBOLS.WFIL]: {
-    tokenName: 'MockWFIL',
+    tokenName: currencies[SYMBOLS.WFIL].isNative ? 'MockWETH9' : 'MockWFIL',
     priceFeeds: [
       {
         name: 'WFIL/ETH',
@@ -184,18 +183,10 @@ const mocks: Record<string, Mock> = {
 // The currency key is used to express the native token symbol of a target blockchain in our protocol
 const currencyIterator = (): Currency[] =>
   INITIAL_CURRENCIES.map((symbol) => {
-    if (symbol === NATIVE_CURRENCY_SYMBOL) {
-      symbol = NATIVE_TOKEN_SYMBOL;
-    }
-
     const currency = currencies[symbol];
 
     if (!currency) {
       throw Error('Invalid currency symbol: ' + symbol);
-    }
-
-    if (currency.key === toBytes32(NATIVE_TOKEN_SYMBOL)) {
-      currency.key = toBytes32(NATIVE_CURRENCY_SYMBOL);
     }
 
     return currency;
