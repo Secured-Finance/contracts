@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.0](https://github.com/Secured-Finance/contracts/compare/v1.1.0...v1.2.0) (2024-04-11)
+
+
+### Features
+
+* add FVM to the dev environment [SF-1112] ([a8e72f5](https://github.com/Secured-Finance/contracts/commit/a8e72f564cef6591e00693d91449c0ebf405493c))
+* support iFIL as collateral [SF-1112] ([f306360](https://github.com/Secured-Finance/contracts/commit/f3063601ace7509e2305e84343b0a0f63875fcfb))
+
 ## [1.1.0](https://github.com/Secured-Finance/contracts/compare/v1.0.3...v1.1.0) (2024-04-02)
 
 
