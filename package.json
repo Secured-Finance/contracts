@@ -42,8 +42,9 @@
     "url": "https://github.com/secured-finance/contracts"
   },
   "dependencies": {
-    "@chainlink/contracts": "^0.4.0",
+    "@chainlink/contracts": "0.4.0",
     "@openzeppelin/contracts": "4.9.3",
+    "@pythnetwork/pyth-sdk-solidity": "3.0.0",
     "@uniswap/v2-periphery": "^1.1.0-beta.0",
     "@uniswap/v3-core": "^1.0.1",
     "@uniswap/v3-periphery": "^1.4.3"

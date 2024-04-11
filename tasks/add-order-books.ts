@@ -34,8 +34,9 @@ task('add-order-books', 'Add new order books to the protocol')
         ethers,
         signerOrProvider: signer,
       });
-      const proposal = new Proposal();
-      await proposal.initSdk(ethersAdapter);
+      const proposal =
+        process.env.ENABLE_AUTO_UPDATE !== 'true' ? new Proposal() : undefined;
+      await proposal?.initSdk(ethersAdapter);
 
       const proxyController = await deployments
         .get('ProxyController')
@@ -58,7 +59,7 @@ task('add-order-books', 'Add new order books to the protocol')
         preOpeningDate,
       );
 
-      if (process.env.ENABLE_AUTO_UPDATE === 'true') {
+      if (!proposal) {
         await lendingMarketController
           .multicall(multicallInputs.map(({ callData }) => callData))
           .then((tx) => tx.wait());

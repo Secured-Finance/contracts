@@ -61,8 +61,9 @@ task('add-currency', 'Add a new currency to the protocol')
         ethers,
         signerOrProvider: signer,
       });
-      const proposal = new Proposal();
-      await proposal.initSdk(ethersAdapter);
+      const proposal =
+        process.env.ENABLE_AUTO_UPDATE !== 'true' ? new Proposal() : undefined;
+      await proposal?.initSdk(ethersAdapter);
 
       const contractNames = ['CurrencyController', 'TokenVault'];
 
@@ -96,7 +97,7 @@ task('add-currency', 'Add a new currency to the protocol')
 
       const tokenVaultArgs = [toBytes32(currency), tokenAddress, isCollateral];
 
-      if (process.env.ENABLE_AUTO_UPDATE === 'true') {
+      if (!proposal) {
         await currencyController.contract
           .addCurrency(...currencyControllerArgs)
           .then((tx) => tx.wait());
