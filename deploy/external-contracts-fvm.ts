@@ -17,6 +17,12 @@ const updatePythPriceFeed = async (
     method: 'GET',
   });
 
+  if (!response.ok) {
+    throw new Error(
+      `Failed to fetch Pyth price feed for ${description}.  Error: ${response.statusText}`,
+    );
+  }
+
   const {
     binary: { data },
   } = await response.json();
