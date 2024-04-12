@@ -30,6 +30,10 @@ export interface Currency {
     addresses: string[];
     heartbeats: number[];
   };
+  pythPriceFeed: {
+    priceId: string;
+    heartbeat: number;
+  };
   isNative: boolean;
 }
 
@@ -70,6 +74,10 @@ const currencies: Record<string, Currency> = {
       heartbeats:
         process.env.PRICE_FEED_HEARTBEATS_USDC?.split(',').map(Number) || [],
     },
+    pythPriceFeed: {
+      priceId: process.env.PYTH_PRICE_ID_USDC || '',
+      heartbeat: Number(process.env.PYTH_PRICE_FEED_HEARTBEAT_USDC) || 86400,
+    },
     isNative: SYMBOLS.USDC === NATIVE_CURRENCY_SYMBOL,
   },
   [SYMBOLS.WBTC]: {
@@ -84,6 +92,10 @@ const currencies: Record<string, Currency> = {
       addresses: process.env.PRICE_FEED_ADDRESSES_WBTC?.split(',') || [],
       heartbeats:
         process.env.PRICE_FEED_HEARTBEATS_WBTC?.split(',').map(Number) || [],
+    },
+    pythPriceFeed: {
+      priceId: process.env.PYTH_PRICE_ID_WBTC || '',
+      heartbeat: Number(process.env.PYTH_PRICE_FEED_HEARTBEAT_WBTC) || 86400,
     },
     isNative: SYMBOLS.WBTC === NATIVE_CURRENCY_SYMBOL,
   },
@@ -100,6 +112,10 @@ const currencies: Record<string, Currency> = {
       heartbeats:
         process.env.PRICE_FEED_HEARTBEATS_WETH?.split(',').map(Number) || [],
     },
+    pythPriceFeed: {
+      priceId: process.env.PYTH_PRICE_ID_WETH || '',
+      heartbeat: Number(process.env.PYTH_PRICE_FEED_HEARTBEAT_WETH) || 86400,
+    },
     isNative: SYMBOLS.WETH === NATIVE_CURRENCY_SYMBOL,
   },
   [SYMBOLS.WFIL]: {
@@ -114,6 +130,10 @@ const currencies: Record<string, Currency> = {
       addresses: process.env.PRICE_FEED_ADDRESSES_WFIL?.split(',') || [],
       heartbeats:
         process.env.PRICE_FEED_HEARTBEATS_WFIL?.split(',').map(Number) || [],
+    },
+    pythPriceFeed: {
+      priceId: process.env.PYTH_PRICE_ID_WFIL || '',
+      heartbeat: Number(process.env.PYTH_PRICE_FEED_HEARTBEAT_WFIL) || 86400,
     },
     isNative: SYMBOLS.WFIL === NATIVE_CURRENCY_SYMBOL,
   },
