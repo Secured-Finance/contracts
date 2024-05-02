@@ -3,35 +3,36 @@ import { Contract, ContractTransaction } from 'ethers';
 import { task } from 'hardhat/config';
 import { HardhatPluginError } from 'hardhat/internal/core/errors';
 import { Proposal, getRelaySigner } from '../utils/deployment';
+import { FVMProposal, isFVM } from '../utils/deployment-fvm';
 import { toBytes32 } from '../utils/strings';
 
 task(
   'change-owners',
   'Change owners of all contracts to the new owner',
-).setAction(async (_, { deployments, ethers }) => {
-  const safeAddress = process.env.SAFE_WALLET_ADDRESS;
+).setAction(async (_, { deployments, ethers, getChainId }) => {
+  const currentChainId = await getChainId();
 
-  if (!safeAddress) {
+  const newOwner = isFVM(currentChainId)
+    ? process.env.FVM_MULTISIG_WALLET_EVM_ADDRESS
+    : process.env.SAFE_WALLET_ADDRESS;
+
+  if (!newOwner) {
     const message =
-      'The following environment variables must be set: SAFE_WALLET_ADDRESS';
+      'The following environment variables must be set: SAFE_WALLET_ADDRESS/FVM_MULTISIG_WALLET_EVM_ADDRESS';
     throw new HardhatPluginError('SecuredFinance', message);
   }
 
   const [owner] = await ethers.getSigners();
   let nonce = await owner.getTransactionCount();
-  const relayer = getRelaySigner();
-
-  if (!relayer) {
-    throw new HardhatPluginError('SecuredFinance', 'Relayer must be provided');
-  }
+  const signer = getRelaySigner() || (await ethers.getSigners())[0];
 
   const ethersAdapter = new EthersAdapter({
     ethers,
-    signerOrProvider: relayer,
+    signerOrProvider: signer,
   });
-  const proposal = new Proposal();
-  await proposal.initSdk(ethersAdapter);
-
+  const proposal = isFVM(currentChainId)
+    ? await FVMProposal.create(currentChainId)
+    : await Proposal.create(ethersAdapter);
   const proxyController = await deployments
     .get('ProxyController')
     .then(({ address }) => ethers.getContractAt('ProxyController', address));
@@ -79,12 +80,12 @@ task(
 
     const tx = await contract
       .connect(owner)
-      .transferOwnership(safeAddress, { nonce });
+      .transferOwnership(newOwner, { nonce });
     txs.push(tx);
 
     nonce++;
 
-    console.log(`Changing owner of ${name} to ${safeAddress}`);
+    console.log(`Changing owner of ${name} to ${newOwner}`);
   }
 
   if (txs.length > 0) {
@@ -99,16 +100,16 @@ task(
 
     const isSafeAddressDefaultAdmin = await contract.hasRole(
       DEFAULT_ADMIN_ROLE,
-      safeAddress,
+      newOwner,
     );
 
     if (!isSafeAddressDefaultAdmin) {
       await contract
         .connect(owner)
-        .grantRole(DEFAULT_ADMIN_ROLE, safeAddress)
+        .grantRole(DEFAULT_ADMIN_ROLE, newOwner)
         .then((tx) => tx.wait());
 
-      console.log(`Granted DEFAULT_ADMIN_ROLE of ${name} to ${safeAddress}`);
+      console.log(`Granted DEFAULT_ADMIN_ROLE of ${name} to ${newOwner}`);
     }
 
     const isOwnerDefaultAdmin = await contract.hasRole(
@@ -131,5 +132,5 @@ task(
     }
   }
 
-  await proposal.submit(await relayer.getAddress());
+  await proposal.submit();
 });

@@ -88,25 +88,38 @@ class DeploymentStorage {
 }
 
 class Proposal {
-  private safeAddress: string;
-  private txServiceUrl: string;
+  private safeAddress!: string;
+  private txServiceUrl!: string;
+  private signer!: string;
   private safeService!: SafeApiKit;
   private safeSdk!: Safe;
-  private safeTransactionData: MetaTransactionData[] = [];
+  private safeTransactions!: MetaTransactionData[];
 
-  constructor() {
+  private constructor() {}
+
+  static async create(ethAdapter: EthAdapter): Promise<Proposal> {
+    const proposal = new Proposal();
+    await proposal.init(ethAdapter);
+    return proposal;
+  }
+
+  private async init(ethAdapter: EthAdapter) {
     if (!process.env.SAFE_WALLET_ADDRESS) {
       throw Error('SAFE_WALLET_ADDRESS is not set');
     }
+
     if (!process.env.SAFE_API_URL) {
       throw Error('SAFE_API_URL is not set');
     }
 
+    const signer = await ethAdapter.getSignerAddress();
+    if (!signer) {
+      throw Error('Signer address is not found');
+    }
+
     this.safeAddress = process.env.SAFE_WALLET_ADDRESS;
     this.txServiceUrl = process.env.SAFE_API_URL;
-  }
-
-  async initSdk(ethAdapter: EthAdapter) {
+    this.signer = signer;
     this.safeService = new SafeApiKit({
       ethAdapter,
       txServiceUrl: this.txServiceUrl,
@@ -115,24 +128,25 @@ class Proposal {
       ethAdapter,
       safeAddress: this.safeAddress,
     });
+    this.safeTransactions = [];
   }
 
   async add(to: string, data: string) {
-    this.safeTransactionData.push({
+    this.safeTransactions.push({
       to,
       data,
       value: '0',
     });
   }
 
-  async submit(sender: string) {
-    if (this.safeTransactionData.length === 0) {
+  async submit() {
+    if (this.safeTransactions.length === 0) {
       console.warn('Skipped proposal submission due to no update');
       return;
     }
 
     const safeTransaction = await this.safeSdk.createTransaction({
-      safeTransactionData: this.safeTransactionData,
+      safeTransactionData: this.safeTransactions,
     });
 
     const safeTxHash = await this.safeSdk.getTransactionHash(safeTransaction);
@@ -142,7 +156,7 @@ class Proposal {
       safeAddress: this.safeAddress,
       safeTransactionData: safeTransaction.data,
       safeTxHash,
-      senderAddress: utils.getAddress(sender),
+      senderAddress: utils.getAddress(this.signer),
       senderSignature: senderSignature.data,
     });
 
