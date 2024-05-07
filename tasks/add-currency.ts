@@ -3,6 +3,7 @@ import { task, types } from 'hardhat/config';
 import { HardhatPluginError } from 'hardhat/internal/core/errors';
 import { getAggregatedDecimals } from '../utils/currencies';
 import { Proposal, getRelaySigner } from '../utils/deployment';
+import { FVMProposal, isFVM } from '../utils/deployment-fvm';
 import { toBytes32 } from '../utils/strings';
 
 task('add-currency', 'Add a new currency to the protocol')
@@ -30,7 +31,7 @@ task('add-currency', 'Add a new currency to the protocol')
   .setAction(
     async (
       { currency, haircut, priceFeeds, heartbeats, tokenAddress, isCollateral },
-      { deployments, ethers },
+      { deployments, ethers, getChainId },
     ) => {
       if (!ethers.utils.isAddress(tokenAddress)) {
         throw new HardhatPluginError(
@@ -61,9 +62,15 @@ task('add-currency', 'Add a new currency to the protocol')
         ethers,
         signerOrProvider: signer,
       });
+
       const proposal =
-        process.env.ENABLE_AUTO_UPDATE !== 'true' ? new Proposal() : undefined;
-      await proposal?.initSdk(ethersAdapter);
+        process.env.ENABLE_AUTO_UPDATE !== 'true'
+          ? await getChainId().then(async (chainId) =>
+              isFVM(chainId)
+                ? FVMProposal.create(chainId)
+                : Proposal.create(ethersAdapter),
+            )
+          : undefined;
 
       const contractNames = ['CurrencyController', 'TokenVault'];
 
@@ -134,7 +141,7 @@ task('add-currency', 'Add a new currency to the protocol')
           },
         ]);
 
-        await proposal.submit(await signer.getAddress());
+        await proposal.submit();
       }
     },
   );

@@ -3,6 +3,7 @@ import { Contract } from 'ethers';
 import { task, types } from 'hardhat/config';
 import { getAdjustedGenesisDate } from '../utils/dates';
 import { Proposal, getRelaySigner } from '../utils/deployment';
+import { FVMProposal, isFVM } from '../utils/deployment-fvm';
 import { getMulticallOrderBookInputs } from '../utils/markets';
 import { toBytes32 } from '../utils/strings';
 
@@ -26,7 +27,7 @@ task('add-order-books', 'Add new order books to the protocol')
   .setAction(
     async (
       { currency, minDebtUnitPrice, openingDate, preOpeningDate },
-      { deployments, ethers },
+      { deployments, ethers, getChainId },
     ) => {
       const signer = getRelaySigner() || (await ethers.getSigners())[0];
 
@@ -35,8 +36,13 @@ task('add-order-books', 'Add new order books to the protocol')
         signerOrProvider: signer,
       });
       const proposal =
-        process.env.ENABLE_AUTO_UPDATE !== 'true' ? new Proposal() : undefined;
-      await proposal?.initSdk(ethersAdapter);
+        process.env.ENABLE_AUTO_UPDATE !== 'true'
+          ? await getChainId().then(async (chainId) =>
+              isFVM(chainId)
+                ? FVMProposal.create(chainId)
+                : Proposal.create(ethersAdapter),
+            )
+          : undefined;
 
       const proxyController = await deployments
         .get('ProxyController')
@@ -79,7 +85,7 @@ task('add-order-books', 'Add new order books to the protocol')
           })),
         );
 
-        await proposal.submit(await signer.getAddress());
+        await proposal.submit();
       }
     },
   );

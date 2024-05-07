@@ -6,10 +6,12 @@ import {
   Proposal,
   getRelaySigner,
 } from '../utils/deployment';
+import { FVMProposal, isFVM } from '../utils/deployment-fvm';
 
 const func: DeployFunction = async function ({
   getNamedAccounts,
   ethers,
+  getChainId,
 }: HardhatRuntimeEnvironment) {
   if (process.env.ENABLE_AUTO_UPDATE === 'true') {
     console.warn('Skipped proposal creation because it is under auto update');
@@ -31,8 +33,12 @@ const func: DeployFunction = async function ({
     ethers,
     signerOrProvider: signer,
   });
-  const proposal = new Proposal();
-  await proposal.initSdk(ethersAdapter);
+
+  const proposal = await getChainId().then(async (chainId) =>
+    isFVM(chainId)
+      ? FVMProposal.create(chainId)
+      : Proposal.create(ethersAdapter),
+  );
 
   for (const [contractAddress, deployment] of Object.entries(
     DeploymentStorage.instance.deployments,
@@ -66,7 +72,7 @@ const func: DeployFunction = async function ({
     );
   }
 
-  await proposal.submit(await signer.getAddress());
+  await proposal.submit();
 };
 
 func.tags = ['Proposal'];
