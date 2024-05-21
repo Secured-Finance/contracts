@@ -6,7 +6,6 @@ import {
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATOR_FEE_RATE,
-  MINIMUM_RELIABLE_AMOUNT,
 } from '../utils/constants';
 import { getNativeTokenAddress } from '../utils/currencies';
 
@@ -32,7 +31,7 @@ task(
 
   const constructorArguments = {
     CurrencyController: [BASE_CURRENCY_DECIMALS],
-    LendingMarket: [MINIMUM_RELIABLE_AMOUNT],
+    LendingMarket: [process.env.MINIMUM_RELIABLE_AMOUNT],
     // NOTE: Arguments of the ProxyController will be AddressZero for the initial deployment
     // When it is updated, the AddressResolver address will be set as an argument.
     // ProxyController: [ethers.constants.AddressZero],

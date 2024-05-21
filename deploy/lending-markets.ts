@@ -2,7 +2,6 @@ import { Contract } from 'ethers';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { MINIMUM_RELIABLE_AMOUNT } from '../utils/constants';
 import {
   DeploymentStorage,
   executeIfNewlyDeployment,
@@ -23,7 +22,7 @@ const func: DeployFunction = async function ({
 
   const deployResult = await deploy('LendingMarket', {
     from: deployer,
-    args: [MINIMUM_RELIABLE_AMOUNT],
+    args: [process.env.MINIMUM_RELIABLE_AMOUNT],
     libraries: {
       OrderActionLogic: orderActionLogic.address,
       OrderReaderLogic: orderReaderLogic.address,
