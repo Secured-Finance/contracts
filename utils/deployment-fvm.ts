@@ -8,6 +8,7 @@ import {
 import BigNumber from 'bignumber.js';
 import { HttpJsonRpcConnector, LotusClient } from 'filecoin.js';
 import { createProposeMessage } from 'filecoin.js/builds/dist/utils/msig';
+import { getNodeEndpoint } from './deployment';
 
 interface TransactionData {
   to: string;
@@ -40,9 +41,6 @@ class FVMProposal {
     if (!isFVM(chainId)) {
       throw Error('Chain ID is not FVM');
     }
-    if (!process.env.FVM_RPC_ENDPOINT) {
-      throw Error('FVM_RPC_ENDPOINT is not set');
-    }
     if (!process.env.FVM_SIGNER_F1_ADDRESS) {
       throw Error('FVM_SIGNER_F1_ADDRESS is not set');
     }
@@ -53,13 +51,15 @@ class FVMProposal {
       throw Error('FVM_MULTISIG_WALLET_F2_ADDRESS is not set');
     }
 
+    const rpcEndpoint = getNodeEndpoint(chainId);
+
     this.chainId = chainId;
     this.signer = process.env.FVM_SIGNER_F1_ADDRESS;
     this.privateKey = process.env.FVM_SIGNER_PRIVATE_KEY;
     this.multisigWallet = process.env.FVM_MULTISIG_WALLET_F2_ADDRESS;
-    this.filecoinClient = new FilecoinClient(process.env.FVM_RPC_ENDPOINT);
+    this.filecoinClient = new FilecoinClient(rpcEndpoint);
     this.lotusClient = new LotusClient(
-      new HttpJsonRpcConnector({ url: process.env.FVM_RPC_ENDPOINT }),
+      new HttpJsonRpcConnector({ url: rpcEndpoint }),
     );
   }
 
