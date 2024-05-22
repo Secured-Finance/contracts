@@ -367,12 +367,6 @@ function _calculatePVFromFV(contract ILendingMarket _market, uint8 _orderBookId,
 function _calculatePVFromFV(int256 _futureValue, uint256 _unitPrice) internal pure returns (int256)
 ```
 
-### _calculatePVFromFV
-
-```solidity
-function _calculatePVFromFV(uint256 _futureValue, uint256 _unitPrice) internal pure returns (uint256)
-```
-
 ### _calculateFVFromPV
 
 ```solidity
