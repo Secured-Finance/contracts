@@ -61,11 +61,18 @@ jobs:
         run: npm ci
       - name: Set environment variables
         run: |
+          echo "SAFE_WALLET_ADDRESS=${{ vars.SAFE_WALLET_ADDRESS }}" >> $GITHUB_ENV
+          echo "SAFE_API_URL=${{ vars.SAFE_API_URL }}" >> $GITHUB_ENV
           echo "RELAYER_API_KEY=${{ vars.RELAYER_API_KEY }}" >> $GITHUB_ENV
           echo "RELAYER_API_SECRET=${{ secrets.RELAYER_API_SECRET }}" >> $GITHUB_ENV
           echo "PRIVATE_KEY=${{ secrets.PRIVATE_KEY }}" >> $GITHUB_ENV
           echo "ALCHEMY_API_KEY=${{ secrets.ALCHEMY_API_KEY }}" >> $GITHUB_ENV
+          echo "ANKR_API_KEY=${{ secrets.ANKR_API_KEY }}" >> $GITHUB_ENV
           echo "INFURA_API_KEY=${{ secrets.INFURA_API_KEY }}" >> $GITHUB_ENV
+          echo "FVM_SIGNER_PRIVATE_KEY=${{ secrets.FVM_SIGNER_PRIVATE_KEY }}" >> $GITHUB_ENV
+          echo "FVM_SIGNER_F1_ADDRESS=${{ vars.FVM_SIGNER_F1_ADDRESS }}" >> $GITHUB_ENV
+          echo "FVM_MULTISIG_WALLET_F2_ADDRESS=${{ vars.FVM_MULTISIG_WALLET_F2_ADDRESS }}" >> $GITHUB_ENV
+          echo "FVM_MULTISIG_WALLET_EVM_ADDRESS=${{ vars.FVM_MULTISIG_WALLET_EVM_ADDRESS }}" >> $GITHUB_ENV
       - name: Build Smart Contracts
         run: npm run compile
       - name: Run task

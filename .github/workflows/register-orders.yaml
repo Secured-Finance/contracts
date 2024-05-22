@@ -64,6 +64,7 @@ jobs:
         run: |
           echo "PRIVATE_KEY=${{ secrets.PRIVATE_KEY }}" >> $GITHUB_ENV
           echo "ALCHEMY_API_KEY=${{ secrets.ALCHEMY_API_KEY }}" >> $GITHUB_ENV
+          echo "ANKR_API_KEY=${{ secrets.ANKR_API_KEY }}" >> $GITHUB_ENV
           echo "INFURA_API_KEY=${{ secrets.INFURA_API_KEY }}" >> $GITHUB_ENV
       - name: Build Smart Contracts
         run: npm run compile
