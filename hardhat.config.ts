@@ -51,6 +51,7 @@ const config: HardhatUserConfig = {
     staging: networkConfig(11155111),
     'staging-arb': networkConfig(421614),
     'staging-ava': networkConfig(43113),
+    'staging-fil': networkConfig(314159),
     sepolia: networkConfig(11155111),
     mainnet: networkConfig(1),
     'arbitrum-sepolia': networkConfig(421614),
