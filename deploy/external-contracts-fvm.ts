@@ -43,10 +43,15 @@ const func: DeployFunction = async function ({
               ethers.getContractAt('CurrencyController', address),
             );
 
+          const pythAggregator = await ethers.getContractAt(
+            'PythAggregator',
+            deployResult.address,
+          );
+
           await currencyController
             .updatePriceFeed(
               currency.key,
-              await currencyController.getDecimals(currency.key),
+              await pythAggregator.decimals(),
               [deployResult.address],
               [currency.pythPriceFeed.heartbeat || '86400'],
             )

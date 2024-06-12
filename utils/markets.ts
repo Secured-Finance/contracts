@@ -4,6 +4,7 @@ import {
   CIRCUIT_BREAKER_LIMIT_RANGE,
   ORDER_FEE_RATE,
 } from '../utils/constants';
+import { getLastFriday } from './dates';
 import { fromBytes32 } from './strings';
 
 // NOTE: Active markets are 8.
@@ -79,7 +80,9 @@ const getMulticallOrderBookInputs = async (
 
       nearestMaturity = marketBasePeriod.eq(0)
         ? moment.unix(genesisDate).add(7, 'd').unix()
-        : moment.unix(genesisDate).add(marketBasePeriod.toNumber(), 'M').unix();
+        : getLastFriday(
+            moment.unix(genesisDate).add(marketBasePeriod.toNumber(), 'M'),
+          ).unix();
     }
 
     for (let i = 0; i < count; i++) {
