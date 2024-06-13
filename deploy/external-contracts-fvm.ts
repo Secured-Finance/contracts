@@ -1,7 +1,11 @@
 import { Contract } from 'ethers';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { currencyIterator } from '../utils/currencies';
+import {
+  currencyIterator,
+  getAggregatedDecimals,
+  mocks,
+} from '../utils/currencies';
 import { executeIfNewlyDeployment } from '../utils/deployment';
 import { toBytes32 } from '../utils/strings';
 
@@ -43,15 +47,18 @@ const func: DeployFunction = async function ({
               ethers.getContractAt('CurrencyController', address),
             );
 
-          const pythAggregator = await ethers.getContractAt(
-            'PythAggregator',
+          const mock = mocks[currency.symbol];
+          const tokenAddress =
+            currency.tokenAddress ||
+            (await deployments.get(mock.tokenName)).address;
+          const decimals = await getAggregatedDecimals(ethers, tokenAddress, [
             deployResult.address,
-          );
+          ]);
 
           await currencyController
             .updatePriceFeed(
               currency.key,
-              await pythAggregator.decimals(),
+              decimals,
               [deployResult.address],
               [currency.pythPriceFeed.heartbeat || '86400'],
             )
