@@ -69,18 +69,3 @@ jobs:
           git switch develop
           git merge main --no-verify
           git push
-  release-please:
-    runs-on: ubuntu-latest
-    needs: [publish]
-    if: ${{ github.event.inputs.versionLevel != 'prerelease' }}
-    steps:
-      - name: Generate token
-        id: generate_token
-        uses: tibdex/github-app-token@v1
-        with:
-          app_id: ${{ secrets.MACHINE_USER_APP_ID }}
-          private_key: ${{ secrets.MACHINE_USER_PRIVATE_KEY }}
-      - uses: GoogleCloudPlatform/release-please-action@v3
-        with:
-          release-type: node
-          token: ${{ secrets.GITHUB_TOKEN }}
