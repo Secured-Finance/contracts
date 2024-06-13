@@ -58,6 +58,7 @@ const config: HardhatUserConfig = {
     'arbitrum-one': networkConfig(42161),
     'avalanche-mainnet': networkConfig(43114),
     'polygon-zkevm-mainnet': networkConfig(1101),
+    'filecoin-mainnet': networkConfig(314),
   },
   solidity: {
     compilers: [
