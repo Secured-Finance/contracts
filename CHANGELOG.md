@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.2.0](https://github.com/Secured-Finance/contracts/compare/v1.1.0...v1.2.0) (2024-06-13)
+
+
+### Features
+
+* add FVM to the dev environment [SF-1112] ([a8e72f5](https://github.com/Secured-Finance/contracts/commit/a8e72f564cef6591e00693d91449c0ebf405493c))
+* add new task to update pyth price feeds [SF-1112] ([cd46f25](https://github.com/Secured-Finance/contracts/commit/cd46f25b671fed909f072db7e37b9a5cc387f7a5))
+* integrate FVM built-in msig [SF-1112] ([ce44ffe](https://github.com/Secured-Finance/contracts/commit/ce44ffefef5ead97dbeb8e7c487d99ff4d5a156c))
+* support Filecoin Mainnet [SF-1157] ([a8f49c8](https://github.com/Secured-Finance/contracts/commit/a8f49c8765bffb6ce74dc46b4d9bd178494fb9d9))
+* support iFIL as collateral [SF-1112] ([f306360](https://github.com/Secured-Finance/contracts/commit/f3063601ace7509e2305e84343b0a0f63875fcfb))
+
+
+### Bug Fixes
+
+* add error handling logic into deployment script [SF-1112] ([0b23ae7](https://github.com/Secured-Finance/contracts/commit/0b23ae74c5b94b51bdb0fbff30ebd955a82ef4bc))
+* fix issues in deploy script [SF-1157] ([0c4eb4e](https://github.com/Secured-Finance/contracts/commit/0c4eb4e340967767feacdab35be36262944f99dd))
+
 ## [1.1.0](https://github.com/Secured-Finance/contracts/compare/v1.0.3...v1.1.0) (2024-04-02)
 
 
