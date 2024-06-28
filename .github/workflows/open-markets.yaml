@@ -22,6 +22,7 @@ on:
           - arbitrum-one
           - avalanche-mainnet
           - polygon-zkevm-mainnet
+          - filecoin-mainnet
 
 jobs:
   deploy:
