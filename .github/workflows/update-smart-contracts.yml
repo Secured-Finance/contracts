@@ -22,6 +22,7 @@ on:
           - arbitrum-one
           - avalanche-mainnet
           - polygon-zkevm-mainnet
+          - filecoin-mainnet
       skip_test:
         description: 'True to bypass testing on the fork'
         required: false
