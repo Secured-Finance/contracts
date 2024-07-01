@@ -16,6 +16,7 @@ on:
           - staging
           - staging-arb
           - staging-ava
+          - staging-fil
           - sepolia
           - mainnet
           - arbitrum-sepolia
