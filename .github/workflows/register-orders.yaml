@@ -11,8 +11,12 @@ on:
         options:
           - development
           - development-arb
+          - development-ava
+          - development-fil
           - staging
           - staging-arb
+          - staging-ava
+          - staging-fil
       collateralCurrency:
         description: 'CollateralCurrency'
         required: true
