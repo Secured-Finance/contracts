@@ -5,5 +5,6 @@ import './fork';
 import './open-markets';
 import './register-orders';
 import './unfork';
+import './update-price-feed';
 import './update-pyth';
 import './verify-contracts';
