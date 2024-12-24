@@ -2,11 +2,11 @@ FROM python:3.9.6
 ENV PYTHONUNBUFFERED=1
 WORKDIR /app
 
-ENV SOLC_VERSION=0.8.9 
+ENV SOLC_VERSION=0.8.19 
 
 RUN echo "slither-analyzer==0.9.6" > requirements.txt
 RUN pip install -r requirements.txt
-RUN solc-select install 0.8.9
-RUN solc-select use 0.8.9
+RUN solc-select install 0.8.19
+RUN solc-select use 0.8.19
 
 CMD ["/app/scripts/slither.sh"]
