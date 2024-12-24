@@ -84,7 +84,7 @@ const func: DeployFunction = async function ({
 
 func.tags = ['ExternalContractsFVM'];
 func.skip = async () =>
-  !process.env.PYTH_PRICE_FEED_ADDRESS ||
+  (!process.env.PYTH_PRICE_FEED_ADDRESS && !process.env.GLIF_POOL_ADDRESS) ||
   process.env.ENABLE_AUTO_UPDATE !== 'true';
 func.runAtTheEnd = true;
 export default func;

@@ -31,7 +31,7 @@
     "docgen": "hardhat docgen",
     "predocgen": "rm -rf cache && npm run compile:force && rm -rf docs",
     "flatten": "./scripts/hardhat-flattener.sh",
-    "security:slither": "docker run --rm -v `pwd`:/app sf-slither",
+    "security:slither": "docker run --rm --platform linux/amd64 -v `pwd`:/app sf-slither",
     "security:mythril": "docker run --rm --platform linux/amd64 --entrypoint /bin/bash -v $(pwd):/home/mythril mythril/myth:0.23.22 /home/mythril/scripts/mythril.sh"
   },
   "author": "Secured Finance",
