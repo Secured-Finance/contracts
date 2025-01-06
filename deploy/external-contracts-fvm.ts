@@ -80,11 +80,26 @@ const func: DeployFunction = async function ({
 
     await executeIfNewlyDeployment('GlifIFilAggregator', deployResult);
   }
+
+  if (process.env.PARASAIL_AGGREGATOR_ADDRESS && process.env.WPFIL_ADDRESS) {
+    const deployResult = await deploy('ParasailWPFILAggregator', {
+      from: deployer,
+      args: [
+        process.env.PARASAIL_AGGREGATOR_ADDRESS,
+        process.env.WPFIL_ADDRESS,
+      ],
+    });
+
+    await executeIfNewlyDeployment('ParasailWPFILAggregator', deployResult);
+  }
 };
 
 func.tags = ['ExternalContractsFVM'];
 func.skip = async () =>
-  (!process.env.PYTH_PRICE_FEED_ADDRESS && !process.env.GLIF_POOL_ADDRESS) ||
-  process.env.ENABLE_AUTO_UPDATE !== 'true';
+  !(
+    process.env.PYTH_PRICE_FEED_ADDRESS ||
+    process.env.GLIF_POOL_ADDRESS ||
+    (process.env.PARASAIL_AGGREGATOR_ADDRESS && process.env.WPFIL_ADDRESS)
+  ) || process.env.ENABLE_AUTO_UPDATE !== 'true';
 func.runAtTheEnd = true;
 export default func;

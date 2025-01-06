@@ -1,14 +1,20 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.19;
 
-import {IInfinityPool} from "./interfaces/IInfinityPool.sol";
+import {SafeCast} from "../../dependencies/openzeppelin/utils/math/SafeCast.sol";
+import {IParasailAggregator} from "./interfaces/IParasailAggregator.sol";
+import {IWPFIL} from "./interfaces/IWPFIL.sol";
 import {AggregatorV2V3Interface} from "../../dependencies/chainlink/AggregatorV2V3Interface.sol";
 
-contract GlifIFilAggregator is AggregatorV2V3Interface {
-    IInfinityPool pool;
+contract ParasailWPFILAggregator is AggregatorV2V3Interface {
+    using SafeCast for uint256;
 
-    constructor(address _pool) {
-        pool = IInfinityPool(_pool);
+    IWPFIL wpfil;
+    IParasailAggregator aggregator;
+
+    constructor(address _aggregator, address _wpfil) {
+        aggregator = IParasailAggregator(_aggregator);
+        wpfil = IWPFIL(_wpfil);
     }
 
     function decimals() public view virtual returns (uint8) {
@@ -16,7 +22,7 @@ contract GlifIFilAggregator is AggregatorV2V3Interface {
     }
 
     function description() public pure returns (string memory) {
-        return "iFIL / FIL";
+        return "wpFIL / FIL";
     }
 
     function version() public pure returns (uint256) {
@@ -24,7 +30,7 @@ contract GlifIFilAggregator is AggregatorV2V3Interface {
     }
 
     function latestAnswer() public view returns (int256) {
-        return int256(pool.convertToAssets(1e18));
+        return wpfil.getPFILByWPFIL(aggregator.getAggregatedPrice()).toInt256();
     }
 
     function latestTimestamp() public view returns (uint256) {
@@ -43,6 +49,7 @@ contract GlifIFilAggregator is AggregatorV2V3Interface {
         return latestTimestamp();
     }
 
+    // NOTE: This functions returns the latest round data since WPFIL does not have historical data
     function getRoundData(
         uint80 _roundId
     )
