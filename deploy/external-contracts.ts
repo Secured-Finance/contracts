@@ -50,8 +50,10 @@ const func: DeployFunction = async function ({
     proxy: {
       owner: deployer,
       execute: {
-        methodName: 'initialize',
-        args: [],
+        init: {
+          methodName: 'initialize',
+          args: [],
+        },
       },
       proxyContract: 'OpenZeppelinTransparentProxy',
     },

@@ -209,7 +209,11 @@ contract Liquidator is ILiquidationReceiver, MixinAccessControl, MixinWallet, In
         }
 
         if (debtTokenBalance != 0) {
-            tokenVault.deposit(_debtCcy, debtTokenBalance);
+            if (debtCcyAddr == nativeToken) {
+                tokenVault.deposit{value: debtTokenBalance}(_debtCcy, debtTokenBalance);
+            } else {
+                tokenVault.deposit(_debtCcy, debtTokenBalance);
+            }
 
             // If debt is expired, it is under the repayment phase. In this case, we don't need to unwind the position.
             // Instead, repayment will be executed on the protocol side using the liquidator's deposit.
