@@ -210,7 +210,9 @@ library DepositManagementLogic {
         totalDeposit = plusDeposit >= minusDeposit ? plusDeposit - minusDeposit : 0;
     }
 
-    function getWithdrawableCollateral(address _user) public view returns (uint256) {
+    function getWithdrawableCollateral(
+        address _user
+    ) public view returns (uint256, bool usedCollateralExists) {
         (
             uint256 totalCollateral,
             uint256 totalUsedCollateral,
@@ -218,7 +220,7 @@ library DepositManagementLogic {
         ) = getTotalCollateralAmount(_user);
 
         if (totalUsedCollateral == 0) {
-            return totalDeposit;
+            return (totalDeposit, false);
         } else if (
             totalCollateral * Constants.PCT_DIGIT >
             totalUsedCollateral * Storage.slot().liquidationThresholdRate
@@ -230,9 +232,9 @@ library DepositManagementLogic {
                 totalUsedCollateral *
                 Storage.slot().liquidationThresholdRate).div(Constants.PCT_DIGIT);
 
-            return maxWithdraw >= totalDeposit ? totalDeposit : maxWithdraw;
+            return (maxWithdraw >= totalDeposit ? totalDeposit : maxWithdraw, true);
         } else {
-            return 0;
+            return (0, true);
         }
     }
 
@@ -242,7 +244,15 @@ library DepositManagementLogic {
     ) public view returns (uint256 withdrawableAmount) {
         uint256 depositAmount = getDepositAmount(_user, _ccy);
         if (Storage.slot().collateralCurrencies.contains(_ccy)) {
-            uint256 maxWithdrawInBaseCurrency = getWithdrawableCollateral(_user);
+            (
+                uint256 maxWithdrawInBaseCurrency,
+                bool usedCollateralExists
+            ) = getWithdrawableCollateral(_user);
+
+            if (!usedCollateralExists) {
+                return depositAmount;
+            }
+
             uint256 maxWithdraw = AddressResolverLib.currencyController().convertFromBaseCurrency(
                 _ccy,
                 maxWithdrawInBaseCurrency
