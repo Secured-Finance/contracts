@@ -619,6 +619,7 @@ describe('LendingMarketController - Operations', () => {
         const aliceGVBefore = await genesisValueVaultProxy.getBalance(
           targetCurrency,
           alice.address,
+          0,
         );
 
         // Update implementations
@@ -652,6 +653,7 @@ describe('LendingMarketController - Operations', () => {
         const aliceGVAfter = await genesisValueVaultProxy.getBalance(
           targetCurrency,
           alice.address,
+          0,
         );
 
         for (let i = 0; i < maturitiesBefore.length; i++) {

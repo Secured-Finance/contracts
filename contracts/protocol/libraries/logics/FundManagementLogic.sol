@@ -378,9 +378,16 @@ library FundManagementLogic {
             vars.orderBookId = Storage.slot().maturityOrderBookIds[_ccy][_maturity];
             vars.isDefaultMarket = vars.orderBookId == vars.defaultOrderBookId;
         }
-        actualFunds.genesisValue = AddressResolverLib.genesisValueVault().getBalance(_ccy, _user);
 
         vars.maturities = getUsedMaturities(_ccy, _user);
+
+        // Get genesis value from Genesis Value Vault including pending fluctuations amount up to the first maturity.
+        // The remaining fluctuation amount is calculated in the following loop.
+        actualFunds.genesisValue = AddressResolverLib.genesisValueVault().getBalance(
+            _ccy,
+            _user,
+            vars.maturities.length == 0 ? 0 : vars.maturities[0]
+        );
 
         for (uint256 i; i < vars.maturities.length; i++) {
             uint256 currentMaturity = vars.maturities[i];
@@ -761,7 +768,7 @@ library FundManagementLogic {
 
             if (
                 !futureValueExists &&
-                AddressResolverLib.genesisValueVault().getBalance(_ccy, _user) == 0
+                AddressResolverLib.genesisValueVault().getBalance(_ccy, _user, 0) == 0
             ) {
                 Storage.slot().usedCurrencies[_user].remove(_ccy);
             }
