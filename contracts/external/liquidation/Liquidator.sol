@@ -178,9 +178,10 @@ contract Liquidator is ILiquidationReceiver, MixinAccessControl, MixinWallet, In
         uint amountIn = _receivedCollateralAmount > collateralTokenBalance
             ? collateralTokenBalance
             : _receivedCollateralAmount;
+        bool isV2Router = poolFee == 0;
 
         if (collateralCcyAddr != debtCcyAddr && _receivedDebtAmount != 0 && amountIn != 0) {
-            if (poolFee == 0) {
+            if (isV2Router) {
                 _executeSwapWithV2(
                     collateralCcyAddr,
                     debtCcyAddr,
@@ -201,17 +202,22 @@ contract Liquidator is ILiquidationReceiver, MixinAccessControl, MixinWallet, In
 
         uint256 debtTokenBalance;
 
-        if (debtCcyAddr == nativeToken) {
+        // If the debt token is the native token and the router is V2 at the previous step, the collateral token is swapped to the debt token
+        // in the native currency at the previous step.
+        if (debtCcyAddr == nativeToken && isV2Router) {
             debtTokenBalance = address(this).balance;
         } else {
             debtTokenBalance = IERC20(debtCcyAddr).balanceOf(address(this));
-            TransferHelper.safeApprove(debtCcyAddr, address(tokenVault), debtTokenBalance);
         }
 
         if (debtTokenBalance != 0) {
             if (debtCcyAddr == nativeToken) {
+                if (!isV2Router) {
+                    TransferHelper.convertFromWrappedToken(address(this), debtTokenBalance);
+                }
                 tokenVault.deposit{value: debtTokenBalance}(_debtCcy, debtTokenBalance);
             } else {
+                TransferHelper.safeApprove(debtCcyAddr, address(tokenVault), debtTokenBalance);
                 tokenVault.deposit(_debtCcy, debtTokenBalance);
             }
 
