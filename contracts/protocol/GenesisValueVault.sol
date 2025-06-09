@@ -94,16 +94,23 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
     }
 
     /**
-     * @notice Gets the user balance.
+     * @notice Gets the user balance of the user including the fluctuation amount until the maturity.
+     * @dev This function returns the user's balance at the maturity with the fluctuation amount
+     * caused by auto-rolls.
      * @param _ccy Currency name in bytes32
      * @param _user User's address
+     * @param _maturity The maturity that is the base date used to calculate the fluctuation amount
      * @return The user balance
      */
-    function getBalance(bytes32 _ccy, address _user) public view override returns (int256) {
+    function getBalance(
+        bytes32 _ccy,
+        address _user,
+        uint256 _maturity
+    ) public view override returns (int256) {
         (int256 balance, int256 fluctuation) = _getActualBalance(
             _ccy,
             _user,
-            getCurrentMaturity(_ccy)
+            _maturity == 0 ? getCurrentMaturity(_ccy) : _maturity
         );
         return balance + fluctuation;
     }
@@ -445,7 +452,7 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         address _user,
         uint256 _amount
     ) public override onlyLendingMarketController returns (uint256 lockedAmount) {
-        int256 balance = getBalance(_ccy, _user);
+        int256 balance = getBalance(_ccy, _user, 0);
 
         if (balance <= 0) revert InsufficientBalance();
 

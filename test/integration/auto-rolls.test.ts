@@ -946,6 +946,7 @@ describe('Integration Test: Auto-rolls', async () => {
       const reserveFundGVAmountBefore = await genesisValueVault.getBalance(
         hexETH,
         reserveFund.address,
+        0,
       );
 
       // Auto-roll
@@ -984,6 +985,332 @@ describe('Integration Test: Auto-rolls', async () => {
           .add(reserveFundGVAmount.sub(reserveFundGVAmountBefore))
           .add(daveGVAmount),
       ).to.equal('0');
+    });
+  });
+
+  describe('Execute auto-rolls with users who has filled orders that make balance fluctuations on the 2 markets.', async () => {
+    const orderAmount = BigNumber.from('100000000000000000');
+
+    before(async () => {
+      [alice, bob, carol] = await getUsers(3);
+      await resetContractInstances();
+      await executeAutoRoll('9600');
+    });
+
+    it('Fill an order', async () => {
+      await tokenVault.connect(bob).deposit(hexETH, orderAmount.mul(3), {
+        value: orderAmount.mul(3),
+      });
+
+      await expect(
+        lendingMarketController
+          .connect(alice)
+          .depositAndExecuteOrder(
+            hexETH,
+            maturities[0],
+            Side.LEND,
+            orderAmount.mul(2),
+            9600,
+            {
+              value: orderAmount.mul(2),
+            },
+          ),
+      ).to.not.emit(fundManagementLogic, 'OrderFilled');
+
+      await expect(
+        lendingMarketController
+          .connect(bob)
+          .executeOrder(
+            hexETH,
+            maturities[0],
+            Side.BORROW,
+            orderAmount.mul(2),
+            0,
+          ),
+      ).to.emit(fundManagementLogic, 'OrderFilled');
+
+      await createSampleETHOrders(carol, maturities[1], '9600');
+
+      // Check future value
+      const { futureValue: aliceActualFV } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[0],
+          alice.address,
+        );
+
+      expect(aliceActualFV).to.equal(
+        calculateFutureValue(orderAmount.mul(2), 9600),
+      );
+    });
+
+    it(`Execute auto-roll`, async () => {
+      const { futureValue: aliceFVBefore } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[0],
+          alice.address,
+        );
+
+      // Auto-roll
+      await executeAutoRoll('9600');
+
+      // Check future value
+      const { futureValue: aliceActualFV } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[0],
+          alice.address,
+        );
+      expect(aliceActualFV).to.equal('0');
+
+      // Check future value * genesis value
+      const { futureValue: aliceFVAfter } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[1],
+          alice.address,
+        );
+
+      const { amount: aliceGVAfter } =
+        await lendingMarketController.getGenesisValue(hexETH, alice.address);
+
+      const { lendingCompoundFactor: lendingCF0 } =
+        await genesisValueVault.getAutoRollLog(hexETH, maturities[0]);
+      const { lendingCompoundFactor: lendingCF1 } =
+        await genesisValueVault.getAutoRollLog(hexETH, maturities[1]);
+      const gvDecimals = await genesisValueVault.decimals(hexETH);
+
+      expect(aliceFVAfter).to.equal(
+        calculateFVFromFV(aliceFVBefore, lendingCF0, lendingCF1, gvDecimals),
+      );
+      expect(aliceGVAfter).to.equal(
+        calculateGVFromFV(aliceFVBefore, lendingCF0, gvDecimals),
+      );
+    });
+
+    it('Fill an order', async () => {
+      await tokenVault.connect(alice).deposit(hexETH, orderAmount.mul(2), {
+        value: orderAmount.mul(2),
+      });
+
+      await expect(
+        lendingMarketController
+          .connect(bob)
+          .depositAndExecuteOrder(
+            hexETH,
+            maturities[0],
+            Side.LEND,
+            orderAmount,
+            9800,
+            {
+              value: orderAmount,
+            },
+          ),
+      ).to.not.emit(fundManagementLogic, 'OrderFilled');
+
+      const tx = await lendingMarketController
+        .connect(alice)
+        .executeOrder(hexETH, maturities[0], Side.BORROW, orderAmount, 0);
+      await expect(tx).to.emit(fundManagementLogic, 'OrderFilled');
+    });
+
+    it(`Execute auto-roll and Clean up funds`, async () => {
+      await executeAutoRoll('8000');
+
+      const aliceCoverageBefore = await tokenVault.getCoverage(alice.address);
+      const bobCoverageBefore = await tokenVault.getCoverage(bob.address);
+
+      await lendingMarketController.cleanUpFunds(hexETH, alice.address);
+      await lendingMarketController.cleanUpFunds(hexETH, bob.address);
+
+      const aliceCoverageAfter = await tokenVault.getCoverage(alice.address);
+      const bobCoverageAfter = await tokenVault.getCoverage(bob.address);
+
+      // Check if the coverage is not changed by cleaning up funds
+      expect(aliceCoverageBefore).to.equal(aliceCoverageAfter);
+      expect(bobCoverageBefore).to.equal(bobCoverageAfter);
+    });
+  });
+
+  describe('Execute auto-rolls with users who has filled orders that make balance fluctuations on the 3 markets.', async () => {
+    const orderAmount = BigNumber.from('100000000000000000');
+
+    before(async () => {
+      [alice, bob, carol] = await getUsers(3);
+      await resetContractInstances();
+      await executeAutoRoll('9600');
+    });
+
+    it('Fill an order', async () => {
+      await tokenVault.connect(bob).deposit(hexETH, orderAmount.mul(3), {
+        value: orderAmount.mul(3),
+      });
+
+      await expect(
+        lendingMarketController
+          .connect(alice)
+          .depositAndExecuteOrder(
+            hexETH,
+            maturities[0],
+            Side.LEND,
+            orderAmount.mul(2),
+            9600,
+            {
+              value: orderAmount.mul(2),
+            },
+          ),
+      ).to.not.emit(fundManagementLogic, 'OrderFilled');
+
+      await expect(
+        lendingMarketController
+          .connect(bob)
+          .executeOrder(
+            hexETH,
+            maturities[0],
+            Side.BORROW,
+            orderAmount.mul(2),
+            0,
+          ),
+      ).to.emit(fundManagementLogic, 'OrderFilled');
+
+      await createSampleETHOrders(carol, maturities[1], '9600');
+
+      // Check future value
+      const { futureValue: aliceActualFV } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[0],
+          alice.address,
+        );
+
+      expect(aliceActualFV).to.equal(
+        calculateFutureValue(orderAmount.mul(2), 9600),
+      );
+    });
+
+    it(`Execute auto-roll`, async () => {
+      const { futureValue: aliceFVBefore } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[0],
+          alice.address,
+        );
+
+      // Auto-roll
+      await executeAutoRoll('9600');
+
+      // Check future value
+      const { futureValue: aliceActualFV } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[0],
+          alice.address,
+        );
+      expect(aliceActualFV).to.equal('0');
+
+      // Check future value * genesis value
+      const { futureValue: aliceFVAfter } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[1],
+          alice.address,
+        );
+
+      const { amount: aliceGVAfter } =
+        await lendingMarketController.getGenesisValue(hexETH, alice.address);
+
+      const { lendingCompoundFactor: lendingCF0 } =
+        await genesisValueVault.getAutoRollLog(hexETH, maturities[0]);
+      const { lendingCompoundFactor: lendingCF1 } =
+        await genesisValueVault.getAutoRollLog(hexETH, maturities[1]);
+      const gvDecimals = await genesisValueVault.decimals(hexETH);
+
+      expect(aliceFVAfter).to.equal(
+        calculateFVFromFV(aliceFVBefore, lendingCF0, lendingCF1, gvDecimals),
+      );
+      expect(aliceGVAfter).to.equal(
+        calculateGVFromFV(aliceFVBefore, lendingCF0, gvDecimals),
+      );
+    });
+
+    it('Fill an order', async () => {
+      await tokenVault.connect(alice).deposit(hexETH, orderAmount.mul(2), {
+        value: orderAmount.mul(2),
+      });
+
+      await expect(
+        lendingMarketController
+          .connect(bob)
+          .depositAndExecuteOrder(
+            hexETH,
+            maturities[1],
+            Side.LEND,
+            orderAmount,
+            9800,
+            {
+              value: orderAmount,
+            },
+          ),
+      ).to.not.emit(fundManagementLogic, 'OrderFilled');
+
+      const tx = await lendingMarketController
+        .connect(alice)
+        .executeOrder(hexETH, maturities[1], Side.BORROW, orderAmount, 0);
+      await expect(tx).to.emit(fundManagementLogic, 'OrderFilled');
+    });
+
+    it('Fill an order', async () => {
+      await expect(
+        lendingMarketController
+          .connect(bob)
+          .depositAndExecuteOrder(
+            hexETH,
+            maturities[2],
+            Side.LEND,
+            orderAmount.div(2),
+            9900,
+            {
+              value: orderAmount.div(2),
+            },
+          ),
+      ).to.not.emit(fundManagementLogic, 'OrderFilled');
+
+      const tx = await lendingMarketController
+        .connect(alice)
+        .executeOrder(
+          hexETH,
+          maturities[2],
+          Side.BORROW,
+          orderAmount.div(2),
+          0,
+        );
+      await expect(tx).to.emit(fundManagementLogic, 'OrderFilled');
+    });
+
+    it(`Execute auto-roll (1st time)`, async () => {
+      await executeAutoRoll('9900');
+    });
+
+    it(`Execute auto-roll (2st time)`, async () => {
+      await executeAutoRoll('9800');
+    });
+
+    it(`Execute auto-roll (3nd time) and Clean up funds`, async () => {
+      await executeAutoRoll('9000');
+
+      const aliceCoverageBefore = await tokenVault.getCoverage(alice.address);
+      const bobCoverageBefore = await tokenVault.getCoverage(bob.address);
+
+      await lendingMarketController.cleanUpFunds(hexETH, alice.address);
+      await lendingMarketController.cleanUpFunds(hexETH, bob.address);
+
+      const aliceCoverageAfter = await tokenVault.getCoverage(alice.address);
+      const bobCoverageAfter = await tokenVault.getCoverage(bob.address);
+
+      // Check if the coverage is not changed by cleaning up funds
+      expect(aliceCoverageBefore).to.equal(aliceCoverageAfter);
+      expect(bobCoverageBefore).to.equal(bobCoverageAfter);
     });
   });
 

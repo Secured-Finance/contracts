@@ -414,7 +414,7 @@ library LiquidationLogic {
         untransferredAmount = _amount;
         bool isDebt = _amount < 0;
 
-        int256 userGVAmount = AddressResolverLib.genesisValueVault().getBalance(_ccy, _from);
+        int256 userGVAmount = AddressResolverLib.genesisValueVault().getBalance(_ccy, _from, 0);
 
         if ((isDebt && userGVAmount < 0) || (!isDebt && userGVAmount > 0)) {
             uint256 currentMaturity = AddressResolverLib.genesisValueVault().getCurrentMaturity(

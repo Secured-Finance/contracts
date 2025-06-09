@@ -398,6 +398,7 @@ describe('GenesisValueVault', () => {
         const aliceBalance = await genesisValueVaultProxy.getBalance(
           targetCurrency,
           alice.address,
+          0,
         );
         const aliceBalanceInFV = await genesisValueVaultProxy.calculateFVFromGV(
           targetCurrency,
@@ -460,10 +461,12 @@ describe('GenesisValueVault', () => {
         const aliceBalance = await genesisValueVaultProxy.getBalance(
           targetCurrency,
           alice.address,
+          0,
         );
         const rfBalance = await genesisValueVaultProxy.getBalance(
           targetCurrency,
           mockReserveFund.address,
+          0,
         );
 
         expect(totalBorrowingSupply).to.equals(
@@ -610,6 +613,7 @@ describe('GenesisValueVault', () => {
         const aliceBalance = await genesisValueVaultProxy.getBalance(
           targetCurrency,
           alice.address,
+          0,
         );
 
         await expect(
@@ -641,6 +645,7 @@ describe('GenesisValueVault', () => {
         const aliceBalance = await genesisValueVaultProxy.getBalance(
           targetCurrency,
           alice.address,
+          0,
         );
 
         await genesisValueVaultCaller.lock(
@@ -700,6 +705,7 @@ describe('GenesisValueVault', () => {
         const aliceBalance = await genesisValueVaultProxy.getBalance(
           targetCurrency,
           alice.address,
+          0,
         );
 
         await genesisValueVaultCaller.lock(
@@ -742,6 +748,7 @@ describe('GenesisValueVault', () => {
         const aliceBalance = await genesisValueVaultProxy.getBalance(
           targetCurrency,
           alice.address,
+          0,
         );
 
         await expect(
@@ -780,6 +787,7 @@ describe('GenesisValueVault', () => {
         const aliceBalance = await genesisValueVaultProxy.getBalance(
           targetCurrency,
           alice.address,
+          0,
         );
 
         await expect(
@@ -807,6 +815,7 @@ describe('GenesisValueVault', () => {
         const aliceBalance = await genesisValueVaultProxy.getBalance(
           targetCurrency,
           alice.address,
+          0,
         );
 
         await expect(
@@ -834,6 +843,7 @@ describe('GenesisValueVault', () => {
         const aliceBalance = await genesisValueVaultProxy.getBalance(
           targetCurrency,
           alice.address,
+          0,
         );
 
         await expect(
@@ -1050,6 +1060,62 @@ describe('GenesisValueVault', () => {
     });
 
     it('Calculate the balance fluctuation of auto-rolls by on the current maturity', async () => {
+      const gvAmount = await genesisValueVaultProxy.calculateGVFromFV(
+        targetCurrency,
+        maturity,
+        fvAmount,
+      );
+
+      await genesisValueVaultCaller.updateGenesisValueWithFutureValue(
+        targetCurrency,
+        mockReserveFund.address,
+        maturity,
+        -fvAmount,
+      );
+
+      await genesisValueVaultCaller.executeAutoRoll(
+        targetCurrency,
+        maturity,
+        nextMaturity,
+        8000,
+        1000,
+      );
+
+      const gvAmountWithoutFluctuation =
+        await genesisValueVaultProxy.getBalance(
+          targetCurrency,
+          mockReserveFund.address,
+          maturity,
+        );
+
+      const gvAmountWithFluctuation = await genesisValueVaultProxy.getBalance(
+        targetCurrency,
+        mockReserveFund.address,
+        nextMaturity,
+      );
+
+      const fluctuation =
+        await genesisValueVaultProxy.calculateBalanceFluctuationByAutoRolls(
+          targetCurrency,
+          -gvAmount,
+          maturity,
+          nextMaturity,
+        );
+
+      expect(-gvAmount).equals(gvAmountWithoutFluctuation);
+      expect(gvAmountWithFluctuation).equals(
+        gvAmountWithoutFluctuation.add(fluctuation),
+      );
+      expect(fluctuation).lt(0);
+    });
+
+    it('Calculate the balance fluctuation of auto-rolls by on the future maturity', async () => {
+      const gvAmount = await genesisValueVaultProxy.calculateGVFromFV(
+        targetCurrency,
+        maturity,
+        fvAmount,
+      );
+
       await genesisValueVaultCaller.updateGenesisValueWithFutureValue(
         targetCurrency,
         mockReserveFund.address,
@@ -1068,27 +1134,7 @@ describe('GenesisValueVault', () => {
       const fluctuation =
         await genesisValueVaultProxy.calculateBalanceFluctuationByAutoRolls(
           targetCurrency,
-          -fvAmount,
-          maturity,
-          nextMaturity,
-        );
-
-      expect(fluctuation).lt(0);
-    });
-
-    it('Calculate the balance fluctuation of auto-rolls by on the future maturity', async () => {
-      await genesisValueVaultCaller.executeAutoRoll(
-        targetCurrency,
-        maturity,
-        nextMaturity,
-        8000,
-        1000,
-      );
-
-      const fluctuation =
-        await genesisValueVaultProxy.calculateBalanceFluctuationByAutoRolls(
-          targetCurrency,
-          -fvAmount,
+          -gvAmount,
           maturity,
           nextMaturity + 1,
         );
@@ -1097,6 +1143,12 @@ describe('GenesisValueVault', () => {
     });
 
     it('Calculate the balance fluctuation of auto-rolls by on the past maturity', async () => {
+      const gvAmount = await genesisValueVaultProxy.calculateGVFromFV(
+        targetCurrency,
+        maturity,
+        fvAmount,
+      );
+
       await genesisValueVaultCaller.updateGenesisValueWithFutureValue(
         targetCurrency,
         mockReserveFund.address,
@@ -1120,14 +1172,30 @@ describe('GenesisValueVault', () => {
         1000,
       );
 
+      const gvAmountWithoutFluctuation =
+        await genesisValueVaultProxy.getBalance(
+          targetCurrency,
+          mockReserveFund.address,
+          maturity,
+        );
+      const gvAmountWithFluctuation1 = await genesisValueVaultProxy.getBalance(
+        targetCurrency,
+        mockReserveFund.address,
+        nextMaturity,
+      );
+
       const fluctuation =
         await genesisValueVaultProxy.calculateBalanceFluctuationByAutoRolls(
           targetCurrency,
-          -fvAmount,
+          -gvAmount,
           maturity,
           nextMaturity,
         );
 
+      expect(-gvAmount).equals(gvAmountWithoutFluctuation);
+      expect(gvAmountWithFluctuation1).equals(
+        gvAmountWithoutFluctuation.add(fluctuation),
+      );
       expect(fluctuation).lt(0);
     });
 
