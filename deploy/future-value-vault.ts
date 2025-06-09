@@ -14,7 +14,10 @@ const func: DeployFunction = async function ({
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  const deployResult = await deploy('FutureValueVault', { from: deployer });
+  const deployResult = await deploy('FutureValueVault', {
+    from: deployer,
+    waitConfirmations: parseInt(process.env.WAIT_CONFIRMATIONS || '1'),
+  });
 
   await executeIfNewlyDeployment('FutureValueVault', deployResult, async () => {
     const proxyController = await deployments

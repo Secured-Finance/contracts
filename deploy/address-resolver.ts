@@ -15,6 +15,7 @@ const func: DeployFunction = async function ({
 
   const deployResult = await deploy('AddressResolver', {
     from: deployer,
+    waitConfirmations: parseInt(process.env.WAIT_CONFIRMATIONS || '1'),
   });
 
   await executeIfNewlyDeployment('AddressResolver', deployResult, async () => {

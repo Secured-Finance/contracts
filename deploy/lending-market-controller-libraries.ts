@@ -10,16 +10,12 @@ const func: DeployFunction = async function ({
   const { deployer } = await getNamedAccounts();
 
   const deployResults: Record<string, DeployResult> = {};
+  const waitConfirmations = parseInt(process.env.WAIT_CONFIRMATIONS || '1');
 
-  for (const libName of [
-    'QuickSort',
-    'DepositManagementLogic',
-    'LendingMarketOperationLogic',
-    'OrderReaderLogic',
-    'OrderBookLogic',
-  ]) {
+  for (const libName of ['QuickSort', 'LendingMarketOperationLogic']) {
     const deployResult = await deploy(libName, {
       from: deployer,
+      waitConfirmations,
     }).then((result) => {
       executeIfNewlyDeployment(libName, result);
       return result;
@@ -32,6 +28,7 @@ const func: DeployFunction = async function ({
     libraries: {
       QuickSort: deployResults['QuickSort'].address,
     },
+    waitConfirmations,
   }).then((result) => {
     executeIfNewlyDeployment('FundManagementLogic', result);
     return result;
@@ -42,6 +39,7 @@ const func: DeployFunction = async function ({
     libraries: {
       FundManagementLogic: deployResults['FundManagementLogic'].address,
     },
+    waitConfirmations,
   }).then((result) => {
     executeIfNewlyDeployment('LiquidationLogic', result);
     return result;
@@ -54,18 +52,12 @@ const func: DeployFunction = async function ({
       LendingMarketOperationLogic:
         deployResults['LendingMarketOperationLogic'].address,
     },
+    waitConfirmations,
   }).then((result) =>
     executeIfNewlyDeployment('LendingMarketUserLogic', result),
   );
-
-  await deploy('OrderActionLogic', {
-    from: deployer,
-    libraries: {
-      OrderReaderLogic: deployResults['OrderReaderLogic'].address,
-    },
-  }).then((result) => executeIfNewlyDeployment('OrderActionLogic', result));
 };
 
-func.tags = ['Libraries'];
+func.tags = ['LendingMarketControllerLibraries'];
 
 export default func;

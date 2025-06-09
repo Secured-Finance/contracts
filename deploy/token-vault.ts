@@ -29,6 +29,7 @@ const func: DeployFunction = async function ({
     libraries: {
       DepositManagementLogic: depositManagementLogic.address,
     },
+    waitConfirmations: parseInt(process.env.WAIT_CONFIRMATIONS || '1'),
   });
 
   await executeIfNewlyDeployment('TokenVault', deployResult, async () => {
@@ -53,6 +54,6 @@ const func: DeployFunction = async function ({
 };
 
 func.tags = ['TokenVault'];
-func.dependencies = ['ProxyController', 'Tokens', 'Libraries'];
+func.dependencies = ['ProxyController', 'Tokens', 'TokenVaultLibraries'];
 
 export default func;
