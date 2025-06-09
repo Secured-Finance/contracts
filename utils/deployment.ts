@@ -188,6 +188,10 @@ const ankrNetworkKeys = {
   314: 'filecoin',
 };
 
+const glifNetworkKeys = {
+  314: 'node.glif.io/fvm-archive/lotus',
+};
+
 const getNodeEndpoint = (chainId: string): string => {
   if (process.env.ALCHEMY_API_KEY && alchemyNetworkKeys[chainId]) {
     return `https://${alchemyNetworkKeys[chainId]}.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`;
@@ -195,6 +199,8 @@ const getNodeEndpoint = (chainId: string): string => {
     return `https://rpc.ankr.com/${ankrNetworkKeys[chainId]}/${process.env.ANKR_API_KEY}`;
   } else if (process.env.INFURA_API_KEY && infuraNetworkKeys[chainId]) {
     return `https://${infuraNetworkKeys[chainId]}.infura.io/v3/${process.env.INFURA_API_KEY}`;
+  } else if (process.env.GLIF_API_KEY && glifNetworkKeys[chainId]) {
+    return `https://${glifNetworkKeys[chainId]}/rpc/v1`;
   } else {
     return '';
   }
@@ -202,8 +208,8 @@ const getNodeEndpoint = (chainId: string): string => {
 
 export {
   DeploymentStorage,
-  Proposal,
   executeIfNewlyDeployment,
   getNodeEndpoint,
   getRelaySigner,
+  Proposal,
 };
