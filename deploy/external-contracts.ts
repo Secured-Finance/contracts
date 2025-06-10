@@ -11,6 +11,7 @@ const func: DeployFunction = async function ({
 }: HardhatRuntimeEnvironment) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
+  const waitConfirmations = parseInt(process.env.WAIT_CONFIRMATIONS || '1');
 
   const proxyController: Contract = await deployments
     .get('ProxyController')
@@ -38,6 +39,7 @@ const func: DeployFunction = async function ({
     await deploy(contractName, {
       from: deployer,
       args: [addressResolver.address],
+      waitConfirmations,
     }).then((result) => executeIfNewlyDeployment(contractName, result));
   }
 
@@ -62,6 +64,7 @@ const func: DeployFunction = async function ({
       lendingMarketController.address,
       tokenVault.address,
     ],
+    waitConfirmations,
   });
 
   executeIfNewlyDeployment('Liquidator', deployResult);

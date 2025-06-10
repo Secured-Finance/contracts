@@ -28,6 +28,7 @@ const func: DeployFunction = async function ({
       OrderReaderLogic: orderReaderLogic.address,
       OrderBookLogic: orderBookLogic.address,
     },
+    waitConfirmations: parseInt(process.env.WAIT_CONFIRMATIONS || '1'),
   });
 
   await executeIfNewlyDeployment('LendingMarket', deployResult, async () => {
@@ -51,6 +52,6 @@ const func: DeployFunction = async function ({
 };
 
 func.tags = ['LendingMarkets'];
-func.dependencies = ['Migration'];
+func.dependencies = ['Migration', 'LendingMarketLibraries'];
 
 export default func;

@@ -25,6 +25,7 @@ const func: DeployFunction = async function ({
   const isInitialDeployment = !prevMigrationAddressResolver;
   const migrationAddressResolver = await deploy('MigrationAddressResolver', {
     from: deployer,
+    waitConfirmations: parseInt(process.env.WAIT_CONFIRMATIONS || '1'),
   }).then(({ address }) =>
     ethers.getContractAt('MigrationAddressResolver', address),
   );

@@ -61,6 +61,7 @@ const updateCurrencyControllerSettings = async (
         const priceFeedContract = await deploy('MockV3Aggregator', {
           from: signer,
           args: [priceFeed.decimals, currency.key, priceFeed.mockRate],
+          waitConfirmations: parseInt(process.env.WAIT_CONFIRMATIONS || '1'),
         });
         console.log(
           `Deployed MockV3Aggregator ${priceFeed.name} price feed at`,

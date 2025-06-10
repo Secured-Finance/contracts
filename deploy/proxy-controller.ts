@@ -37,6 +37,7 @@ const func: DeployFunction = async function ({
   const deployResult = await deploy('ProxyController', {
     from: deployer,
     args: [addressResolverAddress],
+    waitConfirmations: parseInt(process.env.WAIT_CONFIRMATIONS || '1'),
   });
 
   await executeIfNewlyDeployment('ProxyController', deployResult, async () => {

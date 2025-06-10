@@ -10,6 +10,7 @@ const func: DeployFunction = async function ({
 }: HardhatRuntimeEnvironment) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
+  const waitConfirmations = parseInt(process.env.WAIT_CONFIRMATIONS || '1');
 
   // Deploy mock tokens
   const log = {};
@@ -30,6 +31,7 @@ const func: DeployFunction = async function ({
     const tokenDeployResult = await deploy(mocks[currency.symbol].tokenName, {
       from: deployer,
       args: currency.isNative ? [] : currency.args,
+      waitConfirmations,
     });
     log[currency.symbol] = { [logHeader]: tokenDeployResult.address };
 
@@ -40,7 +42,10 @@ const func: DeployFunction = async function ({
   }
 
   if (!process.env.NATIVE_TOKEN_ADDRESS && !hasNativeToken) {
-    const deployResult = await deploy('MockWETH9', { from: deployer });
+    const deployResult = await deploy('MockWETH9', {
+      from: deployer,
+      waitConfirmations,
+    });
     await executeIfNewlyDeployment('MockWETH9', deployResult);
   }
 
@@ -48,7 +53,10 @@ const func: DeployFunction = async function ({
 
   // Deploy TokenFaucet
   if (process.env.ENABLE_FAUCET === 'true') {
-    const faucetDeployResult = await deploy('TokenFaucet', { from: deployer });
+    const faucetDeployResult = await deploy('TokenFaucet', {
+      from: deployer,
+      waitConfirmations,
+    });
 
     await executeIfNewlyDeployment(
       'TokenFaucet',

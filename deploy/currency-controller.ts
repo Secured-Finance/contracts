@@ -17,6 +17,7 @@ const func: DeployFunction = async function ({
   const deployResult = await deploy('CurrencyController', {
     from: deployer,
     args: [BASE_CURRENCY_DECIMALS],
+    waitConfirmations: parseInt(process.env.WAIT_CONFIRMATIONS || '1'),
   });
 
   await executeIfNewlyDeployment(

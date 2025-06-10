@@ -16,6 +16,7 @@ const func: DeployFunction = async function ({
 }: HardhatRuntimeEnvironment) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
+  const waitConfirmations = parseInt(process.env.WAIT_CONFIRMATIONS || '1');
 
   if (process.env.PYTH_PRICE_FEED_ADDRESS) {
     for (const currency of currencyIterator()) {
@@ -29,6 +30,7 @@ const func: DeployFunction = async function ({
           description,
         ],
         skipIfAlreadyDeployed: false,
+        waitConfirmations,
       });
 
       await executeIfNewlyDeployment(
@@ -76,6 +78,7 @@ const func: DeployFunction = async function ({
     const deployResult = await deploy('GlifIFilAggregator', {
       from: deployer,
       args: [process.env.GLIF_POOL_ADDRESS],
+      waitConfirmations,
     });
 
     await executeIfNewlyDeployment('GlifIFilAggregator', deployResult);
@@ -88,6 +91,7 @@ const func: DeployFunction = async function ({
         process.env.PARASAIL_AGGREGATOR_ADDRESS,
         process.env.WPFIL_ADDRESS,
       ],
+      waitConfirmations,
     });
 
     await executeIfNewlyDeployment('ParasailWPFILAggregator', deployResult);

@@ -30,6 +30,7 @@ const func: DeployFunction = async function ({
       LendingMarketUserLogic: lendingMarketUserLogic.address,
       LiquidationLogic: liquidationLogic.address,
     },
+    waitConfirmations: parseInt(process.env.WAIT_CONFIRMATIONS || '1'),
   });
 
   await executeIfNewlyDeployment(
@@ -53,6 +54,6 @@ const func: DeployFunction = async function ({
 };
 
 func.tags = ['LendingMarketController'];
-func.dependencies = ['ProxyController', 'Libraries'];
+func.dependencies = ['ProxyController', 'LendingMarketControllerLibraries'];
 
 export default func;
