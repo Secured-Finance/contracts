@@ -73,6 +73,7 @@ const func: DeployFunction = async function ({
   }
 
   await proposal.submit();
+  DeploymentStorage.instance.clear();
 };
 
 func.tags = ['Proposal'];
