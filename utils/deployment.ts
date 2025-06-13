@@ -9,6 +9,7 @@ import {
   MetaTransactionData,
 } from '@safe-global/safe-core-sdk-types';
 import { utils } from 'ethers';
+import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'fs';
 import { DeployResult } from 'hardhat-deploy/types';
 
 const executeIfNewlyDeployment = async (
@@ -47,7 +48,13 @@ class DeploymentStorage {
   private static _instance: DeploymentStorage;
   private _deployments: Record<string, Deployment> = {};
 
-  private constructor() {}
+  private constructor() {
+    if (existsSync('deployments.json')) {
+      this._deployments = JSON.parse(
+        readFileSync('deployments.json', 'utf-8'),
+      ) as Record<string, Deployment>;
+    }
+  }
 
   static get instance() {
     if (this._instance) return this._instance;
@@ -80,10 +87,20 @@ class DeploymentStorage {
       name: functionName,
       args,
     });
+
+    writeFileSync(
+      'deployments.json',
+      JSON.stringify(this._deployments, null, 2),
+    );
   }
 
   get deployments(): Record<string, Deployment> {
     return this._deployments;
+  }
+
+  clear() {
+    this._deployments = {};
+    unlinkSync('deployments.json');
   }
 }
 
@@ -136,10 +153,13 @@ class Proposal {
       to,
       data,
       value: '0',
+      operation: 0, // Call operation
     });
   }
 
   async submit() {
+    console.log('Submitting proposal...');
+
     if (this.safeTransactions.length === 0) {
       console.warn('Skipped proposal submission due to no update');
       return;
@@ -147,6 +167,7 @@ class Proposal {
 
     const safeTransaction = await this.safeSdk.createTransaction({
       safeTransactionData: this.safeTransactions,
+      onlyCalls: true,
     });
 
     const safeTxHash = await this.safeSdk.getTransactionHash(safeTransaction);

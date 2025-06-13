@@ -57,9 +57,15 @@ class FVMProposal {
     this.signer = process.env.FVM_SIGNER_F1_ADDRESS;
     this.privateKey = process.env.FVM_SIGNER_PRIVATE_KEY;
     this.multisigWallet = process.env.FVM_MULTISIG_WALLET_F2_ADDRESS;
-    this.filecoinClient = new FilecoinClient(rpcEndpoint);
+    this.filecoinClient = new FilecoinClient(
+      rpcEndpoint,
+      process.env.GLIF_API_KEY,
+    );
     this.lotusClient = new LotusClient(
-      new HttpJsonRpcConnector({ url: rpcEndpoint }),
+      new HttpJsonRpcConnector({
+        url: rpcEndpoint,
+        token: process.env.GLIF_API_KEY,
+      }),
     );
   }
 
@@ -75,6 +81,8 @@ class FVMProposal {
   }
 
   async submit() {
+    console.log('Submitting FVM proposal...');
+
     if (this.transactions.length === 0) {
       console.warn('Skipped proposal submission due to no update');
       return;
