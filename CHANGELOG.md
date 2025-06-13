@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.3.0](https://github.com/Secured-Finance/contracts/compare/v1.2.0...v1.3.0) (2025-06-13)
+
+
+### Features
+
+* add StaticPriceAggregator [SF-1340] ([c363d36](https://github.com/Secured-Finance/contracts/commit/c363d36c1b8d161f5b17ea19d630d6715ca88ac4))
+* add wpFIL [SF-1300] ([52ef22a](https://github.com/Secured-Finance/contracts/commit/52ef22aa18e211b86860a0259fc933e2df25e51f))
+
+
+### Bug Fixes
+
+* fix deposit bug in Liquidator [SF-1376] ([99ce28b](https://github.com/Secured-Finance/contracts/commit/99ce28bc40fb2018c807353746168065bcd12c34))
+* fix gv lazy evaluation bug [SF-1407] ([4946c46](https://github.com/Secured-Finance/contracts/commit/4946c46cbfccde9b8f63fdf6470762b123a8f26c))
+* fix liduidator bug [SF-1376] ([f6983e3](https://github.com/Secured-Finance/contracts/commit/f6983e33f2b5bbbdfd4719f77f62f25a5f3da855))
+
 ## [1.2.0](https://github.com/Secured-Finance/contracts/compare/v1.1.0...v1.2.0) (2024-06-13)
 
 
