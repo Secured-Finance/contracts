@@ -114,7 +114,7 @@ describe('Integration Test: Calculations', async () => {
       });
 
       it('Estimate a borrowing order result', async () => {
-        const estimation = await lendingMarketController
+        const limitOrderEstimation = await lendingMarketController
           .connect(alice)
           .getOrderEstimation({
             ccy: hexETH,
@@ -127,7 +127,7 @@ describe('Integration Test: Calculations', async () => {
             ignoreBorrowedAmount: false,
           });
 
-        const estimation2 = await lendingMarketController
+        const limitOrderEstimation2 = await lendingMarketController
           .connect(alice)
           .getOrderEstimation({
             ccy: hexETH,
@@ -138,6 +138,32 @@ describe('Integration Test: Calculations', async () => {
             unitPrice: '9600',
             additionalDepositAmount: '0',
             ignoreBorrowedAmount: true,
+          });
+
+        const marketOrderEstimation = await lendingMarketController
+          .connect(alice)
+          .getOrderEstimation({
+            ccy: hexETH,
+            maturity: ethMaturities[0],
+            user: alice.address,
+            side: Side.BORROW,
+            amount: orderAmount,
+            unitPrice: '0',
+            additionalDepositAmount: '0',
+            ignoreBorrowedAmount: false,
+          });
+
+        const marketOrderEstimation2 = await lendingMarketController
+          .connect(alice)
+          .getOrderEstimation({
+            ccy: hexETH,
+            maturity: ethMaturities[0],
+            user: alice.address,
+            side: Side.BORROW,
+            amount: orderAmount.mul(2).add(1),
+            unitPrice: '0',
+            additionalDepositAmount: '0',
+            ignoreBorrowedAmount: false,
           });
 
         await lendingMarketController
@@ -159,19 +185,29 @@ describe('Integration Test: Calculations', async () => {
 
         const aliceCoverage = await tokenVault.getCoverage(alice.address);
 
-        expect(estimation.filledAmount).to.equal(orderAmount);
+        expect(limitOrderEstimation.filledAmount).to.equal(orderAmount);
         expect(
           aliceFV
             .mul(PCT_DIGIT)
-            .div(estimation.filledAmountInFV.add(estimation.orderFeeInFV))
+            .div(
+              limitOrderEstimation.filledAmountInFV.add(
+                limitOrderEstimation.orderFeeInFV,
+              ),
+            )
             .abs(),
         ).gte(BigNumber.from(PCT_DIGIT).sub(1));
-        expect(estimation.coverage).to.equal(aliceCoverage);
-        expect(estimation.coverage).to.equal(
+        expect(limitOrderEstimation.coverage).to.equal(aliceCoverage);
+        expect(limitOrderEstimation.coverage).to.equal(
           alicePV.abs().mul(PCT_DIGIT).div(depositAmount.add(orderAmount)),
         );
-        expect(estimation2.coverage).to.equal(
+        expect(limitOrderEstimation2.coverage).to.equal(
           alicePV.abs().mul(PCT_DIGIT).div(depositAmount),
+        );
+        expect(limitOrderEstimation.filledAmount).to.equal(
+          marketOrderEstimation.filledAmount,
+        );
+        expect(marketOrderEstimation2.filledAmount).to.equal(
+          orderAmount.mul(2),
         );
       });
     });
@@ -226,8 +262,8 @@ describe('Integration Test: Calculations', async () => {
         expect(aliceDepositAmount).to.equal(depositAmount);
       });
 
-      it('Estimate a lending order result', async () => {
-        const estimation = await lendingMarketController
+      it('Estimate a lending limit order result', async () => {
+        const limitOrderEstimation = await lendingMarketController
           .connect(alice)
           .getOrderEstimation({
             ccy: hexETH,
@@ -240,7 +276,7 @@ describe('Integration Test: Calculations', async () => {
             ignoreBorrowedAmount: false,
           });
 
-        const estimation2 = await lendingMarketController
+        const limitOrderEstimation2 = await lendingMarketController
           .connect(alice)
           .getOrderEstimation({
             ccy: hexETH,
@@ -249,6 +285,32 @@ describe('Integration Test: Calculations', async () => {
             side: Side.LEND,
             amount: orderAmount.mul(2),
             unitPrice: '9600',
+            additionalDepositAmount: '0',
+            ignoreBorrowedAmount: false,
+          });
+
+        const marketOrderEstimation = await lendingMarketController
+          .connect(alice)
+          .getOrderEstimation({
+            ccy: hexETH,
+            maturity: ethMaturities[0],
+            user: alice.address,
+            side: Side.LEND,
+            amount: orderAmount,
+            unitPrice: '0',
+            additionalDepositAmount: '0',
+            ignoreBorrowedAmount: false,
+          });
+
+        const marketOrderEstimation2 = await lendingMarketController
+          .connect(alice)
+          .getOrderEstimation({
+            ccy: hexETH,
+            maturity: ethMaturities[0],
+            user: alice.address,
+            side: Side.LEND,
+            amount: orderAmount.mul(2).add(1),
+            unitPrice: '0',
             additionalDepositAmount: '0',
             ignoreBorrowedAmount: false,
           });
@@ -272,20 +334,34 @@ describe('Integration Test: Calculations', async () => {
 
         const aliceCoverage = await tokenVault.getCoverage(alice.address);
 
-        expect(estimation.filledAmount).to.equal(orderAmount);
+        expect(limitOrderEstimation.filledAmount).to.equal(orderAmount);
         expect(
           aliceFV
             .mul(PCT_DIGIT)
-            .div(estimation.filledAmountInFV.sub(estimation.orderFeeInFV))
+            .div(
+              limitOrderEstimation.filledAmountInFV.sub(
+                limitOrderEstimation.orderFeeInFV,
+              ),
+            )
             .abs(),
         ).gte(BigNumber.from(PCT_DIGIT).sub(1));
-        expect(estimation.coverage).to.equal('0');
-        expect(estimation.isInsufficientDepositAmount).to.equal(false);
-        expect(orderAmount).to.equal(estimation.filledAmount);
-        expect(estimation.coverage).to.equal(aliceCoverage);
+        expect(limitOrderEstimation.coverage).to.equal('0');
+        expect(limitOrderEstimation.isInsufficientDepositAmount).to.equal(
+          false,
+        );
+        expect(orderAmount).to.equal(limitOrderEstimation.filledAmount);
+        expect(limitOrderEstimation.coverage).to.equal(aliceCoverage);
 
-        expect(estimation2.filledAmount).to.equal(orderAmount.mul(2));
-        expect(estimation2.isInsufficientDepositAmount).to.equal(true);
+        expect(limitOrderEstimation2.filledAmount).to.equal(orderAmount.mul(2));
+        expect(limitOrderEstimation2.isInsufficientDepositAmount).to.equal(
+          true,
+        );
+        expect(limitOrderEstimation.filledAmount).to.equal(
+          marketOrderEstimation.filledAmount,
+        );
+        expect(marketOrderEstimation2.filledAmount).to.equal(
+          orderAmount.mul(2),
+        );
       });
     });
 

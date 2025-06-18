@@ -207,7 +207,9 @@ library OrderReaderLogic {
                 _amount,
                 executedUnitPrice
             );
-            placedAmount = _amount - filledAmount;
+            if (!ignoreRemainingAmount) {
+                placedAmount = _amount - filledAmount;
+            }
             orderFeeInFV = calculateOrderFeeAmount(orderBook.maturity, filledAmountInFV);
         } else {
             if (!ignoreRemainingAmount) {
