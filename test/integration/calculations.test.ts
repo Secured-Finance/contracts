@@ -209,6 +209,7 @@ describe('Integration Test: Calculations', async () => {
         expect(marketOrderEstimation2.filledAmount).to.equal(
           orderAmount.mul(2),
         );
+        expect(marketOrderEstimation2.placedAmount).to.equal(0);
       });
     });
 
@@ -362,6 +363,7 @@ describe('Integration Test: Calculations', async () => {
         expect(marketOrderEstimation2.filledAmount).to.equal(
           orderAmount.mul(2),
         );
+        expect(marketOrderEstimation2.placedAmount).to.equal(0);
       });
     });
 
