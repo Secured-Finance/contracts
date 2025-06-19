@@ -83,6 +83,7 @@ jobs:
           echo "PRIVATE_KEY=${{ secrets.PRIVATE_KEY }}" >> $GITHUB_ENV
           echo "ALCHEMY_API_KEY=${{ secrets.ALCHEMY_API_KEY }}" >> $GITHUB_ENV
           echo "ANKR_API_KEY=${{ secrets.ANKR_API_KEY }}" >> $GITHUB_ENV
+          echo "GLIF_API_KEY=${{ secrets.GLIF_API_KEY }}" >> $GITHUB_ENV
           echo "INFURA_API_KEY=${{ secrets.INFURA_API_KEY }}" >> $GITHUB_ENV
           echo "ENABLE_FAUCET=${{ vars.ENABLE_FAUCET }}" >> $GITHUB_ENV
           echo "TENDERLY_USER=${{ vars.TENDERLY_USER }}" >> $GITHUB_ENV
@@ -182,6 +183,7 @@ jobs:
           echo "PRIVATE_KEY=${{ secrets.PRIVATE_KEY }}" >> $GITHUB_ENV
           echo "ALCHEMY_API_KEY=${{ secrets.ALCHEMY_API_KEY }}" >> $GITHUB_ENV
           echo "ANKR_API_KEY=${{ secrets.ANKR_API_KEY }}" >> $GITHUB_ENV
+          echo "GLIF_API_KEY=${{ secrets.GLIF_API_KEY }}" >> $GITHUB_ENV
           echo "INFURA_API_KEY=${{ secrets.INFURA_API_KEY }}" >> $GITHUB_ENV
           echo "ENABLE_FAUCET=${{ vars.ENABLE_FAUCET }}" >> $GITHUB_ENV
           echo "SAFE_WALLET_ADDRESS=${{ vars.SAFE_WALLET_ADDRESS }}" >> $GITHUB_ENV
