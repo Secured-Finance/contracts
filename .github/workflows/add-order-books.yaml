@@ -62,6 +62,7 @@ jobs:
           echo "PRIVATE_KEY=${{ secrets.PRIVATE_KEY }}" >> $GITHUB_ENV
           echo "ALCHEMY_API_KEY=${{ secrets.ALCHEMY_API_KEY }}" >> $GITHUB_ENV
           echo "ANKR_API_KEY=${{ secrets.ANKR_API_KEY }}" >> $GITHUB_ENV
+          echo "GLIF_API_KEY=${{ secrets.GLIF_API_KEY }}" >> $GITHUB_ENV
           echo "INFURA_API_KEY=${{ secrets.INFURA_API_KEY }}" >> $GITHUB_ENV
           echo "FVM_SIGNER_PRIVATE_KEY=${{ secrets.FVM_SIGNER_PRIVATE_KEY }}" >> $GITHUB_ENV
           echo "FVM_SIGNER_F1_ADDRESS=${{ vars.FVM_SIGNER_F1_ADDRESS }}" >> $GITHUB_ENV

@@ -14,6 +14,7 @@ const func: DeployFunction = async function ({
   getChainId,
 }: HardhatRuntimeEnvironment) {
   if (process.env.ENABLE_AUTO_UPDATE === 'true') {
+    DeploymentStorage.instance.clear();
     console.warn('Skipped proposal creation because it is under auto update');
     return;
   }
