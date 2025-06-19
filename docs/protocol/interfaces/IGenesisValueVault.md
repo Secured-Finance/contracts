@@ -131,7 +131,7 @@ function getTotalBorrowingSupply(bytes32 ccy) external view returns (uint256)
 ### getBalance
 
 ```solidity
-function getBalance(bytes32 ccy, address user) external view returns (int256)
+function getBalance(bytes32 ccy, address user, uint256 maturity) external view returns (int256)
 ```
 
 ### getMaturityGenesisValue

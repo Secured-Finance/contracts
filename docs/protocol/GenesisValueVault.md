@@ -120,15 +120,19 @@ Gets the total supply of borrowing
 ### getBalance
 
 ```solidity
-function getBalance(bytes32 _ccy, address _user) public view returns (int256)
+function getBalance(bytes32 _ccy, address _user, uint256 _maturity) public view returns (int256)
 ```
 
-Gets the user balance.
+Gets the user balance of the user including the fluctuation amount until the maturity.
+
+_This function returns the user's balance at the maturity with the fluctuation amount
+caused by auto-rolls._
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _ccy | bytes32 | Currency name in bytes32 |
 | _user | address | User's address |
+| _maturity | uint256 | The maturity that is the base date used to calculate the fluctuation amount |
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
