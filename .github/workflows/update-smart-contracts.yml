@@ -190,6 +190,7 @@ jobs:
           echo "SAFE_API_URL=${{ vars.SAFE_API_URL }}" >> $GITHUB_ENV
           echo "RELAYER_API_KEY=${{ vars.RELAYER_API_KEY }}" >> $GITHUB_ENV
           echo "RELAYER_API_SECRET=${{ secrets.RELAYER_API_SECRET }}" >> $GITHUB_ENV
+          echo "WAIT_CONFIRMATIONS=${{ vars.WAIT_CONFIRMATIONS }}" >> $GITHUB_ENV
           echo "FVM_SIGNER_PRIVATE_KEY=${{ secrets.FVM_SIGNER_PRIVATE_KEY }}" >> $GITHUB_ENV
           echo "FVM_SIGNER_F1_ADDRESS=${{ vars.FVM_SIGNER_F1_ADDRESS }}" >> $GITHUB_ENV
           echo "FVM_MULTISIG_WALLET_F2_ADDRESS=${{ vars.FVM_MULTISIG_WALLET_F2_ADDRESS }}" >> $GITHUB_ENV
