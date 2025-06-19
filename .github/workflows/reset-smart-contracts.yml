@@ -89,6 +89,7 @@ jobs:
           echo "GLIF_API_KEY=${{ secrets.GLIF_API_KEY }}" >> $GITHUB_ENV
           echo "INFURA_API_KEY=${{ secrets.INFURA_API_KEY }}" >> $GITHUB_ENV
           echo "ENABLE_FAUCET=true" >> $GITHUB_ENV
+          echo "WAIT_CONFIRMATIONS=${{ vars.WAIT_CONFIRMATIONS }}" >> $GITHUB_ENV
       - name: Deploy smart contracts
         run: npm run deploy:force ${{ github.event.inputs.network }}
       - name: Commit and push
