@@ -16,6 +16,7 @@ coverage/
 coverage.json
 
 deployments/localhost/
+deployments.json
 
 # Security tool related directories
 flattened
