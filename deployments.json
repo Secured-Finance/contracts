@@ -32,5 +32,39 @@
         ]
       }
     ]
+  },
+  "0x8f2D8923F6F324080dC10e54263eef9eede1DC86": {
+    "contractName": "ProxyController",
+    "functions": [
+      {
+        "name": "setBeaconProxyControllerImpl",
+        "args": [
+          "0xD5eb81f17c08a329179c66cCAb1Cc961Fd9B955F"
+        ]
+      }
+    ]
+  },
+  "0x57cC6E208aEb476c6099C3601B2285299661C59A": {
+    "contractName": "BeaconProxyController",
+    "functions": [
+      {
+        "name": "setFutureValueVaultImpl",
+        "args": [
+          "0xFef5E80c9CE157B9eE318F2FE3e247fbD6Da7004"
+        ]
+      },
+      {
+        "name": "setLendingMarketImpl",
+        "args": [
+          "0xf5D9bB06BeDf3B8182398dAA6a5f626ec88C2982"
+        ]
+      },
+      {
+        "name": "setZCTokenImpl",
+        "args": [
+          "0xb1580C9713145FCADA6d10BF95b6a811545e98fE"
+        ]
+      }
+    ]
   }
 }
