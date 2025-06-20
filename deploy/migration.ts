@@ -57,7 +57,7 @@ const func: DeployFunction = async function ({
   // NOTE: When the target network is a forked chain, the contract can't return events and
   // the `queryFilter` method throw an error.
   const proxyCreatedEvents =
-    process.env.FORK_RPC_ENDPOINT || process.env.ENABLE_AUTO_UPDATE !== 'true'
+    process.env.FORK_RPC_ENDPOINT || !isInitialDeployment
       ? []
       : await proxyController.queryFilter(filter, currentBlockNumber);
 
