@@ -1,6 +1,9 @@
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { executeIfNewlyDeployment } from '../utils/deployment';
+import {
+  executeIfNewlyDeployment,
+  getWaitConfirmations,
+} from '../utils/deployment';
 
 const func: DeployFunction = async function ({
   getNamedAccounts,
@@ -9,7 +12,7 @@ const func: DeployFunction = async function ({
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  const waitConfirmations = parseInt(process.env.WAIT_CONFIRMATIONS || '1');
+  const waitConfirmations = getWaitConfirmations();
 
   await deploy('DepositManagementLogic', {
     from: deployer,

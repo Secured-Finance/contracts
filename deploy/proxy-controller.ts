@@ -4,6 +4,7 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import {
   DeploymentStorage,
   executeIfNewlyDeployment,
+  getWaitConfirmations,
 } from '../utils/deployment';
 
 const func: DeployFunction = async function ({
@@ -37,7 +38,7 @@ const func: DeployFunction = async function ({
   const deployResult = await deploy('ProxyController', {
     from: deployer,
     args: [addressResolverAddress],
-    waitConfirmations: parseInt(process.env.WAIT_CONFIRMATIONS || '1'),
+    waitConfirmations: getWaitConfirmations(),
   });
 
   await executeIfNewlyDeployment('ProxyController', deployResult, async () => {

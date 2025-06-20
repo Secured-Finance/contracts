@@ -4,6 +4,7 @@ import { BASE_CURRENCY_DECIMALS } from '../utils/constants';
 import {
   DeploymentStorage,
   executeIfNewlyDeployment,
+  getWaitConfirmations,
 } from '../utils/deployment';
 
 const func: DeployFunction = async function ({
@@ -17,7 +18,7 @@ const func: DeployFunction = async function ({
   const deployResult = await deploy('CurrencyController', {
     from: deployer,
     args: [BASE_CURRENCY_DECIMALS],
-    waitConfirmations: parseInt(process.env.WAIT_CONFIRMATIONS || '1'),
+    waitConfirmations: getWaitConfirmations(),
   });
 
   await executeIfNewlyDeployment(

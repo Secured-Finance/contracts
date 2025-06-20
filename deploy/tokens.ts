@@ -1,7 +1,10 @@
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { currencyIterator, mocks } from '../utils/currencies';
-import { executeIfNewlyDeployment } from '../utils/deployment';
+import {
+  executeIfNewlyDeployment,
+  getWaitConfirmations,
+} from '../utils/deployment';
 
 const func: DeployFunction = async function ({
   getNamedAccounts,
@@ -10,7 +13,7 @@ const func: DeployFunction = async function ({
 }: HardhatRuntimeEnvironment) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
-  const waitConfirmations = parseInt(process.env.WAIT_CONFIRMATIONS || '1');
+  const waitConfirmations = getWaitConfirmations();
 
   // Deploy mock tokens
   const log = {};

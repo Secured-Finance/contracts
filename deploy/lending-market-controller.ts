@@ -3,6 +3,7 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import {
   DeploymentStorage,
   executeIfNewlyDeployment,
+  getWaitConfirmations,
 } from '../utils/deployment';
 
 const func: DeployFunction = async function ({
@@ -30,7 +31,7 @@ const func: DeployFunction = async function ({
       LendingMarketUserLogic: lendingMarketUserLogic.address,
       LiquidationLogic: liquidationLogic.address,
     },
-    waitConfirmations: parseInt(process.env.WAIT_CONFIRMATIONS || '1'),
+    waitConfirmations: getWaitConfirmations(),
   });
 
   await executeIfNewlyDeployment(

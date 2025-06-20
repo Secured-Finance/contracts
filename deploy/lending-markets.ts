@@ -5,6 +5,7 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import {
   DeploymentStorage,
   executeIfNewlyDeployment,
+  getWaitConfirmations,
 } from '../utils/deployment';
 import { toBytes32 } from '../utils/strings';
 
@@ -28,7 +29,7 @@ const func: DeployFunction = async function ({
       OrderReaderLogic: orderReaderLogic.address,
       OrderBookLogic: orderBookLogic.address,
     },
-    waitConfirmations: parseInt(process.env.WAIT_CONFIRMATIONS || '1'),
+    waitConfirmations: getWaitConfirmations(),
   });
 
   await executeIfNewlyDeployment('LendingMarket', deployResult, async () => {

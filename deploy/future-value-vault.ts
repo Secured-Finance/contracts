@@ -3,6 +3,7 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import {
   DeploymentStorage,
   executeIfNewlyDeployment,
+  getWaitConfirmations,
 } from '../utils/deployment';
 import { toBytes32 } from '../utils/strings';
 
@@ -16,7 +17,7 @@ const func: DeployFunction = async function ({
 
   const deployResult = await deploy('FutureValueVault', {
     from: deployer,
-    waitConfirmations: parseInt(process.env.WAIT_CONFIRMATIONS || '1'),
+    waitConfirmations: getWaitConfirmations(),
   });
 
   await executeIfNewlyDeployment('FutureValueVault', deployResult, async () => {

@@ -9,9 +9,11 @@ import {
   mocks,
 } from '../utils/currencies';
 import { getAdjustedGenesisDate } from '../utils/dates';
-import { DeploymentStorage } from '../utils/deployment';
+import { DeploymentStorage, getWaitConfirmations } from '../utils/deployment';
 import { getMulticallOrderBookInputs } from '../utils/markets';
 import { fromBytes32, toBytes32 } from '../utils/strings';
+
+const waitConfirmations = getWaitConfirmations();
 
 const updateBeaconProxyContracts = async (beaconProxyController: Contract) => {
   const deployment =
@@ -24,7 +26,7 @@ const updateBeaconProxyContracts = async (beaconProxyController: Contract) => {
       ),
     );
 
-    await tx.wait();
+    await tx.wait(waitConfirmations);
 
     console.log('Updated beacon proxy contracts');
     console.table(
@@ -33,6 +35,8 @@ const updateBeaconProxyContracts = async (beaconProxyController: Contract) => {
         Args: args.join(', '),
       })),
     );
+
+    DeploymentStorage.instance.remove(beaconProxyController.address);
   }
 };
 
@@ -61,7 +65,7 @@ const updateCurrencyControllerSettings = async (
         const priceFeedContract = await deploy('MockV3Aggregator', {
           from: signer,
           args: [priceFeed.decimals, currency.key, priceFeed.mockRate],
-          waitConfirmations: parseInt(process.env.WAIT_CONFIRMATIONS || '1'),
+          waitConfirmations: waitConfirmations,
         });
         console.log(
           `Deployed MockV3Aggregator ${priceFeed.name} price feed at`,
@@ -89,7 +93,7 @@ const updateCurrencyControllerSettings = async (
         priceFeedAddresses,
         heartbeats,
       )
-      .then((tx) => tx.wait());
+      .then((tx) => tx.wait(waitConfirmations));
   }
 };
 
@@ -109,7 +113,7 @@ const updateTokenVaultSettings = async (
         (await deployments.get(mocks[currency.symbol].tokenName)).address;
       await tokenVault
         .registerCurrency(currency.key, address, currency.isCollateral)
-        .then((tx) => tx.wait());
+        .then((tx) => tx.wait(waitConfirmations));
       console.log(`Registered ${currency.symbol} as supported currency`);
     }
   }
@@ -144,7 +148,7 @@ const createOrderBooks = async (
     if (multicallInputs.length > 0) {
       const receipt = await lendingMarketController
         .multicall(multicallInputs)
-        .then((tx) => tx.wait());
+        .then((tx) => tx.wait(waitConfirmations));
 
       const lendingMarketInitializedEvent = (
         await lendingMarketOperationLogic.queryFilter(

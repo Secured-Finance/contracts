@@ -36,6 +36,9 @@ const getRelaySigner = (): DefenderRelaySigner | undefined => {
   }
 };
 
+const getWaitConfirmations = (): number =>
+  parseInt(process.env.WAIT_CONFIRMATIONS || '1');
+
 interface DeploymentFunction {
   name: string;
   args: any[];
@@ -60,6 +63,10 @@ class DeploymentStorage {
     if (this._instance) return this._instance;
     this._instance = new DeploymentStorage();
     return this._instance;
+  }
+
+  get deployments(): Record<string, Deployment> {
+    return this._deployments;
   }
 
   add(
@@ -94,13 +101,28 @@ class DeploymentStorage {
     );
   }
 
-  get deployments(): Record<string, Deployment> {
-    return this._deployments;
+  remove(contractAddress: string) {
+    if (this._deployments[contractAddress]) {
+      delete this._deployments[contractAddress];
+
+      if (!Object.keys(this._deployments).length) {
+        this.clear();
+      } else {
+        writeFileSync(
+          'deployments.json',
+          JSON.stringify(this._deployments, null, 2),
+        );
+      }
+    } else {
+      console.warn(`No deployment found for ${contractAddress}`);
+    }
   }
 
   clear() {
     this._deployments = {};
-    unlinkSync('deployments.json');
+    if (existsSync('deployments.json')) {
+      unlinkSync('deployments.json');
+    }
   }
 }
 
@@ -233,5 +255,6 @@ export {
   executeIfNewlyDeployment,
   getNodeEndpoint,
   getRelaySigner,
+  getWaitConfirmations,
   Proposal,
 };

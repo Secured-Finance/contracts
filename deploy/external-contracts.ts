@@ -1,7 +1,10 @@
 import { Contract } from 'ethers';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { executeIfNewlyDeployment } from '../utils/deployment';
+import {
+  executeIfNewlyDeployment,
+  getWaitConfirmations,
+} from '../utils/deployment';
 import { toBytes32 } from '../utils/strings';
 
 const func: DeployFunction = async function ({
@@ -11,7 +14,7 @@ const func: DeployFunction = async function ({
 }: HardhatRuntimeEnvironment) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
-  const waitConfirmations = parseInt(process.env.WAIT_CONFIRMATIONS || '1');
+  const waitConfirmations = getWaitConfirmations();
 
   const proxyController: Contract = await deployments
     .get('ProxyController')

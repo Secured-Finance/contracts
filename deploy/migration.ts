@@ -1,6 +1,6 @@
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { DeploymentStorage } from '../utils/deployment';
+import { DeploymentStorage, getWaitConfirmations } from '../utils/deployment';
 import { toBytes32 } from '../utils/strings';
 
 const func: DeployFunction = async function ({
@@ -10,6 +10,7 @@ const func: DeployFunction = async function ({
 }: HardhatRuntimeEnvironment) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
+  const waitConfirmations = getWaitConfirmations();
 
   const currentBlockNumber = await ethers.provider.getBlockNumber();
 
@@ -25,7 +26,7 @@ const func: DeployFunction = async function ({
   const isInitialDeployment = !prevMigrationAddressResolver;
   const migrationAddressResolver = await deploy('MigrationAddressResolver', {
     from: deployer,
-    waitConfirmations: parseInt(process.env.WAIT_CONFIRMATIONS || '1'),
+    waitConfirmations,
   }).then(({ address }) =>
     ethers.getContractAt('MigrationAddressResolver', address),
   );
@@ -41,7 +42,7 @@ const func: DeployFunction = async function ({
       ),
     );
 
-    await tx.wait();
+    await tx.wait(waitConfirmations);
 
     console.log('Updated proxy contracts');
     console.table(
@@ -50,6 +51,8 @@ const func: DeployFunction = async function ({
         Args: args.join(', '),
       })),
     );
+
+    DeploymentStorage.instance.remove(proxyController.address);
   }
 
   // Get contracts from proxyController
@@ -151,12 +154,12 @@ const func: DeployFunction = async function ({
   } else {
     await addressResolver
       .importAddresses(contractNames.map(toBytes32), contractAddresses)
-      .then((tx) => tx.wait());
+      .then((tx) => tx.wait(waitConfirmations));
     console.log('Imported Addresses into AddressResolver');
 
     await migrationAddressResolver
       .buildCaches(buildCachesAddresses)
-      .then((tx) => tx.wait());
+      .then((tx) => tx.wait(waitConfirmations));
     console.log('Built address caches of AddressResolver');
   }
 };

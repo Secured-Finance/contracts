@@ -4,6 +4,7 @@ import { getNativeTokenAddress } from '../utils/currencies';
 import {
   DeploymentStorage,
   executeIfNewlyDeployment,
+  getWaitConfirmations,
 } from '../utils/deployment';
 
 const func: DeployFunction = async function ({
@@ -17,7 +18,7 @@ const func: DeployFunction = async function ({
   const nativeToken = await getNativeTokenAddress(deployments);
   const deployResult = await deploy('ReserveFund', {
     from: deployer,
-    waitConfirmations: parseInt(process.env.WAIT_CONFIRMATIONS || '1'),
+    waitConfirmations: getWaitConfirmations(),
   });
 
   await executeIfNewlyDeployment('ReserveFund', deployResult, async () => {

@@ -10,6 +10,7 @@ import { getNativeTokenAddress } from '../utils/currencies';
 import {
   DeploymentStorage,
   executeIfNewlyDeployment,
+  getWaitConfirmations,
 } from '../utils/deployment';
 
 const func: DeployFunction = async function ({
@@ -29,7 +30,7 @@ const func: DeployFunction = async function ({
     libraries: {
       DepositManagementLogic: depositManagementLogic.address,
     },
-    waitConfirmations: parseInt(process.env.WAIT_CONFIRMATIONS || '1'),
+    waitConfirmations: getWaitConfirmations(),
   });
 
   await executeIfNewlyDeployment('TokenVault', deployResult, async () => {

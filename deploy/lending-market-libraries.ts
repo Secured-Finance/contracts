@@ -1,6 +1,9 @@
 import { DeployFunction, DeployResult } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { executeIfNewlyDeployment } from '../utils/deployment';
+import {
+  executeIfNewlyDeployment,
+  getWaitConfirmations,
+} from '../utils/deployment';
 
 const func: DeployFunction = async function ({
   getNamedAccounts,
@@ -10,7 +13,7 @@ const func: DeployFunction = async function ({
   const { deployer } = await getNamedAccounts();
 
   const deployResults: Record<string, DeployResult> = {};
-  const waitConfirmations = parseInt(process.env.WAIT_CONFIRMATIONS || '1');
+  const waitConfirmations = getWaitConfirmations();
 
   for (const libName of ['OrderReaderLogic', 'OrderBookLogic']) {
     const deployResult = await deploy(libName, {
