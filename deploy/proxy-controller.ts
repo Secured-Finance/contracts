@@ -14,6 +14,7 @@ const func: DeployFunction = async function ({
 }: HardhatRuntimeEnvironment) {
   const { deploy, fetchIfDifferent } = deployments;
   const { deployer } = await getNamedAccounts();
+  const waitConfirmations = getWaitConfirmations();
 
   let addressResolverAddress = ethers.constants.AddressZero;
   let prevProxyController: Contract;
@@ -38,7 +39,7 @@ const func: DeployFunction = async function ({
   const deployResult = await deploy('ProxyController', {
     from: deployer,
     args: [addressResolverAddress],
-    waitConfirmations: getWaitConfirmations(),
+    waitConfirmations: waitConfirmations,
   });
 
   await executeIfNewlyDeployment('ProxyController', deployResult, async () => {
@@ -54,7 +55,7 @@ const func: DeployFunction = async function ({
 
       await proxyController
         .setAddressResolverImpl(addressResolver.address)
-        .then((tx) => tx.wait());
+        .then((tx) => tx.wait(waitConfirmations));
 
       console.log(
         'Updated the proxy implementation of AddressResolver at',
@@ -67,7 +68,7 @@ const func: DeployFunction = async function ({
       if (prevOwner !== currentOwner) {
         await proxyController
           .transferOwnership(prevOwner)
-          .then((tx) => tx.wait());
+          .then((tx) => tx.wait(waitConfirmations));
       }
 
       const addresses = await ethers
@@ -80,7 +81,7 @@ const func: DeployFunction = async function ({
             addressResolverAddress,
             ...addresses,
           ])
-          .then((tx) => tx.wait());
+          .then((tx) => tx.wait(waitConfirmations));
 
         console.log(
           `Changed admin address of all proxy contracts to ${deployResult.address}`,
