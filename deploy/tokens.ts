@@ -93,11 +93,11 @@ const func: DeployFunction = async function ({
                 tokenAddress,
                 ethers.BigNumber.from(currency.args?.[0]).div(10000),
               )
-              .then((tx) => tx.wait());
+              .then((tx) => tx.wait(waitConfirmations));
 
             await mockTokenContract
               .setMinterRole(faucetDeployResult.address)
-              .then((tx) => tx.wait());
+              .then((tx) => tx.wait(waitConfirmations));
           }
         }
       },
