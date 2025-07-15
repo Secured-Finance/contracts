@@ -560,6 +560,9 @@ library OrderStatisticsTreeLib {
                         if (self.nodes[cursor].parent != parent) {
                             self.nodes[cursor].parent = parent;
                             self.nodes[parent].left = cursor;
+                            if (self.nodes[cursor].red && self.nodes[parent].red) {
+                                self.nodes[cursor].red = false;
+                            }
                         }
 
                         cursor = parent;
@@ -655,6 +658,9 @@ library OrderStatisticsTreeLib {
                         if (self.nodes[cursor].parent != parent) {
                             self.nodes[cursor].parent = parent;
                             self.nodes[parent].right = cursor;
+                            if (self.nodes[cursor].red && self.nodes[parent].red) {
+                                self.nodes[cursor].red = false;
+                            }
                         }
 
                         cursor = parent;
@@ -687,11 +693,18 @@ library OrderStatisticsTreeLib {
     }
 
     function rotateTreeToLeft(Tree storage self) internal {
-        if (self.nodes[self.root].left == 0 && self.nodes[self.root].right != 0) {
-            if (self.nodes[self.nodes[self.root].right].left != 0) {
-                rotateRight(self, self.nodes[self.root].right);
+        uint256 cursor = self.root;
+        while (self.nodes[cursor].left != 0) {
+            cursor = self.nodes[cursor].left;
+        }
+
+        if (self.nodes[cursor].left == 0 && self.nodes[cursor].right != 0) {
+            if (self.nodes[self.nodes[cursor].right].left != 0) {
+                rotateRight(self, self.nodes[cursor].right);
             }
-            rotateLeft(self, self.root);
+            self.nodes[self.nodes[cursor].right].red = false;
+            self.nodes[cursor].red = true;
+            rotateLeft(self, cursor);
         }
 
         if (self.nodes[self.root].red) {
@@ -700,11 +713,18 @@ library OrderStatisticsTreeLib {
     }
 
     function rotateTreeToRight(Tree storage self) internal {
-        if (self.nodes[self.root].right == 0 && self.nodes[self.root].left != 0) {
-            if (self.nodes[self.nodes[self.root].left].right != 0) {
-                rotateLeft(self, self.nodes[self.root].left);
+        uint256 cursor = self.root;
+        while (self.nodes[cursor].right != 0) {
+            cursor = self.nodes[cursor].right;
+        }
+
+        if (self.nodes[cursor].right == 0 && self.nodes[cursor].left != 0) {
+            if (self.nodes[self.nodes[cursor].left].right != 0) {
+                rotateLeft(self, self.nodes[cursor].left);
             }
-            rotateRight(self, self.root);
+            self.nodes[self.nodes[cursor].left].red = false;
+            self.nodes[cursor].red = true;
+            rotateRight(self, cursor);
         }
 
         if (self.nodes[self.root].red) {
