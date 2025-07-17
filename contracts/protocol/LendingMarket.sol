@@ -831,28 +831,4 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     function unpause() external override onlyLendingMarketController {
         _unpause();
     }
-
-    // This function is created to recover user funds in case of a contract bug.
-    // It must be deleted after recovering for a specific user.
-    function emitOrderExecuted(
-        address _user,
-        ProtocolTypes.Side _side,
-        bytes32 _ccy,
-        uint256 _maturity,
-        uint256 _inputAmount,
-        uint256 _filledAmount,
-        uint256 _filledUnitPrice,
-        uint256 _filledAmountInFV
-    ) external onlyLendingMarketController {
-        OrderActionLogic.emitOrderExecuted(
-            _user,
-            _side,
-            _ccy,
-            _maturity,
-            _inputAmount,
-            _filledAmount,
-            _filledUnitPrice,
-            _filledAmountInFV
-        );
-    }
 }
