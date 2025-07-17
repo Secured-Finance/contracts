@@ -44,6 +44,10 @@ contract OrderStatisticsTreeContract {
         _exists = tree.exists(value);
     }
 
+    function orderIdExists(uint256 value, uint48 orderId) public view returns (bool _exists) {
+        _exists = tree.orderIdExists(value, orderId);
+    }
+
     function getNode(
         uint256 value
     )

@@ -1042,4 +1042,27 @@ contract LendingMarketController is
     function migrateLendingMarket(bytes32 _ccy, uint256 _maturity) external onlyOwner {
         LendingMarketOperationLogic.migrateLendingMarket(_ccy, _maturity);
     }
+
+    /**
+     * @notice Recovers user funds from the lending market.
+     * @dev This function is used to recover user funds in case of a contract bug.
+     * It allows the owner to recover funds for a specific user, currency, maturity, side, amount, and unit price.
+     * This function must be deleted after fund recovering for a specific user.
+     * @param _ccy Currency name in bytes32
+     * @param _maturity The maturity of the order book
+     * @param _user User's address
+     * @param _side Order position type, Borrow or Lend
+     * @param _amount Amount of funds to recover
+     * @param _unitPrice Amount of unit price to recover
+     */
+    function recoverUserFunds(
+        bytes32 _ccy,
+        uint256 _maturity,
+        address _user,
+        ProtocolTypes.Side _side,
+        uint256 _amount,
+        uint256 _unitPrice
+    ) external onlyOwner {
+        LendingMarketUserLogic.recoverUserFunds(_ccy, _maturity, _user, _side, _amount, _unitPrice);
+    }
 }

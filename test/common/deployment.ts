@@ -361,6 +361,7 @@ const deployContracts = async () => {
     wETHToken,
     wBTCToken,
     usdcToken,
+    ethToUSDPriceFeed: priceFeedContracts['ETH/USD'],
     wFilToETHPriceFeed: priceFeedContracts['WFIL/ETH'],
     btcToUSDPriceFeed: priceFeedContracts['BTC/USD'],
     usdcToUSDPriceFeed: priceFeedContracts['USDC/USD'],
