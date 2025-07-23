@@ -2,7 +2,7 @@ module.exports = {
   extends: ['@commitlint/config-conventional'],
   parserPreset: {
     parserOpts: {
-      issuePrefixes: ['SF-'],
+      issuePrefixes: ['SF-', '#'],
     },
   },
   rules: {
