@@ -1,0 +1,32 @@
+name: 🚀 Feature Request
+description: Suggest a new feature or improvement for USDFC
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for proposing a feature for the USDFC stablecoin contracts!
+  - type: input
+    id: summary
+    attributes:
+      label: Summary
+      description: Briefly describe your suggestion.
+      placeholder: "e.g. Support interest-bearing stablecoin mints"
+    validations:
+      required: true
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: Why is this needed?
+  - type: textarea
+    id: design
+    attributes:
+      label: Proposed Design / Implementation
+      description: Outline how it might be implemented.
+  - type: input
+    id: use_cases
+    attributes:
+      label: Use Cases
+      description: Who would benefit and how?
