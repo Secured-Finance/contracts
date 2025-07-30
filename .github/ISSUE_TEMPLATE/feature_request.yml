@@ -1,18 +1,18 @@
 name: 🚀 Feature Request
-description: Suggest a new feature or improvement for USDFC
-title: "[Feature]: "
-labels: ["enhancement"]
+description: Suggest a new feature or enhancement
+title: '[Feature]: '
+labels: ['enhancement']
 body:
   - type: markdown
     attributes:
       value: |
-        Thank you for proposing a feature for the USDFC stablecoin contracts!
+        We appreciate your suggestion! To help us evaluate it, please complete the form below.
   - type: input
     id: summary
     attributes:
       label: Summary
       description: Briefly describe your suggestion.
-      placeholder: "e.g. Support interest-bearing stablecoin mints"
+      placeholder: 'e.g. Add support for ERC‑4626 yield vault reporting'
     validations:
       required: true
   - type: textarea

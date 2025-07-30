@@ -1,6 +1,6 @@
-# Contributing to USDFC
+# Contributing to Secured Finance Contracts
 
-Thank you for your interest in contributing to the USDFC project! This document outlines the guidelines and processes for contributing to this repository.
+Thank you for your interest in contributing to the Secured Finance Contracts project! This document outlines the guidelines and processes for contributing to this repository.
 
 ## Getting Started
 
@@ -42,10 +42,10 @@ This project follows [Conventional Commits](https://www.conventionalcommits.org/
 **Example commit messages:**
 
 ```
-feat: add new collateral type support [#123]
-fix: resolve trove liquidation calculation error [#456]
-docs: update API documentation for stability pool [#789]
-test: add unit tests for price feed integration [#012]
+feat: add new lending market support [#123]
+fix: resolve order book matching calculation error [#456]
+docs: update API documentation for token vault [#789]
+test: add unit tests for price oracle integration [#012]
 chore: update dependencies to latest versions [#345]
 ```
 
@@ -114,6 +114,7 @@ Given the financial nature of this project:
 
 Ensure your pull request:
 
+- [ ] Targets the `develop` branch (not `main`)
 - [ ] References the related GitHub issue
 - [ ] Includes a clear description of changes
 - [ ] Has been tested locally
@@ -164,16 +165,17 @@ npm run coverage           # Generate test coverage report
 
 ```
 contracts/           # Solidity smart contracts
-├── Dependencies/    # External dependencies and interfaces
-├── Interfaces/      # Contract interfaces
-├── ProtocolToken/   # Protocol token related contracts
-├── Proxy/          # Testing proxy contracts and scripts
-└── TestContracts/  # Testing utilities and mock contracts
+├── protocol/        # Core protocol contracts (LendingMarket, TokenVault, etc.)
+├── external/        # External integrations (oracles, liquidation, etc.)
+├── libraries/       # Shared libraries and utilities
+├── interfaces/      # Contract interfaces
+├── proxies/         # Proxy contracts and beacon implementations
+└── test/           # Test contracts and mocks
 
-test/               # JavaScript test files
-deployments/        # Deployment scripts and configurations
+test/               # TypeScript/JavaScript test files
+task/               # Hardhat tasks and deployment scripts
+deployments/        # Contract deployment configurations
 audits/            # Security audit reports
-scripts/           # Utility scripts
 ```
 
 ## Additional Resources
@@ -191,4 +193,4 @@ If you have questions about contributing, please:
 2. Create a new issue with your question
 3. Reach out to the maintainers
 
-Thank you for contributing to Secured Finance Stablecoin Contracts!
+Thank you for contributing to Secured Finance Contracts!
