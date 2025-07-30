@@ -1153,7 +1153,7 @@ describe('TokenVault', () => {
           targetCurrency,
           signer.address,
         ),
-      ).to.equal(valueInETH);
+      ).to.equal(value);
     });
 
     it('Get the withdrawable amount per currency with the borrowing working orders', async () => {
@@ -1253,7 +1253,7 @@ describe('TokenVault', () => {
           targetCurrency,
           signer.address,
         ),
-      ).to.equal(valueInETH);
+      ).to.equal(value.sub(usedValue));
     });
 
     it('Get the liquidation amount', async () => {
