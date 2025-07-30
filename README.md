@@ -142,3 +142,7 @@ You can find all audit reports under the audits folder
 
 - [Quantstamp | Nov 2023](./audits/2023-11-Quantstamp.pdf)
 - [Quantstamp | Mar 2024](./audits/2024-03-Quantstamp.pdf)
+
+## Contributing
+
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for details.

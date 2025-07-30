@@ -1,0 +1,32 @@
+name: 🚀 Feature Request
+description: Suggest a new feature or enhancement
+title: '[Feature]: '
+labels: ['enhancement']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        We appreciate your suggestion! To help us evaluate it, please complete the form below.
+  - type: input
+    id: summary
+    attributes:
+      label: Summary
+      description: Briefly describe your suggestion.
+      placeholder: 'e.g. Add support for ERC‑4626 yield vault reporting'
+    validations:
+      required: true
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: Why is this needed?
+  - type: textarea
+    id: design
+    attributes:
+      label: Proposed Design / Implementation
+      description: Outline how it might be implemented.
+  - type: input
+    id: use_cases
+    attributes:
+      label: Use Cases
+      description: Who would benefit and how?
