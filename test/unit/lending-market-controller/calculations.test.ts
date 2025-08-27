@@ -67,7 +67,7 @@ describe('LendingMarketController - Calculations', () => {
     await mockCurrencyController.mock.getHaircut.returns(8000);
     await mockCurrencyController.mock[
       'convertFromBaseCurrency(bytes32,uint256)'
-    ].returns('10');
+    ].returns('10000000000000000');
     await mockTokenVault.mock.addDepositAmount.returns();
     await mockTokenVault.mock.removeDepositAmount.returns();
     await mockTokenVault.mock.cleanUpUsedCurrencies.returns();
@@ -414,6 +414,38 @@ describe('LendingMarketController - Calculations', () => {
           coverage: '1000',
         },
       },
+      {
+        title:
+          'Get an order estimation with amount less than minimum reliable amount',
+        orders: [
+          {
+            side: Side.LEND,
+            amount: '200000000000000000',
+            unitPrice: '8200',
+          },
+          {
+            side: Side.BORROW,
+            amount: '200000000000000000',
+            unitPrice: '8200',
+          },
+          {
+            side: Side.LEND,
+            amount: '5000000000000000',
+            unitPrice: '8000',
+          },
+        ],
+        input: {
+          side: Side.BORROW,
+          amount: '5000000000000000',
+          unitPrice: '8000',
+        },
+        result: {
+          lastUnitPrice: '8000',
+          filledAmount: '5000000000000000',
+          filledAmountInFV: calculateFutureValue('5000000000000000', '8000'),
+          coverage: '1000',
+        },
+      },
     ];
 
     for (const condition of conditions) {
@@ -443,6 +475,37 @@ describe('LendingMarketController - Calculations', () => {
             additionalDepositAmount: '0',
             ignoreBorrowedAmount: false,
           });
+
+        // Verify consistency with getOrderEstimationFromFV if order is filled
+        if (estimation.filledAmount.gt(0)) {
+          const amountInFV =
+            condition.input.side === Side.BORROW
+              ? estimation.filledAmountInFV.add(estimation.orderFeeInFV)
+              : estimation.filledAmountInFV.sub(estimation.orderFeeInFV);
+
+          const estimationFromFV = await lendingMarketControllerProxy
+            .connect(alice)
+            .getOrderEstimationFromFV({
+              ccy: targetCurrency,
+              maturity: maturities[0],
+              user: alice.address,
+              side: condition.input.side,
+              amountInFV: amountInFV,
+              additionalDepositAmount: '0',
+              ignoreBorrowedAmount: false,
+            });
+
+          expect(estimationFromFV.filledAmount).to.equal(
+            estimation.filledAmount,
+          );
+          expect(estimationFromFV.filledAmountInFV).to.equal(
+            estimation.filledAmountInFV,
+          );
+          expect(estimationFromFV.orderFeeInFV).to.equal(
+            estimation.orderFeeInFV,
+          );
+          expect(estimationFromFV.coverage).to.equal(estimation.coverage);
+        }
 
         const { timestamp } = await ethers.provider.getBlock('latest');
 

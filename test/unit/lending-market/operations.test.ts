@@ -4,6 +4,7 @@ import { Contract } from 'ethers';
 import { ethers } from 'hardhat';
 
 import { Side } from '../../../utils/constants';
+import { MINIMUM_RELIABLE_AMOUNT } from '../../common/constants';
 import { deployContracts } from './utils';
 
 describe('LendingMarket - Operations', () => {
@@ -58,6 +59,13 @@ describe('LendingMarket - Operations', () => {
 
     await lendingMarketCaller.unpause(targetCurrency);
     expect(await lendingMarket.paused()).to.be.false;
+  });
+
+  it('Get the minimum reliable amount', async () => {
+    const minReliableAmount =
+      await lendingMarket.minimumReliableAmountInBaseCurrency();
+
+    expect(minReliableAmount).to.equal(MINIMUM_RELIABLE_AMOUNT);
   });
 
   it('Fail to update the order fee rate due to invalid caller', async () => {

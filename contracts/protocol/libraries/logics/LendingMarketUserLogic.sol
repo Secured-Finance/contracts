@@ -243,9 +243,9 @@ library LendingMarketUserLogic {
             // Apply cap if specified
             if (_maxAmountInFV > 0) {
                 if (futureValue > 0 && futureValue.toUint256() > _maxAmountInFV) {
-                    futureValue = int256(_maxAmountInFV);
+                    futureValue = _maxAmountInFV.toInt256();
                 } else if (futureValue < 0 && (-futureValue).toUint256() > _maxAmountInFV) {
-                    futureValue = -int256(_maxAmountInFV);
+                    futureValue = -_maxAmountInFV.toInt256();
                 }
             }
 

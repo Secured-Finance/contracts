@@ -1258,6 +1258,152 @@ describe('Integration Test: Order Book', async () => {
         ).to.be.revertedWith('NotEnoughCollateral');
       });
     });
+
+    describe('Unwind the ETH borrowing order with a cap', async () => {
+      const orderAmount = initialETHBalance.div(5);
+      const depositAmount = orderAmount.mul(3).div(2);
+
+      before(async () => {
+        [alice, bob, carol] = await getUsers(3);
+        ethMaturities = await lendingMarketController.getMaturities(hexETH);
+      });
+
+      it('Create orders', async () => {
+        await tokenVault
+          .connect(carol)
+          .deposit(hexETH, initialETHBalance.div(3), {
+            value: initialETHBalance.div(3),
+          });
+
+        await lendingMarketController
+          .connect(carol)
+          .executeOrder(hexETH, ethMaturities[0], Side.BORROW, '1000', '9800');
+
+        await lendingMarketController
+          .connect(carol)
+          .executeOrder(hexETH, ethMaturities[0], Side.LEND, '1000', '9400');
+      });
+
+      it('Deposit ETH', async () => {
+        await tokenVault.connect(alice).deposit(hexETH, depositAmount, {
+          value: depositAmount,
+        });
+
+        const aliceDepositAmount = await tokenVault.getDepositAmount(
+          alice.address,
+          hexETH,
+        );
+
+        expect(aliceDepositAmount).to.equal(depositAmount);
+      });
+
+      it('Fill an order on the ETH market', async () => {
+        await lendingMarketController
+          .connect(bob)
+          .depositAndExecuteOrder(
+            hexETH,
+            ethMaturities[0],
+            Side.LEND,
+            orderAmount,
+            '9600',
+            { value: orderAmount },
+          );
+
+        const { blockHash } = await lendingMarketController
+          .connect(alice)
+          .executeOrder(
+            hexETH,
+            ethMaturities[0],
+            Side.BORROW,
+            orderAmount,
+            '9600',
+          );
+
+        const { timestamp } = await ethers.provider.getBlock(blockHash);
+        const fee = calculateOrderFee(
+          orderAmount,
+          '9600',
+          ethMaturities[0].sub(timestamp),
+        );
+
+        const [aliceFV, bobFV] = await Promise.all(
+          [alice, bob].map(({ address }) =>
+            lendingMarketController
+              .getPosition(hexETH, ethMaturities[0], address)
+              .then(({ futureValue }) => futureValue),
+          ),
+        );
+
+        expect(bobFV.sub(orderAmount.mul(10).div(8))).lte(1);
+        expect(bobFV.add(aliceFV).add(fee)).to.lte(1);
+      });
+
+      it('Check collateral', async () => {
+        const aliceDepositAmount = await tokenVault.getDepositAmount(
+          alice.address,
+          hexETH,
+        );
+        const bobDepositAmount = await tokenVault.getDepositAmount(
+          bob.address,
+          hexETH,
+        );
+
+        expect(aliceDepositAmount).to.equal(depositAmount.add(orderAmount));
+        expect(bobDepositAmount).to.equal('0');
+      });
+
+      it('Unwind half of the positions', async () => {
+        const { futureValue: aliceFVBefore } =
+          await lendingMarketController.getPosition(
+            hexETH,
+            ethMaturities[0],
+            alice.address,
+          );
+
+        await lendingMarketController
+          .connect(carol)
+          .depositAndExecuteOrder(
+            hexETH,
+            ethMaturities[0],
+            Side.BORROW,
+            orderAmount.mul(2),
+            '9600',
+            { value: orderAmount.mul(2) },
+          );
+
+        await expect(
+          lendingMarketController
+            .connect(alice)
+            .unwindPositionWithCap(
+              hexETH,
+              ethMaturities[0],
+              aliceFVBefore.div(2).abs(),
+            ),
+        ).to.emit(fundManagementLogic, 'OrderFilled');
+
+        const { futureValue: aliceFVAfter } =
+          await lendingMarketController.getPosition(
+            hexETH,
+            ethMaturities[0],
+            alice.address,
+          );
+
+        expect(aliceFVAfter.sub(aliceFVBefore.div(2))).to.lte(1);
+      });
+
+      after(async () => {
+        const { activeOrders } = await lendingMarketReader[
+          'getOrders(bytes32,address)'
+        ](hexETH, carol.address);
+
+        for (const order of activeOrders) {
+          await lendingMarketController
+            .connect(carol)
+            .cancelOrder(hexETH, order.maturity, order.orderId);
+        }
+      });
+    });
+
     describe('Fill orders without prior approval', async () => {
       const depositAmount = initialETHBalance.div(5);
       const orderAmount = depositAmount
