@@ -13,6 +13,8 @@ interface ILendingMarket {
     error NotItayosePeriod();
     error NotPreOrderPeriod();
 
+    function minimumReliableAmountInBaseCurrency() external view returns (uint256);
+
     function getOrderBookDetail(
         uint8 orderBookId
     )
@@ -185,6 +187,20 @@ interface ILendingMarket {
             uint256 filledAmountInFV,
             uint256 feeInFV,
             uint256 placedAmount
+        );
+
+    function calculateFilledAmountFromFV(
+        uint8 orderBookId,
+        ProtocolTypes.Side side,
+        uint256 amountInFV
+    )
+        external
+        view
+        returns (
+            uint256 lastUnitPrice,
+            uint256 filledAmount,
+            uint256 filledAmountInFV,
+            uint256 orderFeeInFV
         );
 
     function createOrderBook(

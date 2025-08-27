@@ -412,6 +412,35 @@ library OrderBookLib {
         }
     }
 
+    function calculateFilledAmountFromFV(
+        OrderBook storage self,
+        ProtocolTypes.Side _side,
+        uint256 _amountInFV,
+        uint256 _unitPrice
+    )
+        internal
+        view
+        returns (uint256 lastUnitPrice, uint256 filledAmount, uint256 filledAmountInFV)
+    {
+        if (_amountInFV == 0) return (0, 0, 0);
+
+        if (_side == ProtocolTypes.Side.LEND) {
+            return
+                self.borrowOrders[self.maturity].calculateDroppedAmountFromLeft(
+                    0,
+                    _amountInFV,
+                    _unitPrice
+                );
+        } else {
+            return
+                self.lendOrders[self.maturity].calculateDroppedAmountFromRight(
+                    0,
+                    _amountInFV,
+                    _unitPrice
+                );
+        }
+    }
+
     function updateUserMaturity(OrderBook storage self, address _user) internal {
         uint256 userMaturity = self.userCurrentMaturities[_user];
         uint256 orderBookMaturity = self.maturity;

@@ -529,36 +529,12 @@ library OrderActionLogic {
         )
     {
         bool orderExists;
-        uint256 futureValueWithFee;
         OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
-        uint256 maturity = orderBook.maturity;
-        uint256 currentMaturity = maturity >= block.timestamp ? maturity - block.timestamp : 0;
-
-        if (_side == ProtocolTypes.Side.BORROW) {
-            // To unwind all positions, calculate the future value taking into account
-            // the added portion of the fee.
-            // NOTE: The formula is:
-            // actualRate = feeRate * (currentMaturity / SECONDS_IN_YEAR)
-            // amount = totalAmountInFV / (1 + actualRate)
-            futureValueWithFee = (_futureValue * Constants.SECONDS_IN_YEAR * Constants.PCT_DIGIT)
-                .div(
-                    Constants.SECONDS_IN_YEAR *
-                        Constants.PCT_DIGIT +
-                        (Storage.slot().orderFeeRate * currentMaturity)
-                );
-        } else {
-            // To unwind all positions, calculate the future value taking into account
-            // the subtracted portion of the fee.
-            // NOTE: The formula is:
-            // actualRate = feeRate * (currentMaturity / SECONDS_IN_YEAR)
-            // amount = totalAmountInFV / (1 - actualRate)
-            futureValueWithFee = (_futureValue * Constants.SECONDS_IN_YEAR * Constants.PCT_DIGIT)
-                .div(
-                    Constants.SECONDS_IN_YEAR *
-                        Constants.PCT_DIGIT -
-                        (Storage.slot().orderFeeRate * currentMaturity)
-                );
-        }
+        uint256 futureValueWithFee = OrderReaderLogic.calculateFutureValueWithFee(
+            _futureValue,
+            _side,
+            orderBook.maturity
+        );
 
         (filledOrder, partiallyFilledOrder, , orderExists) = orderBook.fillOrders(
             _side,
