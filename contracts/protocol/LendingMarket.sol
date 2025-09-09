@@ -171,7 +171,15 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
 
     // @inheritdoc Proxyable
     function getRevision() external pure override returns (uint256) {
-        return 0x2;
+        return 0x3;
+    }
+
+    /**
+     * @notice Gets the minimum reliable amount in base currency for calculating block unit price.
+     * @return The minimum reliable amount in base currency
+     */
+    function minimumReliableAmountInBaseCurrency() external view override returns (uint256) {
+        return MINIMUM_RELIABLE_AMOUNT_IN_BASE_CURRENCY;
     }
 
     /**
@@ -583,6 +591,34 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         )
     {
         return OrderReaderLogic.calculateFilledAmount(_orderBookId, _side, _amount, _unitPrice);
+    }
+
+    /**
+     * @notice Calculates the amount to be filled when executing an order in the order book from the future value.
+     * @param _orderBookId The order book id
+     * @param _side Order position type, Borrow or Lend
+     * @param _amountInFV Amount of funds the user wants to borrow/lend in future value
+     * @return lastUnitPrice The last unit price that is filled on the order book
+     * @return filledAmount The amount that is filled on the order book
+     * @return filledAmountInFV The amount in the future value that is filled on the order book
+     * @return orderFeeInFV The order fee amount in the future value
+     */
+    function calculateFilledAmountFromFV(
+        uint8 _orderBookId,
+        ProtocolTypes.Side _side,
+        uint256 _amountInFV
+    )
+        external
+        view
+        override
+        returns (
+            uint256 lastUnitPrice,
+            uint256 filledAmount,
+            uint256 filledAmountInFV,
+            uint256 orderFeeInFV
+        )
+    {
+        return OrderReaderLogic.calculateFilledAmountFromFV(_orderBookId, _side, _amountInFV);
     }
 
     /**

@@ -218,6 +218,44 @@ library OrderReaderLogic {
         }
     }
 
+    function calculateFilledAmountFromFV(
+        uint8 _orderBookId,
+        ProtocolTypes.Side _side,
+        uint256 _amountInFV
+    )
+        external
+        view
+        returns (
+            uint256 lastUnitPrice,
+            uint256 filledAmount,
+            uint256 filledAmountInFV,
+            uint256 orderFeeInFV
+        )
+    {
+        OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
+
+        (bool isFilled, uint256 executedUnitPrice, , ) = orderBook.getOrderExecutionConditions(
+            _side,
+            0,
+            Storage.slot().circuitBreakerLimitRange,
+            true
+        );
+
+        if (isFilled) {
+            uint256 amountInFVWithFee = calculateFutureValueWithFee(
+                _amountInFV,
+                _side,
+                orderBook.maturity
+            );
+            (lastUnitPrice, filledAmount, filledAmountInFV) = orderBook.calculateFilledAmountFromFV(
+                _side,
+                amountInFVWithFee,
+                executedUnitPrice
+            );
+            orderFeeInFV = calculateOrderFeeAmount(orderBook.maturity, filledAmountInFV);
+        }
+    }
+
     function calculateOrderFeeAmount(
         uint256 _maturity,
         uint256 _amount
@@ -232,6 +270,42 @@ library OrderReaderLogic {
         orderFeeAmount = (Storage.slot().orderFeeRate * currentMaturity * _amount).div(
             Constants.SECONDS_IN_YEAR * Constants.PCT_DIGIT
         );
+    }
+
+    function calculateFutureValueWithFee(
+        uint256 _futureValue,
+        ProtocolTypes.Side _side,
+        uint256 _maturity
+    ) public view returns (uint256 futureValueWithFee) {
+        if (block.timestamp >= _maturity) return _futureValue;
+
+        uint256 duration = _maturity - block.timestamp;
+
+        if (_side == ProtocolTypes.Side.BORROW) {
+            // To unwind all positions, calculate the future value taking into account
+            // the added portion of the fee.
+            // NOTE: The formula is:
+            // actualRate = feeRate * (duration / SECONDS_IN_YEAR)
+            // amount = totalAmountInFV / (1 + actualRate)
+            futureValueWithFee = (_futureValue * Constants.SECONDS_IN_YEAR * Constants.PCT_DIGIT)
+                .div(
+                    Constants.SECONDS_IN_YEAR *
+                        Constants.PCT_DIGIT +
+                        (Storage.slot().orderFeeRate * duration)
+                );
+        } else {
+            // To unwind all positions, calculate the future value taking into account
+            // the subtracted portion of the fee.
+            // NOTE: The formula is:
+            // actualRate = feeRate * (duration / SECONDS_IN_YEAR)
+            // amount = totalAmountInFV / (1 - actualRate)
+            futureValueWithFee = (_futureValue * Constants.SECONDS_IN_YEAR * Constants.PCT_DIGIT)
+                .div(
+                    Constants.SECONDS_IN_YEAR *
+                        Constants.PCT_DIGIT -
+                        (Storage.slot().orderFeeRate * duration)
+                );
+        }
     }
 
     function getLendOrderAmounts(

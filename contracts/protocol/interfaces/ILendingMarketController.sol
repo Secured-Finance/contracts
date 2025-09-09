@@ -55,6 +55,16 @@ interface ILendingMarketController {
         bool ignoreBorrowedAmount;
     }
 
+    struct GetOrderEstimationFromFVParams {
+        bytes32 ccy;
+        uint256 maturity;
+        address user;
+        ProtocolTypes.Side side;
+        uint256 amountInFV;
+        uint256 additionalDepositAmount;
+        bool ignoreBorrowedAmount;
+    }
+
     function isValidMaturity(bytes32 _ccy, uint256 _maturity) external view returns (bool);
 
     function isTerminated() external view returns (bool);
@@ -99,6 +109,20 @@ interface ILendingMarketController {
             uint256 filledAmountInFV,
             uint256 orderFeeInFV,
             uint256 placedAmount,
+            uint256 coverage,
+            bool isInsufficientDepositAmount
+        );
+
+    function getOrderEstimationFromFV(
+        GetOrderEstimationFromFVParams calldata _params
+    )
+        external
+        view
+        returns (
+            uint256 lastUnitPrice,
+            uint256 filledAmount,
+            uint256 filledAmountInFV,
+            uint256 orderFeeInFV,
             uint256 coverage,
             bool isInsufficientDepositAmount
         );
@@ -218,6 +242,12 @@ interface ILendingMarketController {
     ) external returns (bool);
 
     function unwindPosition(bytes32 ccy, uint256 maturity) external returns (bool);
+
+    function unwindPositionWithCap(
+        bytes32 ccy,
+        uint256 maturity,
+        uint256 maxFutureValue
+    ) external returns (uint256 filledAmount, uint256 filledAmountInFV, uint256 feeInFV);
 
     function executeItayoseCall(bytes32 ccy, uint256 maturity) external returns (bool);
 

@@ -95,6 +95,44 @@ library LendingMarketUserLogic {
         );
     }
 
+    function getOrderEstimationFromFV(
+        ILendingMarketController.GetOrderEstimationFromFVParams memory input
+    )
+        external
+        view
+        returns (
+            uint256 lastUnitPrice,
+            uint256 filledAmount,
+            uint256 filledAmountInFV,
+            uint256 orderFeeInFV,
+            uint256 coverage,
+            bool isInsufficientDepositAmount
+        )
+    {
+        (
+            lastUnitPrice,
+            filledAmount,
+            filledAmountInFV,
+            orderFeeInFV
+        ) = _calculateFilledAmountFromFV(input.ccy, input.maturity, input.side, input.amountInFV);
+
+        (coverage, isInsufficientDepositAmount) = _estimateCollateralCoverage(
+            EstimateCollateralCoverageParams(
+                input.ccy,
+                input.maturity,
+                input.user,
+                input.side,
+                0, // unitPrice
+                input.additionalDepositAmount,
+                input.ignoreBorrowedAmount,
+                filledAmount,
+                filledAmountInFV,
+                orderFeeInFV,
+                0 // placedAmount
+            )
+        );
+    }
+
     function executeOrder(
         bytes32 _ccy,
         uint256 _maturity,
@@ -189,43 +227,68 @@ library LendingMarketUserLogic {
         _isCovered(_user, _ccy);
     }
 
-    function unwindPosition(bytes32 _ccy, uint256 _maturity, address _user) external {
+    function unwindPosition(
+        bytes32 _ccy,
+        uint256 _maturity,
+        address _user,
+        uint256 _maxAmountInFV
+    ) external returns (uint256 filledAmount, uint256 filledAmountInFV, uint256 feeInFV) {
         FundManagementLogic.cleanUpFunds(_ccy, _user);
 
-        int256 futureValue = FundManagementLogic
-            .getActualFunds(_ccy, _maturity, _user, 0)
-            .futureValue;
+        {
+            int256 futureValue = FundManagementLogic
+                .getActualFunds(_ccy, _maturity, _user, 0)
+                .futureValue;
 
-        (
-            FilledOrder memory filledOrder,
-            PartiallyFilledOrder memory partiallyFilledOrder,
-            uint256 feeInFV,
-            ProtocolTypes.Side side
-        ) = _unwindPosition(_ccy, _maturity, _user, futureValue);
+            // Apply cap if specified
+            if (_maxAmountInFV > 0) {
+                if (futureValue > 0 && futureValue.toUint256() > _maxAmountInFV) {
+                    futureValue = _maxAmountInFV.toInt256();
+                } else if (futureValue < 0 && (-futureValue).toUint256() > _maxAmountInFV) {
+                    futureValue = -_maxAmountInFV.toInt256();
+                }
+            }
 
-        updateFundsForTaker(
-            _ccy,
-            _maturity,
-            _user,
-            side,
-            filledOrder.amount,
-            filledOrder.futureValue,
-            feeInFV
-        );
+            FilledOrder memory filledOrder;
+            PartiallyFilledOrder memory partiallyFilledOrder;
+            ProtocolTypes.Side side;
 
-        updateFundsForMaker(
-            _ccy,
-            _maturity,
-            side == ProtocolTypes.Side.LEND ? ProtocolTypes.Side.BORROW : ProtocolTypes.Side.LEND,
-            partiallyFilledOrder
-        );
+            (filledOrder, partiallyFilledOrder, feeInFV, side) = _unwindPosition(
+                _ccy,
+                _maturity,
+                _user,
+                futureValue
+            );
 
-        // Updates the pending order amount for marker's orders.
-        // Since the partially filled order is updated with `updateFundsForMaker()`,
-        // its amount is subtracted from `pendingOrderAmounts`.
-        Storage.slot().pendingOrderAmounts[_ccy][_maturity] +=
-            filledOrder.amount -
-            partiallyFilledOrder.amount;
+            updateFundsForTaker(
+                _ccy,
+                _maturity,
+                _user,
+                side,
+                filledOrder.amount,
+                filledOrder.futureValue,
+                feeInFV
+            );
+
+            updateFundsForMaker(
+                _ccy,
+                _maturity,
+                side == ProtocolTypes.Side.LEND
+                    ? ProtocolTypes.Side.BORROW
+                    : ProtocolTypes.Side.LEND,
+                partiallyFilledOrder
+            );
+
+            // Updates the pending order amount for marker's orders.
+            // Since the partially filled order is updated with `updateFundsForMaker()`,
+            // its amount is subtracted from `pendingOrderAmounts`.
+            Storage.slot().pendingOrderAmounts[_ccy][_maturity] +=
+                filledOrder.amount -
+                partiallyFilledOrder.amount;
+
+            filledAmount = filledOrder.amount;
+            filledAmountInFV = filledOrder.futureValue;
+        }
 
         // When the market is the nearest market and the user has only GV, a user still has future value after unwinding.
         // For that case, the `registerCurrencyAndMaturity` function needs to be called again.
@@ -382,22 +445,39 @@ library LendingMarketUserLogic {
         );
     }
 
+    function _calculateFilledAmountFromFV(
+        bytes32 _ccy,
+        uint256 _maturity,
+        ProtocolTypes.Side _side,
+        uint256 _amountInFV
+    )
+        internal
+        view
+        returns (
+            uint256 lastUnitPrice,
+            uint256 filledAmount,
+            uint256 filledAmountInFV,
+            uint256 orderFeeInFV
+        )
+    {
+        return
+            ILendingMarket(Storage.slot().lendingMarkets[_ccy]).calculateFilledAmountFromFV(
+                Storage.slot().maturityOrderBookIds[_ccy][_maturity],
+                _side,
+                _amountInFV
+            );
+    }
+
     function _estimateCollateralCoverage(
         EstimateCollateralCoverageParams memory _params
     ) internal view returns (uint256 coverage, bool isInsufficientDepositAmount) {
-        uint256 filledAmountWithFeeInFV = _params.filledAmountInFV;
-
-        if (_params.side == ProtocolTypes.Side.LEND) {
-            filledAmountWithFeeInFV -= _params.orderFeeInFV;
-        } else {
-            filledAmountWithFeeInFV += _params.orderFeeInFV;
-        }
-
-        uint256 filledAmountWithFeeInPV = _estimatePVFromFV(
+        uint256 filledAmountWithFeeInPV = _estimateFilledAmountWithFee(
             _params.ccy,
             _params.maturity,
-            filledAmountWithFeeInFV,
-            _params.unitPrice
+            _params.side,
+            _params.filledAmount,
+            _params.filledAmountInFV,
+            _params.orderFeeInFV
         );
 
         ILendingMarketController.AdditionalFunds memory funds;
@@ -446,20 +526,43 @@ library LendingMarketUserLogic {
         );
     }
 
-    function _estimatePVFromFV(
+    function _estimateFilledAmountWithFee(
         bytes32 _ccy,
         uint256 _maturity,
-        uint256 _amount,
-        uint256 _unitPrice
+        ProtocolTypes.Side side,
+        uint256 filledAmount,
+        uint256 filledAmountInFV,
+        uint256 orderFeeInFV
     ) internal view returns (uint256) {
-        uint256 marketUnitPrice = ILendingMarket(Storage.slot().lendingMarkets[_ccy])
-            .getMarketUnitPrice(Storage.slot().maturityOrderBookIds[_ccy][_maturity]);
-
-        if (marketUnitPrice == 0) {
-            marketUnitPrice = _unitPrice;
+        if (filledAmountInFV == 0) {
+            return 0;
         }
 
-        return (_amount * marketUnitPrice).div(Constants.PRICE_DIGIT);
+        uint256 filledAmountWithFeeInFV = filledAmountInFV;
+
+        if (side == ProtocolTypes.Side.LEND) {
+            filledAmountWithFeeInFV -= orderFeeInFV;
+        } else {
+            filledAmountWithFeeInFV += orderFeeInFV;
+        }
+
+        ILendingMarket lendingMarket = ILendingMarket(Storage.slot().lendingMarkets[_ccy]);
+        uint256 minimumReliableAmount = AddressResolverLib
+            .currencyController()
+            .convertFromBaseCurrency(_ccy, lendingMarket.minimumReliableAmountInBaseCurrency());
+
+        uint256 marketUnitPrice;
+        if (filledAmount < minimumReliableAmount) {
+            marketUnitPrice = lendingMarket.getMarketUnitPrice(
+                Storage.slot().maturityOrderBookIds[_ccy][_maturity]
+            );
+        }
+
+        if (marketUnitPrice == 0) {
+            marketUnitPrice = (filledAmount * Constants.PRICE_DIGIT).div(filledAmountInFV);
+        }
+
+        return (filledAmountWithFeeInFV * marketUnitPrice).div(Constants.PRICE_DIGIT);
     }
 
     function _unwindPosition(

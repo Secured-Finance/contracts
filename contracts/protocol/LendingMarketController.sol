@@ -135,7 +135,7 @@ contract LendingMarketController is
 
     // @inheritdoc Proxyable
     function getRevision() external pure override returns (uint256) {
-        return 0x2;
+        return 0x3;
     }
 
     /**
@@ -291,6 +291,43 @@ contract LendingMarketController is
         )
     {
         return LendingMarketUserLogic.getOrderEstimation(_params);
+    }
+
+    /**
+     * @notice Gets the estimated order result by the calculation of the amount to be filled when executing an order in the order books.
+     * This function is used to estimate the order from future value.
+     * @param _params The parameters to calculate the order estimation <br>
+     * - ccy: Currency name in bytes32 of the selected market <br>
+     * - maturity: The maturity of the market <br>
+     * - user: User's address <br>
+     * - side: Order position type, Borrow or Lend <br>
+     * - amountInFV: Amount of funds in future value the maker wants to borrow/lend <br>
+     * - additionalDepositAmount: Additional amount to be deposited with the lending order <br>
+     * - ignoreBorrowedAmount: The boolean if the borrowed amount is ignored and not used as collateral or not
+     * @return lastUnitPrice The last unit price that is filled on the order book
+     * @return filledAmount The amount that is filled on the order book
+     * @return filledAmountInFV The amount in the future value that is filled on the order book
+     * @return orderFeeInFV The order fee amount in the future value
+     * @return coverage The rate of collateral used
+     * @return isInsufficientDepositAmount The boolean if the order amount for lending in the selected currency is insufficient
+     * for the deposit amount or not
+     */
+    function getOrderEstimationFromFV(
+        GetOrderEstimationFromFVParams calldata _params
+    )
+        external
+        view
+        override
+        returns (
+            uint256 lastUnitPrice,
+            uint256 filledAmount,
+            uint256 filledAmountInFV,
+            uint256 orderFeeInFV,
+            uint256 coverage,
+            bool isInsufficientDepositAmount
+        )
+    {
+        return LendingMarketUserLogic.getOrderEstimationFromFV(_params);
     }
 
     /**
@@ -758,8 +795,32 @@ contract LendingMarketController is
         bytes32 _ccy,
         uint256 _maturity
     ) external override nonReentrant ifValidMaturity(_ccy, _maturity) ifActive returns (bool) {
-        LendingMarketUserLogic.unwindPosition(_ccy, _maturity, msg.sender);
+        LendingMarketUserLogic.unwindPosition(_ccy, _maturity, msg.sender, 0);
         return true;
+    }
+
+    /**
+     * @notice Unwinds user's lending or borrowing positions by creating an opposite position order with a cap.
+     * @param _ccy Currency name in bytes32 of the selected order book
+     * @param _maturity The maturity of the selected order book
+     * @param _maxAmountInFV Maximum amount in future value to unwind. If 0, no cap is applied.
+     * @return filledAmount The amount that is filled on the order book
+     * @return filledAmountInFV The amount in the future value that is filled on the order book
+     * @return feeInFV The order fee amount in the future value
+     */
+    function unwindPositionWithCap(
+        bytes32 _ccy,
+        uint256 _maturity,
+        uint256 _maxAmountInFV
+    )
+        external
+        override
+        nonReentrant
+        ifValidMaturity(_ccy, _maturity)
+        ifActive
+        returns (uint256 filledAmount, uint256 filledAmountInFV, uint256 feeInFV)
+    {
+        return LendingMarketUserLogic.unwindPosition(_ccy, _maturity, msg.sender, _maxAmountInFV);
     }
 
     /**

@@ -3272,6 +3272,270 @@ describe('LendingMarketController - Orders', () => {
       });
     });
 
+    describe('Unwinding with cap', async () => {
+      it('Unwind a lending position without cap constraint', async () => {
+        await expect(
+          lendingMarketControllerProxy
+            .connect(alice)
+            .executeOrder(
+              targetCurrency,
+              maturities[0],
+              Side.LEND,
+              '10000000000000000',
+              '8000',
+            ),
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
+
+        await expect(
+          lendingMarketControllerProxy
+            .connect(bob)
+            .executeOrder(
+              targetCurrency,
+              maturities[0],
+              Side.LEND,
+              '20000000000000000',
+              '8000',
+            ),
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
+
+        await expect(
+          lendingMarketControllerProxy
+            .connect(carol)
+            .executeOrder(
+              targetCurrency,
+              maturities[0],
+              Side.BORROW,
+              '10000000000000000',
+              '8000',
+            ),
+        ).to.emit(fundManagementLogic, 'OrderFilled');
+
+        const { futureValue: aliceInitialFV } =
+          await lendingMarketControllerProxy.getPosition(
+            targetCurrency,
+            maturities[0],
+            alice.address,
+          );
+
+        const maxAmountInFV = aliceInitialFV.abs().mul(2);
+
+        await lendingMarketControllerProxy
+          .connect(alice)
+          .unwindPositionWithCap(targetCurrency, maturities[0], maxAmountInFV);
+
+        const { futureValue: aliceFinalFV } =
+          await lendingMarketControllerProxy.getPosition(
+            targetCurrency,
+            maturities[0],
+            alice.address,
+          );
+
+        expect(aliceFinalFV).to.equal('0');
+      });
+
+      it('Unwind a lending position with cap constraint', async () => {
+        await expect(
+          lendingMarketControllerProxy
+            .connect(alice)
+            .executeOrder(
+              targetCurrency,
+              maturities[0],
+              Side.LEND,
+              '20000000000000000',
+              '8000',
+            ),
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
+
+        await expect(
+          lendingMarketControllerProxy
+            .connect(bob)
+            .executeOrder(
+              targetCurrency,
+              maturities[0],
+              Side.LEND,
+              '40000000000000000',
+              '8000',
+            ),
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
+
+        await expect(
+          lendingMarketControllerProxy
+            .connect(carol)
+            .executeOrder(
+              targetCurrency,
+              maturities[0],
+              Side.BORROW,
+              '20000000000000000',
+              '8000',
+            ),
+        ).to.emit(fundManagementLogic, 'OrderFilled');
+
+        const { futureValue: aliceInitialFV } =
+          await lendingMarketControllerProxy.getPosition(
+            targetCurrency,
+            maturities[0],
+            alice.address,
+          );
+
+        const maxAmountInFV = aliceInitialFV.abs().div(2);
+
+        await lendingMarketControllerProxy
+          .connect(alice)
+          .unwindPositionWithCap(targetCurrency, maturities[0], maxAmountInFV);
+
+        const { futureValue: aliceFinalFV } =
+          await lendingMarketControllerProxy.getPosition(
+            targetCurrency,
+            maturities[0],
+            alice.address,
+          );
+
+        expect(aliceFinalFV).to.be.equal(aliceInitialFV.div(2));
+        expect(aliceFinalFV).to.be.equal('12500000000000000');
+      });
+
+      it('Unwind a borrowing position without cap constraint', async () => {
+        await expect(
+          lendingMarketControllerProxy
+            .connect(alice)
+            .executeOrder(
+              targetCurrency,
+              maturities[0],
+              Side.BORROW,
+              '10000000000000000',
+              '8000',
+            ),
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
+
+        await expect(
+          lendingMarketControllerProxy
+            .connect(bob)
+            .executeOrder(
+              targetCurrency,
+              maturities[0],
+              Side.BORROW,
+              '20000000000000000',
+              '8000',
+            ),
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
+
+        await expect(
+          lendingMarketControllerProxy
+            .connect(carol)
+            .executeOrder(
+              targetCurrency,
+              maturities[0],
+              Side.LEND,
+              '10000000000000000',
+              '8000',
+            ),
+        ).to.emit(fundManagementLogic, 'OrderFilled');
+
+        const { futureValue: aliceInitialFV } =
+          await lendingMarketControllerProxy.getPosition(
+            targetCurrency,
+            maturities[0],
+            alice.address,
+          );
+
+        const maxAmountInFV = aliceInitialFV.abs().mul(2);
+
+        await lendingMarketControllerProxy
+          .connect(alice)
+          .unwindPositionWithCap(targetCurrency, maturities[0], maxAmountInFV);
+
+        const { futureValue: aliceFinalFV } =
+          await lendingMarketControllerProxy.getPosition(
+            targetCurrency,
+            maturities[0],
+            alice.address,
+          );
+
+        expect(aliceFinalFV).to.equal('0');
+      });
+
+      it('Unwind a borrowing position with cap constraint', async () => {
+        await expect(
+          lendingMarketControllerProxy
+            .connect(alice)
+            .executeOrder(
+              targetCurrency,
+              maturities[0],
+              Side.BORROW,
+              '20000000000000000',
+              '8000',
+            ),
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
+
+        await expect(
+          lendingMarketControllerProxy
+            .connect(bob)
+            .executeOrder(
+              targetCurrency,
+              maturities[0],
+              Side.BORROW,
+              '40000000000000000',
+              '8000',
+            ),
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
+
+        await expect(
+          lendingMarketControllerProxy
+            .connect(carol)
+            .executeOrder(
+              targetCurrency,
+              maturities[0],
+              Side.LEND,
+              '20000000000000000',
+              '8000',
+            ),
+        ).to.emit(fundManagementLogic, 'OrderFilled');
+
+        const { futureValue: aliceInitialFV } =
+          await lendingMarketControllerProxy.getPosition(
+            targetCurrency,
+            maturities[0],
+            alice.address,
+          );
+
+        const maxAmountInFV = aliceInitialFV.abs().div(2);
+
+        await lendingMarketControllerProxy
+          .connect(alice)
+          .unwindPositionWithCap(targetCurrency, maturities[0], maxAmountInFV);
+
+        const { futureValue: aliceFinalFV } =
+          await lendingMarketControllerProxy.getPosition(
+            targetCurrency,
+            maturities[0],
+            alice.address,
+          );
+
+        expect(aliceFinalFV).to.be.equal(aliceInitialFV.div(2));
+        expect(aliceFinalFV).to.be.equal('-12500000000000000');
+      });
+
+      it('Fail to unwind with invalid maturity', async () => {
+        await expect(
+          lendingMarketControllerProxy
+            .connect(alice)
+            .unwindPositionWithCap(targetCurrency, '1', '1000000000000000000'),
+        ).to.be.revertedWith('InvalidMaturity');
+      });
+
+      it('Fail to unwind when no position exists', async () => {
+        await expect(
+          lendingMarketControllerProxy
+            .connect(alice)
+            .unwindPositionWithCap(
+              targetCurrency,
+              maturities[0],
+              '1000000000000000000',
+            ),
+        ).to.be.revertedWith('FutureValueIsZero');
+      });
+    });
+
     describe('Order Book', async () => {
       beforeEach(async () => {
         const orderCount = 10;

@@ -221,6 +221,14 @@ describe('LendingMarketController - Terminations', () => {
       ).to.revertedWith('MarketTerminated');
 
       await expect(
+        lendingMarketControllerProxy.unwindPositionWithCap(
+          targetCurrency,
+          maturities[0],
+          '1',
+        ),
+      ).to.revertedWith('MarketTerminated');
+
+      await expect(
         lendingMarketControllerProxy.executeRedemption(
           targetCurrency,
           maturities[0],
