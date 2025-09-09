@@ -505,6 +505,12 @@ describe('LendingMarketController - Calculations', () => {
             estimation.orderFeeInFV,
           );
           expect(estimationFromFV.coverage).to.equal(estimation.coverage);
+          expect(estimationFromFV.lastUnitPrice).to.equal(
+            estimation.lastUnitPrice,
+          );
+          expect(estimationFromFV.isInsufficientDepositAmount).to.equal(
+            estimation.isInsufficientDepositAmount,
+          );
         }
 
         const { timestamp } = await ethers.provider.getBlock('latest');

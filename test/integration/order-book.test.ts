@@ -1388,7 +1388,7 @@ describe('Integration Test: Order Book', async () => {
             alice.address,
           );
 
-        expect(aliceFVAfter.sub(aliceFVBefore.div(2))).to.lte(1);
+        expect(aliceFVAfter.sub(aliceFVBefore.div(2)).abs()).to.lte(1);
       });
 
       after(async () => {
