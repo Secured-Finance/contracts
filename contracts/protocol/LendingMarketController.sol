@@ -293,42 +293,42 @@ contract LendingMarketController is
         return LendingMarketUserLogic.getOrderEstimation(_params);
     }
 
-    /**
-     * @notice Gets the estimated order result by the calculation of the amount to be filled when executing an order in the order books.
-     * This function is used to estimate the order from future value.
-     * @param _params The parameters to calculate the order estimation <br>
-     * - ccy: Currency name in bytes32 of the selected market <br>
-     * - maturity: The maturity of the market <br>
-     * - user: User's address <br>
-     * - side: Order position type, Borrow or Lend <br>
-     * - amountInFV: Amount of funds in future value the maker wants to borrow/lend <br>
-     * - additionalDepositAmount: Additional amount to be deposited with the lending order <br>
-     * - ignoreBorrowedAmount: The boolean if the borrowed amount is ignored and not used as collateral or not
-     * @return lastUnitPrice The last unit price that is filled on the order book
-     * @return filledAmount The amount that is filled on the order book
-     * @return filledAmountInFV The amount in the future value that is filled on the order book
-     * @return orderFeeInFV The order fee amount in the future value
-     * @return coverage The rate of collateral used
-     * @return isInsufficientDepositAmount The boolean if the order amount for lending in the selected currency is insufficient
-     * for the deposit amount or not
-     */
-    function getOrderEstimationFromFV(
-        GetOrderEstimationFromFVParams calldata _params
-    )
-        external
-        view
-        override
-        returns (
-            uint256 lastUnitPrice,
-            uint256 filledAmount,
-            uint256 filledAmountInFV,
-            uint256 orderFeeInFV,
-            uint256 coverage,
-            bool isInsufficientDepositAmount
-        )
-    {
-        return LendingMarketUserLogic.getOrderEstimationFromFV(_params);
-    }
+    // /**
+    //  * @notice Gets the estimated order result by the calculation of the amount to be filled when executing an order in the order books.
+    //  * This function is used to estimate the order from future value.
+    //  * @param _params The parameters to calculate the order estimation <br>
+    //  * - ccy: Currency name in bytes32 of the selected market <br>
+    //  * - maturity: The maturity of the market <br>
+    //  * - user: User's address <br>
+    //  * - side: Order position type, Borrow or Lend <br>
+    //  * - amountInFV: Amount of funds in future value the maker wants to borrow/lend <br>
+    //  * - additionalDepositAmount: Additional amount to be deposited with the lending order <br>
+    //  * - ignoreBorrowedAmount: The boolean if the borrowed amount is ignored and not used as collateral or not
+    //  * @return lastUnitPrice The last unit price that is filled on the order book
+    //  * @return filledAmount The amount that is filled on the order book
+    //  * @return filledAmountInFV The amount in the future value that is filled on the order book
+    //  * @return orderFeeInFV The order fee amount in the future value
+    //  * @return coverage The rate of collateral used
+    //  * @return isInsufficientDepositAmount The boolean if the order amount for lending in the selected currency is insufficient
+    //  * for the deposit amount or not
+    //  */
+    // function getOrderEstimationFromFV(
+    //     GetOrderEstimationFromFVParams calldata _params
+    // )
+    //     external
+    //     view
+    //     override
+    //     returns (
+    //         uint256 lastUnitPrice,
+    //         uint256 filledAmount,
+    //         uint256 filledAmountInFV,
+    //         uint256 orderFeeInFV,
+    //         uint256 coverage,
+    //         bool isInsufficientDepositAmount
+    //     )
+    // {
+    //     return LendingMarketUserLogic.getOrderEstimationFromFV(_params);
+    // }
 
     /**
      * @notice Gets maturities for the selected currency.
@@ -1102,5 +1102,28 @@ contract LendingMarketController is
      */
     function migrateLendingMarket(bytes32 _ccy, uint256 _maturity) external onlyOwner {
         LendingMarketOperationLogic.migrateLendingMarket(_ccy, _maturity);
+    }
+
+    /**
+     * @notice Recovers user funds from the lending market.
+     * @dev This function is used to recover user funds in case of a contract bug.
+     * It allows the owner to recover funds for a specific user, currency, maturity, side, amount, and unit price.
+     * This function must be deleted after fund recovering for a specific user.
+     * @param _ccy Currency name in bytes32
+     * @param _maturity The maturity of the order book
+     * @param _user User's address
+     * @param _side Order position type, Borrow or Lend
+     * @param _amount Amount of funds to recover
+     * @param _unitPrice Amount of unit price to recover
+     */
+    function recoverUserFunds(
+        bytes32 _ccy,
+        uint256 _maturity,
+        address _user,
+        ProtocolTypes.Side _side,
+        uint256 _amount,
+        uint256 _unitPrice
+    ) external onlyOwner ifValidMaturity(_ccy, _maturity) {
+        LendingMarketUserLogic.recoverUserFunds(_ccy, _maturity, _user, _side, _amount, _unitPrice);
     }
 }

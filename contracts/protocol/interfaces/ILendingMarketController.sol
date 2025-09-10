@@ -113,19 +113,19 @@ interface ILendingMarketController {
             bool isInsufficientDepositAmount
         );
 
-    function getOrderEstimationFromFV(
-        GetOrderEstimationFromFVParams calldata _params
-    )
-        external
-        view
-        returns (
-            uint256 lastUnitPrice,
-            uint256 filledAmount,
-            uint256 filledAmountInFV,
-            uint256 orderFeeInFV,
-            uint256 coverage,
-            bool isInsufficientDepositAmount
-        );
+    // function getOrderEstimationFromFV(
+    //     GetOrderEstimationFromFVParams calldata _params
+    // )
+    //     external
+    //     view
+    //     returns (
+    //         uint256 lastUnitPrice,
+    //         uint256 filledAmount,
+    //         uint256 filledAmountInFV,
+    //         uint256 orderFeeInFV,
+    //         uint256 coverage,
+    //         bool isInsufficientDepositAmount
+    //     );
 
     function getMaturities(bytes32 ccy) external view returns (uint256[] memory);
 

@@ -286,4 +286,15 @@ interface ILendingMarket {
     function pause() external;
 
     function unpause() external;
+
+    function emitOrderExecuted(
+        address _user,
+        ProtocolTypes.Side _side,
+        bytes32 _ccy,
+        uint256 _maturity,
+        uint256 _inputAmount,
+        uint256 _filledAmount,
+        uint256 _filledUnitPrice,
+        uint256 _filledAmountInFV
+    ) external;
 }
