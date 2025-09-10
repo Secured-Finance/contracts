@@ -210,6 +210,18 @@ Gets the revision number of the contract
 | ---- | ---- | ----------- |
 | [0] | uint256 | The revision number |
 
+### minimumReliableAmountInBaseCurrency
+
+```solidity
+function minimumReliableAmountInBaseCurrency() external view returns (uint256)
+```
+
+Gets the minimum reliable amount in base currency for calculating block unit price.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | uint256 | The minimum reliable amount in base currency |
+
 ### getOrderBookDetail
 
 ```solidity
@@ -646,6 +658,27 @@ Calculates the amount to be filled when executing an order in the order book.
 | orderFeeInFV | uint256 | The order fee amount in the future value |
 | placedAmount | uint256 | The amount that is placed to the order book |
 
+### calculateFilledAmountFromFV
+
+```solidity
+function calculateFilledAmountFromFV(uint8 _orderBookId, enum ProtocolTypes.Side _side, uint256 _amountInFV) external view returns (uint256 lastUnitPrice, uint256 filledAmount, uint256 filledAmountInFV, uint256 orderFeeInFV)
+```
+
+Calculates the amount to be filled when executing an order in the order book from the future value.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _orderBookId | uint8 | The order book id |
+| _side | enum ProtocolTypes.Side | Order position type, Borrow or Lend |
+| _amountInFV | uint256 | Amount of funds the user wants to borrow/lend in future value |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| lastUnitPrice | uint256 | The last unit price that is filled on the order book |
+| filledAmount | uint256 | The amount that is filled on the order book |
+| filledAmountInFV | uint256 | The amount in the future value that is filled on the order book |
+| orderFeeInFV | uint256 | The order fee amount in the future value |
+
 ### createOrderBook
 
 ```solidity
@@ -830,4 +863,10 @@ function unpause() external
 ```
 
 Unpauses the lending market.
+
+### emitOrderExecuted
+
+```solidity
+function emitOrderExecuted(address _user, enum ProtocolTypes.Side _side, bytes32 _ccy, uint256 _maturity, uint256 _inputAmount, uint256 _filledAmount, uint256 _filledUnitPrice, uint256 _filledAmountInFV) external
+```
 

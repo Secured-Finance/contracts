@@ -722,6 +722,26 @@ Unwinds user's lending or borrowing positions by creating an opposite position o
 | _ccy | bytes32 | Currency name in bytes32 of the selected order book |
 | _maturity | uint256 | The maturity of the selected order book |
 
+### unwindPositionWithCap
+
+```solidity
+function unwindPositionWithCap(bytes32 _ccy, uint256 _maturity, uint256 _maxAmountInFV) external returns (uint256 filledAmount, uint256 filledAmountInFV, uint256 feeInFV)
+```
+
+Unwinds user's lending or borrowing positions by creating an opposite position order with a cap.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 of the selected order book |
+| _maturity | uint256 | The maturity of the selected order book |
+| _maxAmountInFV | uint256 | Maximum amount in future value to unwind. If 0, no cap is applied. |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| filledAmount | uint256 | The amount that is filled on the order book |
+| filledAmountInFV | uint256 | The amount in the future value that is filled on the order book |
+| feeInFV | uint256 | The order fee amount in the future value |
+
 ### executeRedemption
 
 ```solidity
@@ -972,4 +992,25 @@ This function can be deleted after executing for all currencies and maturities._
 | ---- | ---- | ----------- |
 | _ccy | bytes32 | Currency name in bytes32 |
 | _maturity | uint256 | The maturity of the ZCToken |
+
+### recoverUserFunds
+
+```solidity
+function recoverUserFunds(bytes32 _ccy, uint256 _maturity, address _user, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice) external
+```
+
+Recovers user funds from the lending market.
+
+_This function is used to recover user funds in case of a contract bug.
+It allows the owner to recover funds for a specific user, currency, maturity, side, amount, and unit price.
+This function must be deleted after fund recovering for a specific user._
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 |
+| _maturity | uint256 | The maturity of the order book |
+| _user | address | User's address |
+| _side | enum ProtocolTypes.Side | Order position type, Borrow or Lend |
+| _amount | uint256 | Amount of funds to recover |
+| _unitPrice | uint256 | Amount of unit price to recover |
 

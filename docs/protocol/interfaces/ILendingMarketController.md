@@ -92,6 +92,20 @@ struct GetOrderEstimationParams {
 }
 ```
 
+### GetOrderEstimationFromFVParams
+
+```solidity
+struct GetOrderEstimationFromFVParams {
+  bytes32 ccy;
+  uint256 maturity;
+  address user;
+  enum ProtocolTypes.Side side;
+  uint256 amountInFV;
+  uint256 additionalDepositAmount;
+  bool ignoreBorrowedAmount;
+}
+```
+
 ### isValidMaturity
 
 ```solidity
@@ -312,6 +326,12 @@ function depositWithPermitAndExecutePreOrder(bytes32 _ccy, uint256 _maturity, en
 
 ```solidity
 function unwindPosition(bytes32 ccy, uint256 maturity) external returns (bool)
+```
+
+### unwindPositionWithCap
+
+```solidity
+function unwindPositionWithCap(bytes32 ccy, uint256 maturity, uint256 maxFutureValue) external returns (uint256 filledAmount, uint256 filledAmountInFV, uint256 feeInFV)
 ```
 
 ### executeItayoseCall

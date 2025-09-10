@@ -38,6 +38,12 @@ error NotItayosePeriod()
 error NotPreOrderPeriod()
 ```
 
+### minimumReliableAmountInBaseCurrency
+
+```solidity
+function minimumReliableAmountInBaseCurrency() external view returns (uint256)
+```
+
 ### getOrderBookDetail
 
 ```solidity
@@ -224,6 +230,12 @@ function getBorrowOrderIds(uint8 orderBookId, address user) external view return
 function calculateFilledAmount(uint8 orderBookId, enum ProtocolTypes.Side side, uint256 amount, uint256 unitPrice) external view returns (uint256 lastUnitPrice, uint256 filledAmount, uint256 filledAmountInFV, uint256 feeInFV, uint256 placedAmount)
 ```
 
+### calculateFilledAmountFromFV
+
+```solidity
+function calculateFilledAmountFromFV(uint8 orderBookId, enum ProtocolTypes.Side side, uint256 amountInFV) external view returns (uint256 lastUnitPrice, uint256 filledAmount, uint256 filledAmountInFV, uint256 orderFeeInFV)
+```
+
 ### createOrderBook
 
 ```solidity
@@ -294,5 +306,11 @@ function pause() external
 
 ```solidity
 function unpause() external
+```
+
+### emitOrderExecuted
+
+```solidity
+function emitOrderExecuted(address _user, enum ProtocolTypes.Side _side, bytes32 _ccy, uint256 _maturity, uint256 _inputAmount, uint256 _filledAmount, uint256 _filledUnitPrice, uint256 _filledAmountInFV) external
 ```
 

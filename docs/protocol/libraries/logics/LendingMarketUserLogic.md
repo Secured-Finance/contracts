@@ -62,6 +62,12 @@ struct EstimateCollateralCoverageParams {
 function getOrderEstimation(struct ILendingMarketController.GetOrderEstimationParams input) external view returns (uint256 lastUnitPrice, uint256 filledAmount, uint256 filledAmountInFV, uint256 orderFeeInFV, uint256 placedAmount, uint256 coverage, bool isInsufficientDepositAmount)
 ```
 
+### getOrderEstimationFromFV
+
+```solidity
+function getOrderEstimationFromFV(struct ILendingMarketController.GetOrderEstimationFromFVParams input) external view returns (uint256 lastUnitPrice, uint256 filledAmount, uint256 filledAmountInFV, uint256 orderFeeInFV, uint256 coverage, bool isInsufficientDepositAmount)
+```
+
 ### executeOrder
 
 ```solidity
@@ -77,7 +83,7 @@ function executePreOrder(bytes32 _ccy, uint256 _maturity, address _user, enum Pr
 ### unwindPosition
 
 ```solidity
-function unwindPosition(bytes32 _ccy, uint256 _maturity, address _user) external
+function unwindPosition(bytes32 _ccy, uint256 _maturity, address _user, uint256 _maxAmountInFV) external returns (uint256 filledAmount, uint256 filledAmountInFV, uint256 feeInFV)
 ```
 
 ### updateFundsForTaker
@@ -116,16 +122,22 @@ function getWithdrawableZCTokenAmount(bytes32 _ccy, uint256 _maturity, address _
 function _calculateFilledAmount(bytes32 _ccy, uint256 _maturity, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice) internal view returns (uint256 lastUnitPrice, uint256 filledAmount, uint256 filledAmountInFV, uint256 orderFeeInFV, uint256 placedAmount)
 ```
 
+### _calculateFilledAmountFromFV
+
+```solidity
+function _calculateFilledAmountFromFV(bytes32 _ccy, uint256 _maturity, enum ProtocolTypes.Side _side, uint256 _amountInFV) internal view returns (uint256 lastUnitPrice, uint256 filledAmount, uint256 filledAmountInFV, uint256 orderFeeInFV)
+```
+
 ### _estimateCollateralCoverage
 
 ```solidity
 function _estimateCollateralCoverage(struct LendingMarketUserLogic.EstimateCollateralCoverageParams _params) internal view returns (uint256 coverage, bool isInsufficientDepositAmount)
 ```
 
-### _estimatePVFromFV
+### _estimateFilledAmountWithFee
 
 ```solidity
-function _estimatePVFromFV(bytes32 _ccy, uint256 _maturity, uint256 _amount, uint256 _unitPrice) internal view returns (uint256)
+function _estimateFilledAmountWithFee(bytes32 _ccy, uint256 _maturity, enum ProtocolTypes.Side side, uint256 filledAmount, uint256 filledAmountInFV, uint256 orderFeeInFV) internal view returns (uint256)
 ```
 
 ### _unwindPosition
@@ -180,5 +192,11 @@ function _getWithdrawableAmount(bytes32 _ccy, address _user) internal view retur
 
 ```solidity
 function _isCovered(address _user, bytes32 _ccy) internal view
+```
+
+### recoverUserFunds
+
+```solidity
+function recoverUserFunds(bytes32 _ccy, uint256 _maturity, address _user, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice) internal
 ```
 

@@ -185,6 +185,12 @@ function getBorrowOrderIds(struct OrderBookLib.OrderBook self, address _user) in
 function calculateFilledAmount(struct OrderBookLib.OrderBook self, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice) internal view returns (uint256 lastUnitPrice, uint256 filledAmount, uint256 filledAmountInFV)
 ```
 
+### calculateFilledAmountFromFV
+
+```solidity
+function calculateFilledAmountFromFV(struct OrderBookLib.OrderBook self, enum ProtocolTypes.Side _side, uint256 _amountInFV, uint256 _unitPrice) internal view returns (uint256 lastUnitPrice, uint256 filledAmount, uint256 filledAmountInFV)
+```
+
 ### updateUserMaturity
 
 ```solidity
