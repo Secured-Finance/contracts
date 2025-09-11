@@ -818,33 +818,4 @@ library LendingMarketUserLogic {
         if (!isEnoughDepositInOrderCcy) revert NotEnoughDeposit(_ccy);
         if (!isEnoughCollateral) revert NotEnoughCollateral();
     }
-
-    // This function is created to recover user funds in case of a contract bug.
-    // It must be deleted after fund recovering for a specific user.
-    function recoverUserFunds(
-        bytes32 _ccy,
-        uint256 _maturity,
-        address _user,
-        ProtocolTypes.Side _side,
-        uint256 _amount,
-        uint256 _unitPrice
-    ) internal {
-        if (_amount == 0 || _unitPrice == 0) revert InvalidAmount();
-        uint256 futureValue = FundManagementLogic._calculateFVFromPV(_amount, _unitPrice);
-
-        ILendingMarket(Storage.slot().lendingMarkets[_ccy]).emitOrderExecuted(
-            _user,
-            _side,
-            _ccy,
-            _maturity,
-            _amount,
-            _amount,
-            _unitPrice,
-            futureValue
-        );
-        updateFundsForTaker(_ccy, _maturity, _user, _side, _amount, futureValue, 0);
-
-        Storage.slot().pendingOrderAmounts[_ccy][_maturity] += _amount;
-        Storage.slot().usedCurrencies[_user].add(_ccy);
-    }
 }
