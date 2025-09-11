@@ -194,9 +194,3 @@ function _getWithdrawableAmount(bytes32 _ccy, address _user) internal view retur
 function _isCovered(address _user, bytes32 _ccy) internal view
 ```
 
-### recoverUserFunds
-
-```solidity
-function recoverUserFunds(bytes32 _ccy, uint256 _maturity, address _user, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice) internal
-```
-

@@ -308,9 +308,3 @@ function pause() external
 function unpause() external
 ```
 
-### emitOrderExecuted
-
-```solidity
-function emitOrderExecuted(address _user, enum ProtocolTypes.Side _side, bytes32 _ccy, uint256 _maturity, uint256 _inputAmount, uint256 _filledAmount, uint256 _filledUnitPrice, uint256 _filledAmountInFV) external
-```
-

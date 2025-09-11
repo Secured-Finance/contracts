@@ -318,6 +318,28 @@ Gets the estimated order result by the calculation of the amount to be filled wh
 | coverage | uint256 | The rate of collateral used |
 | isInsufficientDepositAmount | bool | The boolean if the order amount for lending in the selected currency is insufficient for the deposit amount or not |
 
+### getOrderEstimationFromFV
+
+```solidity
+function getOrderEstimationFromFV(struct ILendingMarketController.GetOrderEstimationFromFVParams _params) external view returns (uint256 lastUnitPrice, uint256 filledAmount, uint256 filledAmountInFV, uint256 orderFeeInFV, uint256 coverage, bool isInsufficientDepositAmount)
+```
+
+Gets the estimated order result by the calculation of the amount to be filled when executing an order in the order books.
+This function is used to estimate the order from future value.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _params | struct ILendingMarketController.GetOrderEstimationFromFVParams | The parameters to calculate the order estimation <br> - ccy: Currency name in bytes32 of the selected market <br> - maturity: The maturity of the market <br> - user: User's address <br> - side: Order position type, Borrow or Lend <br> - amountInFV: Amount of funds in future value the maker wants to borrow/lend <br> - additionalDepositAmount: Additional amount to be deposited with the lending order <br> - ignoreBorrowedAmount: The boolean if the borrowed amount is ignored and not used as collateral or not |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| lastUnitPrice | uint256 | The last unit price that is filled on the order book |
+| filledAmount | uint256 | The amount that is filled on the order book |
+| filledAmountInFV | uint256 | The amount in the future value that is filled on the order book |
+| orderFeeInFV | uint256 | The order fee amount in the future value |
+| coverage | uint256 | The rate of collateral used |
+| isInsufficientDepositAmount | bool | The boolean if the order amount for lending in the selected currency is insufficient for the deposit amount or not |
+
 ### getMaturities
 
 ```solidity
@@ -992,25 +1014,4 @@ This function can be deleted after executing for all currencies and maturities._
 | ---- | ---- | ----------- |
 | _ccy | bytes32 | Currency name in bytes32 |
 | _maturity | uint256 | The maturity of the ZCToken |
-
-### recoverUserFunds
-
-```solidity
-function recoverUserFunds(bytes32 _ccy, uint256 _maturity, address _user, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice) external
-```
-
-Recovers user funds from the lending market.
-
-_This function is used to recover user funds in case of a contract bug.
-It allows the owner to recover funds for a specific user, currency, maturity, side, amount, and unit price.
-This function must be deleted after fund recovering for a specific user._
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _ccy | bytes32 | Currency name in bytes32 |
-| _maturity | uint256 | The maturity of the order book |
-| _user | address | User's address |
-| _side | enum ProtocolTypes.Side | Order position type, Borrow or Lend |
-| _amount | uint256 | Amount of funds to recover |
-| _unitPrice | uint256 | Amount of unit price to recover |
 

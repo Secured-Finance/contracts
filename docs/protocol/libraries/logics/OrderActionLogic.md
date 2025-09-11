@@ -175,9 +175,3 @@ function _unwindPosition(uint8 _orderBookId, enum ProtocolTypes.Side _side, uint
 function _getOrderBook(uint8 _orderBookId) private view returns (struct OrderBookLib.OrderBook)
 ```
 
-### emitOrderExecuted
-
-```solidity
-function emitOrderExecuted(address _user, enum ProtocolTypes.Side _side, bytes32 _ccy, uint256 _maturity, uint256 _inputAmount, uint256 _filledAmount, uint256 _filledUnitPrice, uint256 _filledAmountInFV) external
-```
-

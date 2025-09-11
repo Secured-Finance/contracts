@@ -196,6 +196,12 @@ function getPendingOrderAmount(bytes32 _ccy, uint256 _maturity) external view re
 function getOrderEstimation(struct ILendingMarketController.GetOrderEstimationParams params) external view returns (uint256 lastUnitPrice, uint256 filledAmount, uint256 filledAmountInFV, uint256 orderFeeInFV, uint256 placedAmount, uint256 coverage, bool isInsufficientDepositAmount)
 ```
 
+### getOrderEstimationFromFV
+
+```solidity
+function getOrderEstimationFromFV(struct ILendingMarketController.GetOrderEstimationFromFVParams _params) external view returns (uint256 lastUnitPrice, uint256 filledAmount, uint256 filledAmountInFV, uint256 orderFeeInFV, uint256 coverage, bool isInsufficientDepositAmount)
+```
+
 ### getMaturities
 
 ```solidity
