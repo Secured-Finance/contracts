@@ -116,7 +116,7 @@ interface ILendingMarket {
 
     function isItayosePeriod(uint8 orderBookId) external view returns (bool);
 
-    function isPreOrderPeriod(uint8 orderBookId) external returns (bool);
+    function isPreOrderPeriod(uint8 orderBookId) external view returns (bool);
 
     function getItayoseLog(uint256 maturity) external view returns (ItayoseLog memory);
 
