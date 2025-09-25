@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.4.0](https://github.com/Secured-Finance/contracts/compare/v1.3.0...v1.4.0) (2025-09-25)
+
+
+### Features
+
+* add estimation and unwind functions by fv [SF-1456] ([24f21dd](https://github.com/Secured-Finance/contracts/commit/24f21dd47fc7778f04048af3f227227fc6416e21))
+* add issue templates and update configs [SF-1438] ([a5d76e2](https://github.com/Secured-Finance/contracts/commit/a5d76e2b61cc7db47b3c400edde3103d15ea392e))
+* add tempolary function to recover user funds [SF-1435] ([21ce3fd](https://github.com/Secured-Finance/contracts/commit/21ce3fd01cff821f29c2a1175e9bef7bf40864cd))
+* add tempolary function to recover user funds [SF-1435] ([495ee41](https://github.com/Secured-Finance/contracts/commit/495ee4126014793445b1b839595715e658d29c2c))
+
+
+### Bug Fixes
+
+* fix ILendingMarket [SF-1456] ([c1867c3](https://github.com/Secured-Finance/contracts/commit/c1867c3b360e33e1a783f2d475f852436b2da003))
+* fix order estimation bug [SF-1421] ([c48de48](https://github.com/Secured-Finance/contracts/commit/c48de48f75b3651b6391ff896a8b8c91bd7c9ca9))
+* fix tree rotation issue [SF-1435] ([02d5041](https://github.com/Secured-Finance/contracts/commit/02d5041429438046365ef8e6f94a8feb16b4cd9b))
+* remove tmp function [SF-1435] ([ede7bad](https://github.com/Secured-Finance/contracts/commit/ede7bad8e80bdd13c1b7e1414553ba4a69d5bfa5))
+* remove tmp function for bug fix [SF-1435] ([06c7a05](https://github.com/Secured-Finance/contracts/commit/06c7a05843860559e7db2eedd8457698eef60701))
+
 ## [1.3.0](https://github.com/Secured-Finance/contracts/compare/v1.2.0...v1.3.0) (2025-06-13)
 
 
