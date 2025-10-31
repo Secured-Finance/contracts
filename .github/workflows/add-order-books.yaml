@@ -57,8 +57,7 @@ jobs:
         run: |
           echo "SAFE_WALLET_ADDRESS=${{ vars.SAFE_WALLET_ADDRESS }}" >> $GITHUB_ENV
           echo "SAFE_API_URL=${{ vars.SAFE_API_URL }}" >> $GITHUB_ENV
-          echo "RELAYER_API_KEY=${{ vars.RELAYER_API_KEY }}" >> $GITHUB_ENV
-          echo "RELAYER_API_SECRET=${{ secrets.RELAYER_API_SECRET }}" >> $GITHUB_ENV
+          echo "SAFE_API_KEY=${{ secrets.SAFE_API_KEY }}" >> $GITHUB_ENV
           echo "PRIVATE_KEY=${{ secrets.PRIVATE_KEY }}" >> $GITHUB_ENV
           echo "ALCHEMY_API_KEY=${{ secrets.ALCHEMY_API_KEY }}" >> $GITHUB_ENV
           echo "ANKR_API_KEY=${{ secrets.ANKR_API_KEY }}" >> $GITHUB_ENV

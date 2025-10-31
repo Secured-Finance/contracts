@@ -1,13 +1,6 @@
-import {
-  DefenderRelayProvider,
-  DefenderRelaySigner,
-} from '@openzeppelin/defender-relay-client/lib/ethers';
 import SafeApiKit from '@safe-global/api-kit';
-import Safe from '@safe-global/protocol-kit';
-import {
-  EthAdapter,
-  MetaTransactionData,
-} from '@safe-global/safe-core-sdk-types';
+import Safe, { Eip1193Provider } from '@safe-global/protocol-kit';
+import { MetaTransactionData } from '@safe-global/types-kit';
 import { utils } from 'ethers';
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'fs';
 import { DeployResult } from 'hardhat-deploy/types';
@@ -22,17 +15,6 @@ const executeIfNewlyDeployment = async (
     callback && (await callback());
   } else {
     console.warn(`Skipped deploying ${name}`);
-  }
-};
-
-const getRelaySigner = (): DefenderRelaySigner | undefined => {
-  if (process.env.RELAYER_API_KEY && process.env.RELAYER_API_SECRET) {
-    const credentials = {
-      apiKey: process.env.RELAYER_API_KEY,
-      apiSecret: process.env.RELAYER_API_SECRET,
-    };
-    const provider = new DefenderRelayProvider(credentials);
-    return new DefenderRelaySigner(credentials, provider);
   }
 };
 
@@ -128,7 +110,6 @@ class DeploymentStorage {
 
 class Proposal {
   private safeAddress!: string;
-  private txServiceUrl!: string;
   private signer!: string;
   private safeService!: SafeApiKit;
   private safeSdk!: Safe;
@@ -136,37 +117,39 @@ class Proposal {
 
   private constructor() {}
 
-  static async create(ethAdapter: EthAdapter): Promise<Proposal> {
+  static async create(
+    provider: Eip1193Provider,
+    signer: string,
+  ): Promise<Proposal> {
     const proposal = new Proposal();
-    await proposal.init(ethAdapter);
+    await proposal.init(provider, signer);
     return proposal;
   }
 
-  private async init(ethAdapter: EthAdapter) {
+  private async init(provider: Eip1193Provider | string, signer: string) {
     if (!process.env.SAFE_WALLET_ADDRESS) {
       throw Error('SAFE_WALLET_ADDRESS is not set');
     }
 
-    if (!process.env.SAFE_API_URL) {
-      throw Error('SAFE_API_URL is not set');
-    }
-
-    const signer = await ethAdapter.getSignerAddress();
-    if (!signer) {
-      throw Error('Signer address is not found');
+    if (!process.env.SAFE_API_KEY) {
+      throw Error('SAFE_API_KEY is not set');
     }
 
     this.safeAddress = process.env.SAFE_WALLET_ADDRESS;
-    this.txServiceUrl = process.env.SAFE_API_URL;
     this.signer = signer;
-    this.safeService = new SafeApiKit({
-      ethAdapter,
-      txServiceUrl: this.txServiceUrl,
-    });
-    this.safeSdk = await Safe.create({
-      ethAdapter,
+
+    this.safeSdk = await Safe.init({
+      provider,
+      signer,
       safeAddress: this.safeAddress,
     });
+
+    const chainId = BigInt(await this.safeSdk.getChainId());
+    this.safeService = new SafeApiKit({
+      chainId,
+      apiKey: process.env.SAFE_API_KEY!,
+    });
+
     this.safeTransactions = [];
   }
 
@@ -188,12 +171,12 @@ class Proposal {
     }
 
     const safeTransaction = await this.safeSdk.createTransaction({
-      safeTransactionData: this.safeTransactions,
+      transactions: this.safeTransactions,
       onlyCalls: true,
     });
 
     const safeTxHash = await this.safeSdk.getTransactionHash(safeTransaction);
-    const senderSignature = await this.safeSdk.signTransactionHash(safeTxHash);
+    const senderSignature = await this.safeSdk.signHash(safeTxHash);
 
     await this.safeService.proposeTransaction({
       safeAddress: this.safeAddress,
@@ -254,7 +237,6 @@ export {
   DeploymentStorage,
   executeIfNewlyDeployment,
   getNodeEndpoint,
-  getRelaySigner,
   getWaitConfirmations,
   Proposal,
 };

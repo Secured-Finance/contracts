@@ -1,15 +1,14 @@
-import { EthersAdapter } from '@safe-global/protocol-kit';
 import { Contract, ContractTransaction } from 'ethers';
 import { task } from 'hardhat/config';
 import { HardhatPluginError } from 'hardhat/internal/core/errors';
-import { Proposal, getRelaySigner } from '../utils/deployment';
+import { Proposal } from '../utils/deployment';
 import { FVMProposal, isFVM } from '../utils/deployment-fvm';
 import { toBytes32 } from '../utils/strings';
 
 task(
   'change-owners',
   'Change owners of all contracts to the new owner',
-).setAction(async (_, { deployments, ethers, getChainId }) => {
+).setAction(async (_, { deployments, ethers, getChainId, network }) => {
   const currentChainId = await getChainId();
 
   const newOwner = isFVM(currentChainId)
@@ -24,15 +23,11 @@ task(
 
   const [owner] = await ethers.getSigners();
   let nonce = await owner.getTransactionCount();
-  const signer = getRelaySigner() || (await ethers.getSigners())[0];
+  const [deployer] = await ethers.getSigners();
 
-  const ethersAdapter = new EthersAdapter({
-    ethers,
-    signerOrProvider: signer,
-  });
   const proposal = isFVM(currentChainId)
     ? await FVMProposal.create(currentChainId)
-    : await Proposal.create(ethersAdapter);
+    : await Proposal.create(network.provider, await deployer.getAddress());
   const proxyController = await deployments
     .get('ProxyController')
     .then(({ address }) => ethers.getContractAt('ProxyController', address));
