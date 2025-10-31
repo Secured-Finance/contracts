@@ -1,12 +1,7 @@
-import { EthersAdapter } from '@safe-global/protocol-kit';
 import { task, types } from 'hardhat/config';
 import { HardhatPluginError } from 'hardhat/internal/core/errors';
 import { getAggregatedDecimals } from '../utils/currencies';
-import {
-  Proposal,
-  executeIfNewlyDeployment,
-  getRelaySigner,
-} from '../utils/deployment';
+import { Proposal, executeIfNewlyDeployment } from '../utils/deployment';
 import { FVMProposal, isFVM } from '../utils/deployment-fvm';
 import { toBytes32 } from '../utils/strings';
 
@@ -52,10 +47,9 @@ task('add-currency', 'Add a new currency to the protocol')
         isCollateral,
         useStaticPrice,
       },
-      { deployments, ethers, getChainId },
+      { deployments, ethers, getChainId, network },
     ) => {
       const [deployer] = await ethers.getSigners();
-      const signer = getRelaySigner() || deployer;
 
       let priceFeeds: string[] = priceFeedsString?.split(', ') || [];
       let heartbeats: string[] = heartbeatsString?.split(', ') || [];
@@ -107,17 +101,15 @@ task('add-currency', 'Add a new currency to the protocol')
         }
       });
 
-      const ethersAdapter = new EthersAdapter({
-        ethers,
-        signerOrProvider: signer,
-      });
-
       const proposal =
         process.env.ENABLE_AUTO_UPDATE !== 'true'
           ? await getChainId().then(async (chainId) =>
               isFVM(chainId)
                 ? FVMProposal.create(chainId)
-                : Proposal.create(ethersAdapter),
+                : Proposal.create(
+                    network.provider,
+                    await deployer.getAddress(),
+                  ),
             )
           : undefined;
 

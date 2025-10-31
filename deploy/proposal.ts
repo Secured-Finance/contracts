@@ -1,17 +1,13 @@
-import { EthersAdapter } from '@safe-global/protocol-kit';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import {
-  DeploymentStorage,
-  Proposal,
-  getRelaySigner,
-} from '../utils/deployment';
+import { DeploymentStorage, Proposal } from '../utils/deployment';
 import { FVMProposal, isFVM } from '../utils/deployment-fvm';
 
 const func: DeployFunction = async function ({
   getNamedAccounts,
   ethers,
   getChainId,
+  network,
 }: HardhatRuntimeEnvironment) {
   if (process.env.ENABLE_AUTO_UPDATE === 'true') {
     console.warn('Skipped proposal creation because it is under auto update');
@@ -25,19 +21,12 @@ const func: DeployFunction = async function ({
     return;
   }
 
-  const signer =
-    getRelaySigner() ||
-    ethers.provider.getSigner((await getNamedAccounts()).deployer);
-
-  const ethersAdapter = new EthersAdapter({
-    ethers,
-    signerOrProvider: signer,
-  });
+  const { deployer } = await getNamedAccounts();
 
   const proposal = await getChainId().then(async (chainId) =>
     isFVM(chainId)
       ? FVMProposal.create(chainId)
-      : Proposal.create(ethersAdapter),
+      : Proposal.create(network.provider, deployer),
   );
 
   for (const [contractAddress, deployment] of Object.entries(
