@@ -140,8 +140,8 @@ describe('Integration Test: Deposit', async () => {
 
       await tokenVault
         .connect(alice)
-        .deposit(hexETH, initialETHBalance.div(5), {
-          value: initialETHBalance.div(5),
+        .deposit(hexETH, initialETHBalance.div(3), {
+          value: initialETHBalance.div(3),
         });
 
       const tokenVaultBalance = await wETHToken.balanceOf(tokenVault.address);
@@ -154,12 +154,20 @@ describe('Integration Test: Deposit', async () => {
         hexETH,
       );
 
-      expect(tokenVaultBalance).to.equal(initialETHBalance.div(5));
+      expect(tokenVaultBalance).to.equal(initialETHBalance.div(3));
       expect(currencies.includes(hexETH)).to.equal(true);
-      expect(depositAmount).to.equal(initialETHBalance.div(5));
+      expect(depositAmount).to.equal(initialETHBalance.div(3));
       expect(
         totalCollateralAmountAfter.sub(totalCollateralAmountBefore),
-      ).to.equal(initialETHBalance.div(5));
+      ).to.equal(initialETHBalance.div(3));
+    });
+
+    it('Check withdrawable amount', async () => {
+      const withdrawableCollateral = await tokenVault[
+        'getWithdrawableCollateral(bytes32,address)'
+      ](hexETH, alice.address);
+
+      expect(withdrawableCollateral).to.equal(initialETHBalance.div(3));
     });
 
     it('Withdraw all collateral', async () => {
@@ -168,7 +176,7 @@ describe('Integration Test: Deposit', async () => {
 
       await tokenVault
         .connect(alice)
-        .withdraw(hexETH, initialETHBalance.div(5));
+        .withdraw(hexETH, initialETHBalance.div(3));
 
       const tokenVaultBalance = await wETHToken.balanceOf(tokenVault.address);
       const currencies = await tokenVault.getUsedCurrencies(alice.address);
@@ -185,7 +193,7 @@ describe('Integration Test: Deposit', async () => {
       expect(depositAmount).to.equal(0);
       expect(
         totalCollateralAmountBefore.sub(totalCollateralAmountAfter),
-      ).to.equal(initialETHBalance.div(5));
+      ).to.equal(initialETHBalance.div(3));
     });
 
     it('Clean up funds', async () => {
@@ -207,10 +215,10 @@ describe('Integration Test: Deposit', async () => {
 
       await wBTCToken
         .connect(alice)
-        .approve(tokenVault.address, initialWBTCBalance.div(5));
+        .approve(tokenVault.address, initialWBTCBalance.div(7));
       await tokenVault
         .connect(alice)
-        .deposit(hexWBTC, initialWBTCBalance.div(5));
+        .deposit(hexWBTC, initialWBTCBalance.div(7));
 
       const tokenVaultBalance = await wBTCToken.balanceOf(tokenVault.address);
       const currencies = await tokenVault.getUsedCurrencies(alice.address);
@@ -222,12 +230,20 @@ describe('Integration Test: Deposit', async () => {
         hexWBTC,
       );
 
-      expect(tokenVaultBalance).to.equal(initialWBTCBalance.div(5));
+      expect(tokenVaultBalance).to.equal(initialWBTCBalance.div(7));
       expect(currencies.includes(hexWBTC)).to.equal(true);
-      expect(depositAmount).to.equal(initialWBTCBalance.div(5));
+      expect(depositAmount).to.equal(initialWBTCBalance.div(7));
       expect(
         totalCollateralAmountAfter.sub(totalCollateralAmountBefore),
-      ).to.equal(initialWBTCBalance.div(5));
+      ).to.equal(initialWBTCBalance.div(7));
+    });
+
+    it('Check withdrawable amount', async () => {
+      const withdrawableCollateral = await tokenVault[
+        'getWithdrawableCollateral(bytes32,address)'
+      ](hexWBTC, alice.address);
+
+      expect(withdrawableCollateral).to.equal(initialWBTCBalance.div(7));
     });
 
     it('Withdraw all collateral', async () => {
@@ -236,7 +252,7 @@ describe('Integration Test: Deposit', async () => {
 
       await tokenVault
         .connect(alice)
-        .withdraw(hexWBTC, initialETHBalance.div(5));
+        .withdraw(hexWBTC, initialWBTCBalance.div(7));
 
       const tokenVaultBalance = await wBTCToken.balanceOf(tokenVault.address);
       const currencies = await tokenVault.getUsedCurrencies(alice.address);
@@ -253,7 +269,7 @@ describe('Integration Test: Deposit', async () => {
       expect(depositAmount).to.equal(0);
       expect(
         totalCollateralAmountBefore.sub(totalCollateralAmountAfter),
-      ).to.equal(initialWBTCBalance.div(5));
+      ).to.equal(initialWBTCBalance.div(7));
     });
 
     it('Clean up funds', async () => {
