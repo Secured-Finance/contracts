@@ -160,7 +160,7 @@ contract TokenVault is
 
     // @inheritdoc Proxyable
     function getRevision() external pure override returns (uint256) {
-        return 0x2;
+        return 0x3;
     }
 
     /**

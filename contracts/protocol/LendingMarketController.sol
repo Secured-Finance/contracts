@@ -135,7 +135,7 @@ contract LendingMarketController is
 
     // @inheritdoc Proxyable
     function getRevision() external pure override returns (uint256) {
-        return 0x3;
+        return 0x4;
     }
 
     /**
@@ -1090,17 +1090,5 @@ contract LendingMarketController is
         if (_maturity != 0 && !isValidMaturity(_ccy, _maturity)) revert InvalidMaturity();
 
         LendingMarketUserLogic.depositZCToken(_ccy, _maturity, msg.sender, _amount);
-    }
-
-    /**
-     * @notice Migrate the lending market to the new version.
-     * @dev ZCTokens do not exist in markets that were deployed before the contract upgrade,
-     * so they must be configured individually.
-     * This function can be deleted after executing for all currencies and maturities.
-     * @param _ccy Currency name in bytes32
-     * @param _maturity The maturity of the ZCToken
-     */
-    function migrateLendingMarket(bytes32 _ccy, uint256 _maturity) external onlyOwner {
-        LendingMarketOperationLogic.migrateLendingMarket(_ccy, _maturity);
     }
 }

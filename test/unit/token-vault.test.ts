@@ -1053,6 +1053,11 @@ describe('TokenVault', () => {
       expect(
         await tokenVaultProxy.getTotalCollateralAmount(signer.address),
       ).to.equal('0');
+
+      const currencies = await tokenVaultProxy.getUsedCurrencies(
+        signer.address,
+      );
+      expect(currencies.includes(targetCurrency)).to.false;
     });
 
     it('Add an amount in a currency that is not accepted as collateral', async () => {

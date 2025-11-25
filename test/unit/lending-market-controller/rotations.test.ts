@@ -804,26 +804,6 @@ describe('LendingMarketController - Rotations', () => {
         lendingMarketControllerProxy.rotateOrderBooks(targetCurrency),
       ).revertedWith('InvalidCurrency');
     });
-
-    it('Fail to rotate order books due to no order book', async () => {
-      const targetCurrency = ethers.utils.formatBytes32String('NoOrderBook');
-      await lendingMarketControllerProxy.migrateLendingMarket(
-        targetCurrency,
-        0,
-      );
-
-      await expect(
-        lendingMarketControllerProxy.rotateOrderBooks(targetCurrency),
-      ).revertedWith('NotEnoughOrderBooks');
-    });
-
-    it('Fail to rotate order books due to no zc token', async () => {
-      await expect(
-        lendingMarketControllerProxy.rotateOrderBooks(
-          ethers.utils.formatBytes32String('NoZcToken'),
-        ),
-      ).revertedWith('ZcTokenIsZero');
-    });
   });
 
   describe('Pre-open order books', async () => {
