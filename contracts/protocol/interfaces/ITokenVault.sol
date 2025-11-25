@@ -113,8 +113,6 @@ interface ITokenVault {
 
     function removeDepositAmount(address user, bytes32 ccy, uint256 amount) external;
 
-    function cleanUpUsedCurrencies(address user, bytes32 ccy) external;
-
     function executeForcedReset(address user, bytes32 ccy) external returns (uint256 removedAmount);
 
     function transferFrom(

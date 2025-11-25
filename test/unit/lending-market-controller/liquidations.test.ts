@@ -105,7 +105,6 @@ describe('LendingMarketController - Liquidations', () => {
     await mockCurrencyController.mock.getHaircut.returns(8000);
     await mockTokenVault.mock.addDepositAmount.returns();
     await mockTokenVault.mock.removeDepositAmount.returns();
-    await mockTokenVault.mock.cleanUpUsedCurrencies.returns();
     await mockTokenVault.mock.getTokenAddress.returns(
       ethers.constants.AddressZero,
     );

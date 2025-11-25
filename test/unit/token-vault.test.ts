@@ -1004,10 +1004,6 @@ describe('TokenVault', () => {
         .connect(signer)
         .removeDepositAmount(signer.address, targetCurrency, value);
 
-      await tokenVaultCaller
-        .connect(signer)
-        .cleanUpUsedCurrencies(signer.address, targetCurrency);
-
       expect(
         await tokenVaultProxy.getTotalUnusedCollateralAmount(signer.address),
       ).to.equal('0');
@@ -1854,10 +1850,6 @@ describe('TokenVault', () => {
           bob.address,
           arbitraryAmount,
         ),
-      ).to.be.revertedWith('Pausable: paused');
-
-      await expect(
-        tokenVaultCaller.cleanUpUsedCurrencies(alice.address, targetCurrency),
       ).to.be.revertedWith('Pausable: paused');
     });
 

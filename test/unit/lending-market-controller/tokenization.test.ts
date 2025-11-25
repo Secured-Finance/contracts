@@ -72,7 +72,6 @@ describe('LendingMarketController - Tokenization', () => {
     ].returns('10');
     await mockTokenVault.mock.addDepositAmount.returns();
     await mockTokenVault.mock.removeDepositAmount.returns();
-    await mockTokenVault.mock.cleanUpUsedCurrencies.returns();
     await mockTokenVault.mock.depositFrom.returns();
     await mockTokenVault.mock.isCovered.returns(true, true);
     await mockTokenVault.mock['isCollateral(bytes32[])'].returns([true]);
