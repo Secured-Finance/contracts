@@ -51,17 +51,7 @@ describe('LendingMarketController - Operations', () => {
   let bob: SignerWithAddress;
   let carol: SignerWithAddress;
 
-  beforeEach(async () => {
-    targetCurrency = ethers.utils.formatBytes32String(`Test${currencyIdx}`);
-    currencyIdx++;
-
-    const { timestamp } = await ethers.provider.getBlock('latest');
-    genesisDate = getGenesisDate(timestamp * 1000);
-
-    await initialize(targetCurrency);
-  });
-
-  before(async () => {
+  const initialize = async () => {
     [owner, alice, bob, carol] = await ethers.getSigners();
 
     ({
@@ -95,9 +85,9 @@ describe('LendingMarketController - Operations', () => {
     await mockTokenVault.mock.isCovered.returns(true, true);
     await mockTokenVault.mock.getTokenAddress.returns(mockERC20.address);
     await mockERC20.mock.decimals.returns(18);
-  });
+  };
 
-  const initialize = async (currency: string) => {
+  const initializeCurrency = async (currency: string) => {
     await lendingMarketControllerProxy.initializeLendingMarket(
       currency,
       genesisDate,
@@ -123,6 +113,20 @@ describe('LendingMarketController - Operations', () => {
       .getFutureValueVault(targetCurrency)
       .then((address) => ethers.getContractAt('FutureValueVault', address));
   };
+
+  beforeEach(async () => {
+    if (currencyIdx % 5 === 0) {
+      await initialize();
+    }
+
+    targetCurrency = ethers.utils.formatBytes32String(`Test${currencyIdx}`);
+    currencyIdx++;
+
+    const { timestamp } = await ethers.provider.getBlock('latest');
+    genesisDate = getGenesisDate(timestamp * 1000);
+
+    await initializeCurrency(targetCurrency);
+  });
 
   describe('Operations', async () => {
     describe('Order books', async () => {

@@ -41,6 +41,10 @@ describe('LendingMarketController - Itayose', () => {
   let dave: SignerWithAddress;
 
   beforeEach(async () => {
+    if (currencyIdx % 5 === 0) {
+      await initialize();
+    }
+
     targetCurrency = ethers.utils.formatBytes32String(`Test${currencyIdx}`);
     currencyIdx++;
 
@@ -50,7 +54,7 @@ describe('LendingMarketController - Itayose', () => {
     genesisDate = getGenesisDate(timestamp * 1000);
   });
 
-  before(async () => {
+  const initialize = async () => {
     [owner, alice, bob, carol, dave] = await ethers.getSigners();
 
     ({
@@ -78,9 +82,12 @@ describe('LendingMarketController - Itayose', () => {
     await mockTokenVault.mock.depositWithPermitFrom.returns();
     await mockTokenVault.mock.getTokenAddress.returns(mockERC20.address);
     await mockERC20.mock.decimals.returns(18);
-  });
+  };
 
-  const initialize = async (currency: string, openingDate = genesisDate) => {
+  const initializeCurrency = async (
+    currency: string,
+    openingDate = genesisDate,
+  ) => {
     await lendingMarketControllerProxy.initializeLendingMarket(
       currency,
       genesisDate,
@@ -112,7 +119,7 @@ describe('LendingMarketController - Itayose', () => {
       .add(2, 'h')
       .unix();
 
-    await initialize(targetCurrency, openingDate);
+    await initializeCurrency(targetCurrency, openingDate);
 
     const estimation = await lendingMarketReader.getItayoseEstimation(
       targetCurrency,
@@ -130,7 +137,7 @@ describe('LendingMarketController - Itayose', () => {
       .add(2, 'h')
       .unix();
 
-    await initialize(targetCurrency, openingDate);
+    await initializeCurrency(targetCurrency, openingDate);
 
     await genesisValueVaultProxy
       .getLatestAutoRollLog(targetCurrency)
@@ -293,7 +300,7 @@ describe('LendingMarketController - Itayose', () => {
       .add(2, 'h')
       .unix();
 
-    await initialize(targetCurrency, openingDate);
+    await initializeCurrency(targetCurrency, openingDate);
 
     await genesisValueVaultProxy
       .getLatestAutoRollLog(targetCurrency)
@@ -416,7 +423,7 @@ describe('LendingMarketController - Itayose', () => {
       .add(2, 'h')
       .unix();
 
-    await initialize(targetCurrency, openingDate);
+    await initializeCurrency(targetCurrency, openingDate);
 
     const orders = [
       {
@@ -520,7 +527,7 @@ describe('LendingMarketController - Itayose', () => {
       .add(2, 'h')
       .unix();
 
-    await initialize(targetCurrency, openingDate);
+    await initializeCurrency(targetCurrency, openingDate);
 
     const orders = [
       {
@@ -619,7 +626,7 @@ describe('LendingMarketController - Itayose', () => {
   });
 
   it('Execute Itayose call after auto-rolling', async () => {
-    await initialize(targetCurrency);
+    await initializeCurrency(targetCurrency);
 
     await lendingMarketControllerProxy
       .connect(bob)
@@ -744,7 +751,7 @@ describe('LendingMarketController - Itayose', () => {
       .add(2, 'h')
       .unix();
 
-    await initialize(targetCurrency, openingDate);
+    await initializeCurrency(targetCurrency, openingDate);
 
     const maturity = maturities[0];
 
@@ -831,7 +838,7 @@ describe('LendingMarketController - Itayose', () => {
       .add(2, 'h')
       .unix();
 
-    await initialize(targetCurrency, openingDate);
+    await initializeCurrency(targetCurrency, openingDate);
 
     const maturity = maturities[0];
 
@@ -918,7 +925,7 @@ describe('LendingMarketController - Itayose', () => {
       .add(2, 'h')
       .unix();
 
-    await initialize(targetCurrency, openingDate);
+    await initializeCurrency(targetCurrency, openingDate);
 
     const orders = [
       {
@@ -1060,7 +1067,7 @@ describe('LendingMarketController - Itayose', () => {
       .add(2, 'h')
       .unix();
 
-    await initialize(targetCurrency, openingDate);
+    await initializeCurrency(targetCurrency, openingDate);
 
     const deadline = ethers.constants.MaxUint256;
     const v = 1;
@@ -1090,7 +1097,7 @@ describe('LendingMarketController - Itayose', () => {
       .add(2, 'h')
       .unix();
 
-    await initialize(targetCurrency, openingDate);
+    await initializeCurrency(targetCurrency, openingDate);
 
     for (let i = 0; i < 20; i++) {
       await lendingMarketControllerProxy

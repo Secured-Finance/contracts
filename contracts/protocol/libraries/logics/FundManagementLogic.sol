@@ -30,6 +30,7 @@ library FundManagementLogic {
     using RoundingInt256 for int256;
 
     uint256 public constant BASE_MIN_DEBT_UNIT_PRICE = 9600;
+    uint256 public constant MAX_USED_CURRENCIES = 5;
 
     error NotRedemptionPeriod();
     error NotRepaymentPeriod();
@@ -37,6 +38,7 @@ library FundManagementLogic {
     error NoRepaymentAmount();
     error AlreadyRedeemed();
     error InsufficientCollateral();
+    error TooManyUsedCurrencies();
 
     struct CalculatedTotalFundInBaseCurrencyVars {
         address user;
@@ -243,8 +245,12 @@ library FundManagementLogic {
     }
 
     function registerCurrency(bytes32 _ccy, address _user) public {
-        if (!Storage.slot().usedCurrencies[_user].contains(_ccy)) {
-            Storage.slot().usedCurrencies[_user].add(_ccy);
+        EnumerableSet.Bytes32Set storage currencySet = Storage.slot().usedCurrencies[_user];
+        if (!currencySet.contains(_ccy)) {
+            if (currencySet.length() >= MAX_USED_CURRENCIES) {
+                revert TooManyUsedCurrencies();
+            }
+            currencySet.add(_ccy);
         }
     }
 

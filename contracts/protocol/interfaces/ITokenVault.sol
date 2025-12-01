@@ -13,6 +13,7 @@ interface ITokenVault {
     error CallerNotBaseCurrency(address caller);
     error MarketTerminated();
     error RedemptionIsRequired();
+    error TooManyUsedCurrencies();
 
     event Deposit(address indexed user, bytes32 ccy, uint256 amount, address caller);
     event Withdraw(address indexed user, bytes32 ccy, uint256 amount);
