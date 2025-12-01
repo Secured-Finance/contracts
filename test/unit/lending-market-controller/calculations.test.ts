@@ -35,16 +35,20 @@ describe('LendingMarketController - Calculations', () => {
   let bob: SignerWithAddress;
 
   beforeEach(async () => {
+    if (currencyIdx % 5 === 0) {
+      await initialize();
+    }
+
     targetCurrency = ethers.utils.formatBytes32String(`Test${currencyIdx}`);
     currencyIdx++;
 
     const { timestamp } = await ethers.provider.getBlock('latest');
     genesisDate = getGenesisDate(timestamp * 1000);
 
-    await initialize(targetCurrency);
+    await initializeCurrency(targetCurrency);
   });
 
-  before(async () => {
+  const initialize = async () => {
     [owner, alice, bob] = await ethers.getSigners();
 
     ({
@@ -76,9 +80,9 @@ describe('LendingMarketController - Calculations', () => {
     await mockTokenVault.mock.calculateCoverage.returns('1000', false);
     await mockTokenVault.mock.getTokenAddress.returns(mockERC20.address);
     await mockERC20.mock.decimals.returns(18);
-  });
+  };
 
-  const initialize = async (currency: string) => {
+  const initializeCurrency = async (currency: string) => {
     await lendingMarketControllerProxy.initializeLendingMarket(
       currency,
       genesisDate,

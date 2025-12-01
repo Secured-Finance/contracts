@@ -35,7 +35,10 @@ describe('LendingMarketController - Terminations', () => {
   let carol: SignerWithAddress;
   let dave: SignerWithAddress;
 
-  const initialize = async (currency: string, openingDate = genesisDate) => {
+  const initializeCurrency = async (
+    currency: string,
+    openingDate = genesisDate,
+  ) => {
     await lendingMarketControllerProxy.initializeLendingMarket(
       currency,
       genesisDate,
@@ -104,7 +107,7 @@ describe('LendingMarketController - Terminations', () => {
     await mockERC20.mock.balanceOf.returns(1000000000);
     await mockERC20.mock.decimals.returns(18);
 
-    await initialize(targetCurrency);
+    await initializeCurrency(targetCurrency);
   });
 
   describe('Terminations', async () => {
@@ -439,7 +442,7 @@ describe('LendingMarketController - Terminations', () => {
       ).to.emit(fundManagementLogic, 'OrderFilled');
 
       const targetCurrency2 = ethers.utils.formatBytes32String(`TestCurrency2`);
-      await initialize(targetCurrency2);
+      await initializeCurrency(targetCurrency2);
       await mockCurrencyController.mock.getCurrencies.returns([
         targetCurrency,
         targetCurrency2,

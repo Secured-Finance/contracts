@@ -193,8 +193,6 @@ library LendingMarketUserLogic {
             filledAmount -
             partiallyFilledOrder.amount;
 
-        Storage.slot().usedCurrencies[_user].add(_ccy);
-
         _isCovered(_user, _ccy);
     }
 
@@ -221,8 +219,6 @@ library LendingMarketUserLogic {
             _amount,
             _unitPrice
         );
-
-        Storage.slot().usedCurrencies[_user].add(_ccy);
 
         _isCovered(_user, _ccy);
     }
@@ -395,11 +391,11 @@ library LendingMarketUserLogic {
 
         if (_maturity == 0) {
             _depositZCPerpetualToken(_ccy, _user, _amount);
+            FundManagementLogic.registerCurrency(_ccy, _user);
         } else {
             _depositZCToken(_ccy, _maturity, _user, _amount);
+            FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, _user);
         }
-
-        FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, _user);
     }
 
     function getWithdrawableZCTokenAmount(

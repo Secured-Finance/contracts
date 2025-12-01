@@ -561,7 +561,7 @@ describe('Performance Test: Order Replay', function () {
 
     it('Itayose', async function () {
       // Advance time and execute Itayose
-      await time.increaseTo(Math.floor(Date.now() / 1000) + 7200);
+      await time.increase(7200);
       for (const maturity of maturities) {
         await lendingMarketController.executeItayoseCall(ccy, maturity);
       }
