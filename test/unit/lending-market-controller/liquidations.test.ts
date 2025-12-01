@@ -52,7 +52,7 @@ describe('LendingMarketController - Liquidations', () => {
     return users;
   };
 
-  const initialize = async (
+  const initializeCurrency = async (
     currency: string,
     compoundFactor: string | BigNumber = INITIAL_COMPOUND_FACTOR,
   ) => {
@@ -76,7 +76,7 @@ describe('LendingMarketController - Liquidations', () => {
     maturities = await lendingMarketControllerProxy.getMaturities(currency);
   };
 
-  before(async () => {
+  const initialize = async () => {
     [owner, ...signers] = await ethers.getSigners();
 
     ({
@@ -109,9 +109,13 @@ describe('LendingMarketController - Liquidations', () => {
       ethers.constants.AddressZero,
     );
     await mockERC20.mock.decimals.returns(18);
-  });
+  };
 
   beforeEach(async () => {
+    if (currencyIdx % 5 === 0) {
+      await initialize();
+    }
+
     targetCurrency = ethers.utils.formatBytes32String(`Test${currencyIdx}`);
     currencyIdx++;
 
@@ -137,7 +141,7 @@ describe('LendingMarketController - Liquidations', () => {
     ].returns([2, 3]);
     await mockCurrencyController.mock.currencyExists.returns(true);
 
-    await initialize(targetCurrency);
+    await initializeCurrency(targetCurrency);
   });
 
   describe('External liquidator', async () => {
@@ -1218,7 +1222,7 @@ describe('LendingMarketController - Liquidations', () => {
         const targetCurrency = ethers.utils.formatBytes32String(
           `RepaymentTest${currencyIdx}`,
         );
-        initialize(targetCurrency, compoundFactor);
+        initializeCurrency(targetCurrency, compoundFactor);
 
         const orderAmount = ethers.BigNumber.from('100000000000000000');
         const orderRate = ethers.BigNumber.from('10000');

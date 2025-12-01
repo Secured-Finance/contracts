@@ -47,6 +47,10 @@ describe('LendingMarketController - Rotations', () => {
   let dave: SignerWithAddress;
 
   beforeEach(async () => {
+    if (currencyIdx % 5 === 0) {
+      await initialize();
+    }
+
     targetCurrency = ethers.utils.formatBytes32String(`Test${currencyIdx}`);
     currencyIdx++;
 
@@ -54,7 +58,7 @@ describe('LendingMarketController - Rotations', () => {
     genesisDate = getGenesisDate(timestamp * 1000);
   });
 
-  before(async () => {
+  const initialize = async () => {
     [owner, alice, bob, carol, dave] = await ethers.getSigners();
 
     ({
@@ -86,9 +90,12 @@ describe('LendingMarketController - Rotations', () => {
     await mockTokenVault.mock.isCovered.returns(true, true);
     await mockTokenVault.mock.getTokenAddress.returns(mockERC20.address);
     await mockERC20.mock.decimals.returns(18);
-  });
+  };
 
-  const initialize = async (currency: string, openingDate = genesisDate) => {
+  const initializeCurrency = async (
+    currency: string,
+    openingDate = genesisDate,
+  ) => {
     await lendingMarketControllerProxy.initializeLendingMarket(
       currency,
       genesisDate,
@@ -125,7 +132,7 @@ describe('LendingMarketController - Rotations', () => {
 
   describe('General order books', async () => {
     beforeEach(async () => {
-      await initialize(targetCurrency);
+      await initializeCurrency(targetCurrency);
     });
 
     it('Rotate markets multiple times under condition without lending position', async () => {
@@ -815,7 +822,7 @@ describe('LendingMarketController - Rotations', () => {
         .add(2, 'h')
         .unix();
 
-      await initialize(targetCurrency, openingDate);
+      await initializeCurrency(targetCurrency, openingDate);
     });
 
     it('Rotate markets including one market that has pre-orders adjusted by with the residual amount.', async () => {

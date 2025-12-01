@@ -267,6 +267,11 @@ describe('Integration Test: Tokenization', async () => {
           );
 
         expect(alicePV).to.equal(orderAmount);
+
+        const usedCurrencies = await lendingMarketController.getUsedCurrencies(
+          alice.address,
+        );
+        expect(usedCurrencies.length).to.equal(1);
       });
 
       it('Withdraw ZC token', async () => {
