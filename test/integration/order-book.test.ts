@@ -224,6 +224,18 @@ describe('Integration Test: Order Book', async () => {
         expect(aliceFV).to.equal(0);
       });
 
+      it('Cleanup funds', async () => {
+        const currenciesBeforeCleanup =
+          await lendingMarketController.getUsedCurrencies(alice.address);
+        expect(currenciesBeforeCleanup.includes(hexETH)).to.equal(true);
+
+        await lendingMarketController.cleanUpFunds(hexETH, alice.address);
+
+        const currenciesAfterCleanup =
+          await lendingMarketController.getUsedCurrencies(alice.address);
+        expect(currenciesAfterCleanup.includes(hexETH)).to.equal(false);
+      });
+
       after(async () => {
         const { activeOrders } = await lendingMarketReader[
           'getOrders(bytes32,address)'
@@ -375,6 +387,18 @@ describe('Integration Test: Order Book', async () => {
 
         expect(aliceFV).to.equal(0);
       });
+
+      it('Cleanup funds', async () => {
+        const currenciesBeforeCleanup =
+          await lendingMarketController.getUsedCurrencies(alice.address);
+        expect(currenciesBeforeCleanup.includes(hexWFIL)).to.equal(true);
+
+        await lendingMarketController.cleanUpFunds(hexWFIL, alice.address);
+
+        const currenciesAfterCleanup =
+          await lendingMarketController.getUsedCurrencies(alice.address);
+        expect(currenciesAfterCleanup.includes(hexWFIL)).to.equal(false);
+      });
     });
 
     describe('Fill the order, Unwind the lending order', async () => {
@@ -505,6 +529,18 @@ describe('Integration Test: Order Book', async () => {
             )
             .abs(1),
         ).to.lte(1);
+      });
+
+      it('Cleanup funds', async () => {
+        const currenciesBeforeCleanup =
+          await lendingMarketController.getUsedCurrencies(bob.address);
+        expect(currenciesBeforeCleanup.includes(hexWFIL)).to.equal(true);
+
+        await lendingMarketController.cleanUpFunds(hexWFIL, bob.address);
+
+        const currenciesAfterCleanup =
+          await lendingMarketController.getUsedCurrencies(bob.address);
+        expect(currenciesAfterCleanup.includes(hexWFIL)).to.equal(false);
       });
     });
 
@@ -703,6 +739,18 @@ describe('Integration Test: Order Book', async () => {
           );
 
         expect(aliceFVAfter.abs()).to.lte(aliceFVBefore.abs());
+      });
+
+      it('Cleanup funds', async () => {
+        const currenciesBeforeCleanup =
+          await lendingMarketController.getUsedCurrencies(alice.address);
+        expect(currenciesBeforeCleanup.includes(hexETH)).to.equal(true);
+
+        await lendingMarketController.cleanUpFunds(hexETH, alice.address);
+
+        const currenciesAfterCleanup =
+          await lendingMarketController.getUsedCurrencies(alice.address);
+        expect(currenciesAfterCleanup.includes(hexETH)).to.equal(true);
       });
     });
 
@@ -1389,6 +1437,18 @@ describe('Integration Test: Order Book', async () => {
           );
 
         expect(aliceFVAfter.sub(aliceFVBefore.div(2)).abs()).to.lte(1);
+      });
+
+      it('Cleanup funds', async () => {
+        const currenciesBeforeCleanup =
+          await lendingMarketController.getUsedCurrencies(alice.address);
+        expect(currenciesBeforeCleanup.includes(hexETH)).to.equal(true);
+
+        await lendingMarketController.cleanUpFunds(hexETH, alice.address);
+
+        const currenciesAfterCleanup =
+          await lendingMarketController.getUsedCurrencies(alice.address);
+        expect(currenciesAfterCleanup.includes(hexETH)).to.equal(true);
       });
 
       after(async () => {

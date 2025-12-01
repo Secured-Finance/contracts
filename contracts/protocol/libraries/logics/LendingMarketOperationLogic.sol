@@ -45,7 +45,6 @@ library LendingMarketOperationLogic {
     error NotEnoughOrderBooks();
     error AlreadyZCTokenExists(address tokenAddress);
     error InvalidMaturity(uint256 maturity);
-    error ZcTokenIsZero();
 
     event LendingMarketInitialized(
         bytes32 indexed ccy,
@@ -226,14 +225,6 @@ library LendingMarketOperationLogic {
     }
 
     function rotateOrderBooks(bytes32 _ccy) external {
-        // NOTE: Before the contract upgrade, the ZCToken did not exist, but the upgrade added it.
-        // This check is to prevent the error that occurs when the ZCToken is not created by the
-        // `migrateLendingMarket` function. After ZCTokens are added for all currencies and maturities,
-        // this check can be removed.
-        if (Storage.slot().zcTokens[_ccy][0] == address(0)) {
-            revert ZcTokenIsZero();
-        }
-
         if (!AddressResolverLib.currencyController().currencyExists(_ccy)) {
             revert InvalidCurrency();
         }
@@ -352,25 +343,6 @@ library LendingMarketOperationLogic {
                 .observationPeriodLogs[_ccy][_maturity].totalFutureValue += _filledFutureValue;
             }
         }
-    }
-
-    function migrateLendingMarket(bytes32 _ccy, uint256 _maturity) external {
-        address tokenAddress = AddressResolverLib.tokenVault().getTokenAddress(_ccy);
-
-        if (_maturity == 0) {
-            uint8 tokenDecimals = IERC20Metadata(tokenAddress).decimals();
-
-            if (tokenDecimals > COMPOUND_FACTOR_DECIMALS + ZC_TOKEN_BASE_DECIMALS) {
-                revert TooManyTokenDecimals(tokenAddress, tokenDecimals);
-            }
-
-            AddressResolverLib.genesisValueVault().updateDecimals(
-                _ccy,
-                COMPOUND_FACTOR_DECIMALS + ZC_TOKEN_BASE_DECIMALS - tokenDecimals
-            );
-        }
-
-        createZCToken(_ccy, _maturity, tokenAddress);
     }
 
     function createZCToken(bytes32 _ccy, uint256 _maturity, address _tokenAddress) public {

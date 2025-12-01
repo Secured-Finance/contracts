@@ -82,7 +82,6 @@ describe('LendingMarketController - Rotations', () => {
     ].returns('10');
     await mockTokenVault.mock.addDepositAmount.returns();
     await mockTokenVault.mock.removeDepositAmount.returns();
-    await mockTokenVault.mock.cleanUpUsedCurrencies.returns();
     await mockTokenVault.mock.depositFrom.returns();
     await mockTokenVault.mock.isCovered.returns(true, true);
     await mockTokenVault.mock.getTokenAddress.returns(mockERC20.address);
@@ -804,26 +803,6 @@ describe('LendingMarketController - Rotations', () => {
       await expect(
         lendingMarketControllerProxy.rotateOrderBooks(targetCurrency),
       ).revertedWith('InvalidCurrency');
-    });
-
-    it('Fail to rotate order books due to no order book', async () => {
-      const targetCurrency = ethers.utils.formatBytes32String('NoOrderBook');
-      await lendingMarketControllerProxy.migrateLendingMarket(
-        targetCurrency,
-        0,
-      );
-
-      await expect(
-        lendingMarketControllerProxy.rotateOrderBooks(targetCurrency),
-      ).revertedWith('NotEnoughOrderBooks');
-    });
-
-    it('Fail to rotate order books due to no zc token', async () => {
-      await expect(
-        lendingMarketControllerProxy.rotateOrderBooks(
-          ethers.utils.formatBytes32String('NoZcToken'),
-        ),
-      ).revertedWith('ZcTokenIsZero');
     });
   });
 

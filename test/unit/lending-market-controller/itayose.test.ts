@@ -75,7 +75,6 @@ describe('LendingMarketController - Itayose', () => {
     await mockTokenVault.mock.isCovered.returns(true, true);
     await mockTokenVault.mock.addDepositAmount.returns();
     await mockTokenVault.mock.removeDepositAmount.returns();
-    await mockTokenVault.mock.cleanUpUsedCurrencies.returns();
     await mockTokenVault.mock.depositWithPermitFrom.returns();
     await mockTokenVault.mock.getTokenAddress.returns(mockERC20.address);
     await mockERC20.mock.decimals.returns(18);

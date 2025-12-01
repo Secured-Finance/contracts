@@ -21,10 +21,6 @@ contract TokenVaultCaller {
         tokenVault.removeDepositAmount(user, ccy, amount);
     }
 
-    function cleanUpUsedCurrencies(address user, bytes32 ccy) public {
-        tokenVault.cleanUpUsedCurrencies(user, ccy);
-    }
-
     function executeForcedReset(address user, bytes32 ccy) public {
         tokenVault.executeForcedReset(user, ccy);
     }

@@ -270,8 +270,13 @@ library DepositManagementLogic {
     }
 
     function removeDepositAmount(address _user, bytes32 _ccy, uint256 _amount) public {
-        if (Storage.slot().depositAmounts[_user][_ccy] < _amount) {
+        uint256 currentAmount = Storage.slot().depositAmounts[_user][_ccy];
+        if (currentAmount < _amount) {
             revert NotEnoughDeposit({ccy: _ccy});
+        }
+
+        if (currentAmount == _amount) {
+            Storage.slot().usedCurrencies[_user].remove(_ccy);
         }
 
         Storage.slot().depositAmounts[_user][_ccy] -= _amount;
@@ -414,12 +419,6 @@ library DepositManagementLogic {
 
         removeDepositAmount(_from, _ccy, amount);
         addDepositAmount(_to, _ccy, amount);
-    }
-
-    function cleanUpUsedCurrencies(address _user, bytes32 _ccy) external {
-        if (Storage.slot().depositAmounts[_user][_ccy] == 0) {
-            Storage.slot().usedCurrencies[_user].remove(_ccy);
-        }
     }
 
     /**

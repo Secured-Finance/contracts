@@ -72,7 +72,6 @@ describe('LendingMarketController - Tokenization', () => {
     ].returns('10');
     await mockTokenVault.mock.addDepositAmount.returns();
     await mockTokenVault.mock.removeDepositAmount.returns();
-    await mockTokenVault.mock.cleanUpUsedCurrencies.returns();
     await mockTokenVault.mock.depositFrom.returns();
     await mockTokenVault.mock.isCovered.returns(true, true);
     await mockTokenVault.mock['isCollateral(bytes32[])'].returns([true]);
@@ -248,54 +247,6 @@ describe('LendingMarketController - Tokenization', () => {
       expect(zcTokenInfo.maturity).to.equal(nextMaturity.unix());
       expect(await zcToken.name()).to.equal(tokenName);
       expect(await zcToken.symbol()).to.equal(tokenSymbol);
-    });
-
-    it('Create a new zc token manually', async () => {
-      await expect(
-        lendingMarketControllerProxy.migrateLendingMarket(targetCurrency, 0),
-      )
-        .to.emit(lendingMarketOperationLogic, 'ZCTokenCreated')
-        .withArgs(
-          targetCurrency,
-          0,
-          `ZC ${targetCurrencySymbol}`,
-          `zc${targetCurrencySymbol}`,
-          24,
-          () => true,
-        );
-    });
-
-    it('Fail to migrate a lending market manually if it already exists', async () => {
-      await lendingMarketControllerProxy.migrateLendingMarket(
-        targetCurrency,
-        0,
-      );
-
-      await expect(
-        lendingMarketControllerProxy.migrateLendingMarket(targetCurrency, 0),
-      ).to.be.revertedWith('AlreadyZCTokenExists');
-    });
-
-    it('Fail to migrate a lending market manually if the maturity is invalid', async () => {
-      await expect(
-        lendingMarketControllerProxy.migrateLendingMarket(targetCurrency, 1),
-      ).to.be.revertedWith('InvalidMaturity');
-    });
-
-    it('Fail to migrate a lending market manually if the caller is not owner', async () => {
-      await expect(
-        lendingMarketControllerProxy
-          .connect(alice)
-          .migrateLendingMarket(targetCurrency, 0),
-      ).to.be.revertedWith('Ownable: caller is not the owner');
-    });
-
-    it('Fail to migrate a lending market manually due to too many token decimals', async () => {
-      await mockERC20.mock.decimals.returns(45);
-
-      await expect(
-        lendingMarketControllerProxy.migrateLendingMarket(targetCurrency, 0),
-      ).revertedWith(`TooManyTokenDecimals("${mockERC20.address}", 45)`);
     });
   });
 

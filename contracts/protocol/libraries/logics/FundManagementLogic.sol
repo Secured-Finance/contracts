@@ -764,8 +764,6 @@ library FundManagementLogic {
         }
 
         if (totalActiveOrderCount == 0) {
-            AddressResolverLib.tokenVault().cleanUpUsedCurrencies(_user, _ccy);
-
             if (
                 !futureValueExists &&
                 AddressResolverLib.genesisValueVault().getBalance(_ccy, _user, 0) == 0

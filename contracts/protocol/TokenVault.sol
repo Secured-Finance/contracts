@@ -160,7 +160,7 @@ contract TokenVault is
 
     // @inheritdoc Proxyable
     function getRevision() external pure override returns (uint256) {
-        return 0x2;
+        return 0x3;
     }
 
     /**
@@ -557,18 +557,6 @@ contract TokenVault is
     }
 
     /**
-     * @notice Clean up the used currencies of the user.
-     * @param _user User's address
-     * @param _ccy Currency name in bytes32
-     */
-    function cleanUpUsedCurrencies(
-        address _user,
-        bytes32 _ccy
-    ) external override whenNotPaused onlyLendingMarketController {
-        DepositManagementLogic.cleanUpUsedCurrencies(_user, _ccy);
-    }
-
-    /**
      * @notice Forces a reset of the user's deposit amount.
      * @param _user User's address
      * @param _ccy Currency name in bytes32
@@ -644,6 +632,7 @@ contract TokenVault is
         if (lendingMarketController().isRedemptionRequired(_user)) revert RedemptionIsRequired();
 
         lendingMarketController().cleanUpFunds(_ccy, _user);
+
         uint256 withdrawableAmount = DepositManagementLogic.withdraw(_user, _ccy, _amount);
 
         emit Withdraw(_user, _ccy, withdrawableAmount);

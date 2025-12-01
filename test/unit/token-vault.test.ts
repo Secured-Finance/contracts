@@ -1004,10 +1004,6 @@ describe('TokenVault', () => {
         .connect(signer)
         .removeDepositAmount(signer.address, targetCurrency, value);
 
-      await tokenVaultCaller
-        .connect(signer)
-        .cleanUpUsedCurrencies(signer.address, targetCurrency);
-
       expect(
         await tokenVaultProxy.getTotalUnusedCollateralAmount(signer.address),
       ).to.equal('0');
@@ -1057,6 +1053,11 @@ describe('TokenVault', () => {
       expect(
         await tokenVaultProxy.getTotalCollateralAmount(signer.address),
       ).to.equal('0');
+
+      const currencies = await tokenVaultProxy.getUsedCurrencies(
+        signer.address,
+      );
+      expect(currencies.includes(targetCurrency)).to.false;
     });
 
     it('Add an amount in a currency that is not accepted as collateral', async () => {
@@ -1854,10 +1855,6 @@ describe('TokenVault', () => {
           bob.address,
           arbitraryAmount,
         ),
-      ).to.be.revertedWith('Pausable: paused');
-
-      await expect(
-        tokenVaultCaller.cleanUpUsedCurrencies(alice.address, targetCurrency),
       ).to.be.revertedWith('Pausable: paused');
     });
 

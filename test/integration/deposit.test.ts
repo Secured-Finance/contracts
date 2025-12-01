@@ -189,7 +189,7 @@ describe('Integration Test: Deposit', async () => {
       );
 
       expect(tokenVaultBalance).to.equal(0);
-      expect(currencies.includes(hexETH)).to.equal(true);
+      expect(currencies.includes(hexETH)).to.equal(false);
       expect(depositAmount).to.equal(0);
       expect(
         totalCollateralAmountBefore.sub(totalCollateralAmountAfter),
@@ -265,7 +265,7 @@ describe('Integration Test: Deposit', async () => {
       );
 
       expect(tokenVaultBalance).to.equal(0);
-      expect(currencies.includes(hexWBTC)).to.equal(true);
+      expect(currencies.includes(hexWBTC)).to.equal(false);
       expect(depositAmount).to.equal(0);
       expect(
         totalCollateralAmountBefore.sub(totalCollateralAmountAfter),
@@ -349,7 +349,7 @@ describe('Integration Test: Deposit', async () => {
       );
 
       expect(tokenVaultBalance).to.equal(0);
-      expect(currencies.includes(hexETH)).to.equal(true);
+      expect(currencies.includes(hexETH)).to.equal(false);
       expect(depositAmount).to.equal(0);
       expect(
         totalCollateralAmountBefore.sub(totalCollateralAmountAfter),
@@ -469,7 +469,7 @@ describe('Integration Test: Deposit', async () => {
         initialETHBalance.div(5),
       );
       expect(tokenVaultBalance).to.equal(0);
-      expect(currencies.includes(hexETH)).to.equal(true);
+      expect(currencies.includes(hexETH)).to.equal(false);
       expect(depositAmount).to.equal(0);
       expect(
         totalCollateralAmountBefore.sub(totalCollateralAmountAfter),
@@ -595,7 +595,7 @@ describe('Integration Test: Deposit', async () => {
 
       expect(collateralAmountAfter.sub(collateralAmountBefore)).to.equal(0);
       expect(tokenVaultBalanceAfter).to.equal(0);
-      expect(currencies.includes(hexWFIL)).to.equal(true);
+      expect(currencies.includes(hexWFIL)).to.equal(false);
       expect(depositAmount).to.equal(0);
       expect(
         totalCollateralAmountBefore.sub(totalCollateralAmountAfter),

@@ -100,7 +100,6 @@ describe('LendingMarketController - Terminations', () => {
     await mockTokenVault.mock.getTokenAddress.returns(mockERC20.address);
     await mockTokenVault.mock.addDepositAmount.returns();
     await mockTokenVault.mock.removeDepositAmount.returns();
-    await mockTokenVault.mock.cleanUpUsedCurrencies.returns();
     await mockTokenVault.mock.depositFrom.returns();
     await mockERC20.mock.balanceOf.returns(1000000000);
     await mockERC20.mock.decimals.returns(18);
