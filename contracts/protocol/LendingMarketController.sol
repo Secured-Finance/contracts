@@ -824,6 +824,23 @@ contract LendingMarketController is
     }
 
     /**
+     * @notice Execute multiple actions in a single transaction for gas efficiency.
+     * @dev Inspired by Compound V3 Bulker pattern. Uses BatchAction enum.
+     *      The collateral check is performed only once at the end, reducing gas costs significantly.
+     *      Actions: DEPOSIT=0, EXECUTE_ORDER=1, EXECUTE_PRE_ORDER=2, UNWIND_POSITION=3
+     * @param _actions Array of BatchAction enum values
+     * @param _data Array of encoded action parameters corresponding to each action
+     * @return True if the execution of all operations succeeds
+     */
+    function executeBatch(
+        BatchAction[] calldata _actions,
+        bytes[] calldata _data
+    ) external payable nonReentrant ifActive returns (bool) {
+        LendingMarketUserLogic.executeBatch(msg.sender, _actions, _data);
+        return true;
+    }
+
+    /**
      * @notice Redeem user's lending positions.
      * Redemption can only be executed once the order book has matured after the currency has been delisted.
      * @param _ccy Currency name in bytes32 of the selected order book
