@@ -92,12 +92,6 @@ error AlreadyZCTokenExists(address tokenAddress)
 error InvalidMaturity(uint256 maturity)
 ```
 
-### ZcTokenIsZero
-
-```solidity
-error ZcTokenIsZero()
-```
-
 ### LendingMarketInitialized
 
 ```solidity
@@ -186,12 +180,6 @@ function unpauseLendingMarket(bytes32 _ccy) public
 
 ```solidity
 function updateOrderLogs(bytes32 _ccy, uint256 _maturity, uint256 _filledAmount, uint256 _filledFutureValue) external
-```
-
-### migrateLendingMarket
-
-```solidity
-function migrateLendingMarket(bytes32 _ccy, uint256 _maturity) external
 ```
 
 ### createZCToken

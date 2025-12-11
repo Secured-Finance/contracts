@@ -166,7 +166,7 @@ Fills orders in the order book.
 ### _unwindPosition
 
 ```solidity
-function _unwindPosition(uint8 _orderBookId, enum ProtocolTypes.Side _side, uint256 _futureValue, uint256 _unitPrice) private returns (struct FilledOrder filledOrder, struct PartiallyFilledOrder partiallyFilledOrder, bool isCircuitBreakerTriggered)
+function _unwindPosition(uint8 _orderBookId, enum ProtocolTypes.Side _side, uint256 _futureValue, uint256 _unitPrice) private returns (struct FilledOrder filledOrder, struct PartiallyFilledOrder partiallyFilledOrder, bool isCircuitBreakerTriggered, uint256 feeInFV)
 ```
 
 ### _getOrderBook

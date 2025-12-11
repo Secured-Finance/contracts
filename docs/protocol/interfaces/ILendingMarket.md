@@ -185,7 +185,7 @@ function isItayosePeriod(uint8 orderBookId) external view returns (bool)
 ### isPreOrderPeriod
 
 ```solidity
-function isPreOrderPeriod(uint8 orderBookId) external returns (bool)
+function isPreOrderPeriod(uint8 orderBookId) external view returns (bool)
 ```
 
 ### getItayoseLog

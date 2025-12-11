@@ -567,19 +567,6 @@ Removes deposit amount.
 | _ccy | bytes32 | Currency name in bytes32 |
 | _amount | uint256 | Amount of funds to withdraw. |
 
-### cleanUpUsedCurrencies
-
-```solidity
-function cleanUpUsedCurrencies(address _user, bytes32 _ccy) external
-```
-
-Clean up the used currencies of the user.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _user | address | User's address |
-| _ccy | bytes32 | Currency name in bytes32 |
-
 ### executeForcedReset
 
 ```solidity

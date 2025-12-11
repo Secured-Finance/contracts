@@ -998,20 +998,3 @@ This function is not inactivated after the emergency termination to allow users 
 | _maturity | uint256 | The maturity of the order book |
 | _amount | uint256 | The amount of ZCToken to burn |
 
-### migrateLendingMarket
-
-```solidity
-function migrateLendingMarket(bytes32 _ccy, uint256 _maturity) external
-```
-
-Migrate the lending market to the new version.
-
-_ZCTokens do not exist in markets that were deployed before the contract upgrade,
-so they must be configured individually.
-This function can be deleted after executing for all currencies and maturities._
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _ccy | bytes32 | Currency name in bytes32 |
-| _maturity | uint256 | The maturity of the ZCToken |
-

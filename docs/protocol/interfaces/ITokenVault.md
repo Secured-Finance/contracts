@@ -260,12 +260,6 @@ function addDepositAmount(address user, bytes32 ccy, uint256 amount) external
 function removeDepositAmount(address user, bytes32 ccy, uint256 amount) external
 ```
 
-### cleanUpUsedCurrencies
-
-```solidity
-function cleanUpUsedCurrencies(address user, bytes32 ccy) external
-```
-
 ### executeForcedReset
 
 ```solidity

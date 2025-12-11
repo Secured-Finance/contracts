@@ -92,7 +92,7 @@ function _calculateCollateral(address _user, struct ILendingMarketController.Add
 ### getWithdrawableCollateral
 
 ```solidity
-function getWithdrawableCollateral(address _user) public view returns (uint256)
+function getWithdrawableCollateral(address _user) public view returns (uint256, bool usedCollateralExists)
 ```
 
 ### getWithdrawableCollateral
@@ -147,12 +147,6 @@ function calculateLiquidationFees(uint256 _amount) public view returns (uint256 
 
 ```solidity
 function transferFrom(bytes32 _ccy, address _from, address _to, uint256 _amount) external returns (uint256 untransferredAmount)
-```
-
-### cleanUpUsedCurrencies
-
-```solidity
-function cleanUpUsedCurrencies(address _user, bytes32 _ccy) external
 ```
 
 ### _getTotalInternalDepositAmountInBaseCurrency
