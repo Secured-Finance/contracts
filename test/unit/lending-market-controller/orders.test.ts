@@ -3533,6 +3533,91 @@ describe('LendingMarketController - Orders', () => {
             ),
         ).to.be.revertedWith('FutureValueIsZero');
       });
+
+      it('Reproduce rounding error bug: unwind lending position results in ±1', async () => {
+        // This test reproduces the bug where unwinding a lending position
+        // results in a future value of ±1 instead of 0 due to double rounding errors.
+
+        const aliceAmount = '200'; // Small amount to trigger bug
+
+        // Alice places a lending order
+        await expect(
+          lendingMarketControllerProxy
+            .connect(alice)
+            .executeOrder(
+              targetCurrency,
+              maturities[0],
+              Side.LEND,
+              aliceAmount,
+              '9856',
+            ),
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
+
+        // Bob places a lending order (to provide liquidity for unwind later)
+        await expect(
+          lendingMarketControllerProxy.connect(bob).executeOrder(
+            targetCurrency,
+            maturities[0],
+            Side.LEND,
+            '400000000', // Enough liquidity
+            '9856',
+          ),
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
+
+        // Carol places a borrowing order that matches Alice's order
+        await expect(
+          lendingMarketControllerProxy
+            .connect(carol)
+            .executeOrder(
+              targetCurrency,
+              maturities[0],
+              Side.BORROW,
+              aliceAmount,
+              '9856',
+            ),
+        ).to.emit(fundManagementLogic, 'OrderFilled');
+
+        // Check Alice's initial position
+        const { futureValue: aliceInitialFV } =
+          await lendingMarketControllerProxy.getPosition(
+            targetCurrency,
+            maturities[0],
+            alice.address,
+          );
+
+        // Check duration to maturity BEFORE time advancement
+        let timestamp = (await ethers.provider.getBlock('latest')).timestamp;
+        let duration = maturities[0].sub(timestamp);
+
+        // Advance time to create a short duration where the bug occurs
+        // Bug occurs when duration is around 7772928s (89.97 days) for small FV values
+        const targetDuration = 7772928; // seconds
+        const timeToAdvance = duration.toNumber() - targetDuration;
+        await ethers.provider.send('evm_increaseTime', [timeToAdvance]);
+
+        // Verify new duration
+        timestamp = (await ethers.provider.getBlock('latest')).timestamp;
+        duration = maturities[0].sub(timestamp);
+
+        expect(aliceInitialFV).to.be.gt(0); // Alice should have positive FV (lending position)
+
+        // Execute the unwind
+        const unwindTx = await lendingMarketControllerProxy
+          .connect(alice)
+          .unwindPositionWithCap(targetCurrency, maturities[0], 0);
+
+        await unwindTx.wait();
+
+        // Check Alice's final position
+        const { futureValue: aliceFinalFV } =
+          await lendingMarketControllerProxy.getPosition(
+            targetCurrency,
+            maturities[0],
+            alice.address,
+          );
+
+        expect(aliceFinalFV).to.equal('0'); // This will fail if the bug exists
+      });
     });
 
     describe('Order Book', async () => {

@@ -359,13 +359,12 @@ library OrderActionLogic {
         if (!conditions.orderExists) revert EmptyOrderBook();
 
         if (conditions.isFilled) {
-            (filledOrder, partiallyFilledOrder, isCircuitBreakerTriggered) = _unwindPosition(
-                _orderBookId,
-                _side,
-                _futureValue,
-                conditions.executedUnitPrice
-            );
-            feeInFV = OrderReaderLogic.calculateOrderFeeAmount(maturity, filledOrder.futureValue);
+            (
+                filledOrder,
+                partiallyFilledOrder,
+                isCircuitBreakerTriggered,
+                feeInFV
+            ) = _unwindPosition(_orderBookId, _side, _futureValue, conditions.executedUnitPrice);
             (uint256 latestBlockUnitPrice, bool isUpdated) = orderBook.updateBlockUnitPriceHistory(
                 filledOrder.amount,
                 filledOrder.futureValue,
@@ -525,7 +524,8 @@ library OrderActionLogic {
         returns (
             FilledOrder memory filledOrder,
             PartiallyFilledOrder memory partiallyFilledOrder,
-            bool isCircuitBreakerTriggered
+            bool isCircuitBreakerTriggered,
+            uint256 feeInFV
         )
     {
         bool orderExists;
@@ -544,6 +544,20 @@ library OrderActionLogic {
         );
 
         isCircuitBreakerTriggered = orderExists && _futureValue != filledOrder.futureValue;
+
+        if (futureValueWithFee == filledOrder.futureValue) {
+            // Full unwind: use the difference between original futureValue and futureValueWithFee
+            // to avoid leaving dust amounts by rounding
+            feeInFV = _side == ProtocolTypes.Side.BORROW
+                ? _futureValue - futureValueWithFee
+                : futureValueWithFee - _futureValue;
+        } else {
+            // Partial unwind: calculate fee based on actually filled amount
+            feeInFV = OrderReaderLogic.calculateOrderFeeAmount(
+                orderBook.maturity,
+                filledOrder.futureValue
+            );
+        }
     }
 
     function _getOrderBook(
