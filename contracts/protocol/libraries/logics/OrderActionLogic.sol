@@ -543,7 +543,7 @@ library OrderActionLogic {
             _unitPrice
         );
 
-        isCircuitBreakerTriggered = orderExists && _futureValue != filledOrder.futureValue;
+        isCircuitBreakerTriggered = orderExists && futureValueWithFee != filledOrder.futureValue;
 
         if (futureValueWithFee == filledOrder.futureValue) {
             // Full unwind: use the difference between original futureValue and futureValueWithFee

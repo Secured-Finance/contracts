@@ -754,6 +754,48 @@ describe('LendingMarket - Circuit Breakers', () => {
   }
 
   describe('Unwind positions', async () => {
+    it('Unwind a position completely without triggering the circuit breaker', async () => {
+      await createInitialOrders(Side.LEND, 8000);
+
+      await expect(
+        lendingMarketCaller
+          .connect(bob)
+          .executeOrder(
+            targetCurrency,
+            currentOrderBookId,
+            Side.BORROW,
+            '50000000000000',
+            0,
+          ),
+      ).to.emit(orderActionLogic, 'OrderExecuted');
+
+      await createInitialOrders(Side.BORROW, 8500);
+
+      const tx = await lendingMarketCaller
+        .connect(bob)
+        .unwindPosition(
+          targetCurrency,
+          currentOrderBookId,
+          Side.LEND,
+          calculateFutureValue('50000000000000', 8000),
+        );
+
+      await expect(tx)
+        .to.emit(orderActionLogic, 'PositionUnwound')
+        .withArgs(
+          bob.address,
+          Side.LEND,
+          targetCurrency,
+          maturity,
+          calculateFutureValue('50000000000000', 8000),
+          () => true,
+          '8500',
+          () => true,
+          () => true,
+          false,
+        );
+    });
+
     it('Unwind a position partially until the circuit breaker threshold', async () => {
       await createInitialOrders(Side.LEND, 8000);
 
