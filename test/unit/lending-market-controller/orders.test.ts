@@ -50,18 +50,7 @@ describe('LendingMarketController - Orders', () => {
   let dave: SignerWithAddress;
   let ellen: SignerWithAddress;
 
-  beforeEach(async () => {
-    targetCurrency = ethers.utils.formatBytes32String(`Test${currencyIdx}`);
-    currencyIdx++;
-
-    const { timestamp } = await ethers.provider.getBlock('latest');
-    genesisDate = getGenesisDate(timestamp * 1000);
-
-    await mockCurrencyController.mock.currencyExists.returns(true);
-    await mockERC20.mock.decimals.returns(18);
-  });
-
-  before(async () => {
+  const initialize = async () => {
     [owner, alice, bob, carol, dave, ellen] = await ethers.getSigners();
 
     ({
@@ -93,6 +82,21 @@ describe('LendingMarketController - Orders', () => {
     await mockTokenVault.mock.depositFrom.returns();
     await mockTokenVault.mock.depositWithPermitFrom.returns();
     await mockTokenVault.mock.getTokenAddress.returns(mockERC20.address);
+  };
+
+  beforeEach(async () => {
+    if (currencyIdx % 5 === 0) {
+      await initialize();
+    }
+
+    targetCurrency = ethers.utils.formatBytes32String(`Test${currencyIdx}`);
+    currencyIdx++;
+
+    const { timestamp } = await ethers.provider.getBlock('latest');
+    genesisDate = getGenesisDate(timestamp * 1000);
+
+    await mockCurrencyController.mock.currencyExists.returns(true);
+    await mockERC20.mock.decimals.returns(18);
   });
 
   describe('Initialization', async () => {
@@ -364,7 +368,7 @@ describe('LendingMarketController - Orders', () => {
     let orderBookIds: BigNumber[];
     let lendingMarket: Contract;
 
-    const initialize = async (currency: string) => {
+    const initializeCurrency = async (currency: string) => {
       await lendingMarketControllerProxy.initializeLendingMarket(
         currency,
         genesisDate,
@@ -402,7 +406,7 @@ describe('LendingMarketController - Orders', () => {
       // Set up for the mocks
       await mockTokenVault.mock.isCovered.returns(true, true);
 
-      await initialize(targetCurrency);
+      await initializeCurrency(targetCurrency);
     });
 
     it('Get a market currency data', async () => {
@@ -1091,8 +1095,11 @@ describe('LendingMarketController - Orders', () => {
           '9879',
         );
 
-      const targetCurrency2 = ethers.utils.formatBytes32String(`TestCurrency2`);
-      await initialize(targetCurrency2);
+      const targetCurrency2 = ethers.utils.formatBytes32String(
+        `Test${currencyIdx}`,
+      );
+      currencyIdx++;
+      await initializeCurrency(targetCurrency2);
 
       await lendingMarketControllerProxy
         .connect(alice)
@@ -1377,8 +1384,11 @@ describe('LendingMarketController - Orders', () => {
           '8000',
         );
 
-      const targetCurrency2 = ethers.utils.formatBytes32String(`TestCurrency3`);
-      await initialize(targetCurrency2);
+      const targetCurrency2 = ethers.utils.formatBytes32String(
+        `Test${currencyIdx}`,
+      );
+      currencyIdx++;
+      await initializeCurrency(targetCurrency2);
 
       await lendingMarketControllerProxy
         .connect(alice)

@@ -47,6 +47,8 @@ contract TokenVault is
 {
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
+    uint256 public constant MAX_USED_CURRENCIES = 10;
+
     /**
      * @notice Modifier to check if currency hasn't been registered yet
      * @param _ccy Currency name in bytes32
@@ -620,6 +622,13 @@ contract TokenVault is
             (!TransferHelper.isNative(tokenAddress) && msg.value != 0)
         ) {
             revert InvalidAmount(_ccy, _amount, msg.value);
+        }
+
+        if (
+            Storage.slot().usedCurrencies[_caller].length() >= MAX_USED_CURRENCIES &&
+            !Storage.slot().usedCurrencies[_caller].contains(_ccy)
+        ) {
+            revert TooManyUsedCurrencies();
         }
 
         DepositManagementLogic.deposit(_caller, _ccy, _amount, _onBehalfOf);
