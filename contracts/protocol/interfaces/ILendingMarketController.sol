@@ -11,6 +11,14 @@ interface ILendingMarketController {
     error NotTerminated();
     error AlreadyInitialized();
 
+    // Batch action types for gas-efficient batch execution
+    enum BatchAction {
+        DEPOSIT, // 0
+        EXECUTE_ORDER, // 1
+        EXECUTE_PRE_ORDER, // 2
+        UNWIND_POSITION // 3
+    }
+
     struct AdditionalFunds {
         bytes32 ccy;
         uint256 workingLendOrdersAmount;
