@@ -2,7 +2,7 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { time } from '@openzeppelin/test-helpers';
 import { MockContract, deployMockContract } from 'ethereum-waffle';
 import { BigNumber, Contract } from 'ethers';
-import { artifacts, ethers } from 'hardhat';
+import { artifacts, ethers, network } from 'hardhat';
 
 import { expect } from 'chai';
 import moment from 'moment';
@@ -45,6 +45,8 @@ describe('LendingMarketController - Tokenization', () => {
   let dave: SignerWithAddress;
 
   before(async () => {
+    await network.provider.send('hardhat_reset');
+
     [owner, alice, bob, carol, dave] = await ethers.getSigners();
 
     ({
@@ -260,7 +262,7 @@ describe('LendingMarketController - Tokenization', () => {
     it('Withdraw zc tokens without used collaterals', async () => {
       await mockCurrencyController.mock[
         'convertFromBaseCurrency(bytes32,uint256[])'
-      ].returns([0, 0]);
+      ].returns([value, 0]);
 
       const zcTokenAddress = await lendingMarketControllerProxy.getZCToken(
         targetCurrency,
@@ -295,27 +297,32 @@ describe('LendingMarketController - Tokenization', () => {
         .withArgs(ethers.constants.AddressZero, alice.address, estimatedAmount);
 
       expect(await zcToken.balanceOf(alice.address)).to.equal(estimatedAmount);
+
+      const withdrawableAmountAfter =
+        await lendingMarketControllerProxy.getWithdrawableZCTokenAmount(
+          targetCurrency,
+          maturities[0],
+          alice.address,
+        );
+
+      expect(withdrawableAmountAfter).to.equal(0);
     });
 
-    it('Withdraw zc tokens used as discounted collateral', async () => {
+    it('Withdraw zc tokens used as discounted collateral with a small borrow amount', async () => {
       const totalCollateral = value;
-      const totalUnusedCollateral = value.div(2);
+      const totalUsedCollateral = value.div(10);
 
       await mockCurrencyController.mock[
         'convertFromBaseCurrency(bytes32,uint256[])'
-      ].returns([
-        totalCollateral,
-        totalCollateral
-          .sub(totalUnusedCollateral)
-          .mul(PCT_DIGIT)
-          .div(LIQUIDATION_THRESHOLD_RATE),
-      ]);
+      ].returns([totalCollateral, totalUsedCollateral]);
 
       const zcTokenAddress = await lendingMarketControllerProxy.getZCToken(
         targetCurrency,
         maturities[0],
       );
       const zcToken = await ethers.getContractAt('ZCToken', zcTokenAddress);
+      const lendAmount = value.mul(2);
+      const borrowAmount = value.div(2);
 
       await lendingMarketControllerProxy
         .connect(alice)
@@ -323,7 +330,7 @@ describe('LendingMarketController - Tokenization', () => {
           targetCurrency,
           maturities[0],
           Side.LEND,
-          value.mul(2),
+          lendAmount,
           '8000',
         );
 
@@ -333,7 +340,7 @@ describe('LendingMarketController - Tokenization', () => {
           targetCurrency,
           maturities[0],
           Side.BORROW,
-          value.mul(2),
+          lendAmount,
           '0',
         );
 
@@ -343,7 +350,7 @@ describe('LendingMarketController - Tokenization', () => {
           targetCurrency,
           maturities[1],
           Side.BORROW,
-          value.mul(PCT_DIGIT).div(HAIRCUT).div(2),
+          borrowAmount,
           '8000',
         );
 
@@ -353,7 +360,7 @@ describe('LendingMarketController - Tokenization', () => {
           targetCurrency,
           maturities[1],
           Side.LEND,
-          value.mul(PCT_DIGIT).div(HAIRCUT).div(2),
+          borrowAmount,
           '0',
         );
 
@@ -364,8 +371,110 @@ describe('LendingMarketController - Tokenization', () => {
           alice.address,
         );
 
+      // Estimate the withdrawable amount
+      const availableAmount = totalCollateral.sub(
+        totalUsedCollateral.mul(LIQUIDATION_THRESHOLD_RATE).div(PCT_DIGIT),
+      );
       const estimatedAmount = calculateFutureValue(
-        totalUnusedCollateral.mul(PCT_DIGIT).div(HAIRCUT),
+        availableAmount.mul(PCT_DIGIT).div(HAIRCUT),
+        8000,
+      );
+
+      expect(withdrawableAmount).to.equal(estimatedAmount);
+
+      await expect(
+        lendingMarketControllerProxy
+          .connect(alice)
+          .withdrawZCToken(
+            targetCurrency,
+            maturities[0],
+            estimatedAmount.add(1),
+          ),
+      )
+        .to.emit(zcToken, 'Transfer')
+        .withArgs(ethers.constants.AddressZero, alice.address, estimatedAmount);
+
+      expect(await zcToken.balanceOf(alice.address)).to.equal(estimatedAmount);
+    });
+
+    it('Withdraw zc tokens used as discounted collateral with a large borrow amount', async () => {
+      const totalCollateral = value;
+      const totalUsedCollateral = value.div(10);
+
+      await mockCurrencyController.mock[
+        'convertFromBaseCurrency(bytes32,uint256[])'
+      ].returns([totalCollateral, totalUsedCollateral]);
+
+      const zcTokenAddress = await lendingMarketControllerProxy.getZCToken(
+        targetCurrency,
+        maturities[0],
+      );
+      const zcToken = await ethers.getContractAt('ZCToken', zcTokenAddress);
+      const lendAmount = value.mul(2);
+      const borrowAmount = value.mul(3).div(2);
+
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .executeOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          lendAmount,
+          '8000',
+        );
+
+      await lendingMarketControllerProxy
+        .connect(bob)
+        .executeOrder(
+          targetCurrency,
+          maturities[0],
+          Side.BORROW,
+          lendAmount,
+          '0',
+        );
+
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .executeOrder(
+          targetCurrency,
+          maturities[1],
+          Side.BORROW,
+          borrowAmount,
+          '8000',
+        );
+
+      await lendingMarketControllerProxy
+        .connect(bob)
+        .executeOrder(
+          targetCurrency,
+          maturities[1],
+          Side.LEND,
+          borrowAmount,
+          '0',
+        );
+
+      const withdrawableAmount =
+        await lendingMarketControllerProxy.getWithdrawableZCTokenAmount(
+          targetCurrency,
+          maturities[0],
+          alice.address,
+        );
+
+      // Estimate the withdrawable amount
+      const availableAmount = totalCollateral.sub(
+        totalUsedCollateral.mul(LIQUIDATION_THRESHOLD_RATE).div(PCT_DIGIT),
+      );
+      const unallocatedCollateralAmount = lendAmount.sub(
+        borrowAmount.mul(LIQUIDATION_THRESHOLD_RATE).div(PCT_DIGIT),
+      );
+      const discountedUnallocatedCollateralAmount = unallocatedCollateralAmount
+        .mul(HAIRCUT)
+        .div(PCT_DIGIT);
+
+      const estimatedAmount = calculateFutureValue(
+        availableAmount
+          .add(unallocatedCollateralAmount)
+          .sub(discountedUnallocatedCollateralAmount),
         8000,
       );
 
@@ -582,12 +691,21 @@ describe('LendingMarketController - Tokenization', () => {
         .withArgs(ethers.constants.AddressZero, alice.address, estimatedAmount);
 
       expect(await zcToken.balanceOf(alice.address)).to.equal(estimatedAmount);
+
+      const withdrawableAmountAfter =
+        await lendingMarketControllerProxy.getWithdrawableZCTokenAmount(
+          targetCurrency,
+          maturities[0],
+          alice.address,
+        );
+
+      expect(withdrawableAmountAfter).to.equal(0);
     });
 
     it('Withdraw zc perpetual tokens without allocated collaterals', async () => {
       await mockCurrencyController.mock[
         'convertFromBaseCurrency(bytes32,uint256[])'
-      ].returns([0, 0]);
+      ].returns([value, 0]);
 
       const zcTokenAddress = await lendingMarketControllerProxy.getZCToken(
         targetCurrency,
@@ -644,27 +762,32 @@ describe('LendingMarketController - Tokenization', () => {
         .withArgs(ethers.constants.AddressZero, alice.address, estimatedAmount);
 
       expect(await zcToken.balanceOf(alice.address)).to.equal(estimatedAmount);
+
+      const withdrawableAmountAfter2 =
+        await lendingMarketControllerProxy.getWithdrawableZCTokenAmount(
+          targetCurrency,
+          0,
+          alice.address,
+        );
+
+      expect(withdrawableAmountAfter2).to.equal(0);
     });
 
     it('Withdraw zc perpetual tokens used as discounted collateral', async () => {
       const totalCollateral = value;
-      const totalUnusedCollateral = value.div(2);
+      const totalUsedCollateral = value.div(10);
 
       await mockCurrencyController.mock[
         'convertFromBaseCurrency(bytes32,uint256[])'
-      ].returns([
-        totalCollateral,
-        totalCollateral
-          .sub(totalUnusedCollateral)
-          .mul(PCT_DIGIT)
-          .div(LIQUIDATION_THRESHOLD_RATE),
-      ]);
+      ].returns([totalCollateral, totalUsedCollateral]);
 
       const zcTokenAddress = await lendingMarketControllerProxy.getZCToken(
         targetCurrency,
         0,
       );
       const zcToken = await ethers.getContractAt('ZCToken', zcTokenAddress);
+      const lendAmount = value.mul(2);
+      const borrowAmount = value.mul(3).div(2);
 
       await lendingMarketControllerProxy
         .connect(alice)
@@ -672,7 +795,7 @@ describe('LendingMarketController - Tokenization', () => {
           targetCurrency,
           maturities[0],
           Side.LEND,
-          value.mul(2),
+          lendAmount,
           '8000',
         );
 
@@ -682,7 +805,7 @@ describe('LendingMarketController - Tokenization', () => {
           targetCurrency,
           maturities[0],
           Side.BORROW,
-          value.mul(2),
+          lendAmount,
           '0',
         );
 
@@ -690,9 +813,9 @@ describe('LendingMarketController - Tokenization', () => {
         .connect(alice)
         .executeOrder(
           targetCurrency,
-          maturities[1],
+          maturities[2],
           Side.BORROW,
-          value.mul(PCT_DIGIT).div(HAIRCUT).div(2),
+          borrowAmount,
           '8000',
         );
 
@@ -700,9 +823,9 @@ describe('LendingMarketController - Tokenization', () => {
         .connect(bob)
         .executeOrder(
           targetCurrency,
-          maturities[1],
+          maturities[2],
           Side.LEND,
-          value.mul(PCT_DIGIT).div(HAIRCUT).div(2),
+          borrowAmount,
           '0',
         );
 
@@ -711,15 +834,43 @@ describe('LendingMarketController - Tokenization', () => {
         lendingMarketControllerProxy.rotateOrderBooks(targetCurrency),
       ).to.emit(lendingMarketOperationLogic, 'OrderBooksRotated');
 
+      // Estimate the withdrawable amount
       const compoundFactor =
         await genesisValueVaultProxy.getLendingCompoundFactor(targetCurrency);
 
+      const { presentValue: aliceLendPV } =
+        await lendingMarketControllerProxy.getPosition(
+          targetCurrency,
+          maturities[1],
+          alice.address,
+        );
+
+      const { presentValue: aliceBorrowPV } =
+        await lendingMarketControllerProxy.getPosition(
+          targetCurrency,
+          maturities[2],
+          alice.address,
+        );
+
+      const availableAmount = totalCollateral.sub(
+        totalUsedCollateral.mul(LIQUIDATION_THRESHOLD_RATE).div(PCT_DIGIT),
+      );
+      const unallocatedCollateralAmount = aliceLendPV.add(
+        aliceBorrowPV.mul(LIQUIDATION_THRESHOLD_RATE).div(PCT_DIGIT),
+      );
+      const discountedUnallocatedCollateralAmount = unallocatedCollateralAmount
+        .mul(HAIRCUT)
+        .div(PCT_DIGIT);
+
       const estimatedAmount = calculateFutureValue(
-        totalUnusedCollateral.mul(PCT_DIGIT).div(HAIRCUT),
-        8000,
+        availableAmount
+          .add(unallocatedCollateralAmount)
+          .sub(discountedUnallocatedCollateralAmount),
+        10000,
       )
         .mul(BigNumber.from(10).pow(38))
         .div(compoundFactor);
+
       const withdrawableAmount =
         await lendingMarketControllerProxy.getWithdrawableZCTokenAmount(
           targetCurrency,
@@ -856,7 +1007,7 @@ describe('LendingMarketController - Tokenization', () => {
     it('Withdraw zc tokens partially', async () => {
       await mockCurrencyController.mock[
         'convertFromBaseCurrency(bytes32,uint256[])'
-      ].returns([0, 0]);
+      ].returns([value, 0]);
 
       const zcTokenAddress = await lendingMarketControllerProxy.getZCToken(
         targetCurrency,
@@ -899,7 +1050,7 @@ describe('LendingMarketController - Tokenization', () => {
     it('Withdraw zc perpetual tokens partially', async () => {
       await mockCurrencyController.mock[
         'convertFromBaseCurrency(bytes32,uint256[])'
-      ].returns([0, 0]);
+      ].returns([value, 0]);
 
       const zcTokenAddress = await lendingMarketControllerProxy.getZCToken(
         targetCurrency,
