@@ -13,7 +13,6 @@ jobs:
         with:
           app_id: ${{ secrets.MACHINE_USER_APP_ID }}
           private_key: ${{ secrets.MACHINE_USER_PRIVATE_KEY }}
-      - uses: GoogleCloudPlatform/release-please-action@v3
+      - uses: googleapis/release-please-action@v4
         with:
-          release-type: node
           token: ${{ steps.generate_token.outputs.token }}
