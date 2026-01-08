@@ -6,14 +6,16 @@ import { ethers } from 'hardhat';
 
 import moment from 'moment';
 import { Side } from '../../utils/constants';
-import { hexETH, hexUSDC } from '../../utils/strings';
+import { hexETH, hexUSDC, hexWFIL } from '../../utils/strings';
 import {
   FULL_LIQUIDATION_THRESHOLD_RATE,
+  HAIRCUT,
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATOR_FEE_RATE,
   PCT_DIGIT,
 } from '../common/constants';
+import { wFilToETHRate } from '../common/currencies';
 import { deployContracts } from '../common/deployment';
 import { Signers } from '../common/signers';
 
@@ -23,10 +25,12 @@ describe('Integration Test: Tokenization', async () => {
   let bob: SignerWithAddress;
   let carol: SignerWithAddress;
 
+  let currencyController: Contract;
   let tokenVault: Contract;
   let lendingMarketController: Contract;
   let wETHToken: Contract;
   let usdcToken: Contract;
+  let wFILToken: Contract;
 
   let fundManagementLogic: Contract;
   let lendingMarketOperationLogic: Contract;
@@ -37,12 +41,16 @@ describe('Integration Test: Tokenization', async () => {
   let signers: Signers;
 
   const initialUSDCBalance = BigNumber.from('10000000000');
+  const initialWFILBalance = BigNumber.from('10000000000000000000');
 
   const getUsers = async (count: number) =>
     signers.get(count, async (signer) => {
       await usdcToken
         .connect(owner)
         .transfer(signer.address, initialUSDCBalance);
+      await wFILToken
+        .connect(owner)
+        .transfer(signer.address, initialWFILBalance);
     });
 
   const createSampleETHOrders = async (
@@ -86,10 +94,12 @@ describe('Integration Test: Tokenization', async () => {
 
     ({
       genesisDate,
+      currencyController,
       tokenVault,
       lendingMarketController,
       wETHToken,
       usdcToken,
+      wFILToken,
       fundManagementLogic,
       lendingMarketOperationLogic,
     } = await deployContracts());
@@ -113,6 +123,11 @@ describe('Integration Test: Tokenization', async () => {
       );
       await lendingMarketController.createOrderBook(
         hexETH,
+        genesisDate,
+        genesisDate,
+      );
+      await lendingMarketController.createOrderBook(
+        hexWFIL,
         genesisDate,
         genesisDate,
       );
@@ -220,7 +235,7 @@ describe('Integration Test: Tokenization', async () => {
     });
   });
 
-  describe('Deposit and Withdraw(ETH)', async () => {
+  describe('Deposit and Withdraw in native currency (ETH)', async () => {
     describe('Withdraw and deposit ZC tokens by the same user', async () => {
       const orderAmount = BigNumber.from('100000000000000000');
       let zcToken: Contract;
@@ -942,6 +957,14 @@ describe('Integration Test: Tokenization', async () => {
 
         const balance = await zcToken.balanceOf(alice.address);
         expect(balance).to.equal(withdrawableAmount);
+
+        const withdrawableAmountAfter =
+          await lendingMarketController.getWithdrawableZCTokenAmount(
+            hexETH,
+            maturities[0],
+            alice.address,
+          );
+        expect(withdrawableAmountAfter).to.equal(0);
       });
     });
 
@@ -1070,6 +1093,14 @@ describe('Integration Test: Tokenization', async () => {
 
         const balance = await zcToken.balanceOf(alice.address);
         expect(balance).to.equal(withdrawableAmount);
+
+        const withdrawableAmountAfter =
+          await lendingMarketController.getWithdrawableZCTokenAmount(
+            hexETH,
+            maturities[0],
+            alice.address,
+          );
+        expect(withdrawableAmountAfter).to.equal(0);
       });
     });
 
@@ -1215,6 +1246,446 @@ describe('Integration Test: Tokenization', async () => {
 
         const balance = await zcToken.balanceOf(alice.address);
         expect(balance).to.equal(withdrawableAmount);
+
+        const withdrawableAmountAfter =
+          await lendingMarketController.getWithdrawableZCTokenAmount(
+            hexETH,
+            maturities[0],
+            alice.address,
+          );
+        expect(withdrawableAmountAfter).to.equal(0);
+      });
+    });
+
+    describe('Withdraw full ZC tokens with haircut = 0', async () => {
+      const lendAmount = BigNumber.from('100000000000000000'); // 0.1 ETH LEND
+      const borrowAmount = BigNumber.from('10000000000000000'); // 0.01 ETH BORROW (10% of LEND)
+
+      before(async () => {
+        [alice, bob] = await getUsers(2);
+
+        await resetContractInstances();
+        await currencyController.updateHaircut(hexETH, 0);
+      });
+
+      after(async () => {
+        await currencyController.updateHaircut(hexETH, HAIRCUT);
+      });
+
+      it('Create LEND position for alice', async () => {
+        // Alice deposits and creates a LEND order
+        await expect(
+          lendingMarketController
+            .connect(alice)
+            .depositAndExecuteOrder(
+              hexETH,
+              maturities[0],
+              Side.LEND,
+              lendAmount,
+              9600,
+              { value: lendAmount },
+            ),
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
+
+        // Bob deposits and creates a BORROW order that matches Alice's LEND order
+        await tokenVault.connect(bob).deposit(hexETH, lendAmount.mul(2), {
+          value: lendAmount.mul(2),
+        });
+
+        await expect(
+          lendingMarketController
+            .connect(bob)
+            .executeOrder(hexETH, maturities[0], Side.BORROW, lendAmount, 0),
+        ).to.emit(fundManagementLogic, 'OrderFilled');
+
+        const { presentValue: aliceLendPV, futureValue: aliceLendFV } =
+          await lendingMarketController.getPosition(
+            hexETH,
+            maturities[0],
+            alice.address,
+          );
+
+        expect(aliceLendPV).to.equal(lendAmount);
+        expect(aliceLendFV).to.be.gt(0);
+      });
+
+      it('Create small BORROW position for alice (smaller than LEND)', async () => {
+        // Alice creates a BORROW order
+        await expect(
+          lendingMarketController
+            .connect(alice)
+            .executeOrder(
+              hexETH,
+              maturities[1],
+              Side.BORROW,
+              borrowAmount,
+              9600,
+            ),
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
+
+        // Bob creates a LEND order that matches Alice's BORROW order
+        await expect(
+          lendingMarketController
+            .connect(bob)
+            .depositAndExecuteOrder(
+              hexETH,
+              maturities[1],
+              Side.LEND,
+              borrowAmount,
+              0,
+              { value: borrowAmount },
+            ),
+        ).to.emit(fundManagementLogic, 'OrderFilled');
+
+        const { presentValue: aliceBorrowPV } =
+          await lendingMarketController.getPosition(
+            hexETH,
+            maturities[1],
+            alice.address,
+          );
+
+        expect(aliceBorrowPV.abs()).to.equal(borrowAmount);
+      });
+
+      it('Withdraw ZC tokens with the withdrawable amount (haircut = 0 path)', async () => {
+        const { futureValue: aliceLendFVBefore } =
+          await lendingMarketController.getPosition(
+            hexETH,
+            maturities[0],
+            alice.address,
+          );
+
+        const withdrawableAmountBefore =
+          await lendingMarketController.getWithdrawableZCTokenAmount(
+            hexETH,
+            maturities[0],
+            alice.address,
+          );
+
+        // With haircut = 0, the withdrawable amount should include full unallocated collateral
+        expect(withdrawableAmountBefore).to.be.gt(0);
+
+        // Withdraw the withdrawable amount
+        await lendingMarketController
+          .connect(alice)
+          .withdrawZCToken(hexETH, maturities[0], withdrawableAmountBefore);
+
+        const { futureValue: aliceLendFVAfter } =
+          await lendingMarketController.getPosition(
+            hexETH,
+            maturities[0],
+            alice.address,
+          );
+
+        // Verify the position decreased by the withdrawn amount
+        expect(aliceLendFVBefore.sub(aliceLendFVAfter)).to.equal(
+          withdrawableAmountBefore,
+        );
+      });
+
+      it('Verify no withdrawable ZC tokens remain', async () => {
+        const withdrawableAmountAfter =
+          await lendingMarketController.getWithdrawableZCTokenAmount(
+            hexETH,
+            maturities[0],
+            alice.address,
+          );
+
+        expect(withdrawableAmountAfter).to.equal(0);
+      });
+    });
+
+    describe('Withdraw full ZC tokens with sufficient collateral and small BORROW position', async () => {
+      const lendAmount = BigNumber.from('100000000000000000'); // 0.1 ETH LEND
+      const borrowAmount = BigNumber.from('10000000000000000'); // 0.01 ETH BORROW (10% of LEND)
+
+      before(async () => {
+        [alice, bob] = await getUsers(2);
+
+        await resetContractInstances();
+      });
+
+      it('Create LEND position for alice', async () => {
+        // Alice deposits and creates a LEND order
+        await expect(
+          lendingMarketController
+            .connect(alice)
+            .depositAndExecuteOrder(
+              hexETH,
+              maturities[0],
+              Side.LEND,
+              lendAmount,
+              9600,
+              { value: lendAmount },
+            ),
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
+
+        // Bob deposits and creates a BORROW order that matches Alice's LEND order
+        await tokenVault.connect(bob).deposit(hexETH, lendAmount.mul(2), {
+          value: lendAmount.mul(2),
+        });
+
+        await expect(
+          lendingMarketController
+            .connect(bob)
+            .executeOrder(hexETH, maturities[0], Side.BORROW, lendAmount, 0),
+        ).to.emit(fundManagementLogic, 'OrderFilled');
+
+        const { presentValue: aliceLendPV, futureValue: aliceLendFV } =
+          await lendingMarketController.getPosition(
+            hexETH,
+            maturities[0],
+            alice.address,
+          );
+
+        expect(aliceLendPV).to.equal(lendAmount);
+        expect(aliceLendFV).to.be.gt(0);
+      });
+
+      it('Create small BORROW position for alice (smaller than LEND)', async () => {
+        // Alice creates a BORROW order
+        await expect(
+          lendingMarketController
+            .connect(alice)
+            .executeOrder(
+              hexETH,
+              maturities[1],
+              Side.BORROW,
+              borrowAmount,
+              9600,
+            ),
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
+
+        // Bob creates a LEND order that matches Alice's BORROW order
+        await expect(
+          lendingMarketController
+            .connect(bob)
+            .depositAndExecuteOrder(
+              hexETH,
+              maturities[1],
+              Side.LEND,
+              borrowAmount,
+              0,
+              { value: borrowAmount },
+            ),
+        ).to.emit(fundManagementLogic, 'OrderFilled');
+
+        const { presentValue: aliceBorrowPV } =
+          await lendingMarketController.getPosition(
+            hexETH,
+            maturities[1],
+            alice.address,
+          );
+
+        expect(aliceBorrowPV.abs()).to.equal(borrowAmount);
+      });
+
+      it('Verify alice has low coverage ratio (sufficient collateral)', async () => {
+        const coverage = await tokenVault.getCoverage(alice.address);
+
+        // Coverage should be low (around 15-20%), indicating sufficient collateral
+        // but NOT enough to withdraw 100% due to the bug
+        expect(coverage).to.be.lt(2000); // Less than 20%
+      });
+
+      it('Withdraw ZC tokens with the withdrawable amount', async () => {
+        const { futureValue: aliceLendFVBefore } =
+          await lendingMarketController.getPosition(
+            hexETH,
+            maturities[0],
+            alice.address,
+          );
+
+        const withdrawableAmountBefore =
+          await lendingMarketController.getWithdrawableZCTokenAmount(
+            hexETH,
+            maturities[0],
+            alice.address,
+          );
+
+        // Withdraw the withdrawable amount
+        await lendingMarketController
+          .connect(alice)
+          .withdrawZCToken(hexETH, maturities[0], withdrawableAmountBefore);
+
+        const { futureValue: aliceLendFVAfter } =
+          await lendingMarketController.getPosition(
+            hexETH,
+            maturities[0],
+            alice.address,
+          );
+
+        // Verify the position decreased by the withdrawn amount
+        expect(aliceLendFVBefore.sub(aliceLendFVAfter)).to.equal(
+          withdrawableAmountBefore,
+        );
+      });
+
+      it('Verify no withdrawable ZC tokens remain', async () => {
+        const withdrawableAmountAfter =
+          await lendingMarketController.getWithdrawableZCTokenAmount(
+            hexETH,
+            maturities[0],
+            alice.address,
+          );
+        const coverage = await tokenVault.getCoverage(alice.address);
+
+        expect(withdrawableAmountAfter).to.equal(0);
+        expect(coverage).to.equal(8000);
+      });
+    });
+
+    describe('Withdraw ZC tokens with big BORROW position causing high PV', async () => {
+      const lendAmount = BigNumber.from('100000000000000000'); // 0.1 ETH LEND
+      const borrowAmount = BigNumber.from('80000000000000000'); // 0.08 ETH BORROW (80% of LEND)
+      const tradeAmount = BigNumber.from('1000000000000000000'); // 1 ETH per trade
+
+      let carol: SignerWithAddress;
+
+      before(async () => {
+        [alice, bob, carol] = await getUsers(3);
+
+        await resetContractInstances();
+      });
+
+      it('Create LEND position for alice', async () => {
+        // Alice deposits and creates a LEND order
+        await expect(
+          lendingMarketController
+            .connect(alice)
+            .depositAndExecuteOrder(
+              hexETH,
+              maturities[0],
+              Side.LEND,
+              lendAmount,
+              9600,
+              { value: lendAmount },
+            ),
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
+
+        // Bob deposits and creates a BORROW order that matches Alice's LEND order
+        await tokenVault.connect(bob).deposit(hexETH, lendAmount.mul(2), {
+          value: lendAmount.mul(2),
+        });
+
+        await expect(
+          lendingMarketController
+            .connect(bob)
+            .executeOrder(hexETH, maturities[0], Side.BORROW, lendAmount, 0),
+        ).to.emit(fundManagementLogic, 'OrderFilled');
+
+        const { presentValue: aliceLendPV, futureValue: aliceLendFV } =
+          await lendingMarketController.getPosition(
+            hexETH,
+            maturities[0],
+            alice.address,
+          );
+
+        expect(aliceLendPV).to.equal(lendAmount);
+        expect(aliceLendFV).to.be.gt(0);
+      });
+
+      it('Create big BORROW position for alice', async () => {
+        // Alice creates a BORROW order
+        await expect(
+          lendingMarketController
+            .connect(alice)
+            .executeOrder(
+              hexETH,
+              maturities[1],
+              Side.BORROW,
+              borrowAmount,
+              9600,
+            ),
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
+
+        // Bob creates a LEND order that matches Alice's BORROW order
+        await expect(
+          lendingMarketController
+            .connect(bob)
+            .depositAndExecuteOrder(
+              hexETH,
+              maturities[1],
+              Side.LEND,
+              borrowAmount,
+              0,
+              { value: borrowAmount },
+            ),
+        ).to.emit(fundManagementLogic, 'OrderFilled');
+
+        const { presentValue: aliceBorrowPV } =
+          await lendingMarketController.getPosition(
+            hexETH,
+            maturities[1],
+            alice.address,
+          );
+
+        expect(aliceBorrowPV.abs()).to.equal(borrowAmount);
+      });
+
+      it('Withdraw borrowed collateral to lower coverage ratio', async () => {
+        await tokenVault.connect(alice).withdraw(hexETH, borrowAmount);
+      });
+
+      it('Increase unitPrice by executing multiple orders to increase BORROW position PV', async () => {
+        // Carol deposits funds for trading
+        await tokenVault.connect(carol).deposit(hexETH, tradeAmount.mul(2), {
+          value: tradeAmount.mul(2),
+        });
+
+        // Execute multiple trades to increase unitPrice
+        await expect(
+          lendingMarketController
+            .connect(carol)
+            .executeOrder(
+              hexETH,
+              maturities[1],
+              Side.BORROW,
+              tradeAmount,
+              9900,
+            ),
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
+
+        await expect(
+          lendingMarketController
+            .connect(bob)
+            .depositAndExecuteOrder(
+              hexETH,
+              maturities[1],
+              Side.LEND,
+              tradeAmount,
+              0,
+              { value: tradeAmount },
+            ),
+        ).to.emit(fundManagementLogic, 'OrderFilled');
+
+        const { presentValue: aliceBorrowPV } =
+          await lendingMarketController.getPosition(
+            hexETH,
+            maturities[1],
+            alice.address,
+          );
+
+        // BORROW PV should have increased due to higher unitPrice
+        expect(aliceBorrowPV.abs()).to.be.gt(borrowAmount);
+
+        const coverage = await tokenVault.getCoverage(alice.address);
+        expect(coverage).to.be.gt(8000); // Coverage should be above 80%
+      });
+
+      it('Verify withdrawableAmount is 0 due to increased BORROW position PV', async () => {
+        const withdrawableAmount =
+          await lendingMarketController.getWithdrawableZCTokenAmount(
+            hexETH,
+            maturities[0],
+            alice.address,
+          );
+
+        // Due to the increased BORROW position PV, withdrawableAmount should be 0
+        expect(withdrawableAmount).to.equal(
+          0,
+          'withdrawableAmount should be 0 due to increased BORROW position PV',
+        );
       });
     });
 
@@ -1345,7 +1816,7 @@ describe('Integration Test: Tokenization', async () => {
     });
   });
 
-  describe('Deposit and Withdraw(USDC)', async () => {
+  describe('Deposit and Withdraw in a collateral currency token (USDC)', async () => {
     before(async () => {
       await initializeContracts();
     });
@@ -1574,6 +2045,192 @@ describe('Integration Test: Tokenization', async () => {
           await lendingMarketController.getGenesisValue(hexUSDC, alice.address);
 
         expect(aliceGVAfter).to.equal(balance);
+      });
+    });
+  });
+
+  describe('Deposit and Withdraw in a non-collateral currency token (FIL)', async () => {
+    before(async () => {
+      await initializeContracts();
+    });
+
+    describe('Withdraw ZC tokens without deposits after using as collateral', async () => {
+      const orderAmountInFIL = BigNumber.from('100000000000000000');
+      const orderAmountInETH = orderAmountInFIL
+        .mul(wFilToETHRate)
+        .div(BigNumber.from(10).pow(18));
+      let zcToken: Contract;
+
+      before(async () => {
+        [alice, bob] = await getUsers(2);
+
+        zcToken = await ethers.getContractAt(
+          'ZCToken',
+          await lendingMarketController.getZCToken(hexWFIL, maturities[0]),
+        );
+      });
+
+      it('Fill an order', async () => {
+        // Bob deposits ETH as collateral and WFIL for lending
+        await tokenVault.connect(bob).deposit(hexETH, orderAmountInETH.mul(2), {
+          value: orderAmountInETH.mul(2),
+        });
+        await wFILToken
+          .connect(bob)
+          .approve(tokenVault.address, orderAmountInFIL.mul(2));
+        await tokenVault.connect(bob).deposit(hexWFIL, orderAmountInFIL.mul(2));
+
+        await wFILToken
+          .connect(alice)
+          .approve(tokenVault.address, orderAmountInFIL);
+
+        await expect(
+          lendingMarketController
+            .connect(alice)
+            .depositAndExecuteOrder(
+              hexWFIL,
+              maturities[0],
+              Side.LEND,
+              orderAmountInFIL,
+              9600,
+            ),
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
+
+        await expect(
+          lendingMarketController
+            .connect(bob)
+            .executeOrder(
+              hexWFIL,
+              maturities[0],
+              Side.BORROW,
+              orderAmountInFIL,
+              0,
+            ),
+        ).to.emit(fundManagementLogic, 'OrderFilled');
+
+        // Check future value
+        const { presentValue: alicePV, futureValue: aliceFV } =
+          await lendingMarketController.getPosition(
+            hexWFIL,
+            maturities[0],
+            alice.address,
+          );
+
+        expect(alicePV).to.equal(orderAmountInFIL);
+
+        const withdrawableAmount =
+          await lendingMarketController.getWithdrawableZCTokenAmount(
+            hexWFIL,
+            maturities[0],
+            alice.address,
+          );
+
+        expect(withdrawableAmount).to.equal(aliceFV);
+      });
+
+      it('Fill an order using ZC bonds', async () => {
+        await expect(
+          lendingMarketController
+            .connect(alice)
+            .executeOrder(
+              hexWFIL,
+              maturities[1],
+              Side.BORROW,
+              orderAmountInFIL.div(2),
+              9600,
+            ),
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
+
+        await wFILToken
+          .connect(bob)
+          .approve(tokenVault.address, orderAmountInFIL.div(2));
+
+        await expect(
+          lendingMarketController
+            .connect(bob)
+            .depositAndExecuteOrder(
+              hexWFIL,
+              maturities[1],
+              Side.LEND,
+              orderAmountInFIL.div(2),
+              0,
+            ),
+        ).to.emit(fundManagementLogic, 'OrderFilled');
+
+        // Check future value
+        const { presentValue: alicePV } =
+          await lendingMarketController.getPosition(
+            hexWFIL,
+            maturities[1],
+            alice.address,
+          );
+
+        expect(alicePV.abs()).to.equal(orderAmountInFIL.div(2));
+      });
+
+      it('Withdraw borrowed collateral', async () => {
+        const withdrawableAmount = await tokenVault[
+          'getWithdrawableCollateral(bytes32,address)'
+        ](hexWFIL, alice.address);
+
+        expect(withdrawableAmount).to.equal(orderAmountInFIL.div(2));
+
+        await expect(
+          tokenVault.connect(alice).withdraw(hexWFIL, withdrawableAmount),
+        )
+          .to.emit(tokenVault, 'Withdraw')
+          .withArgs(alice.address, hexWFIL, withdrawableAmount);
+      });
+
+      it('Withdraw ZC token', async () => {
+        const { futureValue: aliceFV } =
+          await lendingMarketController.getPosition(
+            hexWFIL,
+            maturities[0],
+            alice.address,
+          );
+
+        const { futureValue: aliceFV2 } =
+          await lendingMarketController.getPosition(
+            hexWFIL,
+            maturities[1],
+            alice.address,
+          );
+
+        const withdrawableAmount =
+          await lendingMarketController.getWithdrawableZCTokenAmount(
+            hexWFIL,
+            maturities[0],
+            alice.address,
+          );
+
+        expect(
+          aliceFV2
+            .abs()
+            .mul(PCT_DIGIT)
+            .div(aliceFV.sub(withdrawableAmount))
+            .sub('7999'),
+        ).lte(1);
+
+        expect(withdrawableAmount).lt(aliceFV);
+
+        await lendingMarketController
+          .connect(alice)
+          .withdrawZCToken(hexWFIL, maturities[0], withdrawableAmount);
+
+        const coverage = await tokenVault.getCoverage(alice.address);
+        expect(coverage.sub('7999').abs()).lte(1);
+
+        const balance = await zcToken.balanceOf(alice.address);
+        expect(balance).to.equal(withdrawableAmount);
+
+        const withdrawableAmountAfter =
+          await lendingMarketController.getWithdrawableZCTokenAmount(
+            hexWFIL,
+            maturities[0],
+            alice.address,
+          );
+        expect(withdrawableAmountAfter).to.equal(0);
       });
     });
   });

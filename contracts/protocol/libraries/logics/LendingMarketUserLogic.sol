@@ -704,7 +704,7 @@ library LendingMarketUserLogic {
         int256 presentValue = funds.presentValue - funds.genesisValueInPV;
         int256 futureValue = funds.futureValue - funds.genesisValueInFV;
 
-        if (futureValue <= 0) {
+        if (futureValue <= 0 || withdrawableAmount == 0) {
             return 0;
         } else if (!hasAllocatedCollateral || withdrawableAmount >= presentValue.toUint256()) {
             return futureValue.toUint256();
@@ -729,7 +729,7 @@ library LendingMarketUserLogic {
             0
         );
 
-        if (funds.genesisValue <= 0) {
+        if (funds.genesisValue <= 0 || withdrawableAmount == 0) {
             return 0;
         } else if (
             !hasAllocatedCollateral || withdrawableAmount >= funds.genesisValueInPV.toUint256()
@@ -777,36 +777,43 @@ library LendingMarketUserLogic {
         }
 
         uint256 haircut = AddressResolverLib.currencyController().getHaircut(_ccy);
-        uint256 discountedUnallocatedCollateralAmount = (funds.unallocatedCollateralAmount *
-            haircut).div(Constants.PCT_DIGIT);
+        uint256 scaledTotalCollateral = totalCollateral * Constants.PCT_DIGIT;
+        uint256 scaledUsedCollateralThreshold = totalUsedCollateral * liquidationThresholdRate;
 
-        uint256 availableAmount = (totalCollateral *
-            Constants.PCT_DIGIT -
-            totalUsedCollateral *
-            liquidationThresholdRate).div(Constants.PCT_DIGIT);
+        if (scaledTotalCollateral <= scaledUsedCollateralThreshold) {
+            return (0, funds.unallocatedCollateralAmount != 0);
+        }
 
-        if (haircut != 0 && funds.unallocatedCollateralAmount != 0) {
-            uint256 allocatedAmount = funds.claimableAmount - funds.unallocatedCollateralAmount;
+        uint256 availableAmount = (scaledTotalCollateral - scaledUsedCollateralThreshold).div(
+            Constants.PCT_DIGIT
+        );
 
-            if (availableAmount <= discountedUnallocatedCollateralAmount) {
-                return ((availableAmount * Constants.PCT_DIGIT).div(haircut), true);
-            } else if (availableAmount <= discountedUnallocatedCollateralAmount + allocatedAmount) {
-                // If the available amount is insufficient, unallocated collateral, which is discounted by a haircut and used between different currencies,
-                // is used first. Then, the allocated collateral, which is used to offset positions in the same currency, is used for the rest of the amount.
-                // NOTE: The formula is:
-                // allocatedCollateralAmount = availableAmount - discountedUnallocatedCollateralAmount
-                // totalWithdrawableAmount = allocatedCollateralAmount + unallocatedCollateralAmount
-                return (
-                    funds.unallocatedCollateralAmount +
-                        availableAmount -
-                        discountedUnallocatedCollateralAmount,
-                    true
-                );
-            } else {
-                return (availableAmount, true);
-            }
+        if (funds.unallocatedCollateralAmount == 0) {
+            return (availableAmount, false);
         } else {
-            return (availableAmount, funds.unallocatedCollateralAmount != 0);
+            // If the available amount is insufficient, unallocated collateral, which is discounted by a haircut and used between different currencies,
+            // is used first. Then, the allocated collateral, which is used to offset positions in the same currency, is used for the rest of the amount.
+            // NOTE: The formula is:
+            // allocatedCollateralAmount = availableAmount - discountedUnallocatedCollateralAmount
+            // totalWithdrawableAmount = allocatedCollateralAmount + unallocatedCollateralAmount
+
+            if (haircut == 0) {
+                return (availableAmount + funds.unallocatedCollateralAmount, true);
+            } else {
+                uint256 discountedUnallocatedCollateralAmount = (funds.unallocatedCollateralAmount *
+                    haircut).div(Constants.PCT_DIGIT);
+
+                if (availableAmount < discountedUnallocatedCollateralAmount) {
+                    return ((availableAmount * Constants.PCT_DIGIT).div(haircut), true);
+                } else {
+                    return (
+                        availableAmount +
+                            funds.unallocatedCollateralAmount -
+                            discountedUnallocatedCollateralAmount,
+                        true
+                    );
+                }
+            }
         }
     }
 
