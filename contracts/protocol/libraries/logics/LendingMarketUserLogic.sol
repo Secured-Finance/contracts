@@ -16,6 +16,7 @@ import {FilledOrder, PartiallyFilledOrder} from "../OrderBookLib.sol";
 import {RoundingUint256} from "../math/RoundingUint256.sol";
 import {LendingMarketOperationLogic} from "./LendingMarketOperationLogic.sol";
 import {FundManagementLogic} from "./FundManagementLogic.sol";
+import {TransferHelper} from "../TransferHelper.sol";
 // types
 import {ProtocolTypes} from "../../types/ProtocolTypes.sol";
 // storages
@@ -34,6 +35,8 @@ library LendingMarketUserLogic {
     error TooManyActiveOrders();
     error NotEnoughCollateral();
     error NotEnoughDeposit(bytes32 ccy);
+    error InvalidAction();
+    error InvalidBatchData();
 
     struct EstimateCollateralCoverageParams {
         bytes32 ccy;
@@ -47,6 +50,34 @@ library LendingMarketUserLogic {
         uint256 filledAmountInFV;
         uint256 orderFeeInFV;
         uint256 placedAmount;
+    }
+
+    struct DepositActionArgs {
+        address from;
+        bytes32 ccy;
+        uint256 amount;
+    }
+
+    struct ExecuteOrderActionArgs {
+        bytes32 ccy;
+        uint256 maturity;
+        ProtocolTypes.Side side;
+        uint256 amount;
+        uint256 unitPrice;
+    }
+
+    struct ExecutePreOrderActionArgs {
+        bytes32 ccy;
+        uint256 maturity;
+        ProtocolTypes.Side side;
+        uint256 amount;
+        uint256 unitPrice;
+    }
+
+    struct UnwindPositionActionArgs {
+        bytes32 ccy;
+        uint256 maturity;
+        uint256 maxAmountInFV;
     }
 
     function getOrderEstimation(
@@ -141,60 +172,7 @@ library LendingMarketUserLogic {
         uint256 _amount,
         uint256 _unitPrice
     ) external {
-        if (_amount == 0) revert InvalidAmount();
-
-        uint256 activeOrderCount = FundManagementLogic.cleanUpFunds(_ccy, _user);
-        FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, _user);
-
-        (
-            FilledOrder memory filledOrder,
-            PartiallyFilledOrder memory partiallyFilledOrder,
-            uint256 feeInFV
-        ) = ILendingMarket(Storage.slot().lendingMarkets[_ccy]).executeOrder(
-                Storage.slot().maturityOrderBookIds[_ccy][_maturity],
-                _side,
-                _user,
-                _amount,
-                _unitPrice
-            );
-
-        uint256 filledAmount = filledOrder.amount;
-
-        // The case that an order is placed in the order book
-        if ((filledAmount + filledOrder.ignoredAmount) != _amount) {
-            unchecked {
-                activeOrderCount += 1;
-            }
-        }
-
-        if (activeOrderCount > Constants.MAXIMUM_ORDER_COUNT) revert TooManyActiveOrders();
-
-        updateFundsForTaker(
-            _ccy,
-            _maturity,
-            _user,
-            _side,
-            filledAmount,
-            filledOrder.futureValue,
-            feeInFV
-        );
-
-        updateFundsForMaker(
-            _ccy,
-            _maturity,
-            _side == ProtocolTypes.Side.LEND ? ProtocolTypes.Side.BORROW : ProtocolTypes.Side.LEND,
-            partiallyFilledOrder
-        );
-
-        // Updates the pending order amount for marker's orders.
-        // Since the partially filled order is updated with `updateFundsForMaker()`,
-        // its amount is subtracted from `pendingOrderAmounts`.
-        Storage.slot().pendingOrderAmounts[_ccy][_maturity] +=
-            filledAmount -
-            partiallyFilledOrder.amount;
-
-        Storage.slot().usedCurrencies[_user].add(_ccy);
-
+        _executeOrder(_ccy, _maturity, _user, _side, _amount, _unitPrice);
         _isCovered(_user, _ccy);
     }
 
@@ -206,24 +184,7 @@ library LendingMarketUserLogic {
         uint256 _amount,
         uint256 _unitPrice
     ) external {
-        if (_amount == 0) revert InvalidAmount();
-
-        uint256 activeOrderCount = FundManagementLogic.cleanUpFunds(_ccy, _user);
-
-        if (activeOrderCount + 1 > Constants.MAXIMUM_ORDER_COUNT) revert TooManyActiveOrders();
-
-        FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, _user);
-
-        ILendingMarket(Storage.slot().lendingMarkets[_ccy]).executePreOrder(
-            Storage.slot().maturityOrderBookIds[_ccy][_maturity],
-            _side,
-            _user,
-            _amount,
-            _unitPrice
-        );
-
-        Storage.slot().usedCurrencies[_user].add(_ccy);
-
+        _executePreOrder(_ccy, _maturity, _user, _side, _amount, _unitPrice);
         _isCovered(_user, _ccy);
     }
 
@@ -233,73 +194,136 @@ library LendingMarketUserLogic {
         address _user,
         uint256 _maxAmountInFV
     ) external returns (uint256 filledAmount, uint256 filledAmountInFV, uint256 feeInFV) {
-        FundManagementLogic.cleanUpFunds(_ccy, _user);
+        (filledAmount, filledAmountInFV, feeInFV) = _unwindPositionWithoutCheck(
+            _ccy,
+            _maturity,
+            _user,
+            _maxAmountInFV
+        );
+        _isCovered(_user, _ccy);
+    }
 
-        {
-            int256 futureValue = FundManagementLogic
-                .getActualFunds(_ccy, _maturity, _user, 0)
-                .futureValue;
+    /**
+     * @notice Execute multiple actions in a single transaction
+     * @dev Gas-optimized batch execution using BatchAction enum.
+     *      Inspired by Compound V3 Bulker pattern.
+     * @param _user The user address for all actions
+     * @param _actions Array of BatchAction enum values (DEPOSIT=0, EXECUTE_ORDER=1, EXECUTE_PRE_ORDER=2, UNWIND_POSITION=3)
+     * @param _data Array of encoded action parameters corresponding to each action
+     */
+    function executeBatch(
+        address _user,
+        ILendingMarketController.BatchAction[] calldata _actions,
+        bytes[] calldata _data
+    ) external {
+        if (_actions.length != _data.length) revert InvalidBatchData();
 
-            // Apply cap if specified
-            if (_maxAmountInFV > 0) {
-                if (futureValue > 0 && futureValue.toUint256() > _maxAmountInFV) {
-                    futureValue = _maxAmountInFV.toInt256();
-                } else if (futureValue < 0 && (-futureValue).toUint256() > _maxAmountInFV) {
-                    futureValue = -_maxAmountInFV.toInt256();
+        // Track unique currencies used in this batch for final collateral check
+        bytes32[] memory currenciesUsed = new bytes32[](_actions.length);
+        uint256 currencyCount = 0;
+        uint256 totalNativeAmount = 0;
+
+        for (uint256 i = 0; i < _actions.length; ) {
+            ILendingMarketController.BatchAction action = _actions[i];
+            bytes calldata data = _data[i];
+
+            if (action == ILendingMarketController.BatchAction.DEPOSIT) {
+                DepositActionArgs memory args = abi.decode(data, (DepositActionArgs));
+
+                // Check if this is a native token deposit
+                address tokenAddress = AddressResolverLib.tokenVault().getTokenAddress(args.ccy);
+                bool isNative = TransferHelper.isNative(tokenAddress);
+                uint256 valueToSend = 0;
+
+                if (isNative) {
+                    valueToSend = args.amount;
+                    totalNativeAmount += args.amount;
                 }
+
+                AddressResolverLib.tokenVault().depositFrom{value: valueToSend}(
+                    args.from,
+                    args.ccy,
+                    args.amount
+                );
+            } else if (action == ILendingMarketController.BatchAction.EXECUTE_ORDER) {
+                ExecuteOrderActionArgs memory args = abi.decode(data, (ExecuteOrderActionArgs));
+                _executeOrder(
+                    args.ccy,
+                    args.maturity,
+                    _user,
+                    args.side,
+                    args.amount,
+                    args.unitPrice
+                );
+                currencyCount = _addCurrencyIfNotExists(currenciesUsed, currencyCount, args.ccy);
+            } else if (action == ILendingMarketController.BatchAction.EXECUTE_PRE_ORDER) {
+                ExecutePreOrderActionArgs memory args = abi.decode(
+                    data,
+                    (ExecutePreOrderActionArgs)
+                );
+                _executePreOrder(
+                    args.ccy,
+                    args.maturity,
+                    _user,
+                    args.side,
+                    args.amount,
+                    args.unitPrice
+                );
+                currencyCount = _addCurrencyIfNotExists(currenciesUsed, currencyCount, args.ccy);
+            } else if (action == ILendingMarketController.BatchAction.UNWIND_POSITION) {
+                UnwindPositionActionArgs memory args = abi.decode(data, (UnwindPositionActionArgs));
+                _unwindPositionWithoutCheck(args.ccy, args.maturity, _user, args.maxAmountInFV);
+                currencyCount = _addCurrencyIfNotExists(currenciesUsed, currencyCount, args.ccy);
+            } else {
+                revert InvalidAction();
             }
 
-            FilledOrder memory filledOrder;
-            PartiallyFilledOrder memory partiallyFilledOrder;
-            ProtocolTypes.Side side;
-
-            (filledOrder, partiallyFilledOrder, feeInFV, side) = _unwindPosition(
-                _ccy,
-                _maturity,
-                _user,
-                futureValue
-            );
-
-            updateFundsForTaker(
-                _ccy,
-                _maturity,
-                _user,
-                side,
-                filledOrder.amount,
-                filledOrder.futureValue,
-                feeInFV
-            );
-
-            updateFundsForMaker(
-                _ccy,
-                _maturity,
-                side == ProtocolTypes.Side.LEND
-                    ? ProtocolTypes.Side.BORROW
-                    : ProtocolTypes.Side.LEND,
-                partiallyFilledOrder
-            );
-
-            // Updates the pending order amount for marker's orders.
-            // Since the partially filled order is updated with `updateFundsForMaker()`,
-            // its amount is subtracted from `pendingOrderAmounts`.
-            Storage.slot().pendingOrderAmounts[_ccy][_maturity] +=
-                filledOrder.amount -
-                partiallyFilledOrder.amount;
-
-            filledAmount = filledOrder.amount;
-            filledAmountInFV = filledOrder.futureValue;
+            unchecked {
+                ++i;
+            }
         }
 
-        // When the market is the nearest market and the user has only GV, a user still has future value after unwinding.
-        // For that case, the `registerCurrencyAndMaturity` function needs to be called again.
-        (int256 currentFutureValue, ) = IFutureValueVault(Storage.slot().futureValueVaults[_ccy])
-            .getBalance(Storage.slot().maturityOrderBookIds[_ccy][_maturity], _user);
-
-        if (currentFutureValue != 0) {
-            FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, _user);
+        // Ensure exact match between msg.value and total native amount to prevent user loss
+        if (totalNativeAmount != msg.value) {
+            revert InvalidBatchData();
         }
 
-        _isCovered(_user, _ccy);
+        // Perform collateral check once at the end for each unique currency
+        for (uint256 i = 0; i < currencyCount; ) {
+            _isCovered(_user, currenciesUsed[i]);
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    /**
+     * @notice Add currency to the list if it doesn't already exist
+     * @dev Gas-efficient deduplication using linear search (optimal for small arrays)
+     * @param currenciesUsed Array of currencies already tracked
+     * @param currencyCount Current count of unique currencies
+     * @param newCurrency Currency to potentially add
+     * @return Updated currency count
+     */
+    function _addCurrencyIfNotExists(
+        bytes32[] memory currenciesUsed,
+        uint256 currencyCount,
+        bytes32 newCurrency
+    ) private pure returns (uint256) {
+        // Check if currency already exists
+        for (uint256 i = 0; i < currencyCount; ) {
+            if (currenciesUsed[i] == newCurrency) {
+                return currencyCount; // Currency already exists, return same count
+            }
+            unchecked {
+                ++i;
+            }
+        }
+        // Currency doesn't exist, add it and increment count
+        currenciesUsed[currencyCount] = newCurrency;
+        unchecked {
+            return currencyCount + 1;
+        }
     }
 
     function updateFundsForTaker(
@@ -563,6 +587,169 @@ library LendingMarketUserLogic {
         }
 
         return (filledAmountWithFeeInFV * marketUnitPrice).div(Constants.PRICE_DIGIT);
+    }
+
+    function _executeOrder(
+        bytes32 _ccy,
+        uint256 _maturity,
+        address _user,
+        ProtocolTypes.Side _side,
+        uint256 _amount,
+        uint256 _unitPrice
+    ) internal {
+        if (_amount == 0) revert InvalidAmount();
+
+        uint256 activeOrderCount = FundManagementLogic.cleanUpFunds(_ccy, _user);
+        FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, _user);
+
+        (
+            FilledOrder memory filledOrder,
+            PartiallyFilledOrder memory partiallyFilledOrder,
+            uint256 feeInFV
+        ) = ILendingMarket(Storage.slot().lendingMarkets[_ccy]).executeOrder(
+                Storage.slot().maturityOrderBookIds[_ccy][_maturity],
+                _side,
+                _user,
+                _amount,
+                _unitPrice
+            );
+
+        uint256 filledAmount = filledOrder.amount;
+
+        // The case that an order is placed in the order book
+        if ((filledAmount + filledOrder.ignoredAmount) != _amount) {
+            unchecked {
+                activeOrderCount += 1;
+            }
+        }
+
+        if (activeOrderCount > Constants.MAXIMUM_ORDER_COUNT) revert TooManyActiveOrders();
+
+        updateFundsForTaker(
+            _ccy,
+            _maturity,
+            _user,
+            _side,
+            filledAmount,
+            filledOrder.futureValue,
+            feeInFV
+        );
+
+        updateFundsForMaker(
+            _ccy,
+            _maturity,
+            _side == ProtocolTypes.Side.LEND ? ProtocolTypes.Side.BORROW : ProtocolTypes.Side.LEND,
+            partiallyFilledOrder
+        );
+
+        // Updates the pending order amount for marker's orders.
+        // Since the partially filled order is updated with `updateFundsForMaker()`,
+        // its amount is subtracted from `pendingOrderAmounts`.
+        Storage.slot().pendingOrderAmounts[_ccy][_maturity] +=
+            filledAmount -
+            partiallyFilledOrder.amount;
+
+        Storage.slot().usedCurrencies[_user].add(_ccy);
+    }
+
+    function _executePreOrder(
+        bytes32 _ccy,
+        uint256 _maturity,
+        address _user,
+        ProtocolTypes.Side _side,
+        uint256 _amount,
+        uint256 _unitPrice
+    ) internal {
+        if (_amount == 0) revert InvalidAmount();
+
+        uint256 activeOrderCount = FundManagementLogic.cleanUpFunds(_ccy, _user);
+
+        if (activeOrderCount + 1 > Constants.MAXIMUM_ORDER_COUNT) revert TooManyActiveOrders();
+
+        FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, _user);
+
+        ILendingMarket(Storage.slot().lendingMarkets[_ccy]).executePreOrder(
+            Storage.slot().maturityOrderBookIds[_ccy][_maturity],
+            _side,
+            _user,
+            _amount,
+            _unitPrice
+        );
+
+        Storage.slot().usedCurrencies[_user].add(_ccy);
+    }
+
+    function _unwindPositionWithoutCheck(
+        bytes32 _ccy,
+        uint256 _maturity,
+        address _user,
+        uint256 _maxAmountInFV
+    ) internal returns (uint256 filledAmount, uint256 filledAmountInFV, uint256 feeInFV) {
+        FundManagementLogic.cleanUpFunds(_ccy, _user);
+
+        {
+            int256 futureValue = FundManagementLogic
+                .getActualFunds(_ccy, _maturity, _user, 0)
+                .futureValue;
+
+            // Apply cap if specified
+            if (_maxAmountInFV > 0) {
+                if (futureValue > 0 && futureValue.toUint256() > _maxAmountInFV) {
+                    futureValue = _maxAmountInFV.toInt256();
+                } else if (futureValue < 0 && (-futureValue).toUint256() > _maxAmountInFV) {
+                    futureValue = -_maxAmountInFV.toInt256();
+                }
+            }
+
+            FilledOrder memory filledOrder;
+            PartiallyFilledOrder memory partiallyFilledOrder;
+            ProtocolTypes.Side side;
+
+            (filledOrder, partiallyFilledOrder, feeInFV, side) = _unwindPosition(
+                _ccy,
+                _maturity,
+                _user,
+                futureValue
+            );
+
+            updateFundsForTaker(
+                _ccy,
+                _maturity,
+                _user,
+                side,
+                filledOrder.amount,
+                filledOrder.futureValue,
+                feeInFV
+            );
+
+            updateFundsForMaker(
+                _ccy,
+                _maturity,
+                side == ProtocolTypes.Side.LEND
+                    ? ProtocolTypes.Side.BORROW
+                    : ProtocolTypes.Side.LEND,
+                partiallyFilledOrder
+            );
+
+            // Updates the pending order amount for marker's orders.
+            // Since the partially filled order is updated with `updateFundsForMaker()`,
+            // its amount is subtracted from `pendingOrderAmounts`.
+            Storage.slot().pendingOrderAmounts[_ccy][_maturity] +=
+                filledOrder.amount -
+                partiallyFilledOrder.amount;
+
+            filledAmount = filledOrder.amount;
+            filledAmountInFV = filledOrder.futureValue;
+        }
+
+        // When the market is the nearest market and the user has only GV, a user still has future value after unwinding.
+        // For that case, the `registerCurrencyAndMaturity` function needs to be called again.
+        (int256 currentFutureValue, ) = IFutureValueVault(Storage.slot().futureValueVaults[_ccy])
+            .getBalance(Storage.slot().maturityOrderBookIds[_ccy][_maturity], _user);
+
+        if (currentFutureValue != 0) {
+            FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, _user);
+        }
     }
 
     function _unwindPosition(
