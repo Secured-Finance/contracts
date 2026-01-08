@@ -16,4 +16,4 @@ jobs:
       - uses: GoogleCloudPlatform/release-please-action@v3
         with:
           release-type: node
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.generate_token.outputs.token }}
