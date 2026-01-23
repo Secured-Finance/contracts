@@ -1,7 +1,7 @@
 import { task, types } from 'hardhat/config';
 import { HardhatPluginError } from 'hardhat/internal/core/errors';
 import { getAggregatedDecimals } from '../utils/currencies';
-import { Proposal, executeIfNewlyDeployment } from '../utils/deployment';
+import { Proposal, getWaitConfirmations } from '../utils/deployment';
 import { FVMProposal, isFVM } from '../utils/deployment-fvm';
 import { toBytes32 } from '../utils/strings';
 
@@ -36,6 +36,13 @@ task('add-currency', 'Add a new currency to the protocol')
     types.boolean,
     true,
   )
+  .addParam(
+    'priceAggregatorDescription',
+    'Description for StaticPriceAggregator if deployed',
+    'USD / USD',
+    types.string,
+    true,
+  )
   .setAction(
     async (
       {
@@ -46,6 +53,7 @@ task('add-currency', 'Add a new currency to the protocol')
         tokenAddress,
         isCollateral,
         useStaticPrice,
+        priceAggregatorDescription,
       },
       { deployments, ethers, getChainId, network },
     ) => {
@@ -65,24 +73,22 @@ task('add-currency', 'Add a new currency to the protocol')
         const { deploy } = deployments;
         const deployResult = await deploy('StaticPriceAggregator', {
           from: await deployer.getAddress(),
-          args: ['100000000', 'USDFC / USD'],
+          args: ['100000000', priceAggregatorDescription],
+          waitConfirmations: getWaitConfirmations(),
         });
 
-        await executeIfNewlyDeployment('StaticPriceAggregator', deployResult);
-
-        if (priceFeeds.length > 0) {
-          console.warn(
-            `Price feed address has been replaced with StaticPriceAggregator at ${deployResult.address}`,
+        if (priceFeeds.length === 0) {
+          console.log(
+            `StaticPriceAggregator deployed at ${deployResult.address} will be used as the price feed`,
           );
-        }
-        if (heartbeats.length > 0) {
+        } else {
           console.warn(
-            'Price feed heartbeat has been replaced with 86400 seconds',
+            `StaticPriceAggregator deployed at ${deployResult.address} added to the list of price feeds`,
           );
         }
 
-        priceFeeds = [deployResult.address];
-        heartbeats = ['86400'];
+        priceFeeds.push(deployResult.address);
+        heartbeats.push('86400');
       }
 
       if (priceFeeds.length === 0) {
