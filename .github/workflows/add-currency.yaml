@@ -34,11 +34,11 @@ on:
         type: number
       priceFeeds:
         description: 'PriceFeeds'
-        required: true
+        required: false
         type: string
       heartbeats:
         description: 'Heartbeats'
-        required: true
+        required: false
         type: string
       tokenAddress:
         description: 'TokenAddress'
@@ -48,6 +48,15 @@ on:
         description: 'IsCollateral'
         required: true
         type: boolean
+      useStaticPrice:
+        description: 'UseStaticPrice'
+        required: false
+        type: boolean
+      priceAggregatorDescription:
+        description: 'PriceAggregatorDescription'
+        required: false
+        type: string
+        default: 'USD / USD'
 
 jobs:
   deploy:
@@ -88,3 +97,5 @@ jobs:
           --heartbeats ${{ github.event.inputs.heartbeats }}
           --token-address ${{ github.event.inputs.tokenAddress }}
           --is-collateral ${{ github.event.inputs.isCollateral }}
+          --use-static-price ${{ github.event.inputs.useStaticPrice }}
+          --price-aggregator-description "${{ github.event.inputs.priceAggregatorDescription }}"
