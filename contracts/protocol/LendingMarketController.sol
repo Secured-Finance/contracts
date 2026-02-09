@@ -361,6 +361,19 @@ contract LendingMarketController is
     }
 
     /**
+     * @notice Get all the maturities in which the user has lending positions or orders for the selected currency.
+     * @param _ccy Currency name in bytes32
+     * @param _user User's address
+     * @return The array of the maturity
+     */
+    function getUsedMaturities(
+        bytes32 _ccy,
+        address _user
+    ) external view override returns (uint256[] memory) {
+        return FundManagementLogic.getUsedMaturities(_ccy, _user);
+    }
+
+    /**
      * @notice Gets the total present value of the account for selected currency.
      * @param _ccy Currency name in bytes32 for Lending Market
      * @param _user User's address

@@ -4,6 +4,7 @@ pragma solidity 0.8.19;
 // dependencies
 import {EnumerableSet} from "../../../dependencies/openzeppelin/utils/structs/EnumerableSet.sol";
 // interfaces
+import {ILendingMarket} from "../../interfaces/ILendingMarket.sol";
 import {ILendingMarketController} from "../../interfaces/ILendingMarketController.sol";
 // libraries
 import {AddressResolverLib} from "../AddressResolverLib.sol";
@@ -53,7 +54,76 @@ library DepositManagementLogic {
     }
 
     function getUsedCurrencies(address _user) public view returns (bytes32[] memory) {
-        return Storage.slot().usedCurrencies[_user].values();
+        bytes32[] memory depositCurrencies = Storage.slot().usedCurrencies[_user].values();
+        ILendingMarketController lendingMarketController = AddressResolverLib
+            .lendingMarketController();
+        bytes32[] memory lendingCurrencies = lendingMarketController.getUsedCurrencies(_user);
+
+        uint256 depositLength = depositCurrencies.length;
+        uint256 lendingLength = lendingCurrencies.length;
+
+        if (lendingLength == 0) {
+            return depositCurrencies;
+        }
+
+        bytes32[] memory usedCurrencies = new bytes32[](depositLength + lendingLength);
+        uint256 count = depositLength;
+
+        for (uint256 i; i < depositLength; i++) {
+            usedCurrencies[i] = depositCurrencies[i];
+        }
+
+        for (uint256 i; i < lendingLength; i++) {
+            bytes32 ccy = lendingCurrencies[i];
+
+            // Check for duplicates in depositCurrencies
+            bool isDuplicate;
+            for (uint256 k; k < depositLength; k++) {
+                if (depositCurrencies[k] == ccy) {
+                    isDuplicate = true;
+                    break;
+                }
+            }
+
+            if (isDuplicate) {
+                continue;
+            }
+
+            // Check if there are any inactive borrow orders for this currency
+            if (_hasInactiveBorrowOrders(lendingMarketController, ccy, _user)) {
+                usedCurrencies[count++] = ccy;
+            }
+        }
+
+        assembly {
+            mstore(usedCurrencies, count)
+        }
+
+        return usedCurrencies;
+    }
+
+    function _hasInactiveBorrowOrders(
+        ILendingMarketController lendingMarketController,
+        bytes32 ccy,
+        address user
+    ) private view returns (bool) {
+        ILendingMarket market = ILendingMarket(lendingMarketController.getLendingMarket(ccy));
+        uint256[] memory maturities = lendingMarketController.getUsedMaturities(ccy, user);
+        uint256 maturitiesLength = maturities.length;
+
+        for (uint256 j; j < maturitiesLength; j++) {
+            uint8 orderBookId = lendingMarketController.getOrderBookId(ccy, maturities[j]);
+            (, uint48[] memory inActiveBorrowOrderIds) = market.getBorrowOrderIds(
+                orderBookId,
+                user
+            );
+
+            if (inActiveBorrowOrderIds.length != 0) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     function getDepositAmount(address _user, bytes32 _ccy) public view returns (uint256) {

@@ -81,4 +81,20 @@ contract TokenVaultCaller {
     function isRedemptionRequired(address _user) public view returns (bool) {
         return lendingMarketController.isRedemptionRequired(_user);
     }
+
+    function getUsedCurrencies(address user) public view returns (bytes32[] memory) {
+        return lendingMarketController.getUsedCurrencies(user);
+    }
+
+    function getLendingMarket(bytes32 ccy) public view returns (address) {
+        return lendingMarketController.getLendingMarket(ccy);
+    }
+
+    function getUsedMaturities(bytes32 ccy, address user) public view returns (uint256[] memory) {
+        return lendingMarketController.getUsedMaturities(ccy, user);
+    }
+
+    function getOrderBookId(bytes32 ccy, uint256 maturity) public view returns (uint8) {
+        return lendingMarketController.getOrderBookId(ccy, maturity);
+    }
 }

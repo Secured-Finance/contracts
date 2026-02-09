@@ -133,6 +133,8 @@ interface ILendingMarketController {
 
     function getUsedCurrencies(address user) external view returns (bytes32[] memory);
 
+    function getUsedMaturities(bytes32 ccy, address user) external view returns (uint256[] memory);
+
     function getTotalPresentValue(bytes32 ccy, address user) external view returns (int256);
 
     function getTotalPresentValueInBaseCurrency(
