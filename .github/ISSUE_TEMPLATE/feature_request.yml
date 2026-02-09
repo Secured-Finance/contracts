@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         We appreciate your suggestion! To help us evaluate it, please complete the form below.
-  - type: input
+  - type: textarea
     id: summary
     attributes:
       label: Summary
