@@ -39,9 +39,11 @@ describe('Integration Test: Order Book', async () => {
 
   let genesisDate: number;
   let filLendingMarket: Contract;
+  let ethLendingMarket: Contract;
   let filMaturities: BigNumber[];
   let ethMaturities: BigNumber[];
   let filOrderBookIds: BigNumber[];
+  let ethOrderBookIds: BigNumber[];
 
   let signers: Signers;
 
@@ -96,8 +98,12 @@ describe('Integration Test: Order Book', async () => {
     filLendingMarket = await lendingMarketController
       .getLendingMarket(hexWFIL)
       .then((address) => ethers.getContractAt('LendingMarket', address));
+    ethLendingMarket = await lendingMarketController
+      .getLendingMarket(hexETH)
+      .then((address) => ethers.getContractAt('LendingMarket', address));
 
     filOrderBookIds = await lendingMarketController.getOrderBookIds(hexWFIL);
+    ethOrderBookIds = await lendingMarketController.getOrderBookIds(hexETH);
 
     orderActionLogic = orderActionLogic.attach(filLendingMarket.address);
   });
@@ -414,6 +420,18 @@ describe('Integration Test: Order Book', async () => {
         filMaturities = await lendingMarketController.getMaturities(hexWFIL);
       });
 
+      after(async () => {
+        const { activeOrders } = await lendingMarketReader[
+          'getOrders(bytes32,address)'
+        ](hexWFIL, carol.address);
+
+        for (const order of activeOrders) {
+          await lendingMarketController
+            .connect(carol)
+            .cancelOrder(hexWFIL, order.maturity, order.orderId);
+        }
+      });
+
       it('Deposit ETH ', async () => {
         await tokenVault.connect(alice).deposit(hexETH, depositAmount, {
           value: depositAmount,
@@ -555,6 +573,10 @@ describe('Integration Test: Order Book', async () => {
         [alice, bob, carol, dave] = await getUsers(4);
         filMaturities = await lendingMarketController.getMaturities(hexWFIL);
         ethMaturities = await lendingMarketController.getMaturities(hexETH);
+        filOrderBookIds = await lendingMarketController.getOrderBookIds(
+          hexWFIL,
+        );
+        ethOrderBookIds = await lendingMarketController.getOrderBookIds(hexETH);
       });
 
       it('Deposit ETH ', async () => {
@@ -612,6 +634,21 @@ describe('Integration Test: Order Book', async () => {
 
         expect(bobFV.add(aliceFV).add(fee)).to.lte(1);
         expect(bobFV.sub(orderAmountInFIL.mul(5).div(2))).lte(1);
+
+        const { activeOrderIds, inActiveOrderIds } =
+          await filLendingMarket.getLendOrderIds(
+            filOrderBookIds[0],
+            bob.address,
+          );
+
+        expect(activeOrderIds.length).to.equal(0);
+        expect(inActiveOrderIds.length).to.equal(1);
+
+        const bobUsedCurrencies = await tokenVault.getUsedCurrencies(
+          bob.address,
+        );
+        expect(bobUsedCurrencies).to.include(hexWFIL);
+        expect(bobUsedCurrencies.length).to.equal(1);
       });
 
       it('Fill an order on the ETH market', async () => {
@@ -655,6 +692,22 @@ describe('Integration Test: Order Book', async () => {
 
         expect(bobFV.sub(orderAmount.mul(5).div(2))).lte(1);
         expect(bobFV.add(aliceFV).add(fee)).to.lte(1);
+
+        const { activeOrderIds, inActiveOrderIds } =
+          await ethLendingMarket.getLendOrderIds(
+            ethOrderBookIds[0],
+            bob.address,
+          );
+
+        expect(activeOrderIds.length).to.equal(0);
+        expect(inActiveOrderIds.length).to.equal(1);
+
+        const bobUsedCurrencies = await tokenVault.getUsedCurrencies(
+          bob.address,
+        );
+        expect(bobUsedCurrencies).to.include(hexETH);
+        expect(bobUsedCurrencies).to.include(hexWFIL);
+        expect(bobUsedCurrencies.length).to.equal(2);
       });
 
       it('Check collateral', async () => {
@@ -751,6 +804,131 @@ describe('Integration Test: Order Book', async () => {
         const currenciesAfterCleanup =
           await lendingMarketController.getUsedCurrencies(alice.address);
         expect(currenciesAfterCleanup.includes(hexETH)).to.equal(true);
+      });
+    });
+
+    describe('Place a limit borrow order, Fill it, Check inactive orders', async () => {
+      const depositAmount = initialETHBalance.div(5);
+      const orderAmount = depositAmount
+        .mul(3)
+        .div(5)
+        .mul(BigNumber.from(10).pow(18))
+        .div(wFilToETHRate);
+
+      before(async () => {
+        [alice, bob] = await getUsers(2);
+        filMaturities = await lendingMarketController.getMaturities(hexWFIL);
+      });
+
+      it('Deposit ETH', async () => {
+        await tokenVault.connect(alice).deposit(hexETH, depositAmount, {
+          value: depositAmount,
+        });
+
+        const aliceDepositAmount = await tokenVault.getDepositAmount(
+          alice.address,
+          hexETH,
+        );
+
+        expect(aliceDepositAmount).to.equal(depositAmount);
+      });
+
+      it('Place a limit borrow order on the FIL market', async () => {
+        await lendingMarketController
+          .connect(alice)
+          .executeOrder(
+            hexWFIL,
+            filMaturities[0],
+            Side.BORROW,
+            orderAmount,
+            '9600',
+          );
+
+        // Check that the order is active
+        const { activeOrderIds } = await filLendingMarket.getBorrowOrderIds(
+          filOrderBookIds[0],
+          alice.address,
+        );
+
+        expect(activeOrderIds.length).to.equal(1);
+      });
+
+      it('Fill the order with market order', async () => {
+        await tokenVault.connect(bob).deposit(hexETH, depositAmount, {
+          value: depositAmount,
+        });
+
+        await wFILToken
+          .connect(bob)
+          .approve(tokenVault.address, initialFILBalance);
+
+        await lendingMarketController
+          .connect(bob)
+          .depositAndExecuteOrder(
+            hexWFIL,
+            filMaturities[0],
+            Side.LEND,
+            orderAmount,
+            '0',
+          );
+
+        // Check that alice has a borrow position
+        const { futureValue: aliceFV } =
+          await lendingMarketController.getPosition(
+            hexWFIL,
+            filMaturities[0],
+            alice.address,
+          );
+
+        expect(aliceFV).to.be.lt(0);
+      });
+
+      it('Check active and inactive borrow orders', async () => {
+        const { activeOrderIds, inActiveOrderIds } =
+          await filLendingMarket.getBorrowOrderIds(
+            filOrderBookIds[0],
+            alice.address,
+          );
+
+        // The order should be filled, so no active orders remain
+        expect(activeOrderIds.length).to.equal(0);
+        // The order should be inactive after being filled
+        expect(inActiveOrderIds.length).to.equal(1);
+      });
+
+      it('Check that FIL is in usedCurrencies', async () => {
+        const aliceUsedCurrencies = await tokenVault.getUsedCurrencies(
+          alice.address,
+        );
+
+        // Alice should have both ETH (deposited) and FIL (borrowed) in usedCurrencies
+        expect(aliceUsedCurrencies).to.include(hexETH);
+        expect(aliceUsedCurrencies).to.include(hexWFIL);
+        expect(aliceUsedCurrencies.length).to.equal(2);
+      });
+
+      it('Cleanup funds and check inactive orders are removed', async () => {
+        // Clean up funds for FIL
+        await lendingMarketController.cleanUpFunds(hexWFIL, alice.address);
+
+        // Check that inactive orders are cleaned up
+        const { activeOrderIds, inActiveOrderIds } =
+          await filLendingMarket.getBorrowOrderIds(
+            filOrderBookIds[0],
+            alice.address,
+          );
+
+        expect(activeOrderIds.length).to.equal(0);
+        expect(inActiveOrderIds.length).to.equal(0);
+
+        // Check that usedCurrencies still includes FIL (due to borrow position)
+        const aliceUsedCurrencies = await tokenVault.getUsedCurrencies(
+          alice.address,
+        );
+
+        expect(aliceUsedCurrencies).to.include(hexETH);
+        expect(aliceUsedCurrencies).to.include(hexWFIL);
+        expect(aliceUsedCurrencies.length).to.equal(2);
       });
     });
 

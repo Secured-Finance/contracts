@@ -25,6 +25,9 @@ const TokenVaultCaller = artifacts.require('TokenVaultCaller');
 // libraries
 const DepositManagementLogic = artifacts.require('DepositManagementLogic');
 
+// interfaces
+const LendingMarket = artifacts.require('LendingMarket');
+
 const { deployContract, deployMockContract } = waffle;
 
 describe('TokenVault', () => {
@@ -129,6 +132,7 @@ describe('TokenVault', () => {
       debtAmount: 0,
       borrowedAmount: 0,
     });
+    await mockLendingMarketController.mock.getUsedCurrencies.returns([]);
 
     await updateReturnValuesOfCalculateTotalFundsInBaseCurrencyMock();
 
@@ -2071,5 +2075,233 @@ describe('TokenVault', () => {
         expect(amount).to.equal(condition.result);
       });
     }
+  });
+
+  describe('Used Currencies', () => {
+    let mockLendingMarket: MockContract;
+    let currency1: string;
+    let currency2: string;
+    let currency3: string;
+
+    before(async () => {
+      currency1 = ethers.utils.formatBytes32String('Currency1');
+      currency2 = ethers.utils.formatBytes32String('Currency2');
+      currency3 = ethers.utils.formatBytes32String('Currency3');
+
+      mockLendingMarket = await deployMockContract(owner, LendingMarket.abi);
+
+      for (const currency of [currency1, currency2, currency3]) {
+        await tokenVaultProxy.registerCurrency(
+          currency,
+          mockERC20.address,
+          true,
+        );
+      }
+    });
+
+    it('Get used currencies when no currencies exist in LendingMarketController', async () => {
+      const signer = getUser();
+      await tokenVaultCaller
+        .connect(signer)
+        .addDepositAmount(signer.address, currency1, '1000');
+
+      await mockLendingMarketController.mock.getUsedCurrencies
+        .withArgs(signer.address)
+        .returns([]);
+
+      const usedCurrencies = await tokenVaultProxy.getUsedCurrencies(
+        signer.address,
+      );
+
+      expect(usedCurrencies).to.deep.equal([currency1]);
+    });
+
+    it('Get used currencies when currency exists in LendingMarketController but no borrow orders', async () => {
+      const signer = getUser();
+      await tokenVaultCaller
+        .connect(signer)
+        .addDepositAmount(signer.address, currency1, '1000');
+
+      await mockLendingMarketController.mock.getUsedCurrencies
+        .withArgs(signer.address)
+        .returns([currency2]);
+      await mockLendingMarketController.mock.getLendingMarket.returns(
+        mockLendingMarket.address,
+      );
+      await mockLendingMarketController.mock.getUsedMaturities
+        .withArgs(currency2, signer.address)
+        .returns([123456]);
+      await mockLendingMarketController.mock.getOrderBookId.returns(1);
+      await mockLendingMarket.mock.getBorrowOrderIds
+        .withArgs(1, signer.address)
+        .returns([], []);
+
+      const usedCurrencies = await tokenVaultProxy.getUsedCurrencies(
+        signer.address,
+      );
+
+      expect(usedCurrencies).to.deep.equal([currency1]);
+    });
+
+    it('Get used currencies with inactive borrow orders without duplicate', async () => {
+      const signer = getUser();
+      await tokenVaultCaller
+        .connect(signer)
+        .addDepositAmount(signer.address, currency1, '1000');
+
+      await mockLendingMarketController.mock.getUsedCurrencies
+        .withArgs(signer.address)
+        .returns([currency2]);
+      await mockLendingMarketController.mock.getLendingMarket.returns(
+        mockLendingMarket.address,
+      );
+      await mockLendingMarketController.mock.getUsedMaturities
+        .withArgs(currency2, signer.address)
+        .returns([123456]);
+      await mockLendingMarketController.mock.getOrderBookId.returns(1);
+      await mockLendingMarket.mock.getBorrowOrderIds
+        .withArgs(1, signer.address)
+        .returns([], [1, 2, 3]);
+
+      const usedCurrencies = await tokenVaultProxy.getUsedCurrencies(
+        signer.address,
+      );
+
+      expect(usedCurrencies).to.have.lengthOf(2);
+      expect(usedCurrencies).to.include(currency1);
+      expect(usedCurrencies).to.include(currency2);
+    });
+
+    it('Get used currencies with inactive borrow orders with duplicate in deposit currencies', async () => {
+      const signer = getUser();
+      await tokenVaultCaller
+        .connect(signer)
+        .addDepositAmount(signer.address, currency1, '1000');
+
+      await mockLendingMarketController.mock.getUsedCurrencies
+        .withArgs(signer.address)
+        .returns([currency1]);
+      await mockLendingMarketController.mock.getLendingMarket.returns(
+        mockLendingMarket.address,
+      );
+      await mockLendingMarketController.mock.getUsedMaturities
+        .withArgs(currency1, signer.address)
+        .returns([123456]);
+      await mockLendingMarketController.mock.getOrderBookId.returns(1);
+      await mockLendingMarket.mock.getBorrowOrderIds
+        .withArgs(1, signer.address)
+        .returns([], [1, 2]);
+
+      const usedCurrencies = await tokenVaultProxy.getUsedCurrencies(
+        signer.address,
+      );
+
+      expect(usedCurrencies).to.deep.equal([currency1]);
+    });
+
+    it('Get used currencies with multiple lending currencies having inactive borrow orders', async () => {
+      const signer = getUser();
+      await tokenVaultCaller
+        .connect(signer)
+        .addDepositAmount(signer.address, currency1, '1000');
+
+      await mockLendingMarketController.mock.getUsedCurrencies
+        .withArgs(signer.address)
+        .returns([currency2, currency3]);
+      await mockLendingMarketController.mock.getLendingMarket.returns(
+        mockLendingMarket.address,
+      );
+      await mockLendingMarketController.mock.getUsedMaturities
+        .withArgs(currency2, signer.address)
+        .returns([123456, 789012]);
+      await mockLendingMarketController.mock.getUsedMaturities
+        .withArgs(currency3, signer.address)
+        .returns([123456, 789012]);
+      await mockLendingMarketController.mock.getOrderBookId.returns(1);
+      await mockLendingMarket.mock.getBorrowOrderIds
+        .withArgs(1, signer.address)
+        .returns([], [1, 2]);
+
+      const usedCurrencies = await tokenVaultProxy.getUsedCurrencies(
+        signer.address,
+      );
+
+      expect(usedCurrencies).to.have.lengthOf(3);
+      expect(usedCurrencies).to.include(currency1);
+      expect(usedCurrencies).to.include(currency2);
+      expect(usedCurrencies).to.include(currency3);
+    });
+
+    it('Get used currencies when only one maturity has inactive borrow orders', async () => {
+      const signer = getUser();
+      await tokenVaultCaller
+        .connect(signer)
+        .addDepositAmount(signer.address, currency1, '1000');
+
+      await mockLendingMarketController.mock.getUsedCurrencies
+        .withArgs(signer.address)
+        .returns([currency2]);
+      await mockLendingMarketController.mock.getLendingMarket.returns(
+        mockLendingMarket.address,
+      );
+
+      const maturity1 = 123456;
+      const maturity2 = 234567;
+      const maturity3 = 345678;
+      await mockLendingMarketController.mock.getUsedMaturities
+        .withArgs(currency2, signer.address)
+        .returns([maturity1, maturity2, maturity3]);
+
+      await mockLendingMarketController.mock.getOrderBookId
+        .withArgs(currency2, maturity1)
+        .returns(1);
+      await mockLendingMarketController.mock.getOrderBookId
+        .withArgs(currency2, maturity2)
+        .returns(2);
+      await mockLendingMarketController.mock.getOrderBookId
+        .withArgs(currency2, maturity3)
+        .returns(3);
+
+      await mockLendingMarket.mock.getBorrowOrderIds
+        .withArgs(1, signer.address)
+        .returns([], []);
+      await mockLendingMarket.mock.getBorrowOrderIds
+        .withArgs(2, signer.address)
+        .returns([], [5, 6]);
+      await mockLendingMarket.mock.getBorrowOrderIds
+        .withArgs(3, signer.address)
+        .returns([], []);
+
+      const usedCurrencies = await tokenVaultProxy.getUsedCurrencies(
+        signer.address,
+      );
+
+      expect(usedCurrencies).to.have.lengthOf(2);
+      expect(usedCurrencies).to.include(currency1);
+      expect(usedCurrencies).to.include(currency2);
+    });
+
+    it('Get used currencies when no deposit currencies exist', async () => {
+      const signer = getUser();
+      await mockLendingMarketController.mock.getUsedCurrencies
+        .withArgs(signer.address)
+        .returns([currency2]);
+      await mockLendingMarketController.mock.getLendingMarket.returns(
+        mockLendingMarket.address,
+      );
+      await mockLendingMarketController.mock.getUsedMaturities
+        .withArgs(currency2, signer.address)
+        .returns([123456]);
+      await mockLendingMarketController.mock.getOrderBookId.returns(1);
+      await mockLendingMarket.mock.getBorrowOrderIds
+        .withArgs(1, signer.address)
+        .returns([], [1]);
+
+      const usedCurrencies = await tokenVaultProxy.getUsedCurrencies(
+        signer.address,
+      );
+
+      expect(usedCurrencies).to.deep.equal([currency2]);
+    });
   });
 });
