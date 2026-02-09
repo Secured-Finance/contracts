@@ -220,6 +220,12 @@ function getOrderBookIds(bytes32 ccy) external view returns (uint8[])
 function getUsedCurrencies(address user) external view returns (bytes32[])
 ```
 
+### getUsedMaturities
+
+```solidity
+function getUsedMaturities(bytes32 ccy, address user) external view returns (uint256[])
+```
+
 ### getTotalPresentValue
 
 ```solidity

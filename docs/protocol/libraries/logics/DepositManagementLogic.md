@@ -41,6 +41,12 @@ function isCovered(address _user, bytes32 _orderCcy) public view returns (bool i
 function getUsedCurrencies(address _user) public view returns (bytes32[])
 ```
 
+### _hasInactiveBorrowOrders
+
+```solidity
+function _hasInactiveBorrowOrders(contract ILendingMarketController lendingMarketController, bytes32 ccy, address user) private view returns (bool)
+```
+
 ### getDepositAmount
 
 ```solidity

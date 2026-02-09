@@ -388,6 +388,23 @@ Get all the currencies in which the user has lending positions or orders.
 | ---- | ---- | ----------- |
 | [0] | bytes32[] | The array of the currency |
 
+### getUsedMaturities
+
+```solidity
+function getUsedMaturities(bytes32 _ccy, address _user) external view returns (uint256[])
+```
+
+Get all the maturities in which the user has lending positions or orders for the selected currency.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 |
+| _user | address | User's address |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | uint256[] | The array of the maturity |
+
 ### getTotalPresentValue
 
 ```solidity
