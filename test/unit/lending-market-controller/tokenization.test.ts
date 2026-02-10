@@ -2,7 +2,7 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { time } from '@openzeppelin/test-helpers';
 import { MockContract, deployMockContract } from 'ethereum-waffle';
 import { BigNumber, Contract } from 'ethers';
-import { artifacts, ethers, network } from 'hardhat';
+import { artifacts, ethers } from 'hardhat';
 
 import { expect } from 'chai';
 import moment from 'moment';
@@ -44,7 +44,7 @@ describe('LendingMarketController - Tokenization', () => {
   let carol: SignerWithAddress;
   let dave: SignerWithAddress;
 
-  before(async () => {
+  const initialize = async () => {
     [owner, alice, bob, carol, dave] = await ethers.getSigners();
 
     ({
@@ -1101,6 +1101,10 @@ describe('LendingMarketController - Tokenization', () => {
     });
 
     it('Deposit zc tokens', async () => {
+      await mockCurrencyController.mock[
+        'convertFromBaseCurrency(bytes32,uint256[])'
+      ].returns([value, 0]);
+
       const zcTokenAddress = await lendingMarketControllerProxy.getZCToken(
         targetCurrency,
         maturities[0],
@@ -1139,6 +1143,10 @@ describe('LendingMarketController - Tokenization', () => {
     });
 
     it('Deposit zc tokens with exceeded amount', async () => {
+      await mockCurrencyController.mock[
+        'convertFromBaseCurrency(bytes32,uint256[])'
+      ].returns([value, 0]);
+
       const zcTokenAddress = await lendingMarketControllerProxy.getZCToken(
         targetCurrency,
         maturities[0],
@@ -1179,6 +1187,10 @@ describe('LendingMarketController - Tokenization', () => {
     });
 
     it('Deposit zc perpetual tokens', async () => {
+      await mockCurrencyController.mock[
+        'convertFromBaseCurrency(bytes32,uint256[])'
+      ].returns([value, 0]);
+
       const zcTokenAddress = await lendingMarketControllerProxy.getZCToken(
         targetCurrency,
         0,
@@ -1232,6 +1244,10 @@ describe('LendingMarketController - Tokenization', () => {
     });
 
     it('Deposit zc perpetual tokens with exceeded amount', async () => {
+      await mockCurrencyController.mock[
+        'convertFromBaseCurrency(bytes32,uint256[])'
+      ].returns([value, 0]);
+
       const zcTokenAddress = await lendingMarketControllerProxy.getZCToken(
         targetCurrency,
         0,
