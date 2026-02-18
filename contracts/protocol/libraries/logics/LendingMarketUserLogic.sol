@@ -32,6 +32,7 @@ library LendingMarketUserLogic {
     error AmountIsZero();
     error FutureValueIsZero();
     error TooManyActiveOrders();
+    error TooManyDepositCurrencies();
     error NotEnoughCollateral();
     error NotEnoughDeposit(bytes32 ccy);
 
@@ -144,7 +145,19 @@ library LendingMarketUserLogic {
         if (_amount == 0) revert InvalidAmount();
 
         uint256 activeOrderCount = FundManagementLogic.cleanUpFunds(_ccy, _user);
-        FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, _user);
+
+        bool isNewCurrency = FundManagementLogic.registerCurrencyAndMaturity(
+            _ccy,
+            _maturity,
+            _user
+        );
+
+        if (_side == ProtocolTypes.Side.BORROW && isNewCurrency) {
+            // For borrow orders, check if deposit currency can be added because borrowed currency is added as a new deposit currency.
+            if (!AddressResolverLib.tokenVault().canDepositCurrency(_user, _ccy)) {
+                revert TooManyDepositCurrencies();
+            }
+        }
 
         (
             FilledOrder memory filledOrder,
@@ -210,7 +223,18 @@ library LendingMarketUserLogic {
 
         if (activeOrderCount + 1 > Constants.MAXIMUM_ORDER_COUNT) revert TooManyActiveOrders();
 
-        FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, _user);
+        bool isNewCurrency = FundManagementLogic.registerCurrencyAndMaturity(
+            _ccy,
+            _maturity,
+            _user
+        );
+
+        if (_side == ProtocolTypes.Side.BORROW && isNewCurrency) {
+            // For borrow orders, check if deposit currency can be added
+            if (!AddressResolverLib.tokenVault().canDepositCurrency(_user, _ccy)) {
+                revert TooManyDepositCurrencies();
+            }
+        }
 
         ILendingMarket(Storage.slot().lendingMarkets[_ccy]).executePreOrder(
             Storage.slot().maturityOrderBookIds[_ccy][_maturity],

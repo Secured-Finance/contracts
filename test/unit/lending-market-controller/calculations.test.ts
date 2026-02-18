@@ -77,6 +77,7 @@ describe('LendingMarketController - Calculations', () => {
     await mockTokenVault.mock.depositFrom.returns();
     await mockTokenVault.mock.isCovered.returns(true, true);
     await mockTokenVault.mock['isCollateral(bytes32[])'].returns([true]);
+    await mockTokenVault.mock.canDepositCurrency.returns(true);
     await mockTokenVault.mock.calculateCoverage.returns('1000', false);
     await mockTokenVault.mock.getTokenAddress.returns(mockERC20.address);
     await mockERC20.mock.decimals.returns(18);

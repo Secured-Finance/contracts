@@ -615,15 +615,7 @@ contract LendingMarketController is
         ProtocolTypes.Side _side,
         uint256 _amount,
         uint256 _unitPrice
-    )
-        external
-        payable
-        override
-        nonReentrant
-        ifValidMaturity(_ccy, _maturity)
-        ifActive
-        returns (bool)
-    {
+    ) external payable override ifValidMaturity(_ccy, _maturity) ifActive returns (bool) {
         tokenVault().depositFrom{value: msg.value}(msg.sender, _ccy, _amount);
         LendingMarketUserLogic.executeOrder(
             _ccy,
@@ -661,7 +653,7 @@ contract LendingMarketController is
         uint8 _permitV,
         bytes32 _permitR,
         bytes32 _permitS
-    ) external override nonReentrant ifValidMaturity(_ccy, _maturity) ifActive returns (bool) {
+    ) external override ifValidMaturity(_ccy, _maturity) ifActive returns (bool) {
         tokenVault().depositWithPermitFrom(
             msg.sender,
             _ccy,
@@ -729,15 +721,7 @@ contract LendingMarketController is
         ProtocolTypes.Side _side,
         uint256 _amount,
         uint256 _unitPrice
-    )
-        external
-        payable
-        override
-        nonReentrant
-        ifValidMaturity(_ccy, _maturity)
-        ifActive
-        returns (bool)
-    {
+    ) external payable override ifValidMaturity(_ccy, _maturity) ifActive returns (bool) {
         tokenVault().depositFrom{value: msg.value}(msg.sender, _ccy, _amount);
         LendingMarketUserLogic.executePreOrder(
             _ccy,
@@ -776,7 +760,7 @@ contract LendingMarketController is
         uint8 _permitV,
         bytes32 _permitR,
         bytes32 _permitS
-    ) external override nonReentrant ifValidMaturity(_ccy, _maturity) ifActive returns (bool) {
+    ) external override ifValidMaturity(_ccy, _maturity) ifActive returns (bool) {
         tokenVault().depositWithPermitFrom(
             msg.sender,
             _ccy,

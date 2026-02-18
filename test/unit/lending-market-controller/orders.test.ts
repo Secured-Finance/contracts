@@ -405,6 +405,7 @@ describe('LendingMarketController - Orders', () => {
     beforeEach(async () => {
       // Set up for the mocks
       await mockTokenVault.mock.isCovered.returns(true, true);
+      await mockTokenVault.mock.canDepositCurrency.returns(true);
 
       await initializeCurrency(targetCurrency);
     });
@@ -3859,6 +3860,34 @@ describe('LendingMarketController - Orders', () => {
               ethers.utils.formatBytes32String('dummy'),
             ),
         ).to.be.revertedWith('InvalidMaturity');
+      });
+
+      it('Fail to execute an borrow order due to the deposit currencies exceeding the max.', async () => {
+        await mockTokenVault.mock.canDepositCurrency.returns(false);
+
+        await expect(
+          lendingMarketControllerProxy
+            .connect(alice)
+            .executeOrder(
+              targetCurrency,
+              maturities[0],
+              Side.BORROW,
+              '10000000000000000',
+              '8000',
+            ),
+        ).to.be.revertedWith('TooManyDepositCurrencies');
+
+        await expect(
+          lendingMarketControllerProxy
+            .connect(alice)
+            .executeOrder(
+              targetCurrency,
+              maturities[0],
+              Side.LEND,
+              '10000000000000000',
+              '8000',
+            ),
+        ).not.to.be.revertedWith('TooManyDepositCurrencies');
       });
 
       it('Fail to cancel an order due to invalid maturity', async () => {

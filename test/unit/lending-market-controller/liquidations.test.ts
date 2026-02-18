@@ -127,6 +127,7 @@ describe('LendingMarketController - Liquidations', () => {
     await mockTokenVault.mock.getDepositAmount.returns(100);
     await mockTokenVault.mock.transferFrom.returns(0);
     await mockTokenVault.mock.isCovered.returns(true, true);
+    await mockTokenVault.mock.canDepositCurrency.returns(true);
     await mockTokenVault.mock.isCollateral.returns(true);
     await mockTokenVault.mock.getTokenAddress.returns(mockERC20.address);
     await mockReserveFund.mock.isPaused.returns(true);

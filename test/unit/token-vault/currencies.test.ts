@@ -421,4 +421,215 @@ describe('TokenVault - Currencies', () => {
       expect(usedCurrencies).to.deep.equal([currency2]);
     });
   });
+
+  describe('Used Currency Restriction', () => {
+    let currencies: string[];
+    const MAX_DEPOSIT_CURRENCIES = 10;
+
+    before(async () => {
+      // Prepare currency names (using unique names to avoid conflicts)
+      currencies = [];
+      for (let i = 0; i < MAX_DEPOSIT_CURRENCIES + 1; i++) {
+        const currency = ethers.utils.formatBytes32String(`MaxCurrency${i}`);
+        currencies.push(currency);
+      }
+
+      // Register 11 currencies for testing
+      for (const currency of currencies) {
+        await tokenVaultProxy.registerCurrency(
+          currency,
+          mockERC20.address,
+          true,
+        );
+      }
+    });
+
+    beforeEach(async () => {
+      await mockLendingMarketController.mock.isRedemptionRequired.returns(
+        false,
+      );
+    });
+
+    it('Should successfully deposit when usedCurrencies is less than MAX_DEPOSIT_CURRENCIES', async () => {
+      const signer = getUser();
+
+      // Deposit MAX_DEPOSIT_CURRENCIES - 1 currencies
+      for (let i = 0; i < MAX_DEPOSIT_CURRENCIES - 1; i++) {
+        await tokenVaultProxy.connect(signer).deposit(currencies[i], '1000');
+      }
+
+      const usedCurrencies = await tokenVaultProxy.getUsedCurrencies(
+        signer.address,
+      );
+      expect(usedCurrencies).to.have.lengthOf(MAX_DEPOSIT_CURRENCIES - 1);
+    });
+
+    it('Should successfully deposit when usedCurrencies equals MAX_DEPOSIT_CURRENCIES', async () => {
+      const signer = getUser();
+
+      // Deposit MAX_DEPOSIT_CURRENCIES currencies
+      for (let i = 0; i < MAX_DEPOSIT_CURRENCIES; i++) {
+        await tokenVaultProxy.connect(signer).deposit(currencies[i], '1000');
+      }
+
+      const usedCurrencies = await tokenVaultProxy.getUsedCurrencies(
+        signer.address,
+      );
+      expect(usedCurrencies).to.have.lengthOf(MAX_DEPOSIT_CURRENCIES);
+    });
+
+    it('Should successfully deposit to an existing currency when already at MAX_DEPOSIT_CURRENCIES', async () => {
+      const signer = getUser();
+
+      // Deposit MAX_DEPOSIT_CURRENCIES currencies
+      for (let i = 0; i < MAX_DEPOSIT_CURRENCIES; i++) {
+        await tokenVaultProxy.connect(signer).deposit(currencies[i], '1000');
+      }
+
+      // Additional deposit to an existing currency should succeed
+      await tokenVaultProxy.connect(signer).deposit(currencies[0], '500');
+
+      const usedCurrencies = await tokenVaultProxy.getUsedCurrencies(
+        signer.address,
+      );
+      expect(usedCurrencies).to.have.lengthOf(MAX_DEPOSIT_CURRENCIES);
+    });
+
+    it('Should revert when trying to deposit a new currency when usedCurrencies equals MAX_DEPOSIT_CURRENCIES', async () => {
+      const signer = getUser();
+
+      // Deposit MAX_DEPOSIT_CURRENCIES currencies
+      for (let i = 0; i < MAX_DEPOSIT_CURRENCIES; i++) {
+        await tokenVaultProxy.connect(signer).deposit(currencies[i], '1000');
+      }
+
+      // Try to deposit a new (11th) currency - should revert
+      await expect(
+        tokenVaultProxy
+          .connect(signer)
+          .deposit(currencies[MAX_DEPOSIT_CURRENCIES], '1000'),
+      ).to.be.revertedWith('TooManyDepositCurrencies');
+
+      await expect(
+        tokenVaultProxy
+          .connect(owner)
+          .depositTo(
+            currencies[MAX_DEPOSIT_CURRENCIES],
+            '1000',
+            signer.address,
+          ),
+      ).to.be.revertedWith('TooManyDepositCurrencies');
+
+      const canDepositCurrency = await tokenVaultProxy.canDepositCurrency(
+        signer.address,
+        currencies[MAX_DEPOSIT_CURRENCIES],
+      );
+      expect(canDepositCurrency).to.be.false;
+    });
+
+    it('Should successfully deposit a new currency after withdrawing all from one currency', async () => {
+      const signer = getUser();
+
+      // Set up mocks for withdraw
+      await mockCurrencyController.mock[
+        'convertToBaseCurrency(bytes32,uint256)'
+      ].returns('1000');
+
+      // Deposit MAX_DEPOSIT_CURRENCIES currencies
+      for (let i = 0; i < MAX_DEPOSIT_CURRENCIES; i++) {
+        await tokenVaultProxy.connect(signer).deposit(currencies[i], '1000');
+      }
+
+      // Withdraw all from one currency to free up a slot
+      await tokenVaultProxy.connect(signer).withdraw(currencies[0], '1000');
+
+      const usedCurrenciesAfterWithdraw =
+        await tokenVaultProxy.getUsedCurrencies(signer.address);
+      expect(usedCurrenciesAfterWithdraw).to.have.lengthOf(
+        MAX_DEPOSIT_CURRENCIES - 1,
+      );
+
+      // Now deposit a new currency should succeed
+      await tokenVaultProxy
+        .connect(signer)
+        .deposit(currencies[MAX_DEPOSIT_CURRENCIES], '1000');
+
+      const usedCurrenciesAfterDeposit =
+        await tokenVaultProxy.getUsedCurrencies(signer.address);
+      expect(usedCurrenciesAfterDeposit).to.have.lengthOf(
+        MAX_DEPOSIT_CURRENCIES,
+      );
+    });
+
+    it('Should allow usedCurrencies to exceed MAX_DEPOSIT_CURRENCIES when using addDepositAmount directly', async () => {
+      const signer = getUser();
+
+      // Use addDepositAmount to bypass the MAX_DEPOSIT_CURRENCIES check
+      // This simulates a state where usedCurrencies exceeds the limit
+      for (let i = 0; i < MAX_DEPOSIT_CURRENCIES + 1; i++) {
+        await tokenVaultCaller
+          .connect(signer)
+          .addDepositAmount(signer.address, currencies[i], '1000');
+      }
+
+      const usedCurrencies = await tokenVaultProxy.getUsedCurrencies(
+        signer.address,
+      );
+      expect(usedCurrencies).to.have.lengthOf(MAX_DEPOSIT_CURRENCIES + 1);
+      expect(usedCurrencies.length).to.be.greaterThan(MAX_DEPOSIT_CURRENCIES);
+    });
+
+    it('Should allow deposit to existing currency when usedCurrencies exceeds MAX_DEPOSIT_CURRENCIES', async () => {
+      const signer = getUser();
+
+      // Create a state where usedCurrencies exceeds MAX_DEPOSIT_CURRENCIES
+      for (let i = 0; i < MAX_DEPOSIT_CURRENCIES + 1; i++) {
+        await tokenVaultCaller
+          .connect(signer)
+          .addDepositAmount(signer.address, currencies[i], '1000');
+      }
+
+      const usedCurrenciesBefore = await tokenVaultProxy.getUsedCurrencies(
+        signer.address,
+      );
+      expect(usedCurrenciesBefore).to.have.lengthOf(MAX_DEPOSIT_CURRENCIES + 1);
+
+      // Deposit to an existing currency should succeed
+      await tokenVaultProxy.connect(signer).deposit(currencies[0], '500');
+
+      const usedCurrenciesAfter = await tokenVaultProxy.getUsedCurrencies(
+        signer.address,
+      );
+      expect(usedCurrenciesAfter).to.have.lengthOf(MAX_DEPOSIT_CURRENCIES + 1);
+    });
+
+    it('Should revert when depositing new currency when usedCurrencies exceeds MAX_DEPOSIT_CURRENCIES', async () => {
+      const signer = getUser();
+
+      // Create a state where usedCurrencies exceeds MAX_DEPOSIT_CURRENCIES
+      for (let i = 0; i < MAX_DEPOSIT_CURRENCIES + 1; i++) {
+        await tokenVaultCaller
+          .connect(signer)
+          .addDepositAmount(signer.address, currencies[i], '1000');
+      }
+
+      const usedCurrencies = await tokenVaultProxy.getUsedCurrencies(
+        signer.address,
+      );
+      expect(usedCurrencies).to.have.lengthOf(MAX_DEPOSIT_CURRENCIES + 1);
+
+      // Register an additional currency for testing
+      const newCurrency = ethers.utils.formatBytes32String('NewCurrency');
+      await tokenVaultProxy.registerCurrency(
+        newCurrency,
+        mockERC20.address,
+        true,
+      );
+
+      // Try to deposit a new currency - should revert
+      await expect(
+        tokenVaultProxy.connect(signer).deposit(newCurrency, '1000'),
+      ).to.be.revertedWith('TooManyDepositCurrencies');
+    });
+  });
 });

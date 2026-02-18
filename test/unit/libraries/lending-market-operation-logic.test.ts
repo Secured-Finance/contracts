@@ -1,32 +1,36 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
-import { artifacts, ethers, waffle } from 'hardhat';
+import { Contract } from 'ethers';
+import { ethers, waffle } from 'hardhat';
 
 import moment from 'moment';
 
-const { deployContract, loadFixture } = waffle;
-
-// libraries
-const LendingMarketOperationLogic = artifacts.require(
-  'LendingMarketOperationLogic',
-);
+const { loadFixture } = waffle;
 
 describe('LendingMarketOperationLogic', function () {
   let owner: SignerWithAddress;
+  let lib: Contract;
 
   before(async () => {
     [owner] = await ethers.getSigners();
   });
 
   async function deployOnceFixture() {
-    const lib = await deployContract(owner, LendingMarketOperationLogic);
+    const LendingMarketOperationLogic = await ethers.getContractFactory(
+      'LendingMarketOperationLogic',
+    );
+    const lib = await LendingMarketOperationLogic.deploy();
+    await lib.deployed();
 
     return { lib, owner };
   }
 
+  beforeEach(async () => {
+    ({ lib, owner } = await loadFixture(deployOnceFixture));
+  });
+
   describe('Testing calculateNextMaturity()', function () {
     it('Get the last Friday after 3 months', async function () {
-      const { lib } = await loadFixture(deployOnceFixture);
       const now = moment().unix();
       const nextMaturity = await lib.calculateNextMaturity(now, 3);
 
@@ -37,7 +41,6 @@ describe('LendingMarketOperationLogic', function () {
     });
 
     it('Get the date 1 week later', async function () {
-      const { lib } = await loadFixture(deployOnceFixture);
       const now = moment().unix();
       const nextMaturity = await lib.calculateNextMaturity(now, 0);
 
