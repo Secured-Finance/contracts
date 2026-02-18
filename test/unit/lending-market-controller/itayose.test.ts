@@ -77,6 +77,7 @@ describe('LendingMarketController - Itayose', () => {
       'convertFromBaseCurrency(bytes32,uint256)'
     ].returns('10');
     await mockTokenVault.mock.isCovered.returns(true, true);
+    await mockTokenVault.mock.canDepositCurrency.returns(true);
     await mockTokenVault.mock.addDepositAmount.returns();
     await mockTokenVault.mock.removeDepositAmount.returns();
     await mockTokenVault.mock.depositWithPermitFrom.returns();

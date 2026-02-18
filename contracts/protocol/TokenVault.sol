@@ -47,8 +47,6 @@ contract TokenVault is
 {
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
-    uint256 public constant MAX_USED_CURRENCIES = 10;
-
     /**
      * @notice Modifier to check if currency hasn't been registered yet
      * @param _ccy Currency name in bytes32
@@ -158,6 +156,16 @@ contract TokenVault is
      */
     function isRegisteredCurrency(bytes32 _ccy) public view override returns (bool) {
         return Storage.slot().tokenAddresses[_ccy] != address(0);
+    }
+
+    /**
+     * @notice Checks if a deposit currency can be added for the user.
+     * @param _user User's address
+     * @param _ccy Currency name in bytes32
+     * @return True if the currency can be added, false otherwise
+     */
+    function canDepositCurrency(address _user, bytes32 _ccy) external view override returns (bool) {
+        return DepositManagementLogic.canDepositCurrency(_user, _ccy);
     }
 
     // @inheritdoc Proxyable
@@ -624,12 +632,7 @@ contract TokenVault is
             revert InvalidAmount(_ccy, _amount, msg.value);
         }
 
-        if (
-            Storage.slot().usedCurrencies[_caller].length() >= MAX_USED_CURRENCIES &&
-            !Storage.slot().usedCurrencies[_caller].contains(_ccy)
-        ) {
-            revert TooManyUsedCurrencies();
-        }
+        lendingMarketController().cleanUpFunds(_ccy, _onBehalfOf);
 
         DepositManagementLogic.deposit(_caller, _ccy, _amount, _onBehalfOf);
 
