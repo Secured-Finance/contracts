@@ -31,6 +31,7 @@ describe('Performance Test: Used Currencies Limit', async () => {
   let lendingMarketController: Contract;
   let lendingMarketReader: Contract;
   let currencyController: Contract;
+  let reserveFund: Contract;
   let wETHToken: Contract;
   let usdcToken: Contract;
   let wBTCToken: Contract;
@@ -76,6 +77,7 @@ describe('Performance Test: Used Currencies Limit', async () => {
       lendingMarketController,
       lendingMarketReader,
       currencyController,
+      reserveFund,
       wETHToken,
       usdcToken,
       wBTCToken,
@@ -653,16 +655,9 @@ describe('Performance Test: Used Currencies Limit', async () => {
           const user = waffle.provider.createEmptyWallet();
           depositUser = user; // Store for gas estimation
 
-          for (const {
-            key: currencyKey,
-            name,
-            orderAmount,
-          } of selectedCurrencies) {
+          for (const { key: currencyKey, orderAmount } of selectedCurrencies) {
             // Deposit funds without placing orders
             await depositForUser(user, currencyKey, orderAmount.mul(20));
-
-            process.stdout.write('\r\x1b[K');
-            process.stdout.write(`        Deposited for ${name}\n`);
           }
         });
 
@@ -697,6 +692,228 @@ describe('Performance Test: Used Currencies Limit', async () => {
               .catch(() => BigNumber.from(0)); // If estimation fails, use 0
 
             gasCosts[`GasCosts(${name})`] = estimateGas.toNumber();
+          }
+
+          if (!log[numberOfCurrencies]) {
+            log[numberOfCurrencies] = {};
+          }
+          Object.assign(log[numberOfCurrencies], gasCosts);
+        });
+      });
+    }
+
+    describe('Show results', async () => {
+      it('Gas Costs', () => {
+        console.table(log);
+      });
+    });
+  });
+
+  describe('ReserveFund: WithdrawZCToken Gas Costs with Multiple Used Currencies', async () => {
+    // Test patterns: Measure gas costs for withdrawZCToken with different numbers of used currencies
+    // This tests the ReserveFund usedCurrencies performance when withdrawing ZCTokens received as fees
+    const tests = [1, 2, 5, 10, 20];
+    const log = {};
+
+    for (const numberOfCurrencies of tests) {
+      describe(`${numberOfCurrencies} currencies`, async () => {
+        const preExistingOrdersPerBook = 1;
+
+        before(async () => {
+          await initializeContracts(numberOfCurrencies);
+
+          // Update order fee rate to generate fees for ReserveFund
+          const selectedCurrencies = allCurrencies.slice(0, numberOfCurrencies);
+          for (const { key: currencyKey } of selectedCurrencies) {
+            await lendingMarketController.updateOrderFeeRate(
+              currencyKey,
+              '100',
+            ); // 1% fee
+          }
+        });
+
+        it(`Setup: Create ${preExistingOrdersPerBook} pre-existing orders per order book`, async () => {
+          const selectedCurrencies = allCurrencies.slice(0, numberOfCurrencies);
+
+          for (const {
+            key: currencyKey,
+            name,
+            orderAmount,
+          } of selectedCurrencies) {
+            const currencyMaturities = maturities[name];
+
+            for (
+              let maturityIdx = 0;
+              maturityIdx < currencyMaturities.length;
+              maturityIdx++
+            ) {
+              const maturity = currencyMaturities[maturityIdx];
+
+              process.stdout.write(
+                `\r        Creating pre-existing orders for ${name} maturity ${
+                  maturityIdx + 1
+                }/${currencyMaturities.length}: 0/${
+                  preExistingOrdersPerBook * 2
+                }`,
+              );
+
+              for (let i = 0; i < preExistingOrdersPerBook; i++) {
+                process.stdout.write('\r\x1b[K');
+                process.stdout.write(
+                  `        Creating pre-existing orders for ${name} maturity ${
+                    maturityIdx + 1
+                  }/${currencyMaturities.length}: ${(i + 1) * 2}/${
+                    preExistingOrdersPerBook * 2
+                  }`,
+                );
+
+                const user = waffle.provider.createEmptyWallet();
+
+                // Deposit and create LEND and BORROW orders
+                await depositForUser(user, currencyKey, orderAmount.mul(3));
+                let nonce = await user.getTransactionCount();
+                const txs = await Promise.all([
+                  lendingMarketController
+                    .connect(user)
+                    .executeOrder(
+                      currencyKey,
+                      maturity,
+                      Side.LEND,
+                      orderAmount,
+                      String(9300 - i),
+                      { nonce },
+                    ),
+                  lendingMarketController
+                    .connect(user)
+                    .executeOrder(
+                      currencyKey,
+                      maturity,
+                      Side.BORROW,
+                      orderAmount,
+                      String(9600 + i),
+                      { nonce: nonce + 1 },
+                    ),
+                ]);
+
+                await Promise.all(txs.map((tx) => tx.wait()));
+              }
+              process.stdout.write('\r\x1b[K');
+            }
+          }
+        });
+
+        it(`Execute: Match orders on all maturities to generate fees for ReserveFund`, async () => {
+          const selectedCurrencies = allCurrencies.slice(0, numberOfCurrencies);
+
+          for (const {
+            key: currencyKey,
+            name,
+            orderAmount,
+          } of selectedCurrencies) {
+            const currencyMaturities = maturities[name];
+
+            // Create a separate user to match the orders
+            const matchUser = waffle.provider.createEmptyWallet();
+
+            // Deposit for BORROW matching
+            await depositForUser(
+              matchUser,
+              currencyKey,
+              orderAmount.mul(currencyMaturities.length).mul(3).div(2),
+            );
+
+            // Execute BORROW to match LEND orders
+            for (let maturity of currencyMaturities) {
+              await lendingMarketController
+                .connect(matchUser)
+                .executeOrder(
+                  currencyKey,
+                  maturity,
+                  Side.BORROW,
+                  orderAmount,
+                  '0',
+                )
+                .then((tx) => tx.wait());
+            }
+
+            // Deposit for LEND matching
+            await depositForUser(
+              matchUser,
+              currencyKey,
+              orderAmount.mul(currencyMaturities.length),
+            );
+
+            // Execute LEND to match BORROW orders
+            for (let maturity of currencyMaturities) {
+              await lendingMarketController
+                .connect(matchUser)
+                .executeOrder(
+                  currencyKey,
+                  maturity,
+                  Side.LEND,
+                  orderAmount,
+                  '0',
+                )
+                .then((tx) => tx.wait());
+            }
+
+            process.stdout.write('\r\x1b[K');
+          }
+
+          // Verify ReserveFund received fees
+          const reserveFundCurrencies =
+            await lendingMarketController.getUsedCurrencies(
+              reserveFund.address,
+            );
+
+          console.log(
+            `        ReserveFund has ${reserveFundCurrencies.length} currencies with fees`,
+          );
+        });
+
+        it(`Measure: Estimate gas costs for ReserveFund withdrawZCToken`, async () => {
+          const selectedCurrencies = allCurrencies.slice(
+            0,
+            Math.min(numberOfCurrencies, baseCurrencies.length),
+          );
+          const gasCosts = {};
+
+          for (const { key: currencyKey, name } of selectedCurrencies) {
+            const currencyMaturities = maturities[name];
+            const firstMaturity = currencyMaturities[0];
+
+            // Check ReserveFund's withdrawable amount
+            const withdrawableAmount =
+              await lendingMarketController.getWithdrawableZCTokenAmount(
+                currencyKey,
+                firstMaturity,
+                reserveFund.address,
+              );
+
+            if (withdrawableAmount.gt(0)) {
+              // Encode withdrawZCToken call
+              const withdrawData =
+                lendingMarketController.interface.encodeFunctionData(
+                  'withdrawZCToken',
+                  [currencyKey, firstMaturity, withdrawableAmount],
+                );
+
+              // Estimate gas for ReserveFund.executeTransaction
+              const estimateGas = await reserveFund
+                .connect(signers[0]) // Owner
+                .estimateGas.executeTransaction(
+                  lendingMarketController.address,
+                  withdrawData,
+                )
+                .catch(() => BigNumber.from(0)); // If estimation fails, use 0
+
+              gasCosts[`GasCosts(${name})`] = estimateGas.toNumber();
+            } else {
+              console.warn(
+                `Warning: No withdrawable ZCToken for ${name} at maturity ${firstMaturity}`,
+              );
+              gasCosts[`GasCosts(${name})`] = 0;
+            }
           }
 
           if (!log[numberOfCurrencies]) {
