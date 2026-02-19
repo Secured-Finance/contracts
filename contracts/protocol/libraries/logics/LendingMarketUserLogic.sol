@@ -153,7 +153,10 @@ library LendingMarketUserLogic {
         );
 
         if (_side == ProtocolTypes.Side.BORROW && isNewCurrency) {
-            // For borrow orders, check if deposit currency can be added because borrowed currency is added as a new deposit currency.
+            // Check if the deposit currency can be added for borrow orders because borrowed currency is added as a new deposit currency.
+            // NOTE: Even if this check works, deposit currencies can exceed the max `MAX_DEPOSIT_CURRENCIES` due to the lazy evaluation feature.
+            // However, it will always be less than or equal to `MAX_DEPOSIT_CURRENCIES` + `MAX_EXPOSURE_CURRENCIES`.
+            // To save calculation gas costs, this gap is allowed.
             if (!AddressResolverLib.tokenVault().canDepositCurrency(_user, _ccy)) {
                 revert TooManyDepositCurrencies();
             }
@@ -230,7 +233,7 @@ library LendingMarketUserLogic {
         );
 
         if (_side == ProtocolTypes.Side.BORROW && isNewCurrency) {
-            // For borrow orders, check if deposit currency can be added
+            // Check if the deposit currency can be added for borrow orders
             if (!AddressResolverLib.tokenVault().canDepositCurrency(_user, _ccy)) {
                 revert TooManyDepositCurrencies();
             }

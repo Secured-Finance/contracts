@@ -1223,7 +1223,7 @@ describe('LendingMarketController - Liquidations', () => {
         const targetCurrency = ethers.utils.formatBytes32String(
           `RepaymentTest${currencyIdx}`,
         );
-        initializeCurrency(targetCurrency, compoundFactor);
+        await initializeCurrency(targetCurrency, compoundFactor);
 
         const orderAmount = ethers.BigNumber.from('100000000000000000');
         const orderRate = ethers.BigNumber.from('10000');
