@@ -27,7 +27,7 @@ import {
 import { deployContracts } from '../common/deployment';
 import { Signers } from '../common/signers';
 
-describe('Integration Test: Used Currencies Restriction', async () => {
+describe('Integration Test: Used Currencies Restriction', () => {
   let owner: SignerWithAddress;
   let alice: SignerWithAddress;
   let bob: SignerWithAddress;
@@ -456,7 +456,7 @@ describe('Integration Test: Used Currencies Restriction', async () => {
   });
 
   describe('Combined deposit and executeOrder with Borrow', () => {
-    describe('Should fail to create borrow order for new currency when TokenVault MAX reached', async () => {
+    describe('Should fail to create borrow order for new currency when TokenVault MAX reached', () => {
       before(async () => {
         [alice, bob] = await getUsers(2);
       });
@@ -488,7 +488,7 @@ describe('Integration Test: Used Currencies Restriction', async () => {
         ).to.be.revertedWith('TooManyDepositCurrencies');
       });
 
-      it('Fail to execute an borrow order on NEW currency when at MAX_DEPOSIT_CURRENCIES', async () => {
+      it('Fail to execute a borrow order on NEW currency when at MAX_DEPOSIT_CURRENCIES', async () => {
         const newCurrency = additionalCurrencies[6]; // USDC7
         const maturities = await lendingMarketController.getMaturities(
           newCurrency,
@@ -510,7 +510,7 @@ describe('Integration Test: Used Currencies Restriction', async () => {
       });
     });
 
-    describe('Should fail to create borrow order for new currency when TokenVault MAX exceeded by borrow orders', async () => {
+    describe('Should fail to create borrow order for new currency when TokenVault MAX exceeded by borrow orders', () => {
       before(async () => {
         [alice, bob] = await getUsers(2);
       });
@@ -620,7 +620,7 @@ describe('Integration Test: Used Currencies Restriction', async () => {
       });
     });
 
-    describe('Should fail to deposit after withdrawing all balance in the currency from Borrow order when at MAX_DEPOSIT_CURRENCIES', async () => {
+    describe('Should fail to deposit after withdrawing all balance in the currency from Borrow order when at MAX_DEPOSIT_CURRENCIES', () => {
       before(async () => {
         [alice, bob] = await getUsers(2);
       });
@@ -743,7 +743,7 @@ describe('Integration Test: Used Currencies Restriction', async () => {
       });
     });
 
-    describe('Should fail to deposit to canceled Borrow order currency when at MAX_DEPOSIT_CURRENCIES', async () => {
+    describe('Should fail to deposit to canceled Borrow order currency when at MAX_DEPOSIT_CURRENCIES', () => {
       before(async () => {
         [alice, bob] = await getUsers(2);
       });
