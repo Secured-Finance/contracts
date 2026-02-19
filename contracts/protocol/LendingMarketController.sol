@@ -587,7 +587,7 @@ contract LendingMarketController is
         ProtocolTypes.Side _side,
         uint256 _amount,
         uint256 _unitPrice
-    ) external override nonReentrant ifValidMaturity(_ccy, _maturity) ifActive returns (bool) {
+    ) public override nonReentrant ifValidMaturity(_ccy, _maturity) ifActive returns (bool) {
         LendingMarketUserLogic.executeOrder(
             _ccy,
             _maturity,
@@ -617,14 +617,7 @@ contract LendingMarketController is
         uint256 _unitPrice
     ) external payable override ifValidMaturity(_ccy, _maturity) ifActive returns (bool) {
         tokenVault().depositFrom{value: msg.value}(msg.sender, _ccy, _amount);
-        LendingMarketUserLogic.executeOrder(
-            _ccy,
-            _maturity,
-            msg.sender,
-            _side,
-            _amount,
-            _unitPrice
-        );
+        executeOrder(_ccy, _maturity, _side, _amount, _unitPrice);
         return true;
     }
 
@@ -664,14 +657,7 @@ contract LendingMarketController is
             _permitS
         );
 
-        LendingMarketUserLogic.executeOrder(
-            _ccy,
-            _maturity,
-            msg.sender,
-            _side,
-            _amount,
-            _unitPrice
-        );
+        executeOrder(_ccy, _maturity, _side, _amount, _unitPrice);
         return true;
     }
 
@@ -723,14 +709,7 @@ contract LendingMarketController is
         uint256 _unitPrice
     ) external payable override ifValidMaturity(_ccy, _maturity) ifActive returns (bool) {
         tokenVault().depositFrom{value: msg.value}(msg.sender, _ccy, _amount);
-        LendingMarketUserLogic.executePreOrder(
-            _ccy,
-            _maturity,
-            msg.sender,
-            _side,
-            _amount,
-            _unitPrice
-        );
+        executePreOrder(_ccy, _maturity, _side, _amount, _unitPrice);
 
         return true;
     }
@@ -771,14 +750,7 @@ contract LendingMarketController is
             _permitS
         );
 
-        LendingMarketUserLogic.executePreOrder(
-            _ccy,
-            _maturity,
-            msg.sender,
-            _side,
-            _amount,
-            _unitPrice
-        );
+        executePreOrder(_ccy, _maturity, _side, _amount, _unitPrice);
 
         return true;
     }
