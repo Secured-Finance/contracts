@@ -1,6 +1,7 @@
 import './add-currency';
 import './add-order-books';
 import './change-owners';
+import './create-fvm-proposal';
 import './fork';
 import './open-markets';
 import './register-orders';
