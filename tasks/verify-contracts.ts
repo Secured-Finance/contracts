@@ -38,6 +38,7 @@ task(
     ProxyController: [addressResolver],
     ItayoseCallResolver: [addressResolver],
     OrderBookRotationResolver: [addressResolver],
+    StaticPriceAggregator: ['100000000', 'USD / USD'],
   };
 
   const proxyConstructorArguments = {
@@ -72,6 +73,8 @@ task(
     if (externalContracts.includes(fileName) || fileName.includes('Mock')) {
       continue;
     }
+
+    console.log('Verifying', fileName, 'contract...');
 
     const { address, implementation } = await deployments.get(fileName);
     await run('verify:verify', {

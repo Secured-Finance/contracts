@@ -9,3 +9,5 @@ import './unfork';
 import './update-price-feed';
 import './update-pyth';
 import './verify-contracts';
+import './verify-contracts-filfox';
+import './verify-contracts-starboard';
