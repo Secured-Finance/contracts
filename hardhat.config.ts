@@ -3,6 +3,7 @@ import '@nomiclabs/hardhat-ethers';
 import '@nomiclabs/hardhat-ganache';
 import '@nomiclabs/hardhat-truffle5';
 import '@nomiclabs/hardhat-waffle';
+import '@starboardventures/hardhat-verify';
 import 'dotenv/config';
 import 'hardhat-contract-sizer';
 import 'hardhat-deploy';
@@ -123,6 +124,9 @@ const config: HardhatUserConfig = {
         },
       },
     ],
+  },
+  starboardConfig: {
+    network: 'Mainnet',
   },
 };
 
