@@ -384,10 +384,8 @@ describe('LendingMarket - Orders', () => {
 
       // Create the order book 255 times for testing of the circulated `lastOrderBookId`
       // to avoid exceeding the maximum value of uint8.
-      const calls: (() => void)[] = [];
-
       for (let i = 0; i < 255; i++) {
-        await time.increaseTo(maturity - 172800);
+        await time.increaseTo(maturity);
 
         const { timestamp: newTimestamp } = await ethers.provider.getBlock(
           'latest',
@@ -397,28 +395,26 @@ describe('LendingMarket - Orders', () => {
           .unix();
         const newOpeningDate = moment(newTimestamp * 1000).unix();
 
-        calls.push(() => {
-          lendingMarketCaller.executeAutoRoll(
-            targetCurrency,
-            currentOrderBookId,
-            currentOrderBookId,
-            10000,
-          );
-        });
+        maturity = newMaturity;
 
-        calls.push(() =>
-          lendingMarketCaller.createOrderBook(
-            targetCurrency,
-            newMaturity,
-            newOpeningDate,
-            newOpeningDate - 604800,
-          ),
+        currentOrderBookId = await lendingMarketCaller.getOrderBookId(
+          targetCurrency,
         );
 
-        maturity = newMaturity;
-      }
+        await lendingMarketCaller.executeAutoRoll(
+          targetCurrency,
+          currentOrderBookId,
+          currentOrderBookId,
+          10000,
+        );
 
-      await Promise.all(calls.map((call) => call()));
+        await lendingMarketCaller.createOrderBook(
+          targetCurrency,
+          newMaturity,
+          newOpeningDate,
+          newOpeningDate - 604800,
+        );
+      }
 
       // Get the circulated current order book id.
       currentOrderBookId = await lendingMarketCaller.getOrderBookId(

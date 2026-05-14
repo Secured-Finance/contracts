@@ -755,5 +755,57 @@ describe('LendingMarketController - Terminations', () => {
         lendingMarketControllerProxy.connect(bob).executeEmergencySettlement(),
       ).to.revertedWith('NotTerminated');
     });
+
+    it('Fail to execute the emergency settlement due to protocol insolvency', async () => {
+      // Setup: Create a position where user has positive redemption amount
+      await mockTokenVault.mock.executeForcedReset.returns(
+        '100000000000000000',
+      );
+      await mockTokenVault.mock.isCollateral.returns(true);
+
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .executeOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '100000000000000000',
+          '8000',
+        );
+
+      await lendingMarketControllerProxy
+        .connect(bob)
+        .executeOrder(
+          targetCurrency,
+          maturities[0],
+          Side.BORROW,
+          '100000000000000000',
+          '8000',
+        );
+
+      // Mock TokenVault to return 0 balance for all collateral currencies
+      // This simulates a scenario where the protocol has no collateral at termination
+      await mockTokenVault.mock.getCollateralCurrencies.returns([
+        targetCurrency,
+      ]);
+
+      // Execute emergency termination with zero collateral balance
+      // This will set all terminationCollateralRatios to 0
+      await mockCurrencyController.mock[
+        'convertToBaseCurrency(bytes32,uint256)'
+      ].returns(0);
+
+      await expect(
+        lendingMarketControllerProxy.executeEmergencyTermination(),
+      ).to.emit(lendingMarketOperationLogic, 'EmergencyTerminationExecuted');
+
+      // Now alice has a positive redemption amount, but terminationRatioTotal is 0
+      // This should revert with ProtocolIsInsolvent
+      await expect(
+        lendingMarketControllerProxy
+          .connect(alice)
+          .executeEmergencySettlement(),
+      ).to.revertedWith('ProtocolIsInsolvent');
+    });
   });
 });

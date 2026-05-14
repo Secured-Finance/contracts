@@ -16,10 +16,6 @@ contract UpgradeabilityBeaconProxy is BeaconProxy {
         }
     }
 
-    function upgradeTo(address newImplementation) external ifAdmin {
-        _upgradeTo(newImplementation);
-    }
-
     function changeAdmin(address newAdmin) external ifAdmin {
         _changeAdmin(newAdmin);
     }

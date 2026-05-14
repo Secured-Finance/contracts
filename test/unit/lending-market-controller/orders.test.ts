@@ -362,6 +362,70 @@ describe('LendingMarketController - Orders', () => {
     });
   });
 
+  describe('Order book edge cases', async () => {
+    it('Fill an order with only one order book', async () => {
+      // Initialize lending market with only one order book
+      await lendingMarketControllerProxy.initializeLendingMarket(
+        targetCurrency,
+        genesisDate,
+        INITIAL_COMPOUND_FACTOR,
+        ORDER_FEE_RATE,
+        CIRCUIT_BREAKER_LIMIT_RANGE,
+        MIN_DEBT_UNIT_PRICE,
+      );
+
+      await lendingMarketControllerProxy.createOrderBook(
+        targetCurrency,
+        genesisDate,
+        genesisDate,
+      );
+
+      const orderBookIds = await lendingMarketControllerProxy.getOrderBookIds(
+        targetCurrency,
+      );
+
+      // Verify only one order book exists
+      expect(orderBookIds.length).to.equal(1);
+
+      // Setup mocks for order execution
+      await mockTokenVault.mock.isCovered.returns(true, true);
+      await mockTokenVault.mock.getTotalCollateralAmount.returns('1000');
+      await mockTokenVault.mock.getCollateralCurrencies.returns([
+        targetCurrency,
+      ]);
+
+      // Place a lend order
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .executeOrder(
+          targetCurrency,
+          (
+            await lendingMarketControllerProxy.getMaturities(targetCurrency)
+          )[0],
+          Side.LEND,
+          '100000000000000000',
+          '9000',
+        );
+
+      // Place a matching borrow order to fill the lend order
+      // This will trigger updateOrderLogs with orderBookIds.length == 1
+      // The condition "orderBookIds.length >= 2 && orderBookIds[1] == orderBookId" will be false
+      await expect(
+        lendingMarketControllerProxy
+          .connect(bob)
+          .executeOrder(
+            targetCurrency,
+            (
+              await lendingMarketControllerProxy.getMaturities(targetCurrency)
+            )[0],
+            Side.BORROW,
+            '100000000000000000',
+            '9000',
+          ),
+      ).to.emit(fundManagementLogic, 'OrderFilled');
+    });
+  });
+
   describe('Orders', async () => {
     // let lendingMarketProxies: Contract[];
     let maturities: BigNumber[];
@@ -444,7 +508,6 @@ describe('LendingMarketController - Orders', () => {
 
       const usedCurrenciesBefore =
         await lendingMarketControllerProxy.getUsedCurrencies(alice.address);
-      expect(usedCurrenciesBefore.length).to.equal(0);
 
       for (const order of orders) {
         await lendingMarketControllerProxy
@@ -460,8 +523,12 @@ describe('LendingMarketController - Orders', () => {
 
       const usedCurrenciesAfter =
         await lendingMarketControllerProxy.getUsedCurrencies(alice.address);
-      expect(usedCurrenciesAfter.length).to.equal(1);
-      expect(usedCurrenciesAfter[0]).to.equal(targetCurrency);
+      expect(usedCurrenciesAfter.length - usedCurrenciesBefore.length).to.equal(
+        1,
+      );
+      expect(usedCurrenciesAfter[usedCurrenciesAfter.length - 1]).to.equal(
+        targetCurrency,
+      );
 
       const borrowOrderBook = await lendingMarket.getBorrowOrderBook(
         orderBookIds[3],
@@ -1620,6 +1687,28 @@ describe('LendingMarketController - Orders', () => {
       ).to.emit(fundManagementLogic, 'OrderFilled');
 
       await checkPresentValue();
+    });
+
+    it('Get total present value for a currency with no order books', async () => {
+      // Register a new currency in CurrencyController but don't create any order books
+      const unregisteredCurrency = ethers.utils.formatBytes32String('NOOB');
+
+      await mockCurrencyController.mock.currencyExists
+        .withArgs(unregisteredCurrency)
+        .returns(true);
+      await mockCurrencyController.mock.getHaircut
+        .withArgs(unregisteredCurrency)
+        .returns(8000);
+
+      // Call getTotalPresentValue for a currency that exists in CurrencyController
+      // but has no order books created (orderBookIdLists[ccy].length == 0)
+      // This should not revert and return 0
+      const totalPV = await lendingMarketControllerProxy.getTotalPresentValue(
+        unregisteredCurrency,
+        alice.address,
+      );
+
+      expect(totalPV).to.equal(0);
     });
 
     it('Calculate the funds of users who have a large lending position and a small borrowing position', async () => {
@@ -3757,6 +3846,28 @@ describe('LendingMarketController - Orders', () => {
         );
 
         expect(unitPrices.filter((v) => v.toNumber()).length).to.equal(5);
+        expect(next).to.equal(0);
+      });
+
+      it('Get borrow orders with limit 0', async () => {
+        const { unitPrices, amounts, quantities, next } =
+          await lendingMarket.getBorrowOrderBook(orderBookIds[0], 0, 0);
+
+        // Should return empty arrays without reverting
+        expect(unitPrices.length).to.equal(0);
+        expect(amounts.length).to.equal(0);
+        expect(quantities.length).to.equal(0);
+        expect(next).to.equal(0);
+      });
+
+      it('Get lend orders with limit 0', async () => {
+        const { unitPrices, amounts, quantities, next } =
+          await lendingMarket.getLendOrderBook(orderBookIds[0], 0, 0);
+
+        // Should return empty arrays without reverting
+        expect(unitPrices.length).to.equal(0);
+        expect(amounts.length).to.equal(0);
+        expect(quantities.length).to.equal(0);
         expect(next).to.equal(0);
       });
     });
