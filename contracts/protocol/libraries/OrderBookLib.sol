@@ -209,6 +209,10 @@ library OrderBookLib {
         amounts = new uint256[](_limit);
         quantities = new uint256[](_limit);
 
+        if (_limit == 0) {
+            return (unitPrices, amounts, quantities, 0);
+        }
+
         uint256 unitPrice;
 
         if (_start == 0) {
@@ -262,6 +266,10 @@ library OrderBookLib {
         unitPrices = new uint256[](_limit);
         amounts = new uint256[](_limit);
         quantities = new uint256[](_limit);
+
+        if (_limit == 0) {
+            return (unitPrices, amounts, quantities, 0);
+        }
 
         uint256 unitPrice;
 

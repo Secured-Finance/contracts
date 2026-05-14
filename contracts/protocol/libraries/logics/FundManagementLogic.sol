@@ -39,6 +39,7 @@ library FundManagementLogic {
     error AlreadyRedeemed();
     error InsufficientCollateral();
     error TooManyExposureCurrencies();
+    error ProtocolIsInsolvent();
 
     struct CalculatedTotalFundInBaseCurrencyVars {
         address user;
@@ -357,6 +358,11 @@ library FundManagementLogic {
                 terminationRatioTotal += terminationCollateralRatios[i];
             }
 
+            // If all collateral ratios are zero, the protocol is completely insolvent
+            if (terminationRatioTotal == 0) {
+                revert ProtocolIsInsolvent();
+            }
+
             for (uint256 i; i < collateralCurrencies.length; i++) {
                 bytes32 ccy = collateralCurrencies[i];
                 uint256 addedAmount = _convertFromBaseCurrencyAtMarketTerminationPrice(
@@ -381,10 +387,17 @@ library FundManagementLogic {
         address _user,
         uint256 _minDebtUnitPrice
     ) public view returns (ActualFunds memory actualFunds) {
+        uint8[] memory orderBookIdList = Storage.slot().orderBookIdLists[_ccy];
+
+        // Return empty funds if no order book exists for this currency
+        if (orderBookIdList.length == 0) {
+            return actualFunds;
+        }
+
         CalculateActualFundsVars memory vars;
         vars.market = ILendingMarket(Storage.slot().lendingMarkets[_ccy]);
         vars.futureValueVault = IFutureValueVault(Storage.slot().futureValueVaults[_ccy]);
-        vars.defaultOrderBookId = Storage.slot().orderBookIdLists[_ccy][0];
+        vars.defaultOrderBookId = orderBookIdList[0];
         vars.minDebtUnitPrice = _minDebtUnitPrice;
 
         if (_maturity == 0) {
@@ -1157,6 +1170,9 @@ library FundManagementLogic {
 
         int256 remainingAmount = _amount - totalRemovedAmount;
 
+        // Note: orderBookIdList is guaranteed to be non-empty here because
+        // this function is only called from executeRedemption/executeRepayment
+        // which have the ifValidMaturity modifier that ensures the maturity exists.
         bool isDefaultMarket = Storage.slot().maturityOrderBookIds[_ccy][_maturity] ==
             Storage.slot().orderBookIdLists[_ccy][0];
 

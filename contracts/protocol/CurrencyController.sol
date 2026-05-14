@@ -110,6 +110,11 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable, Multical
      * @param _haircut Remaining ratio after haircut
      * @param _priceFeeds Array with the contract address of price feed
      * @param _heartbeats Array with the heartbeat of price feed
+     *
+     * NOTE: Only standard ERC20 tokens are supported. The following token types are NOT supported:
+     * - Fee-on-transfer tokens (e.g., tokens that deduct fees during transfers)
+     * - Rebasing tokens (e.g., tokens that change balance automatically)
+     * - Tokens with non-standard transfer/approval behavior
      */
     function addCurrency(
         bytes32 _ccy,
@@ -172,7 +177,7 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable, Multical
         price = _getAggregatedLastPrice(_ccy);
         PriceFeed memory priceFeeds = Storage.slot().priceFeeds[_ccy];
 
-        for (uint256 i; i < priceFeeds.instances.length - 1; i++) {
+        for (uint256 i; i + 1 < priceFeeds.instances.length; i++) {
             uint8 decimals = priceFeeds.instances[i].decimals();
             price = price.div((10 ** decimals).toInt256());
         }

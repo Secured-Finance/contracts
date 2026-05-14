@@ -688,4 +688,50 @@ describe('CurrencyController', () => {
       ).to.be.revertedWith('StalePriceFeed');
     });
   });
+
+  describe('Price Feed', async () => {
+    it('Get the last price for an unregistered currency with no price feeds', async () => {
+      const unregisteredCurrency =
+        ethers.utils.formatBytes32String('UNREGISTERED');
+
+      // Call getLastPrice on a currency that has never been registered
+      // This should not revert even though priceFeeds.instances.length is 0
+      const price = await currencyControllerProxy.getLastPrice(
+        unregisteredCurrency,
+      );
+
+      // Since _getAggregatedLastPrice returns 1 when there are no price feeds,
+      // and the loop doesn't execute (length - 1 = -1, no iterations with i + 1 < 0),
+      // the price should be 1
+      expect(price).to.equal(1);
+    });
+
+    it('Get the last price for a registered currency with price feeds', async () => {
+      const currency = ethers.utils.formatBytes32String('TestPrice');
+      const { timestamp: now } = await ethers.provider.getBlock('latest');
+
+      // Set up mock price feed
+      await mockPriceFeed.mock.latestRoundData.returns(
+        0,
+        10000000000,
+        0,
+        now,
+        0,
+      );
+      await mockPriceFeed.mock.decimals.returns(18);
+
+      await currencyControllerProxy.addCurrency(
+        currency,
+        18,
+        9000,
+        [mockPriceFeed.address],
+        [86400],
+      );
+
+      const price = await currencyControllerProxy.getLastPrice(currency);
+
+      // With one price feed, the aggregated price is divided by 10^18
+      expect(price).to.equal(10000000000);
+    });
+  });
 });
