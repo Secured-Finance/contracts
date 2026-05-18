@@ -2784,5 +2784,93 @@ describe('Integration Test: Liquidations', async () => {
         );
       });
     });
+
+    describe('Fail forced repayment due to insufficient executor funds', async () => {
+      const filledOrderAmount = BigNumber.from('200000000000000000000');
+      const depositAmount = BigNumber.from('2000000000000000000');
+      const orderUnitPrice = '9600';
+
+      before(async () => {
+        [alice, bob, carol] = await getUsers(3);
+        await resetContractInstances();
+      });
+
+      after(async () => {
+        await addCurrency(hexWFIL);
+      });
+
+      it('Create orders', async () => {
+        await tokenVault.connect(alice).deposit(hexETH, depositAmount, {
+          value: depositAmount,
+        });
+
+        await lendingMarketController
+          .connect(alice)
+          .executeOrder(
+            hexWFIL,
+            filMaturities[0],
+            Side.BORROW,
+            filledOrderAmount,
+            orderUnitPrice,
+          );
+
+        await expect(
+          lendingMarketController
+            .connect(bob)
+            .depositAndExecuteOrder(
+              hexWFIL,
+              filMaturities[0],
+              Side.LEND,
+              filledOrderAmount,
+              '0',
+            ),
+        ).to.emit(fundManagementLogic, 'OrderFilled');
+
+        expect(
+          await tokenVault.getDepositAmount(alice.address, hexWFIL),
+        ).to.equal(filledOrderAmount);
+      });
+
+      it('Fail to execute forced repayment due to insufficient executor funds', async () => {
+        await time.increaseTo(filMaturities[0].toString());
+
+        await currencyController.removeCurrency(hexWFIL);
+
+        // Move to 1 weeks after maturity.
+        await time.increaseTo(filMaturities[0].add(604800).toString());
+
+        // Deposit only a small insufficient amount for repayment
+        const insufficientAmount = BigNumber.from('20000000000000000000');
+        await tokenVault.connect(carol).deposit(hexWFIL, insufficientAmount);
+
+        const alicePositionBefore = await lendingMarketController.getPosition(
+          hexWFIL,
+          filMaturities[0],
+          alice.address,
+        );
+
+        // Should fail with InsufficientRepayment error
+        await expect(
+          lendingMarketController
+            .connect(carol)
+            .executeForcedRepayment(
+              hexETH,
+              hexWFIL,
+              filMaturities[0],
+              alice.address,
+            ),
+        ).to.be.revertedWith('InsufficientRepayment');
+
+        // Verify alice's position hasn't changed
+        const alicePositionAfter = await lendingMarketController.getPosition(
+          hexWFIL,
+          filMaturities[0],
+          alice.address,
+        );
+        expect(alicePositionAfter.futureValue).to.equal(
+          alicePositionBefore.futureValue,
+        );
+      });
+    });
   });
 });

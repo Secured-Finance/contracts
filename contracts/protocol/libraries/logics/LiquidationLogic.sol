@@ -23,6 +23,12 @@ library LiquidationLogic {
     error InvalidLiquidation();
     error InvalidCurrency(bytes32 ccy);
     error NotRepaymentPeriod();
+    error InsufficientRepayment(
+        address executor,
+        bytes32 ccy,
+        uint256 requiredAmount,
+        uint256 untransferredAmount
+    );
 
     struct ExecuteLiquidationVars {
         uint256 liquidationAmountInCollateralCcy;
@@ -311,12 +317,21 @@ library LiquidationLogic {
             ) revert ILiquidationReceiver.InvalidOperationExecution();
         }
 
-        AddressResolverLib.tokenVault().transferFrom(
+        untransferredAmount = AddressResolverLib.tokenVault().transferFrom(
             _debtCcy,
             _executor,
             _user,
             liquidationAmountInDebtCcy
         );
+
+        if (untransferredAmount != 0) {
+            revert InsufficientRepayment(
+                _executor,
+                _debtCcy,
+                liquidationAmountInDebtCcy,
+                untransferredAmount
+            );
+        }
 
         uint256 repaymentAmount = FundManagementLogic.executeRepayment(
             _debtCcy,
