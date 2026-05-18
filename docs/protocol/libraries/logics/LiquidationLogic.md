@@ -32,6 +32,12 @@ error InvalidCurrency(bytes32 ccy)
 error NotRepaymentPeriod()
 ```
 
+### InsufficientRepayment
+
+```solidity
+error InsufficientRepayment(address executor, bytes32 ccy, uint256 requiredAmount, uint256 untransferredAmount)
+```
+
 ### ExecuteLiquidationVars
 
 ```solidity
