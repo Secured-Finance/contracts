@@ -15,6 +15,15 @@ contract PythAggregator is AggregatorV2V3Interface {
     IPyth public pyth;
     string public description;
 
+    // Maximum allowed confidence interval ratio: 20% = 2000 / 10000
+    // NOTE: This 20% threshold is intentionally set as a fail-safe mechanism to reject
+    // only extreme anomalies. Under normal Pyth operation, confidence intervals are
+    // typically 5-10% of the price. This higher threshold (20%) ensures we don't reject
+    // legitimate price data during high volatility while still protecting against oracle
+    // manipulation or catastrophic market conditions that could breach the liquidation
+    // threshold.
+    uint256 public constant MAX_CONFIDENCE_RATIO = 2000;
+
     constructor(address _pyth, bytes32 _priceId, string memory _description) {
         priceId = _priceId;
         pyth = IPyth(_pyth);
@@ -28,14 +37,29 @@ contract PythAggregator is AggregatorV2V3Interface {
         uint fee = pyth.getUpdateFee(priceUpdateData);
         pyth.updatePriceFeeds{value: fee}(priceUpdateData);
 
-        // refund remaining eth
+        // Refund the entire contract balance to the caller.
+        // NOTE: This code is intended to refund `address(this).balance` rather than `msg.value - fee`
+        // to ensure robustness against Pyth's internal implementation. This approach guarantees
+        // that any unused ETH is returned to the caller, regardless of how much the Pyth contract
+        // actually consumed. This design does not depend on assumptions about Pyth's fee consumption
+        // behavior.
         (bool success, ) = payable(msg.sender).call{value: address(this).balance}("");
         require(success, "PythAggregator: REFUND_FAILED");
     }
 
+    function _validatePrice(PythStructs.Price memory price) internal pure {
+        require(price.price > 0, "Invalid price");
+
+        uint256 confidenceRatio = (uint256(uint64(price.conf)) * 10000) /
+            uint256(uint64(price.price));
+        require(confidenceRatio <= MAX_CONFIDENCE_RATIO, "Confidence too wide");
+    }
+
     function decimals() public view virtual returns (uint8) {
         PythStructs.Price memory price = pyth.getPriceUnsafe(priceId);
-        return uint8(-1 * int8(price.expo));
+        _validatePrice(price);
+        require(price.expo < 0 && price.expo >= -255, "Invalid exponent");
+        return uint8(uint32(-price.expo));
     }
 
     function version() public pure returns (uint256) {
@@ -44,6 +68,7 @@ contract PythAggregator is AggregatorV2V3Interface {
 
     function latestAnswer() public view virtual returns (int256) {
         PythStructs.Price memory price = pyth.getPriceUnsafe(priceId);
+        _validatePrice(price);
         return int256(price.price);
     }
 
@@ -79,6 +104,7 @@ contract PythAggregator is AggregatorV2V3Interface {
         )
     {
         PythStructs.Price memory price = pyth.getPriceUnsafe(priceId);
+        _validatePrice(price);
         return (
             _roundId,
             int256(price.price),
@@ -100,6 +126,7 @@ contract PythAggregator is AggregatorV2V3Interface {
         )
     {
         PythStructs.Price memory price = pyth.getPriceUnsafe(priceId);
+        _validatePrice(price);
         roundId = uint80(price.publishTime);
         return (roundId, int256(price.price), price.publishTime, price.publishTime, roundId);
     }
