@@ -1224,11 +1224,61 @@ describe('TokenVault - Deposits', () => {
         valueInETH,
       );
 
+      // Verify that the return value matches the full requested amount
+      const withdrawnAmount = await tokenVaultProxy
+        .connect(alice)
+        .callStatic.withdraw(targetCurrency, valueInETH);
+      expect(withdrawnAmount).to.equal(valueInETH);
+
       await expect(
         tokenVaultProxy.connect(alice).withdraw(targetCurrency, valueInETH),
       )
         .to.emit(tokenVaultProxy, 'Withdraw')
         .withArgs(alice.address, targetCurrency, valueInETH);
+    });
+
+    it('Withdraw only the withdrawable amount when requesting more than available', async () => {
+      const depositAmount = ethers.BigNumber.from('10000');
+      // Request more than deposited - should only withdraw what was deposited
+      const requestedAmount = ethers.BigNumber.from('20000');
+      const depositAmountInETH = ethers.BigNumber.from('10000');
+
+      // Set up for the mocks
+      await mockCurrencyController.mock[
+        'convertToBaseCurrency(bytes32,uint256)'
+      ].returns(depositAmountInETH);
+      await mockCurrencyController.mock[
+        'convertFromBaseCurrency(bytes32,uint256)'
+      ].returns(depositAmountInETH);
+      await mockCurrencyController.mock[
+        'convertToBaseCurrency(bytes32,uint256[])'
+      ].returns([depositAmountInETH, depositAmountInETH, depositAmountInETH]);
+
+      // Deposit funds
+      await tokenVaultProxy.connect(bob).deposit(targetCurrency, depositAmount);
+
+      // Request more than deposited - should only withdraw the deposit amount
+      const actualWithdrawnAmount = await tokenVaultProxy
+        .connect(bob)
+        .callStatic.withdraw(targetCurrency, requestedAmount);
+
+      // Verify that only the deposit amount is returned, not the requested amount
+      expect(actualWithdrawnAmount).to.equal(depositAmount);
+      expect(actualWithdrawnAmount).to.be.lt(requestedAmount);
+
+      // Execute the actual withdrawal
+      await expect(
+        tokenVaultProxy.connect(bob).withdraw(targetCurrency, requestedAmount),
+      )
+        .to.emit(tokenVaultProxy, 'Withdraw')
+        .withArgs(bob.address, targetCurrency, depositAmount);
+
+      // Verify that all funds were withdrawn
+      const remainingDeposit = await tokenVaultProxy.getDepositAmount(
+        bob.address,
+        targetCurrency,
+      );
+      expect(remainingDeposit).to.equal(0);
     });
 
     it('Fail to call depositFrom due to lending market termination', async () => {

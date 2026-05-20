@@ -39,7 +39,7 @@ describe('ReserveFund', () => {
     );
     mockWETH = await deployMockContract(owner, WETH9.abi);
     await mockTokenVault.mock.deposit.returns();
-    await mockTokenVault.mock.withdraw.returns();
+    await mockTokenVault.mock.withdraw.returns(0);
     await mockTokenVault.mock.getTokenAddress.returns(
       ethers.constants.AddressZero,
     );
@@ -226,8 +226,55 @@ describe('ReserveFund', () => {
   });
 
   describe('Withdraw', async () => {
-    it('Withdraw funds', async () => {
-      await reserveFundProxy.withdraw(targetCurrency, '10000000');
+    it('Withdraw the full requested amount when sufficient funds are available', async () => {
+      const requestedAmount = '10000000';
+
+      // Mock TokenVault.withdraw to return the full requested amount
+      await mockTokenVault.mock.withdraw
+        .withArgs(targetCurrency, requestedAmount)
+        .returns(requestedAmount);
+
+      // Verify that the return value matches the requested amount
+      const result = await reserveFundProxy.callStatic.withdraw(
+        targetCurrency,
+        requestedAmount,
+      );
+      expect(result).to.equal(requestedAmount);
+
+      // Execute the actual withdraw
+      await reserveFundProxy.withdraw(targetCurrency, requestedAmount);
+    });
+
+    it('Withdraw only the actual withdrawable amount when TokenVault returns less than requested', async () => {
+      const requestedAmount = ethers.BigNumber.from('10000000');
+      const actualWithdrawnAmount = ethers.BigNumber.from('5000000');
+
+      // Deploy a mock ERC20 token (not the native token)
+      const mockERC20 = await deployMockContract(owner, WETH9.abi);
+      await mockERC20.mock.transfer.returns(true);
+
+      // Mock TokenVault.withdraw to return less than requested amount
+      await mockTokenVault.mock.withdraw
+        .withArgs(targetCurrency, requestedAmount)
+        .returns(actualWithdrawnAmount);
+      await mockTokenVault.mock.getTokenAddress
+        .withArgs(targetCurrency)
+        .returns(mockERC20.address);
+
+      // Mock the transfer to verify it's called with the actual withdrawn amount (not the requested amount)
+      await mockERC20.mock.transfer
+        .withArgs(owner.address, actualWithdrawnAmount)
+        .returns(true);
+
+      // Verify that the return value is the actual withdrawn amount, not the requested amount
+      const result = await reserveFundProxy.callStatic.withdraw(
+        targetCurrency,
+        requestedAmount,
+      );
+      expect(result).to.equal(actualWithdrawnAmount);
+
+      // Execute the actual withdraw
+      await reserveFundProxy.withdraw(targetCurrency, requestedAmount);
     });
 
     it('Fail to withdraw token due to execution by non-owner', async () => {

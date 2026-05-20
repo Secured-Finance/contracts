@@ -10,6 +10,7 @@ interface ITokenVault {
     error InvalidToken();
     error InvalidAmount(bytes32 ccy, uint256 amount, uint256 msgValue);
     error AmountIsZero();
+    error InvalidAddress();
     error CallerNotBaseCurrency(address caller);
     error MarketTerminated();
     error RedemptionIsRequired();
@@ -109,7 +110,7 @@ interface ITokenVault {
         bytes32 permitS
     ) external;
 
-    function withdraw(bytes32 ccy, uint256 amount) external;
+    function withdraw(bytes32 ccy, uint256 amount) external returns (uint256 withdrawnAmount);
 
     function addDepositAmount(address user, bytes32 ccy, uint256 amount) external;
 
