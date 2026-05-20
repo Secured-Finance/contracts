@@ -289,7 +289,11 @@ interface ILendingMarketController {
 
     function updateMinDebtUnitPrice(bytes32 _ccy, uint256 _minDebtUnitPrice) external;
 
-    function withdrawZCToken(bytes32 _ccy, uint256 _maturity, uint256 _amount) external;
+    function withdrawZCToken(
+        bytes32 _ccy,
+        uint256 _maturity,
+        uint256 _amount
+    ) external returns (uint256 withdrawnAmount);
 
     function depositZCToken(bytes32 _ccy, uint256 _maturity, uint256 _amount) external;
 }

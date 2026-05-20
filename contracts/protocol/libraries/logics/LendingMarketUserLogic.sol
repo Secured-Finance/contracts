@@ -398,13 +398,13 @@ library LendingMarketUserLogic {
         uint256 _maturity,
         address _user,
         uint256 _amount
-    ) public {
+    ) public returns (uint256 withdrawnAmount) {
         FundManagementLogic.cleanUpFunds(_ccy, _user);
 
         if (_maturity == 0) {
-            _withdrawZCPerpetualToken(_ccy, _user, _amount);
+            return _withdrawZCPerpetualToken(_ccy, _user, _amount);
         } else {
-            _withdrawZCToken(_ccy, _maturity, _user, _amount);
+            return _withdrawZCToken(_ccy, _maturity, _user, _amount);
         }
     }
 
@@ -634,7 +634,7 @@ library LendingMarketUserLogic {
         uint256 _maturity,
         address _user,
         uint256 _amount
-    ) internal {
+    ) internal returns (uint256 withdrawableAmount) {
         uint8 orderBookId = Storage.slot().maturityOrderBookIds[_ccy][_maturity];
         uint256 maxWithdrawableAmount = _getWithdrawableZCTokenAmount(_ccy, _maturity, _user);
 
@@ -644,13 +644,13 @@ library LendingMarketUserLogic {
 
         if (_amount == 0) revert AmountIsZero();
 
-        uint256 lockedAmount = IFutureValueVault(Storage.slot().futureValueVaults[_ccy]).lock(
+        withdrawableAmount = IFutureValueVault(Storage.slot().futureValueVaults[_ccy]).lock(
             orderBookId,
             _user,
             _amount,
             _maturity
         );
-        IZCToken(Storage.slot().zcTokens[_ccy][_maturity]).mint(_user, lockedAmount);
+        IZCToken(Storage.slot().zcTokens[_ccy][_maturity]).mint(_user, withdrawableAmount);
     }
 
     function _depositZCToken(
@@ -679,7 +679,11 @@ library LendingMarketUserLogic {
         );
     }
 
-    function _withdrawZCPerpetualToken(bytes32 _ccy, address _user, uint256 _amount) internal {
+    function _withdrawZCPerpetualToken(
+        bytes32 _ccy,
+        address _user,
+        uint256 _amount
+    ) internal returns (uint256 withdrawableAmount) {
         uint256 maxWithdrawableAmount = _getWithdrawableZCPerpetualTokenAmount(_ccy, _user);
 
         if (maxWithdrawableAmount < _amount) {
@@ -688,8 +692,8 @@ library LendingMarketUserLogic {
 
         if (_amount == 0) revert AmountIsZero();
 
-        uint256 lockedAmount = AddressResolverLib.genesisValueVault().lock(_ccy, _user, _amount);
-        IZCToken(Storage.slot().zcTokens[_ccy][0]).mint(_user, lockedAmount);
+        withdrawableAmount = AddressResolverLib.genesisValueVault().lock(_ccy, _user, _amount);
+        IZCToken(Storage.slot().zcTokens[_ccy][0]).mint(_user, withdrawableAmount);
     }
 
     function _depositZCPerpetualToken(bytes32 _ccy, address _user, uint256 _amount) internal {

@@ -1032,15 +1032,16 @@ contract LendingMarketController is
      * @param _ccy Currency name in bytes32
      * @param _maturity The maturity of the order book
      * @param _amount The amount of ZCToken to mint
+     * @return withdrawnAmount Actual amount withdrawn
      */
     function withdrawZCToken(
         bytes32 _ccy,
         uint256 _maturity,
         uint256 _amount
-    ) external override nonReentrant ifActive {
+    ) external override nonReentrant ifActive returns (uint256 withdrawnAmount) {
         if (_maturity != 0 && !isValidMaturity(_ccy, _maturity)) revert InvalidMaturity();
 
-        LendingMarketUserLogic.withdrawZCToken(_ccy, _maturity, msg.sender, _amount);
+        return LendingMarketUserLogic.withdrawZCToken(_ccy, _maturity, msg.sender, _amount);
     }
 
     /**
