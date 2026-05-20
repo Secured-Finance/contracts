@@ -339,6 +339,11 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable, Multical
 
     function _getAggregatedLastPrice(bytes32 _ccy) internal view returns (int256 totalPrice) {
         PriceFeed memory priceFeeds = Storage.slot().priceFeeds[_ccy];
+
+        if (priceFeeds.instances.length == 0) {
+            revert PriceFeedNotRegistered(_ccy);
+        }
+
         totalPrice = 1;
 
         for (uint256 i; i < priceFeeds.instances.length; i++) {
