@@ -251,15 +251,23 @@ library OrderStatisticsTreeLib {
                     cursor = self.nodes[cursor].left;
                 }
             }
+
             if (self.nodes[cursor].left != EMPTY) {
                 probe = self.nodes[cursor].left;
             } else {
                 probe = self.nodes[cursor].right;
             }
+
             uint256 cursorParent = self.nodes[cursor].parent;
-            self.nodes[probe].parent = cursorParent;
+            bool probeIsLeftChild = cursorParent != EMPTY &&
+                cursor == self.nodes[cursorParent].left;
+
+            if (probe != EMPTY) {
+                self.nodes[probe].parent = cursorParent;
+            }
+
             if (cursorParent != EMPTY) {
-                if (cursor == self.nodes[cursorParent].left) {
+                if (probeIsLeftChild) {
                     self.nodes[cursorParent].left = probe;
                 } else {
                     self.nodes[cursorParent].right = probe;
@@ -267,18 +275,36 @@ library OrderStatisticsTreeLib {
             } else {
                 self.root = probe;
             }
+
             bool doFixup = !self.nodes[cursor].red;
+            uint256 probeParent = cursorParent;
+
             if (cursor != value) {
                 replaceParent(self, cursor, value);
-                self.nodes[cursor].left = self.nodes[value].left;
-                self.nodes[self.nodes[cursor].left].parent = cursor;
-                self.nodes[cursor].right = self.nodes[value].right;
-                self.nodes[self.nodes[cursor].right].parent = cursor;
+
+                uint256 valueLeft = self.nodes[value].left;
+                self.nodes[cursor].left = valueLeft;
+                if (valueLeft != EMPTY) {
+                    self.nodes[valueLeft].parent = cursor;
+                }
+
+                uint256 valueRight = self.nodes[value].right;
+                self.nodes[cursor].right = valueRight;
+                if (valueRight != EMPTY) {
+                    self.nodes[valueRight].parent = cursor;
+                }
+
                 self.nodes[cursor].red = self.nodes[value].red;
+
+                if (probeParent == value) {
+                    probeParent = cursor;
+                }
+
                 (cursor, value) = (value, cursor);
             }
+
             if (doFixup) {
-                removeFixup(self, probe);
+                removeFixup(self, probe, probeParent, probeIsLeftChild);
             }
             delete self.nodes[cursor];
         }
@@ -340,44 +366,50 @@ library OrderStatisticsTreeLib {
 
     function insertFixup(Tree storage self, uint256 value) private {
         uint256 cursor;
-        while (value != self.root && self.nodes[self.nodes[value].parent].red) {
+
+        while (value != self.root && _isRed(self, self.nodes[value].parent)) {
             uint256 valueParent = self.nodes[value].parent;
-            if (valueParent == self.nodes[self.nodes[valueParent].parent].left) {
-                cursor = self.nodes[self.nodes[valueParent].parent].right;
-                if (self.nodes[cursor].red) {
+            uint256 valueGrandParent = self.nodes[valueParent].parent;
+
+            if (valueParent == self.nodes[valueGrandParent].left) {
+                cursor = self.nodes[valueGrandParent].right;
+                if (_isRed(self, cursor)) {
                     self.nodes[valueParent].red = false;
                     self.nodes[cursor].red = false;
-                    self.nodes[self.nodes[valueParent].parent].red = true;
-                    value = self.nodes[valueParent].parent;
+                    self.nodes[valueGrandParent].red = true;
+                    value = valueGrandParent;
                 } else {
                     if (value == self.nodes[valueParent].right) {
                         value = valueParent;
                         rotateLeft(self, value);
                     }
                     valueParent = self.nodes[value].parent;
+                    valueGrandParent = self.nodes[valueParent].parent;
                     self.nodes[valueParent].red = false;
-                    self.nodes[self.nodes[valueParent].parent].red = true;
-                    rotateRight(self, self.nodes[valueParent].parent);
+                    self.nodes[valueGrandParent].red = true;
+                    rotateRight(self, valueGrandParent);
                 }
             } else {
-                cursor = self.nodes[self.nodes[valueParent].parent].left;
-                if (self.nodes[cursor].red) {
+                cursor = self.nodes[valueGrandParent].left;
+                if (_isRed(self, cursor)) {
                     self.nodes[valueParent].red = false;
                     self.nodes[cursor].red = false;
-                    self.nodes[self.nodes[valueParent].parent].red = true;
-                    value = self.nodes[valueParent].parent;
+                    self.nodes[valueGrandParent].red = true;
+                    value = valueGrandParent;
                 } else {
                     if (value == self.nodes[valueParent].left) {
                         value = valueParent;
                         rotateRight(self, value);
                     }
                     valueParent = self.nodes[value].parent;
+                    valueGrandParent = self.nodes[valueParent].parent;
                     self.nodes[valueParent].red = false;
-                    self.nodes[self.nodes[valueParent].parent].red = true;
-                    rotateLeft(self, self.nodes[valueParent].parent);
+                    self.nodes[valueGrandParent].red = true;
+                    rotateLeft(self, valueGrandParent);
                 }
             }
         }
+
         self.nodes[self.root].red = false;
     }
 
@@ -395,67 +427,107 @@ library OrderStatisticsTreeLib {
         }
     }
 
-    function removeFixup(Tree storage self, uint256 value) private {
+    function removeFixup(
+        Tree storage self,
+        uint256 value,
+        uint256 parent,
+        bool valueIsLeftChild
+    ) private {
         uint256 cursor;
-        while (value != self.root && !self.nodes[value].red) {
-            uint256 valueParent = self.nodes[value].parent;
-            if (value == self.nodes[valueParent].left) {
+        while (value != self.root && !_isRed(self, value)) {
+            uint256 valueParent = value == EMPTY ? parent : self.nodes[value].parent;
+            if (valueParent == EMPTY) {
+                break;
+            }
+
+            bool isLeftChild = value == EMPTY
+                ? valueIsLeftChild
+                : value == self.nodes[valueParent].left;
+
+            if (isLeftChild) {
                 cursor = self.nodes[valueParent].right;
-                if (self.nodes[cursor].red) {
+                if (_isRed(self, cursor)) {
                     self.nodes[cursor].red = false;
                     self.nodes[valueParent].red = true;
                     rotateLeft(self, valueParent);
                     cursor = self.nodes[valueParent].right;
                 }
-                if (
-                    !self.nodes[self.nodes[cursor].left].red &&
-                    !self.nodes[self.nodes[cursor].right].red
-                ) {
-                    self.nodes[cursor].red = true;
+
+                if (!_isRed(self, _leftOf(self, cursor)) && !_isRed(self, _rightOf(self, cursor))) {
+                    _setRedIfNotEmpty(self, cursor);
                     value = valueParent;
+                    parent = self.nodes[value].parent;
+                    valueIsLeftChild = parent != EMPTY && value == self.nodes[parent].left;
                 } else {
-                    if (!self.nodes[self.nodes[cursor].right].red) {
-                        self.nodes[self.nodes[cursor].left].red = false;
-                        self.nodes[cursor].red = true;
+                    if (!_isRed(self, _rightOf(self, cursor))) {
+                        _setBlackIfNotEmpty(self, _leftOf(self, cursor));
+                        _setRedIfNotEmpty(self, cursor);
                         rotateRight(self, cursor);
                         cursor = self.nodes[valueParent].right;
                     }
                     self.nodes[cursor].red = self.nodes[valueParent].red;
                     self.nodes[valueParent].red = false;
-                    self.nodes[self.nodes[cursor].right].red = false;
+                    _setBlackIfNotEmpty(self, _rightOf(self, cursor));
                     rotateLeft(self, valueParent);
                     value = self.root;
+                    parent = EMPTY;
                 }
             } else {
                 cursor = self.nodes[valueParent].left;
-                if (self.nodes[cursor].red) {
+                if (_isRed(self, cursor)) {
                     self.nodes[cursor].red = false;
                     self.nodes[valueParent].red = true;
                     rotateRight(self, valueParent);
                     cursor = self.nodes[valueParent].left;
                 }
-                if (
-                    !self.nodes[self.nodes[cursor].right].red &&
-                    !self.nodes[self.nodes[cursor].left].red
-                ) {
-                    self.nodes[cursor].red = true;
+
+                if (!_isRed(self, _rightOf(self, cursor)) && !_isRed(self, _leftOf(self, cursor))) {
+                    _setRedIfNotEmpty(self, cursor);
                     value = valueParent;
+                    parent = self.nodes[value].parent;
+                    valueIsLeftChild = parent != EMPTY && value == self.nodes[parent].left;
                 } else {
-                    if (!self.nodes[self.nodes[cursor].left].red) {
-                        self.nodes[self.nodes[cursor].right].red = false;
-                        self.nodes[cursor].red = true;
+                    if (!_isRed(self, _leftOf(self, cursor))) {
+                        _setBlackIfNotEmpty(self, _rightOf(self, cursor));
+                        _setRedIfNotEmpty(self, cursor);
                         rotateLeft(self, cursor);
                         cursor = self.nodes[valueParent].left;
                     }
                     self.nodes[cursor].red = self.nodes[valueParent].red;
                     self.nodes[valueParent].red = false;
-                    self.nodes[self.nodes[cursor].left].red = false;
+                    _setBlackIfNotEmpty(self, _leftOf(self, cursor));
                     rotateRight(self, valueParent);
                     value = self.root;
+                    parent = EMPTY;
                 }
             }
         }
-        self.nodes[value].red = false;
+
+        _setBlackIfNotEmpty(self, value);
+    }
+
+    function _leftOf(Tree storage self, uint256 value) private view returns (uint256) {
+        return value == EMPTY ? EMPTY : self.nodes[value].left;
+    }
+
+    function _rightOf(Tree storage self, uint256 value) private view returns (uint256) {
+        return value == EMPTY ? EMPTY : self.nodes[value].right;
+    }
+
+    function _isRed(Tree storage self, uint256 value) private view returns (bool) {
+        return value != EMPTY && self.nodes[value].red;
+    }
+
+    function _setRedIfNotEmpty(Tree storage self, uint256 value) private {
+        if (value != EMPTY) {
+            self.nodes[value].red = true;
+        }
+    }
+
+    function _setBlackIfNotEmpty(Tree storage self, uint256 value) private {
+        if (value != EMPTY) {
+            self.nodes[value].red = false;
+        }
     }
 
     function calculateDroppedAmountFromLeft(
@@ -496,6 +568,18 @@ library OrderStatisticsTreeLib {
         );
     }
 
+    struct DropVars {
+        uint256 cursor;
+        uint256 cursorNodeAmount;
+        uint256 exceededAmount;
+        uint256 exceededAmountInFV;
+        uint256 totalNodeAmount;
+        uint256 fixupParent;
+        uint256 removedChild;
+        uint256 relinkFixupStart;
+        uint256 relinkFixupStopParent;
+    }
+
     function dropLeft(
         Tree storage self,
         uint256 amount,
@@ -511,61 +595,72 @@ library OrderStatisticsTreeLib {
             PartiallyRemovedOrder memory partiallyRemovedOrder
         )
     {
-        uint256 cursor = first(self);
-        uint256 cursorNodeAmount;
-        uint256 exceededAmount;
-        uint256 exceededAmountInFV;
+        DropVars memory vars;
+        vars.cursor = first(self);
 
-        require(cursor <= limitValue || limitValue == 0, "Insufficient limit value");
+        require(vars.cursor <= limitValue || limitValue == 0, "Insufficient limit value");
 
         (
             droppedValue,
-            cursor,
-            cursorNodeAmount,
+            vars.cursor,
+            vars.cursorNodeAmount,
             droppedAmount,
             droppedAmountInFV,
-            exceededAmount,
-            exceededAmountInFV
-        ) = _calculateDroppedAmountFromLeft(self, amount, amountInFV, limitValue, cursor);
+            vars.exceededAmount,
+            vars.exceededAmountInFV
+        ) = _calculateDroppedAmountFromLeft(self, amount, amountInFV, limitValue, vars.cursor);
 
-        uint256 totalNodeAmount = droppedAmount + exceededAmount;
+        vars.totalNodeAmount = droppedAmount + vars.exceededAmount;
+        vars.fixupParent = EMPTY;
 
-        if (totalNodeAmount > 0) {
-            if (exceededAmount > 0) {
-                cursor = droppedValue;
+        if (vars.totalNodeAmount > 0) {
+            if (vars.exceededAmount > 0) {
+                vars.cursor = droppedValue;
                 // Update order ids in the node.
                 partiallyRemovedOrder = removeOrders(
                     self,
-                    cursor,
-                    cursorNodeAmount - exceededAmount
+                    vars.cursor,
+                    vars.cursorNodeAmount - vars.exceededAmount
                 );
-            } else if (exceededAmountInFV > 0) {
-                cursor = droppedValue;
+            } else if (vars.exceededAmountInFV > 0) {
+                vars.cursor = droppedValue;
                 // Update order ids in the node.
                 partiallyRemovedOrder = removeOrders(
                     self,
-                    cursor,
-                    cursorNodeAmount - _calculatePresentValue(cursor, exceededAmountInFV)
+                    vars.cursor,
+                    vars.cursorNodeAmount -
+                        _calculatePresentValue(vars.cursor, vars.exceededAmountInFV)
                 );
             }
 
-            self.nodes[cursor].left = 0;
+            vars.removedChild = self.nodes[vars.cursor].left;
+            self.nodes[vars.cursor].left = EMPTY;
+            if (_blackHeight(self, vars.removedChild) > _blackHeight(self, EMPTY)) {
+                vars.fixupParent = vars.cursor;
+            }
 
-            uint256 parent = self.nodes[cursor].parent;
+            uint256 parent = self.nodes[vars.cursor].parent;
 
-            if (cursor != EMPTY) {
+            if (vars.cursor != EMPTY) {
                 while (parent != EMPTY) {
-                    if (parent > cursor) {
+                    if (parent > vars.cursor) {
                         // Relink the nodes
-                        if (self.nodes[cursor].parent != parent) {
-                            self.nodes[cursor].parent = parent;
-                            self.nodes[parent].left = cursor;
-                            if (self.nodes[cursor].red && self.nodes[parent].red) {
-                                self.nodes[cursor].red = false;
+                        if (self.nodes[vars.cursor].parent != parent) {
+                            uint256 oldLeft = self.nodes[parent].left;
+                            uint256 newLeft = vars.cursor;
+
+                            self.nodes[vars.cursor].parent = parent;
+                            self.nodes[parent].left = newLeft;
+
+                            if (_blackHeight(self, oldLeft) > _blackHeight(self, newLeft)) {
+                                if (vars.relinkFixupStart == EMPTY) {
+                                    vars.relinkFixupStart = parent;
+                                }
+                                vars.relinkFixupStopParent = self.nodes[parent].parent;
                             }
                         }
 
-                        cursor = parent;
+                        vars.cursor = parent;
                     }
 
                     parent = self.nodes[parent].parent;
@@ -573,8 +668,8 @@ library OrderStatisticsTreeLib {
             }
         }
 
-        if (amount > totalNodeAmount) {
-            remainingAmount = amount - totalNodeAmount;
+        if (amount > vars.totalNodeAmount) {
+            remainingAmount = amount - vars.totalNodeAmount;
         }
 
         uint256 lastNode = last(self);
@@ -584,14 +679,20 @@ library OrderStatisticsTreeLib {
             self.root = EMPTY;
         } else if (
             droppedValue > self.root ||
-            (droppedValue == self.root && droppedAmount == totalNodeAmount)
+            (droppedValue == self.root && droppedAmount == vars.totalNodeAmount)
         ) {
             // The case that the root node is dropped
-            self.root = cursor;
-            self.nodes[cursor].parent = 0;
+            self.root = vars.cursor;
+            self.nodes[vars.cursor].parent = 0;
         }
 
-        rotateTreeToLeft(self);
+        if (self.root != EMPTY) {
+            _rebalanceBlackHeights(
+                self,
+                vars.fixupParent != EMPTY ? vars.fixupParent : vars.relinkFixupStart,
+                vars.relinkFixupStopParent
+            );
+        }
     }
 
     function dropRight(
@@ -609,61 +710,72 @@ library OrderStatisticsTreeLib {
             PartiallyRemovedOrder memory partiallyRemovedOrder
         )
     {
-        uint256 cursor = last(self);
-        uint256 cursorNodeAmount;
-        uint256 exceededAmount;
-        uint256 exceededAmountInFV;
+        DropVars memory vars;
+        vars.cursor = last(self);
 
-        require(cursor >= limitValue || limitValue == 0, "Insufficient limit value");
+        require(vars.cursor >= limitValue || limitValue == 0, "Insufficient limit value");
 
         (
             droppedValue,
-            cursor,
-            cursorNodeAmount,
+            vars.cursor,
+            vars.cursorNodeAmount,
             droppedAmount,
             droppedAmountInFV,
-            exceededAmount,
-            exceededAmountInFV
-        ) = _calculateDroppedAmountFromRight(self, amount, amountInFV, limitValue, cursor);
+            vars.exceededAmount,
+            vars.exceededAmountInFV
+        ) = _calculateDroppedAmountFromRight(self, amount, amountInFV, limitValue, vars.cursor);
 
-        uint256 totalNodeAmount = droppedAmount + exceededAmount;
+        vars.totalNodeAmount = droppedAmount + vars.exceededAmount;
+        vars.fixupParent = EMPTY;
 
-        if (totalNodeAmount > 0) {
-            if (exceededAmount > 0) {
-                cursor = droppedValue;
+        if (vars.totalNodeAmount > 0) {
+            if (vars.exceededAmount > 0) {
+                vars.cursor = droppedValue;
                 // Update order ids in the node.
                 partiallyRemovedOrder = removeOrders(
                     self,
-                    cursor,
-                    cursorNodeAmount - exceededAmount
+                    vars.cursor,
+                    vars.cursorNodeAmount - vars.exceededAmount
                 );
-            } else if (exceededAmountInFV > 0) {
-                cursor = droppedValue;
+            } else if (vars.exceededAmountInFV > 0) {
+                vars.cursor = droppedValue;
                 // Update order ids in the node.
                 partiallyRemovedOrder = removeOrders(
                     self,
-                    cursor,
-                    cursorNodeAmount - _calculatePresentValue(cursor, exceededAmountInFV)
+                    vars.cursor,
+                    vars.cursorNodeAmount -
+                        _calculatePresentValue(vars.cursor, vars.exceededAmountInFV)
                 );
             }
 
-            self.nodes[cursor].right = 0;
+            vars.removedChild = self.nodes[vars.cursor].right;
+            self.nodes[vars.cursor].right = EMPTY;
+            if (_blackHeight(self, vars.removedChild) > _blackHeight(self, EMPTY)) {
+                vars.fixupParent = vars.cursor;
+            }
 
-            uint256 parent = self.nodes[cursor].parent;
+            uint256 parent = self.nodes[vars.cursor].parent;
 
-            if (cursor != EMPTY) {
+            if (vars.cursor != EMPTY) {
                 while (parent != EMPTY) {
-                    if (parent < cursor) {
+                    if (parent < vars.cursor) {
                         // Relink the nodes
-                        if (self.nodes[cursor].parent != parent) {
-                            self.nodes[cursor].parent = parent;
-                            self.nodes[parent].right = cursor;
-                            if (self.nodes[cursor].red && self.nodes[parent].red) {
-                                self.nodes[cursor].red = false;
+                        if (self.nodes[vars.cursor].parent != parent) {
+                            uint256 oldRight = self.nodes[parent].right;
+                            uint256 newRight = vars.cursor;
+
+                            self.nodes[vars.cursor].parent = parent;
+                            self.nodes[parent].right = newRight;
+
+                            if (_blackHeight(self, oldRight) > _blackHeight(self, newRight)) {
+                                if (vars.relinkFixupStart == EMPTY) {
+                                    vars.relinkFixupStart = parent;
+                                }
+                                vars.relinkFixupStopParent = self.nodes[parent].parent;
                             }
                         }
 
-                        cursor = parent;
+                        vars.cursor = parent;
                     }
 
                     parent = self.nodes[parent].parent;
@@ -671,8 +783,8 @@ library OrderStatisticsTreeLib {
             }
         }
 
-        if (amount > totalNodeAmount) {
-            remainingAmount = amount - totalNodeAmount;
+        if (amount > vars.totalNodeAmount) {
+            remainingAmount = amount - vars.totalNodeAmount;
         }
 
         uint256 firstNode = first(self);
@@ -682,54 +794,272 @@ library OrderStatisticsTreeLib {
             self.root = EMPTY;
         } else if (
             droppedValue < self.root ||
-            (droppedValue == self.root && droppedAmount == totalNodeAmount)
+            (droppedValue == self.root && droppedAmount == vars.totalNodeAmount)
         ) {
             // The case that the root node is dropped
-            self.root = cursor;
-            self.nodes[cursor].parent = 0;
+            self.root = vars.cursor;
+            self.nodes[vars.cursor].parent = 0;
         }
 
-        rotateTreeToRight(self);
-    }
-
-    function rotateTreeToLeft(Tree storage self) internal {
-        uint256 cursor = self.root;
-        while (self.nodes[cursor].left != 0) {
-            cursor = self.nodes[cursor].left;
-        }
-
-        if (self.nodes[cursor].left == 0 && self.nodes[cursor].right != 0) {
-            if (self.nodes[self.nodes[cursor].right].left != 0) {
-                rotateRight(self, self.nodes[cursor].right);
-            }
-            self.nodes[self.nodes[cursor].right].red = false;
-            self.nodes[cursor].red = true;
-            rotateLeft(self, cursor);
-        }
-
-        if (self.nodes[self.root].red) {
-            self.nodes[self.root].red = false;
+        if (self.root != EMPTY) {
+            _rebalanceBlackHeights(
+                self,
+                vars.fixupParent != EMPTY ? vars.fixupParent : vars.relinkFixupStart,
+                vars.relinkFixupStopParent
+            );
         }
     }
 
-    function rotateTreeToRight(Tree storage self) internal {
-        uint256 cursor = self.root;
-        while (self.nodes[cursor].right != 0) {
-            cursor = self.nodes[cursor].right;
-        }
+    function _hasBlackDeficitFromLeft(
+        Tree storage self,
+        uint256 target
+    ) private view returns (bool) {
+        return
+            target != EMPTY &&
+            _blackHeight(self, _leftOf(self, target)) < _blackHeight(self, _rightOf(self, target));
+    }
 
-        if (self.nodes[cursor].right == 0 && self.nodes[cursor].left != 0) {
-            if (self.nodes[self.nodes[cursor].left].right != 0) {
-                rotateLeft(self, self.nodes[cursor].left);
+    function _hasBlackDeficitFromRight(
+        Tree storage self,
+        uint256 target
+    ) private view returns (bool) {
+        return
+            target != EMPTY &&
+            _blackHeight(self, _rightOf(self, target)) < _blackHeight(self, _leftOf(self, target));
+    }
+
+    function _rebalanceBlackHeights(
+        Tree storage self,
+        uint256 target,
+        uint256 stopParent
+    ) private returns (uint256 processedUntil) {
+        bool reachedStopParent;
+
+        while (target != EMPTY) {
+            processedUntil = target;
+
+            if (stopParent != EMPTY && target == stopParent) {
+                reachedStopParent = true;
             }
-            self.nodes[self.nodes[cursor].left].red = false;
-            self.nodes[cursor].red = true;
-            rotateRight(self, cursor);
+
+            (uint256 leftBlackHeight, uint256 rightBlackHeight) = _childBlackHeights(self, target);
+            bool fixedAtTarget;
+            bool targetChangedByFix;
+
+            while (leftBlackHeight != rightBlackHeight) {
+                // The two child subtrees have different black heights. Fix the side that has
+                // the black deficit. dropLeft/dropRight can remove a whole subtree, so the
+                // deficit may be larger than one black level; after one fix, the same node
+                // can still be locally imbalanced and must be rechecked before moving upward.
+                fixedAtTarget = true;
+                (target, leftBlackHeight, rightBlackHeight, targetChangedByFix) = _fixBlackDeficit(
+                    self,
+                    target,
+                    leftBlackHeight,
+                    rightBlackHeight
+                );
+
+                if (targetChangedByFix) {
+                    break;
+                }
+            }
+
+            if (targetChangedByFix) {
+                continue;
+            }
+
+            if (leftBlackHeight == rightBlackHeight) {
+                if (fixedAtTarget) {
+                    // This target was just rebalanced. Even if its local black heights now match,
+                    // the fix may have changed this subtree's effective black height, so continue
+                    // upward and let the parent verify whether the change propagated.
+                    target = self.nodes[target].parent;
+                } else if (reachedStopParent) {
+                    // We reached the first node above the relink-affected path, and no fix was
+                    // needed at this node. Its subtree black height is unchanged, so no further
+                    // ancestor can be affected.
+                    target = EMPTY;
+                } else {
+                    // This node is locally balanced, but it is still within the relink-affected
+                    // path. Continue upward until the stop parent is reached.
+                    target = self.nodes[target].parent;
+                }
+            }
         }
 
-        if (self.nodes[self.root].red) {
-            self.nodes[self.root].red = false;
+        _setBlackIfNotEmpty(self, self.root);
+    }
+
+    function _fixBlackDeficit(
+        Tree storage self,
+        uint256 target,
+        uint256 leftBlackHeight,
+        uint256 rightBlackHeight
+    )
+        private
+        returns (
+            uint256 nextTarget,
+            uint256 newLeftBlackHeight,
+            uint256 newRightBlackHeight,
+            bool targetChangedByFix
+        )
+    {
+        uint256 deficitBefore = _absDiff(leftBlackHeight, rightBlackHeight);
+
+        if (leftBlackHeight < rightBlackHeight) {
+            // The left subtree is missing black height after a drop/relink from the left.
+            nextTarget = _fixBlackDeficitFromLeft(self, target);
+        } else {
+            // The right subtree is missing black height after a drop/relink from the right.
+            nextTarget = _fixBlackDeficitFromRight(self, target);
         }
+
+        (newLeftBlackHeight, newRightBlackHeight) = _childBlackHeights(self, target);
+
+        if (newLeftBlackHeight != newRightBlackHeight) {
+            require(
+                _absDiff(newLeftBlackHeight, newRightBlackHeight) < deficitBefore,
+                "OrderStatisticsTreeLib: Rebalance did not converge"
+            );
+
+            // The original node still has a local black-height mismatch. Reprocess it
+            // using the newly calculated black heights instead of recalculating them at
+            // the top of the outer loop.
+            return (target, newLeftBlackHeight, newRightBlackHeight, false);
+        }
+
+        if (nextTarget != target) {
+            // The original node is locally balanced and the fix propagated the remaining
+            // effect to another node, usually the parent. Restart the outer loop because
+            // the cached black heights belong to the original target, not to nextTarget.
+            return (nextTarget, 0, 0, true);
+        }
+
+        return (target, newLeftBlackHeight, newRightBlackHeight, false);
+    }
+
+    function _childBlackHeights(
+        Tree storage self,
+        uint256 target
+    ) private view returns (uint256 leftBlackHeight, uint256 rightBlackHeight) {
+        leftBlackHeight = _blackHeight(self, _leftOf(self, target));
+        rightBlackHeight = _blackHeight(self, _rightOf(self, target));
+    }
+
+    function _absDiff(uint256 a, uint256 b) private pure returns (uint256) {
+        return a > b ? a - b : b - a;
+    }
+
+    function _blackHeight(Tree storage self, uint256 value) private view returns (uint256 height) {
+        while (value != EMPTY) {
+            if (!_isRed(self, value)) {
+                height++;
+            }
+
+            uint256 left = self.nodes[value].left;
+            if (left != EMPTY) {
+                value = left;
+            } else {
+                value = self.nodes[value].right;
+            }
+        }
+
+        // EMPTY leaf is treated as black.
+        return height + 1;
+    }
+
+    function _fixBlackDeficitFromLeft(
+        Tree storage self,
+        uint256 target
+    ) private returns (uint256 nextTarget) {
+        if (target == EMPTY) {
+            return EMPTY;
+        }
+
+        uint256 sibling = _rightOf(self, target);
+
+        if (_isRed(self, sibling)) {
+            self.nodes[sibling].red = false;
+            self.nodes[target].red = true;
+            rotateLeft(self, target);
+            sibling = _rightOf(self, target);
+        }
+
+        uint256 siblingLeft = _leftOf(self, sibling);
+        uint256 siblingRight = _rightOf(self, sibling);
+
+        if (!_isRed(self, siblingLeft) && !_isRed(self, siblingRight)) {
+            _setRedIfNotEmpty(self, sibling);
+
+            if (_isRed(self, target)) {
+                self.nodes[target].red = false;
+                return target;
+            }
+
+            uint256 parent = self.nodes[target].parent;
+            return parent == EMPTY ? target : parent;
+        }
+
+        if (!_isRed(self, siblingRight)) {
+            _setBlackIfNotEmpty(self, siblingLeft);
+            _setRedIfNotEmpty(self, sibling);
+            rotateRight(self, sibling);
+            sibling = _rightOf(self, target);
+        }
+
+        self.nodes[sibling].red = _isRed(self, target);
+        self.nodes[target].red = false;
+        _setBlackIfNotEmpty(self, _rightOf(self, sibling));
+
+        rotateLeft(self, target);
+        return target;
+    }
+
+    function _fixBlackDeficitFromRight(
+        Tree storage self,
+        uint256 target
+    ) private returns (uint256 nextTarget) {
+        if (target == EMPTY) {
+            return EMPTY;
+        }
+
+        uint256 sibling = _leftOf(self, target);
+
+        if (_isRed(self, sibling)) {
+            self.nodes[sibling].red = false;
+            self.nodes[target].red = true;
+            rotateRight(self, target);
+            sibling = _leftOf(self, target);
+        }
+
+        uint256 siblingLeft = _leftOf(self, sibling);
+        uint256 siblingRight = _rightOf(self, sibling);
+
+        if (!_isRed(self, siblingLeft) && !_isRed(self, siblingRight)) {
+            _setRedIfNotEmpty(self, sibling);
+
+            if (_isRed(self, target)) {
+                self.nodes[target].red = false;
+                return target;
+            }
+
+            uint256 parent = self.nodes[target].parent;
+            return parent == EMPTY ? target : parent;
+        }
+
+        if (!_isRed(self, siblingLeft)) {
+            _setBlackIfNotEmpty(self, siblingRight);
+            _setRedIfNotEmpty(self, sibling);
+            rotateLeft(self, sibling);
+            sibling = _leftOf(self, target);
+        }
+
+        self.nodes[sibling].red = _isRed(self, target);
+        self.nodes[target].red = false;
+        _setBlackIfNotEmpty(self, _leftOf(self, sibling));
+
+        rotateRight(self, target);
+        return target;
     }
 
     function getFutureValue(

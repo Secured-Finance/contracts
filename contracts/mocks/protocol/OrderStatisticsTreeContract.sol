@@ -48,6 +48,10 @@ contract OrderStatisticsTreeContract {
         _exists = tree.orderIdExists(value, orderId);
     }
 
+    function isActiveOrderId(uint256 value, uint48 orderId) public view returns (bool _isActive) {
+        _isActive = tree.isActiveOrderId(value, orderId);
+    }
+
     function getNode(
         uint256 value
     )

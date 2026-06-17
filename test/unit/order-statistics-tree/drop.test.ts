@@ -2,6 +2,10 @@ import { expect } from 'chai';
 import { BigNumber, constants, Contract } from 'ethers';
 import { artifacts } from 'hardhat';
 import {
+  displayTree,
+  verifyBlackHeightConsistency,
+} from '../../common/tree-utils';
+import {
   borrowingLimitOrders,
   borrowingMarketOrders,
   borrowingUnwindOrders,
@@ -94,10 +98,14 @@ describe('OrderStatisticsTree - drop values', () => {
                       order.amount,
                     );
                   }
-                  const totalAmountBefore = await getTotalAmount('<Before>');
+                  const totalAmountBefore = await getTotalAmountAndVerifyTree(
+                    '<Before>',
+                  );
 
                   await ost[test.method](input.targetAmount, 0, 0);
-                  const totalAmountAfter = await getTotalAmount('<After>');
+                  const totalAmountAfter = await getTotalAmountAndVerifyTree(
+                    '<After>',
+                  );
 
                   expect(
                     totalAmountBefore?.sub(totalAmountAfter).toNumber(),
@@ -121,13 +129,17 @@ describe('OrderStatisticsTree - drop values', () => {
                       order.amount,
                     );
                   }
-                  await getTotalAmount('<Before>');
+                  await getTotalAmountAndVerifyTree('<Before>');
 
                   await ost[test.method](input.targetAmount / 2, 0, 0);
-                  await getTotalAmount('<After data is dropped 1>');
+                  await getTotalAmountAndVerifyTree(
+                    '<After data is dropped 1>',
+                  );
 
                   await ost[test.method](input.targetAmount / 2, 0, 0);
-                  await getTotalAmount('<After data is dropped 2>');
+                  await getTotalAmountAndVerifyTree(
+                    '<After data is dropped 2>',
+                  );
                 });
               }
             });
@@ -147,10 +159,12 @@ describe('OrderStatisticsTree - drop values', () => {
                       order.amount,
                     );
                   }
-                  const totalAmountBefore = await getTotalAmount('<Before>');
+                  const totalAmountBefore = await getTotalAmountAndVerifyTree(
+                    '<Before>',
+                  );
 
                   await ost[test.method](input.targetAmount, 0, 0);
-                  const totalAmountAfter1 = await getTotalAmount(
+                  const totalAmountAfter1 = await getTotalAmountAndVerifyTree(
                     '<After data is dropped>',
                   );
 
@@ -166,12 +180,12 @@ describe('OrderStatisticsTree - drop values', () => {
                       order.amount,
                     );
                   }
-                  const totalAmountAfter2 = await getTotalAmount(
+                  const totalAmountAfter2 = await getTotalAmountAndVerifyTree(
                     '<After data is inserted again>',
                   );
 
                   await ost[test.method](input.targetAmount, 0, 0);
-                  const totalAmountAfter3 = await getTotalAmount(
+                  const totalAmountAfter3 = await getTotalAmountAndVerifyTree(
                     '<After data is dropped again>',
                   );
 
@@ -201,14 +215,18 @@ describe('OrderStatisticsTree - drop values', () => {
                       order.amount,
                     );
                   }
-                  const totalAmountBefore = await getTotalAmount('<Before>');
+                  const totalAmountBefore = await getTotalAmountAndVerifyTree(
+                    '<Before>',
+                  );
 
                   await ost[test.method](
                     input.targetAmount,
                     0,
                     input?.limitValue || 0,
                   );
-                  const totalAmountAfter = await getTotalAmount('<After>');
+                  const totalAmountAfter = await getTotalAmountAndVerifyTree(
+                    '<After>',
+                  );
 
                   expect(
                     totalAmountBefore?.sub(totalAmountAfter).toNumber(),
@@ -237,7 +255,9 @@ describe('OrderStatisticsTree - drop values', () => {
                       order.amount,
                     );
                   }
-                  const totalAmountBefore = await getTotalAmount('<Before>');
+                  const totalAmountBefore = await getTotalAmountAndVerifyTree(
+                    '<Before>',
+                  );
 
                   const { droppedAmount, droppedAmountInFV } = await ost[
                     test.method
@@ -246,7 +266,9 @@ describe('OrderStatisticsTree - drop values', () => {
                       logs.find(({ event }) => event === 'Drop').args,
                   );
 
-                  const totalAmountAfter = await getTotalAmount('<After>');
+                  const totalAmountAfter = await getTotalAmountAndVerifyTree(
+                    '<After>',
+                  );
 
                   expect(droppedAmount.toNumber()).equal(input.filledAmount);
                   expect(droppedAmountInFV.toNumber()).equal(
@@ -354,7 +376,9 @@ describe('OrderStatisticsTree - drop values', () => {
               await ost.calculateDroppedAmountFromLeft(test.pvAmount, 0, 0);
             expect(estimatedAmount.toNumber()).equal(test.fvAmount);
 
-            const totalAmountBefore = await getTotalAmount('<Before>');
+            const totalAmountBefore = await getTotalAmountAndVerifyTree(
+              '<Before>',
+            );
 
             const { droppedAmount } = await ost
               .dropValuesFromFirst(test.pvAmount, 0, 0)
@@ -362,7 +386,9 @@ describe('OrderStatisticsTree - drop values', () => {
                 ({ logs }) => logs.find(({ event }) => event === 'Drop').args,
               );
 
-            const totalAmountAfter = await getTotalAmount('<After>');
+            const totalAmountAfter = await getTotalAmountAndVerifyTree(
+              '<After>',
+            );
 
             expect(droppedAmount.toString()).to.equal(test.pvAmount.toString());
             expect(totalAmountAfter.add(droppedAmount.toString())).to.equal(
@@ -388,7 +414,9 @@ describe('OrderStatisticsTree - drop values', () => {
               await ost.calculateDroppedAmountFromLeft(0, test.fvAmount, 0);
             expect(estimatedAmount.toNumber()).equal(test.pvAmount);
 
-            const totalAmountBefore = await getTotalAmount('<Before>');
+            const totalAmountBefore = await getTotalAmountAndVerifyTree(
+              '<Before>',
+            );
 
             const { droppedAmount } = await ost
               .dropValuesFromFirst(0, test.fvAmount, 0)
@@ -396,7 +424,9 @@ describe('OrderStatisticsTree - drop values', () => {
                 ({ logs }) => logs.find(({ event }) => event === 'Drop').args,
               );
 
-            const totalAmountAfter = await getTotalAmount('<After>');
+            const totalAmountAfter = await getTotalAmountAndVerifyTree(
+              '<After>',
+            );
 
             expect(droppedAmount.toString()).to.equal(test.pvAmount.toString());
             expect(totalAmountAfter.add(droppedAmount.toString())).to.equal(
@@ -453,7 +483,9 @@ describe('OrderStatisticsTree - drop values', () => {
               await ost.calculateDroppedAmountFromRight(test.pvAmount, 0, 0);
             expect(estimatedAmount.toNumber()).equal(test.fvAmount);
 
-            const totalAmountBefore = await getTotalAmount('<Before>');
+            const totalAmountBefore = await getTotalAmountAndVerifyTree(
+              '<Before>',
+            );
 
             const { droppedAmount } = await ost
               .dropValuesFromLast(test.pvAmount, 0, 0)
@@ -461,7 +493,9 @@ describe('OrderStatisticsTree - drop values', () => {
                 ({ logs }) => logs.find(({ event }) => event === 'Drop').args,
               );
 
-            const totalAmountAfter = await getTotalAmount('<After>');
+            const totalAmountAfter = await getTotalAmountAndVerifyTree(
+              '<After>',
+            );
 
             expect(droppedAmount.toString()).to.equal(test.pvAmount.toString());
             expect(totalAmountAfter.add(droppedAmount.toString())).to.equal(
@@ -487,7 +521,9 @@ describe('OrderStatisticsTree - drop values', () => {
               await ost.calculateDroppedAmountFromRight(0, test.fvAmount, 0);
             expect(estimatedAmount.toNumber()).equal(test.pvAmount);
 
-            const totalAmountBefore = await getTotalAmount('<Before>');
+            const totalAmountBefore = await getTotalAmountAndVerifyTree(
+              '<Before>',
+            );
 
             const { droppedAmount } = await ost
               .dropValuesFromLast(0, test.fvAmount, 0)
@@ -495,7 +531,9 @@ describe('OrderStatisticsTree - drop values', () => {
                 ({ logs }) => logs.find(({ event }) => event === 'Drop').args,
               );
 
-            const totalAmountAfter = await getTotalAmount('<After>');
+            const totalAmountAfter = await getTotalAmountAndVerifyTree(
+              '<After>',
+            );
 
             expect(droppedAmount.toString()).to.equal(test.pvAmount.toString());
             expect(totalAmountAfter.add(droppedAmount.toString())).to.equal(
@@ -508,38 +546,12 @@ describe('OrderStatisticsTree - drop values', () => {
   });
 });
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-async function getTotalAmount(msg?: string) {
-  // msg && console.log(msg);
+async function getTotalAmountAndVerifyTree(msg: string): Promise<BigNumber> {
+  console.log(msg);
 
-  let value = await ost.firstValue();
-  let totalAmount = BigNumber.from(0);
+  const totalAmount = await displayTree(ost);
 
-  if (value.toString() === '0') {
-    // console.table([{ value: 'No value found in the tree.' }]);
-    return totalAmount;
-  }
-
-  let node = await ost.getNode(value);
-  const nodes: any = [];
-
-  while (value.toString() !== '0') {
-    node = await ost.getNode(value);
-    nodes.push({
-      value: value.toString(),
-      parent: node._parent.toString(),
-      left: node._left.toString(),
-      right: node._right.toString(),
-      red: node._red,
-      orderCounter: node._orderCounter.toString(),
-      orderTotalAmount: node._orderTotalAmount.toString(),
-    });
-
-    value = await ost.nextValue(value);
-    totalAmount = totalAmount.add(node._orderTotalAmount.toString());
-  }
-
-  // console.table(nodes);
+  expect(await verifyBlackHeightConsistency(ost)).to.be.true;
 
   return totalAmount;
 }
