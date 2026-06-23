@@ -30,6 +30,7 @@ library FundManagementLogic {
     using RoundingInt256 for int256;
 
     uint256 public constant BASE_MIN_DEBT_UNIT_PRICE = 9600;
+    uint256 public constant MAX_EXPOSURE_CURRENCIES = 5;
 
     error NotRedemptionPeriod();
     error NotRepaymentPeriod();
@@ -37,6 +38,7 @@ library FundManagementLogic {
     error NoRepaymentAmount();
     error AlreadyRedeemed();
     error InsufficientCollateral();
+    error TooManyExposureCurrencies();
 
     struct CalculatedTotalFundInBaseCurrencyVars {
         address user;
@@ -230,22 +232,38 @@ library FundManagementLogic {
                 _maturity
             );
 
-            registerCurrencyAndMaturity(_ccy, _maturity, reserveFundAddr);
+            // NOTE: Register without checking `MAX_EXPOSURE_CURRENCIES` to ensure that ReserveFund always receives fees.
+            // en: By skipping the check of `MAX_EXPOSURE_CURRENCIES`, it is expected that the gas cost will increase
+            // due to the increase of `usedCurrencies`, but since the `cleanUpFunds` function is called for ReserveFund
+            // every time the `rotateOrderBooks` function is called, the increase in gas cost is limited.
+            if (Storage.slot().usedMaturities[_ccy][reserveFundAddr].add(_maturity)) {
+                Storage.slot().usedCurrencies[reserveFundAddr].add(_ccy);
+            }
         }
     }
 
-    function registerCurrencyAndMaturity(bytes32 _ccy, uint256 _maturity, address _user) public {
-        if (!Storage.slot().usedMaturities[_ccy][_user].contains(_maturity)) {
-            Storage.slot().usedMaturities[_ccy][_user].add(_maturity);
-
-            registerCurrency(_ccy, _user);
+    function registerCurrencyAndMaturity(
+        bytes32 _ccy,
+        uint256 _maturity,
+        address _user
+    ) public returns (bool isNewCurrency) {
+        if (Storage.slot().usedMaturities[_ccy][_user].add(_maturity)) {
+            return registerCurrency(_ccy, _user);
         }
+        return false;
     }
 
-    function registerCurrency(bytes32 _ccy, address _user) public {
-        if (!Storage.slot().usedCurrencies[_user].contains(_ccy)) {
-            Storage.slot().usedCurrencies[_user].add(_ccy);
+    function registerCurrency(bytes32 _ccy, address _user) public returns (bool isNewCurrency) {
+        EnumerableSet.Bytes32Set storage currencySet = Storage.slot().usedCurrencies[_user];
+        if (!currencySet.contains(_ccy)) {
+            if (currencySet.length() >= MAX_EXPOSURE_CURRENCIES) {
+                revert TooManyExposureCurrencies();
+            }
+
+            currencySet.add(_ccy);
+            return true;
         }
+        return false;
     }
 
     function executeRedemption(bytes32 _ccy, uint256 _maturity, address _user) external {

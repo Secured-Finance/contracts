@@ -31,6 +31,8 @@ interface ITokenVault {
 
     function isRegisteredCurrency(bytes32 ccy) external view returns (bool);
 
+    function canDepositCurrency(address user, bytes32 ccy) external view returns (bool);
+
     function getTokenAddress(bytes32 ccy) external view returns (address);
 
     function getCollateralCurrencies() external view returns (bytes32[] memory);

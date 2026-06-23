@@ -158,6 +158,16 @@ contract TokenVault is
         return Storage.slot().tokenAddresses[_ccy] != address(0);
     }
 
+    /**
+     * @notice Checks if a deposit currency can be added for the user.
+     * @param _user User's address
+     * @param _ccy Currency name in bytes32
+     * @return True if the currency can be added, false otherwise
+     */
+    function canDepositCurrency(address _user, bytes32 _ccy) external view override returns (bool) {
+        return DepositManagementLogic.canDepositCurrency(_user, _ccy);
+    }
+
     // @inheritdoc Proxyable
     function getRevision() external pure override returns (uint256) {
         return 0x3;
@@ -621,6 +631,8 @@ contract TokenVault is
         ) {
             revert InvalidAmount(_ccy, _amount, msg.value);
         }
+
+        lendingMarketController().cleanUpFunds(_ccy, _onBehalfOf);
 
         DepositManagementLogic.deposit(_caller, _ccy, _amount, _onBehalfOf);
 

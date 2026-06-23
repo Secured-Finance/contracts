@@ -2,7 +2,7 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { time } from '@openzeppelin/test-helpers';
 import { MockContract, deployMockContract } from 'ethereum-waffle';
 import { BigNumber, Contract } from 'ethers';
-import { artifacts, ethers, network } from 'hardhat';
+import { artifacts, ethers } from 'hardhat';
 
 import { expect } from 'chai';
 import moment from 'moment';
@@ -44,9 +44,7 @@ describe('LendingMarketController - Tokenization', () => {
   let carol: SignerWithAddress;
   let dave: SignerWithAddress;
 
-  before(async () => {
-    await network.provider.send('hardhat_reset');
-
+  const initialize = async () => {
     [owner, alice, bob, carol, dave] = await ethers.getSigners();
 
     ({
@@ -76,14 +74,19 @@ describe('LendingMarketController - Tokenization', () => {
     await mockTokenVault.mock.removeDepositAmount.returns();
     await mockTokenVault.mock.depositFrom.returns();
     await mockTokenVault.mock.isCovered.returns(true, true);
+    await mockTokenVault.mock.canDepositCurrency.returns(true);
     await mockTokenVault.mock['isCollateral(bytes32[])'].returns([true]);
     await mockTokenVault.mock.calculateCoverage.returns('1000', false);
     await mockTokenVault.mock.getTokenAddress.returns(mockERC20.address);
     await mockTokenVault.mock.getLiquidationThresholdRate.returns('12500');
     await mockTokenVault.mock.getCollateralDetail.returns(2, 1, 1);
-  });
+  };
 
   beforeEach(async () => {
+    if (currencyIdx % 5 === 0) {
+      await initialize();
+    }
+
     targetCurrencySymbol = `Test${currencyIdx}`;
     targetCurrency = ethers.utils.formatBytes32String(targetCurrencySymbol);
     currencyIdx++;
@@ -94,7 +97,7 @@ describe('LendingMarketController - Tokenization', () => {
     await mockERC20.mock.decimals.returns(6);
   });
 
-  const initialize = async (currency: string, marketCount = 4) => {
+  const initializeCurrency = async (currency: string, marketCount = 4) => {
     await lendingMarketControllerProxy.initializeLendingMarket(
       currency,
       genesisDate,
@@ -150,7 +153,7 @@ describe('LendingMarketController - Tokenization', () => {
     });
 
     it('Create a new zc token with maturity', async () => {
-      await initialize(targetCurrency);
+      await initializeCurrency(targetCurrency);
 
       const maturities = await lendingMarketControllerProxy.getMaturities(
         targetCurrency,
@@ -201,7 +204,7 @@ describe('LendingMarketController - Tokenization', () => {
     });
 
     it('Create a new zc token with maturity(+ 9 month)', async () => {
-      await initialize(targetCurrency, 7);
+      await initializeCurrency(targetCurrency, 7);
 
       const maturities = await lendingMarketControllerProxy.getMaturities(
         targetCurrency,
@@ -256,7 +259,10 @@ describe('LendingMarketController - Tokenization', () => {
     const value = BigNumber.from('100000000000000000');
 
     beforeEach(async () => {
-      await initialize(targetCurrency);
+      await initializeCurrency(targetCurrency);
+      await mockCurrencyController.mock[
+        'convertFromBaseCurrency(bytes32,uint256[])'
+      ].returns([0, 0]);
     });
 
     it('Withdraw zc tokens without used collaterals', async () => {
@@ -1096,6 +1102,10 @@ describe('LendingMarketController - Tokenization', () => {
     });
 
     it('Deposit zc tokens', async () => {
+      await mockCurrencyController.mock[
+        'convertFromBaseCurrency(bytes32,uint256[])'
+      ].returns([value, 0]);
+
       const zcTokenAddress = await lendingMarketControllerProxy.getZCToken(
         targetCurrency,
         maturities[0],
@@ -1134,6 +1144,10 @@ describe('LendingMarketController - Tokenization', () => {
     });
 
     it('Deposit zc tokens with exceeded amount', async () => {
+      await mockCurrencyController.mock[
+        'convertFromBaseCurrency(bytes32,uint256[])'
+      ].returns([value, 0]);
+
       const zcTokenAddress = await lendingMarketControllerProxy.getZCToken(
         targetCurrency,
         maturities[0],
@@ -1174,6 +1188,10 @@ describe('LendingMarketController - Tokenization', () => {
     });
 
     it('Deposit zc perpetual tokens', async () => {
+      await mockCurrencyController.mock[
+        'convertFromBaseCurrency(bytes32,uint256[])'
+      ].returns([value, 0]);
+
       const zcTokenAddress = await lendingMarketControllerProxy.getZCToken(
         targetCurrency,
         0,
@@ -1227,6 +1245,10 @@ describe('LendingMarketController - Tokenization', () => {
     });
 
     it('Deposit zc perpetual tokens with exceeded amount', async () => {
+      await mockCurrencyController.mock[
+        'convertFromBaseCurrency(bytes32,uint256[])'
+      ].returns([value, 0]);
+
       const zcTokenAddress = await lendingMarketControllerProxy.getZCToken(
         targetCurrency,
         0,
