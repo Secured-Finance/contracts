@@ -44,7 +44,10 @@ const config: HardhatUserConfig = {
     alice: 1,
   },
   networks: {
-    hardhat: { accounts: { count: 100 } },
+    hardhat: {
+      accounts: { count: 100 },
+      hardfork: 'cancun',
+    },
     localhost: {
       url: process.env.DEV_RPC_ENDPOINT || 'http://127.0.0.1:8545',
       chainId: parseInt(process.env.DEV_CHAIN_ID || '31337'),

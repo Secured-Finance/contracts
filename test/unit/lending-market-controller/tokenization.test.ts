@@ -1156,6 +1156,10 @@ describe('LendingMarketController - Tokenization', () => {
     });
 
     it('Withdraw only the withdrawable ZC token amount when requesting more than available', async () => {
+      await mockCurrencyController.mock[
+        'convertFromBaseCurrency(bytes32,uint256[])'
+      ].returns([value, 0]);
+
       const zcTokenAddress = await lendingMarketControllerProxy.getZCToken(
         targetCurrency,
         maturities[0],
@@ -1303,6 +1307,10 @@ describe('LendingMarketController - Tokenization', () => {
     });
 
     it('Withdraw only the withdrawable ZC perpetual token amount when requesting more than available', async () => {
+      await mockCurrencyController.mock[
+        'convertFromBaseCurrency(bytes32,uint256[])'
+      ].returns([value, 0]);
+
       const zcTokenAddress = await lendingMarketControllerProxy.getZCToken(
         targetCurrency,
         0,
