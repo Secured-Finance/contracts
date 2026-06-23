@@ -49,9 +49,19 @@ describe('LendingMarketController - Orders', () => {
   let carol: SignerWithAddress;
   let dave: SignerWithAddress;
   let ellen: SignerWithAddress;
+  let signers: SignerWithAddress[];
+
+  const getUser = (): SignerWithAddress => {
+    const signer = signers.shift();
+    if (!signer) {
+      throw new Error('No user exists');
+    }
+    return signer;
+  };
 
   const initialize = async () => {
-    [owner, alice, bob, carol, dave, ellen] = await ethers.getSigners();
+    [owner, alice, bob, carol, dave, ellen, ...signers] =
+      await ethers.getSigners();
 
     ({
       mockERC20,
@@ -82,6 +92,7 @@ describe('LendingMarketController - Orders', () => {
     await mockTokenVault.mock.depositFrom.returns();
     await mockTokenVault.mock.depositWithPermitFrom.returns();
     await mockTokenVault.mock.getTokenAddress.returns(mockERC20.address);
+    await mockTokenVault.mock.canDepositCurrency.returns(true);
   };
 
   beforeEach(async () => {
@@ -1144,6 +1155,8 @@ describe('LendingMarketController - Orders', () => {
     });
 
     it('Get active orders from multiple currencies', async () => {
+      alice = getUser();
+
       await lendingMarketControllerProxy
         .connect(alice)
         .executeOrder(
@@ -1284,6 +1297,9 @@ describe('LendingMarketController - Orders', () => {
     });
 
     it('Get an active position from one market', async () => {
+      alice = getUser();
+      bob = getUser();
+
       await lendingMarketControllerProxy
         .connect(alice)
         .executeOrder(
@@ -1318,6 +1334,9 @@ describe('LendingMarketController - Orders', () => {
     });
 
     it('Get active positions of a user who has both side position', async () => {
+      alice = getUser();
+      bob = getUser();
+
       await lendingMarketControllerProxy
         .connect(alice)
         .executeOrder(
