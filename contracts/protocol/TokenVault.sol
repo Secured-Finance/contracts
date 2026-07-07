@@ -530,12 +530,19 @@ contract TokenVault is
      * @notice Withdraws funds by the caller from unused collateral.
      * @param _ccy Currency name in bytes32
      * @param _amount Amount of funds to withdraw.
+     * @return withdrawnAmount Actual amount withdrawn
      */
     function withdraw(
         bytes32 _ccy,
         uint256 _amount
-    ) external override whenNotPaused onlyRegisteredCurrency(_ccy) {
-        _withdraw(msg.sender, _ccy, _amount);
+    )
+        external
+        override
+        whenNotPaused
+        onlyRegisteredCurrency(_ccy)
+        returns (uint256 withdrawnAmount)
+    {
+        return _withdraw(msg.sender, _ccy, _amount);
     }
 
     /**
@@ -623,6 +630,7 @@ contract TokenVault is
         address _onBehalfOf
     ) internal {
         if (_amount == 0) revert AmountIsZero();
+        if (_onBehalfOf == address(0)) revert InvalidAddress();
 
         address tokenAddress = Storage.slot().tokenAddresses[_ccy];
         if (
@@ -639,13 +647,17 @@ contract TokenVault is
         emit Deposit(_onBehalfOf, _ccy, _amount, _caller);
     }
 
-    function _withdraw(address _user, bytes32 _ccy, uint256 _amount) internal {
+    function _withdraw(
+        address _user,
+        bytes32 _ccy,
+        uint256 _amount
+    ) internal returns (uint256 withdrawableAmount) {
         if (_amount == 0) revert AmountIsZero();
         if (lendingMarketController().isRedemptionRequired(_user)) revert RedemptionIsRequired();
 
         lendingMarketController().cleanUpFunds(_ccy, _user);
 
-        uint256 withdrawableAmount = DepositManagementLogic.withdraw(_user, _ccy, _amount);
+        withdrawableAmount = DepositManagementLogic.withdraw(_user, _ccy, _amount);
 
         emit Withdraw(_user, _ccy, withdrawableAmount);
     }

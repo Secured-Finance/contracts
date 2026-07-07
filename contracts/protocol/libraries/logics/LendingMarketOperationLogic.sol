@@ -328,10 +328,11 @@ library LendingMarketOperationLogic {
         uint256 _filledFutureValue
     ) external {
         uint8 orderBookId = Storage.slot().maturityOrderBookIds[_ccy][_maturity];
+        uint8[] storage orderBookIds = Storage.slot().orderBookIdLists[_ccy];
 
-        if (Storage.slot().orderBookIdLists[_ccy][1] == orderBookId) {
+        if (orderBookIds.length >= 2 && orderBookIds[1] == orderBookId) {
             uint256 nearestMaturity = ILendingMarket(Storage.slot().lendingMarkets[_ccy])
-                .getMaturity(Storage.slot().orderBookIdLists[_ccy][0]);
+                .getMaturity(orderBookIds[0]);
 
             if (
                 (block.timestamp < nearestMaturity) &&

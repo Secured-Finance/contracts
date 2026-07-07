@@ -1,6 +1,10 @@
 import { expect } from 'chai';
 import { constants, Contract } from 'ethers';
 import { artifacts } from 'hardhat';
+import {
+  displayTree,
+  verifyBlackHeightConsistency,
+} from '../../common/tree-utils';
 
 const OrderStatisticsTree = artifacts.require(
   'OrderStatisticsTreeContract.sol',
@@ -48,7 +52,8 @@ describe('OrderStatisticsTree - Drop + Remove Stress Test', () => {
       }
 
       console.log('\n=== Tree Structure After Initial Inserts ===');
-      await printTreeStructure();
+      await displayTree(ost);
+      expect(await verifyBlackHeightConsistency(ost)).to.be.true;
 
       // Verify all initial values exist
       for (const order of allOrders) {
@@ -70,6 +75,11 @@ describe('OrderStatisticsTree - Drop + Remove Stress Test', () => {
           `${8800 - cycle * 10}`, // 8790, 8780, 8770, ...
           `${8700 - cycle * 10}`, // 8690, 8680, 8670, ...
           `${8600 - cycle * 10}`, // 8590, 8580, 8570, ...
+          `${8500 - cycle * 10}`, // 8490, 8480, 8470, ...
+          `${8400 - cycle * 10}`, // 8390, 8380, 8370, ...
+          `${8300 - cycle * 10}`, // 8290, 8280, 8270, ...
+          `${8200 - cycle * 10}`, // 8190, 8180, 8170, ...
+          `${8100 - cycle * 10}`, // 8090, 8080, 8070, ...
         ];
 
         for (let i = 0; i < cycleOrderPrices.length; i++) {
@@ -93,7 +103,8 @@ describe('OrderStatisticsTree - Drop + Remove Stress Test', () => {
         }
 
         console.log(`\nTree after adding cycle ${cycle} values:`);
-        await printTreeStructure();
+        await displayTree(ost);
+        expect(await verifyBlackHeightConsistency(ost)).to.be.true;
 
         console.log(
           `--- Cycle ${cycle}-2: Execute dropLeft to remove 3 values ---`,
@@ -101,13 +112,14 @@ describe('OrderStatisticsTree - Drop + Remove Stress Test', () => {
 
         // Calculate amount to drop approximately 3 values from the left (lowest prices)
         // With 100M amount per order, 300M should remove exactly 3 orders
-        const dropAmount = 300000000; // Amount that should remove exactly 3 orders
+        const dropAmount = 800000000; // Amount that should remove exactly 3 orders
 
         console.log(`Executing dropLeft with amount: ${dropAmount}`);
         await ost.dropValuesFromFirst(dropAmount, 0, 0);
 
         console.log(`\nTree after dropLeft in cycle ${cycle}:`);
-        await printTreeStructure();
+        await displayTree(ost);
+        expect(await verifyBlackHeightConsistency(ost)).to.be.true;
 
         // Check which values still exist after dropLeft
         expectedRemainingPrices.push(...cycleOrderPrices.slice(0, 2));
@@ -128,7 +140,7 @@ describe('OrderStatisticsTree - Drop + Remove Stress Test', () => {
       }
 
       console.log('\n=== Final tree state after all cycles ===');
-      await printTreeStructure();
+      await displayTree(ost);
 
       console.log(
         '\n--- Step 3: Attempt to remove ALL orders (regardless of current existence) ---',
@@ -169,14 +181,15 @@ describe('OrderStatisticsTree - Drop + Remove Stress Test', () => {
         );
 
         console.log(`  Tree state after ${removalCount} removals:`);
-        await printTreeStructure();
+        await displayTree(ost);
+        expect(await verifyBlackHeightConsistency(ost)).to.be.true;
       }
 
       console.log('\n=== Removal Summary ===');
       console.log(`Total orders processed: ${allOrders.length}`);
       console.log(`Successfully removed: ${removalCount}`);
       console.log('\n=== Final Tree State ===');
-      await printTreeStructure();
+      await displayTree(ost);
     });
   });
 
@@ -209,7 +222,8 @@ describe('OrderStatisticsTree - Drop + Remove Stress Test', () => {
       }
 
       console.log('\n=== Tree Structure After Initial Inserts ===');
-      await printTreeStructure();
+      await displayTree(ost);
+      expect(await verifyBlackHeightConsistency(ost)).to.be.true;
 
       // Verify all initial values exist
       for (const order of allOrders) {
@@ -254,7 +268,8 @@ describe('OrderStatisticsTree - Drop + Remove Stress Test', () => {
         }
 
         console.log(`\nTree after adding cycle ${cycle} values:`);
-        await printTreeStructure();
+        await displayTree(ost);
+        expect(await verifyBlackHeightConsistency(ost)).to.be.true;
 
         console.log(
           `--- Cycle ${cycle}-2: Execute dropRight to remove 3 values ---`,
@@ -268,7 +283,8 @@ describe('OrderStatisticsTree - Drop + Remove Stress Test', () => {
         await ost.dropValuesFromLast(dropAmount, 0, 0);
 
         console.log(`\nTree after dropRight in cycle ${cycle}:`);
-        await printTreeStructure();
+        await displayTree(ost);
+        expect(await verifyBlackHeightConsistency(ost)).to.be.true;
 
         // Check which values still exist after dropRight
         expectedRemainingPrices.push(...cycleOrderPrices.slice(0, 2));
@@ -289,7 +305,7 @@ describe('OrderStatisticsTree - Drop + Remove Stress Test', () => {
       }
 
       console.log('\n=== Final tree state after all cycles ===');
-      await printTreeStructure();
+      await displayTree(ost);
 
       console.log(
         '\n--- Step 3: Attempt to remove ALL orders (regardless of current existence) ---',
@@ -328,14 +344,15 @@ describe('OrderStatisticsTree - Drop + Remove Stress Test', () => {
         );
 
         console.log(`  Tree state after ${removalCount} removals:`);
-        await printTreeStructure();
+        await displayTree(ost);
+        expect(await verifyBlackHeightConsistency(ost)).to.be.true;
       }
 
       console.log('\n=== Removal Summary ===');
       console.log(`Total orders processed: ${allOrders.length}`);
       console.log(`Successfully removed: ${removalCount}`);
       console.log('\n=== Final Tree State ===');
-      await printTreeStructure();
+      await displayTree(ost);
     });
 
     it('Should test edge case: dropLeft removes all but one, then remove the last', async () => {
@@ -360,7 +377,8 @@ describe('OrderStatisticsTree - Drop + Remove Stress Test', () => {
       }
 
       console.log('Initial tree:');
-      await printTreeStructure();
+      await displayTree(ost);
+      expect(await verifyBlackHeightConsistency(ost)).to.be.true;
 
       // Drop almost everything, leaving only highest value(s)
       const totalAmount = orders.reduce((sum, order) => sum + order.amount, 0);
@@ -370,7 +388,8 @@ describe('OrderStatisticsTree - Drop + Remove Stress Test', () => {
       await ost.dropValuesFromFirst(dropAmount, 0, 0);
 
       console.log('Tree after aggressive dropLeft:');
-      await printTreeStructure();
+      await displayTree(ost);
+      expect(await verifyBlackHeightConsistency(ost)).to.be.true;
 
       const remainingOrders = await getAllExistingOrders(orders);
       console.log(`Remaining orders: ${remainingOrders.length}`);
@@ -390,7 +409,7 @@ describe('OrderStatisticsTree - Drop + Remove Stress Test', () => {
       }
 
       console.log('Final tree (should be empty):');
-      await printTreeStructure();
+      await displayTree(ost);
     });
 
     it('Should test with different dropLeft amounts to trigger various tree states', async () => {
@@ -423,13 +442,15 @@ describe('OrderStatisticsTree - Drop + Remove Stress Test', () => {
         }
 
         console.log('Tree before dropLeft:');
-        await printTreeStructure();
+        await displayTree(ost);
+        expect(await verifyBlackHeightConsistency(ost)).to.be.true;
 
         // Execute dropLeft
         await ost.dropValuesFromFirst(dropAmount, 0, 0);
 
         console.log('Tree after dropLeft:');
-        await printTreeStructure();
+        await displayTree(ost);
+        expect(await verifyBlackHeightConsistency(ost)).to.be.true;
 
         // Try to remove all remaining values
         const remainingOrders = await getAllExistingOrders(orders);
@@ -482,7 +503,8 @@ describe('OrderStatisticsTree - Drop + Remove Stress Test', () => {
       }
 
       console.log('Initial tree:');
-      await printTreeStructure();
+      await displayTree(ost);
+      expect(await verifyBlackHeightConsistency(ost)).to.be.true;
 
       // Drop almost everything, leaving only lowest value(s)
       const totalAmount = orders.reduce((sum, order) => sum + order.amount, 0);
@@ -492,7 +514,8 @@ describe('OrderStatisticsTree - Drop + Remove Stress Test', () => {
       await ost.dropValuesFromLast(dropAmount, 0, 0);
 
       console.log('Tree after aggressive dropRight:');
-      await printTreeStructure();
+      await displayTree(ost);
+      expect(await verifyBlackHeightConsistency(ost)).to.be.true;
 
       const remainingOrders = await getAllExistingOrders(orders);
       console.log(`Remaining orders: ${remainingOrders.length}`);
@@ -512,7 +535,7 @@ describe('OrderStatisticsTree - Drop + Remove Stress Test', () => {
       }
 
       console.log('Final tree (should be empty):');
-      await printTreeStructure();
+      await displayTree(ost);
     });
 
     it('Should test with different dropRight amounts to trigger various tree states', async () => {
@@ -545,13 +568,15 @@ describe('OrderStatisticsTree - Drop + Remove Stress Test', () => {
         }
 
         console.log('Tree before dropRight:');
-        await printTreeStructure();
+        await displayTree(ost);
+        expect(await verifyBlackHeightConsistency(ost)).to.be.true;
 
         // Execute dropRight
         await ost.dropValuesFromLast(dropAmount, 0, 0);
 
         console.log('Tree after dropRight:');
-        await printTreeStructure();
+        await displayTree(ost);
+        expect(await verifyBlackHeightConsistency(ost)).to.be.true;
 
         // Try to remove all remaining values
         const remainingOrders = await getAllExistingOrders(orders);
@@ -582,38 +607,11 @@ describe('OrderStatisticsTree - Drop + Remove Stress Test', () => {
   });
 });
 
-async function printTreeStructure(): Promise<void> {
-  let value = await ost.firstValue();
-
-  if (value.toString() === '0') {
-    console.log('Tree is empty');
-    return;
-  }
-
-  const treeData: any[] = [];
-
-  while (value.toString() !== '0') {
-    const node = await ost.getNode(value);
-    treeData.push({
-      value: value.toString(),
-      parent: node._parent.toString(),
-      left: node._left.toString(),
-      right: node._right.toString(),
-      red: node._red.toString(),
-      orderCounter: node._orderCounter.toString(),
-      orderTotalAmount: node._orderTotalAmount.toString(),
-    });
-    value = await ost.nextValue(value);
-  }
-
-  console.table(treeData);
-}
-
 async function getAllExistingOrders(orders: Order[]): Promise<Order[]> {
   const existingOrders: Order[] = [];
   for (const order of orders) {
-    const exists = await ost.valueExists(order.unitPrice);
-    if (exists) {
+    const isActive = await ost.isActiveOrderId(order.unitPrice, order.orderId);
+    if (isActive) {
       existingOrders.push(order);
     }
   }

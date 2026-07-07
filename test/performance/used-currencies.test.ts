@@ -310,31 +310,28 @@ describe('Performance Test: Used Currencies Limit', async () => {
 
                 // Deposit and create order
                 await depositForUser(user, currencyKey, orderAmount.mul(3));
-                let nonce = await user.getTransactionCount();
-                const txs = await Promise.all([
-                  lendingMarketController
-                    .connect(user)
-                    .executeOrder(
-                      currencyKey,
-                      maturity,
-                      Side.LEND,
-                      orderAmount,
-                      String(9300 - i),
-                      { nonce },
-                    ),
-                  lendingMarketController
-                    .connect(user)
-                    .executeOrder(
-                      currencyKey,
-                      maturity,
-                      Side.BORROW,
-                      orderAmount,
-                      String(9600 + i),
-                      { nonce: nonce + 1 },
-                    ),
-                ]);
 
-                await Promise.all(txs.map((tx) => tx.wait()));
+                await lendingMarketController
+                  .connect(user)
+                  .executeOrder(
+                    currencyKey,
+                    maturity,
+                    Side.LEND,
+                    orderAmount,
+                    String(9300 - i),
+                  )
+                  .then((tx) => tx.wait());
+
+                await lendingMarketController
+                  .connect(user)
+                  .executeOrder(
+                    currencyKey,
+                    maturity,
+                    Side.BORROW,
+                    orderAmount,
+                    String(9600 + i),
+                  )
+                  .then((tx) => tx.wait());
               }
               process.stdout.write('\r\x1b[K');
             }
@@ -370,32 +367,27 @@ describe('Performance Test: Used Currencies Limit', async () => {
               maturityIdx++
             ) {
               const maturity = currencyMaturities[maturityIdx];
-              let nonce = await user.getTransactionCount();
 
-              const txs = await Promise.all([
-                lendingMarketController
-                  .connect(user)
-                  .executeOrder(
-                    currencyKey,
-                    maturity,
-                    Side.LEND,
-                    orderAmount,
-                    String(9400),
-                    { nonce },
-                  ),
-                lendingMarketController
-                  .connect(user)
-                  .executeOrder(
-                    currencyKey,
-                    maturity,
-                    Side.BORROW,
-                    orderAmount,
-                    String(9500),
-                    { nonce: nonce + 1 },
-                  ),
-              ]);
-
-              await Promise.all(txs.map((tx) => tx.wait()));
+              await lendingMarketController
+                .connect(user)
+                .executeOrder(
+                  currencyKey,
+                  maturity,
+                  Side.LEND,
+                  orderAmount,
+                  String(9400),
+                )
+                .then((tx) => tx.wait());
+              await lendingMarketController
+                .connect(user)
+                .executeOrder(
+                  currencyKey,
+                  maturity,
+                  Side.BORROW,
+                  orderAmount,
+                  String(9500),
+                )
+                .then((tx) => tx.wait());
 
               orderCount += 2;
               process.stdout.write('\r\x1b[K');
@@ -617,31 +609,26 @@ describe('Performance Test: Used Currencies Limit', async () => {
 
                 // Deposit and create LEND and BORROW orders
                 await depositForUser(user, currencyKey, orderAmount.mul(3));
-                let nonce = await user.getTransactionCount();
-                const txs = await Promise.all([
-                  lendingMarketController
-                    .connect(user)
-                    .executeOrder(
-                      currencyKey,
-                      maturity,
-                      Side.LEND,
-                      orderAmount,
-                      String(9300 - i),
-                      { nonce },
-                    ),
-                  lendingMarketController
-                    .connect(user)
-                    .executeOrder(
-                      currencyKey,
-                      maturity,
-                      Side.BORROW,
-                      orderAmount,
-                      String(9600 + i),
-                      { nonce: nonce + 1 },
-                    ),
-                ]);
-
-                await Promise.all(txs.map((tx) => tx.wait()));
+                await lendingMarketController
+                  .connect(user)
+                  .executeOrder(
+                    currencyKey,
+                    maturity,
+                    Side.LEND,
+                    orderAmount,
+                    String(9300 - i),
+                  )
+                  .then((tx) => tx.wait());
+                await lendingMarketController
+                  .connect(user)
+                  .executeOrder(
+                    currencyKey,
+                    maturity,
+                    Side.BORROW,
+                    orderAmount,
+                    String(9600 + i),
+                  )
+                  .then((tx) => tx.wait());
               }
               process.stdout.write('\r\x1b[K');
             }
@@ -771,31 +758,26 @@ describe('Performance Test: Used Currencies Limit', async () => {
 
                 // Deposit and create LEND and BORROW orders
                 await depositForUser(user, currencyKey, orderAmount.mul(3));
-                let nonce = await user.getTransactionCount();
-                const txs = await Promise.all([
-                  lendingMarketController
-                    .connect(user)
-                    .executeOrder(
-                      currencyKey,
-                      maturity,
-                      Side.LEND,
-                      orderAmount,
-                      String(9300 - i),
-                      { nonce },
-                    ),
-                  lendingMarketController
-                    .connect(user)
-                    .executeOrder(
-                      currencyKey,
-                      maturity,
-                      Side.BORROW,
-                      orderAmount,
-                      String(9600 + i),
-                      { nonce: nonce + 1 },
-                    ),
-                ]);
-
-                await Promise.all(txs.map((tx) => tx.wait()));
+                await lendingMarketController
+                  .connect(user)
+                  .executeOrder(
+                    currencyKey,
+                    maturity,
+                    Side.LEND,
+                    orderAmount,
+                    String(9300 - i),
+                  )
+                  .then((tx) => tx.wait());
+                await lendingMarketController
+                  .connect(user)
+                  .executeOrder(
+                    currencyKey,
+                    maturity,
+                    Side.BORROW,
+                    orderAmount,
+                    String(9600 + i),
+                  )
+                  .then((tx) => tx.wait());
               }
               process.stdout.write('\r\x1b[K');
             }

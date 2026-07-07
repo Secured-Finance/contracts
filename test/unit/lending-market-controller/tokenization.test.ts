@@ -1127,12 +1127,24 @@ describe('LendingMarketController - Tokenization', () => {
           alice.address,
         );
 
+      const expectedAmount = calculateFutureValue(value, 8000);
+
+      // Verify that the return value matches the full withdrawable amount
+      const withdrawnAmount = await lendingMarketControllerProxy
+        .connect(alice)
+        .callStatic.withdrawZCToken(
+          targetCurrency,
+          maturities[0],
+          withdrawableAmount,
+        );
+      expect(withdrawnAmount).to.equal(expectedAmount);
+
       await lendingMarketControllerProxy
         .connect(alice)
         .withdrawZCToken(targetCurrency, maturities[0], withdrawableAmount);
 
       const currentBalance = await zcToken.balanceOf(alice.address);
-      expect(currentBalance).to.equal(calculateFutureValue(value, 8000));
+      expect(currentBalance).to.equal(expectedAmount);
 
       await expect(
         lendingMarketControllerProxy
@@ -1141,6 +1153,49 @@ describe('LendingMarketController - Tokenization', () => {
       )
         .to.emit(zcToken, 'Transfer')
         .withArgs(alice.address, ethers.constants.AddressZero, currentBalance);
+    });
+
+    it('Withdraw only the withdrawable ZC token amount when requesting more than available', async () => {
+      await mockCurrencyController.mock[
+        'convertFromBaseCurrency(bytes32,uint256[])'
+      ].returns([value, 0]);
+
+      const zcTokenAddress = await lendingMarketControllerProxy.getZCToken(
+        targetCurrency,
+        maturities[0],
+      );
+      const zcToken = await ethers.getContractAt('ZCToken', zcTokenAddress);
+
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .executeOrder(targetCurrency, maturities[0], Side.LEND, value, '8000');
+
+      await lendingMarketControllerProxy
+        .connect(bob)
+        .executeOrder(targetCurrency, maturities[0], Side.BORROW, value, '0');
+
+      const expectedAmount = calculateFutureValue(value, 8000);
+      // Request more than withdrawable
+      const requestedAmount = expectedAmount.mul(2);
+
+      // Verify that only the withdrawable amount is returned, not the requested amount
+      const actualWithdrawnAmount = await lendingMarketControllerProxy
+        .connect(alice)
+        .callStatic.withdrawZCToken(
+          targetCurrency,
+          maturities[0],
+          requestedAmount,
+        );
+      expect(actualWithdrawnAmount).to.equal(expectedAmount);
+      expect(actualWithdrawnAmount).to.be.lt(requestedAmount);
+
+      // Execute the actual withdrawal - should only withdraw the available amount
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .withdrawZCToken(targetCurrency, maturities[0], requestedAmount);
+
+      const currentBalance = await zcToken.balanceOf(alice.address);
+      expect(currentBalance).to.equal(expectedAmount);
     });
 
     it('Deposit zc tokens with exceeded amount', async () => {
@@ -1218,10 +1273,6 @@ describe('LendingMarketController - Tokenization', () => {
           alice.address,
         );
 
-      await lendingMarketControllerProxy
-        .connect(alice)
-        .withdrawZCToken(targetCurrency, 0, withdrawableAmount);
-
       const autoRollLog = await genesisValueVaultProxy.getAutoRollLog(
         targetCurrency,
         maturities[0],
@@ -1229,6 +1280,17 @@ describe('LendingMarketController - Tokenization', () => {
       const estimatedAmount = calculateFutureValue(value, 8000)
         .mul(BigNumber.from(10).pow(38))
         .div(autoRollLog.lendingCompoundFactor);
+
+      // Verify that the return value matches the full withdrawable amount
+      const withdrawnAmount = await lendingMarketControllerProxy
+        .connect(alice)
+        .callStatic.withdrawZCToken(targetCurrency, 0, withdrawableAmount);
+      expect(withdrawnAmount).to.equal(estimatedAmount);
+
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .withdrawZCToken(targetCurrency, 0, withdrawableAmount);
+
       const currentBalance = await zcToken.balanceOf(alice.address);
 
       expect(currentBalance).to.equal(estimatedAmount);
@@ -1242,6 +1304,57 @@ describe('LendingMarketController - Tokenization', () => {
         .withArgs(alice.address, ethers.constants.AddressZero, currentBalance);
 
       expect(await zcToken.balanceOf(alice.address)).to.equal(0);
+    });
+
+    it('Withdraw only the withdrawable ZC perpetual token amount when requesting more than available', async () => {
+      await mockCurrencyController.mock[
+        'convertFromBaseCurrency(bytes32,uint256[])'
+      ].returns([value, 0]);
+
+      const zcTokenAddress = await lendingMarketControllerProxy.getZCToken(
+        targetCurrency,
+        0,
+      );
+      const zcToken = await ethers.getContractAt('ZCToken', zcTokenAddress);
+
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .executeOrder(targetCurrency, maturities[0], Side.LEND, value, '8000');
+
+      await lendingMarketControllerProxy
+        .connect(bob)
+        .executeOrder(targetCurrency, maturities[0], Side.BORROW, value, '0');
+
+      await time.increaseTo(maturities[0].toString());
+      await expect(
+        lendingMarketControllerProxy.rotateOrderBooks(targetCurrency),
+      ).to.emit(lendingMarketOperationLogic, 'OrderBooksRotated');
+
+      const autoRollLog = await genesisValueVaultProxy.getAutoRollLog(
+        targetCurrency,
+        maturities[0],
+      );
+      const expectedAmount = calculateFutureValue(value, 8000)
+        .mul(BigNumber.from(10).pow(38))
+        .div(autoRollLog.lendingCompoundFactor);
+
+      // Request more than withdrawable
+      const requestedAmount = expectedAmount.mul(2);
+
+      // Verify that only the withdrawable amount is returned, not the requested amount
+      const actualWithdrawnAmount = await lendingMarketControllerProxy
+        .connect(alice)
+        .callStatic.withdrawZCToken(targetCurrency, 0, requestedAmount);
+      expect(actualWithdrawnAmount).to.equal(expectedAmount);
+      expect(actualWithdrawnAmount).to.be.lt(requestedAmount);
+
+      // Execute the actual withdrawal - should only withdraw the available amount
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .withdrawZCToken(targetCurrency, 0, requestedAmount);
+
+      const currentBalance = await zcToken.balanceOf(alice.address);
+      expect(currentBalance).to.equal(expectedAmount);
     });
 
     it('Deposit zc perpetual tokens with exceeded amount', async () => {
