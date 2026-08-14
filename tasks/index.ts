@@ -5,6 +5,7 @@ import './create-fvm-proposal';
 import './fork';
 import './open-markets';
 import './register-orders';
+import './set-simple-price-feed';
 import './unfork';
 import './update-price-feed';
 import './update-pyth';
