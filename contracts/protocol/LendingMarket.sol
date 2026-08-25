@@ -622,6 +622,21 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     }
 
     /**
+     * @notice Builds chunk metadata for a legacy price level after the chunk-index upgrade.
+     * @dev Permissionless and callable only while the price level has orders and no chunk metadata.
+     * @param _orderBookId The order book id
+     * @param _side The order side to migrate
+     * @param _unitPrice The unit price to migrate
+     */
+    function migrateOrderChunks(
+        uint8 _orderBookId,
+        ProtocolTypes.Side _side,
+        uint256 _unitPrice
+    ) external {
+        OrderBookLogic.migrateOrderChunks(_orderBookId, _side, _unitPrice);
+    }
+
+    /**
      * @notice Creates a new order book.
      * @param _maturity The initial maturity of the order book
      * @param _openingDate The timestamp when the order book opens

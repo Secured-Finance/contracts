@@ -531,6 +531,18 @@ library OrderBookLib {
         );
     }
 
+    function migrateOrderChunks(
+        OrderBook storage self,
+        ProtocolTypes.Side _side,
+        uint256 _unitPrice
+    ) internal {
+        if (_side == ProtocolTypes.Side.LEND) {
+            self.lendOrders[self.maturity].migrateOrderChunks(_unitPrice);
+        } else {
+            self.borrowOrders[self.maturity].migrateOrderChunks(_unitPrice);
+        }
+    }
+
     function setInitialBlockUnitPrice(OrderBook storage self, uint256 _unitPrice) internal {
         self.blockUnitPriceHistory = uint16(_unitPrice);
         self.lastBlockUnitPriceTimestamp = uint48(block.timestamp);

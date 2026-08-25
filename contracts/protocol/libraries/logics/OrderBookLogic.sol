@@ -29,6 +29,14 @@ library OrderBookLogic {
         uint256 offsetAmount
     );
 
+    function migrateOrderChunks(
+        uint8 _orderBookId,
+        ProtocolTypes.Side _side,
+        uint256 _unitPrice
+    ) external {
+        _getOrderBook(_orderBookId).migrateOrderChunks(_side, _unitPrice);
+    }
+
     function isReady(uint8 _orderBookId) public view returns (bool) {
         return Storage.slot().isReady[_getOrderBook(_orderBookId).maturity];
     }

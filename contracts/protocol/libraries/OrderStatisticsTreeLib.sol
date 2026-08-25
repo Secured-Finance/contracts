@@ -30,6 +30,8 @@ struct PartiallyRemovedOrder {
 library OrderStatisticsTreeLib {
     using RoundingUint256 for uint256;
     uint256 private constant EMPTY = 0;
+    uint16 private constant ORDER_CHUNK_SIZE = 100;
+    uint32 private constant MAX_ACTIVE_CHUNKS_PER_PRICE = 2000;
 
     struct Node {
         uint256 parent;
@@ -43,9 +45,28 @@ library OrderStatisticsTreeLib {
         mapping(uint48 orderId => OrderItem) orders;
     }
 
+    struct OrderChunk {
+        uint256 totalAmount;
+        uint48 firstOrderId;
+        uint32 prevChunkId;
+        uint32 nextChunkId;
+        uint16 orderCount;
+    }
+
+    struct PriceChunkMetadata {
+        uint32 firstChunkId;
+        uint32 lastChunkId;
+        uint32 lastAllocatedChunkId;
+        uint48 explicitMappingStartOrderId;
+        uint32 activeChunkCount;
+        mapping(uint32 chunkId => OrderChunk chunk) chunks;
+        mapping(uint48 orderId => uint32 chunkId) orderChunkIds;
+    }
+
     struct Tree {
         uint256 root;
         mapping(uint256 value => Node) nodes;
+        mapping(uint256 value => PriceChunkMetadata metadata) chunkMetadata;
     }
 
     struct OrderItem {
@@ -77,7 +98,7 @@ library OrderStatisticsTreeLib {
     }
 
     function next(Tree storage self, uint256 value) internal view returns (uint256 cursor) {
-        require(value != EMPTY, "OrderStatisticsTreeLib: Starting value cannot be zero");
+        require(value != EMPTY, "OSTLib: Value cannot be zero");
         if (self.nodes[value].right != EMPTY) {
             cursor = treeMinimum(self, self.nodes[value].right);
         } else {
@@ -90,7 +111,7 @@ library OrderStatisticsTreeLib {
     }
 
     function prev(Tree storage self, uint256 value) internal view returns (uint256 cursor) {
-        require(value != EMPTY, "OrderStatisticsTreeLib: Starting value cannot be zero");
+        require(value != EMPTY, "OSTLib: Value cannot be zero");
         if (self.nodes[value].left != EMPTY) {
             cursor = treeMaximum(self, self.nodes[value].left);
         } else {
@@ -155,7 +176,7 @@ library OrderStatisticsTreeLib {
         Tree storage self,
         uint256 value
     ) internal view returns (uint256, uint256, uint256, bool, uint256, uint256, uint256, uint256) {
-        require(exists(self, value), "OrderStatisticsTreeLib: Value does not exist");
+        require(exists(self, value), "OSTLib: Value does not exist");
         Node storage gn = self.nodes[value];
         return (
             gn.parent,
@@ -200,7 +221,7 @@ library OrderStatisticsTreeLib {
     }
 
     function insert(Tree storage self, uint256 value) internal {
-        require(value != EMPTY, "OrderStatisticsTreeLib: Value to insert cannot be zero");
+        require(value != EMPTY, "OSTLib: Value cannot be zero");
         uint256 cursor;
         uint256 probe = self.root;
         while (probe != EMPTY) {
@@ -221,6 +242,9 @@ library OrderStatisticsTreeLib {
             nValue.orderTotalAmount = 0;
             _setHead(self, value, 0);
             _setTail(self, value, 0);
+
+            // Reset scalar metadata for a reused price level. Nested mappings remain in storage.
+            delete self.chunkMetadata[value];
         }
         nValue.parent = cursor;
         nValue.left = EMPTY;
@@ -238,7 +262,7 @@ library OrderStatisticsTreeLib {
     }
 
     function remove(Tree storage self, uint256 value) internal {
-        require(value != EMPTY, "OrderStatisticsTreeLib: Value to remove cannot be zero");
+        require(value != EMPTY, "OSTLib: Value cannot be zero");
         Node storage nValue = self.nodes[value];
         uint256 probe;
         uint256 cursor;
@@ -598,7 +622,7 @@ library OrderStatisticsTreeLib {
         DropVars memory vars;
         vars.cursor = first(self);
 
-        require(vars.cursor <= limitValue || limitValue == 0, "Insufficient limit value");
+        require(vars.cursor <= limitValue || limitValue == 0, "OSTLib: Insufficient limit value");
 
         (
             droppedValue,
@@ -713,7 +737,7 @@ library OrderStatisticsTreeLib {
         DropVars memory vars;
         vars.cursor = last(self);
 
-        require(vars.cursor >= limitValue || limitValue == 0, "Insufficient limit value");
+        require(vars.cursor >= limitValue || limitValue == 0, "OSTLib: Insufficient limit value");
 
         (
             droppedValue,
@@ -919,7 +943,7 @@ library OrderStatisticsTreeLib {
         if (newLeftBlackHeight != newRightBlackHeight) {
             require(
                 _absDiff(newLeftBlackHeight, newRightBlackHeight) < deficitBefore,
-                "OrderStatisticsTreeLib: Rebalance did not converge"
+                "OSTLib: Rebalance did not converge"
             );
 
             // The original node still has a local black-height mismatch. Reprocess it
@@ -1088,26 +1112,17 @@ library OrderStatisticsTreeLib {
 
     /**
      * @dev Return boolean if value, amount and orderId exist in doubly linked list
+     * Order IDs must increase monotonically because prefix removals leave old orders in storage
+     * and use the current head order ID to distinguish them from active orders.
      */
     function orderIdExists(
         Tree storage self,
         uint256 value,
         uint48 orderId
     ) internal view returns (bool) {
-        uint48 cursor = orderId;
         Node storage gn = self.nodes[value];
-        OrderItem memory order = gn.orders[cursor];
 
-        if (order.orderId != cursor) {
-            return false;
-        }
-
-        while (order.prev != EMPTY) {
-            cursor = order.prev;
-            order = gn.orders[cursor];
-        }
-
-        return cursor == gn.head;
+        return gn.head != 0 && orderId >= gn.head && gn.orders[orderId].orderId == orderId;
     }
 
     function insertOrder(
@@ -1117,11 +1132,17 @@ library OrderStatisticsTreeLib {
         address user,
         uint256 amount
     ) internal {
-        require(amount > 0, "Insufficient amount");
-        require(value <= Constants.PRICE_DIGIT, "Value too high");
+        require(amount > 0, "OSTLib: Insufficient amount");
+        require(value <= Constants.PRICE_DIGIT, "OSTLib: Value too high");
+
         insert(self, value);
 
+        // TODO: Remove this check after the migration is complete.
+        // This is to ensure that the chunk metadata is created for existing orders.
+        _ensureChunkMetadata(self, value);
+
         addTail(self, value, orderId, user, amount);
+        _addOrderToChunk(self.chunkMetadata[value], orderId, amount);
     }
 
     function removeOrder(
@@ -1129,6 +1150,14 @@ library OrderStatisticsTreeLib {
         uint256 value,
         uint48 orderId
     ) internal returns (uint256 amount) {
+        // TODO: Remove this check after the migration is complete.
+        // This is to ensure that the chunk metadata is created for existing orders.
+        _ensureChunkMetadata(self, value);
+
+        Node storage gn = self.nodes[value];
+        OrderItem storage order = gn.orders[orderId];
+        _removeOrderFromChunk(self.chunkMetadata[value], orderId, order.amount, order.next);
+
         amount = _removeOrder(self, value, orderId);
         remove(self, value);
     }
@@ -1136,46 +1165,105 @@ library OrderStatisticsTreeLib {
     function removeOrders(
         Tree storage self,
         uint256 value,
-        uint256 _amount
+        uint256 amount
     ) internal returns (PartiallyRemovedOrder memory partiallyRemovedOrder) {
         Node storage gn = self.nodes[value];
+        require(gn.orderTotalAmount >= amount, "OSTLib: Amount to remove is insufficient");
 
-        require(
-            gn.orderTotalAmount >= _amount,
-            "OrderStatisticsTreeLib: Amount to remove is insufficient"
-        );
+        // TODO: Remove this check after the migration is complete.
+        // This is to ensure that the chunk metadata is created for existing orders.
+        _ensureChunkMetadata(self, value);
 
-        uint256 remainingAmount = _amount;
-        OrderItem memory currentOrder = gn.orders[gn.head];
-        uint48 orderId = gn.head;
+        PriceChunkMetadata storage metadata = self.chunkMetadata[value];
+        uint256 remainingAmount = amount;
+        uint256 fullyRemovedCount;
+        uint256 fullyRemovedAmount;
+        uint48 partiallyRemovedOrderId;
+        uint256 partiallyRemovedAmount;
+        uint32 removedChunkCount;
+        uint32 chunkId = metadata.firstChunkId;
 
-        while (orderId != 0 && remainingAmount != 0) {
-            currentOrder = gn.orders[orderId];
+        while (chunkId != 0 && remainingAmount > 0) {
+            OrderChunk storage chunk = metadata.chunks[chunkId];
+            uint32 nextChunkId = chunk.nextChunkId;
 
-            if (currentOrder.amount <= remainingAmount) {
-                remainingAmount -= currentOrder.amount;
-                orderId = currentOrder.next;
-            } else {
-                partiallyRemovedOrder = PartiallyRemovedOrder(
-                    currentOrder.orderId,
-                    currentOrder.maker,
-                    remainingAmount,
-                    _calculateFutureValue(value, remainingAmount)
-                );
-                currentOrder = gn.orders[currentOrder.prev];
+            if (chunk.totalAmount > remainingAmount) {
                 break;
             }
+
+            remainingAmount -= chunk.totalAmount;
+            fullyRemovedAmount += chunk.totalAmount;
+            fullyRemovedCount += chunk.orderCount;
+            removedChunkCount += 1;
+            chunkId = nextChunkId;
         }
 
-        if (currentOrder.orderId != 0) {
-            _removeOrders(self, value, currentOrder.orderId);
+        if (chunkId != 0 && remainingAmount > 0) {
+            uint256 removedAmount;
+            uint256 removedCount;
+
+            (
+                removedAmount,
+                removedCount,
+                partiallyRemovedOrderId,
+                partiallyRemovedAmount,
+                remainingAmount
+            ) = _removeOrdersFromBoundaryChunk(gn, metadata.chunks[chunkId], remainingAmount);
+            fullyRemovedAmount += removedAmount;
+            fullyRemovedCount += removedCount;
         }
 
-        if (partiallyRemovedOrder.amount > 0) {
-            self.nodes[value].orders[partiallyRemovedOrder.orderId].amount -= partiallyRemovedOrder
-                .amount;
-            self.nodes[value].orderTotalAmount -= partiallyRemovedOrder.amount;
+        require(remainingAmount == 0, "OSTLib: Insufficient chunk amount");
+
+        if (removedChunkCount > 0) {
+            _unlinkChunkPrefix(metadata, chunkId, removedChunkCount);
         }
+
+        if (fullyRemovedCount > 0) {
+            uint48 newHeadOrderId = metadata.firstChunkId == 0
+                ? 0
+                : metadata.chunks[metadata.firstChunkId].firstOrderId;
+
+            if (newHeadOrderId == 0) {
+                _setHead(self, value, 0);
+                _setTail(self, value, 0);
+            } else {
+                _setHead(self, value, newHeadOrderId);
+                gn.orders[newHeadOrderId].prev = 0;
+            }
+
+            gn.orderCounter -= fullyRemovedCount;
+            gn.orderTotalAmount -= fullyRemovedAmount;
+        }
+
+        if (partiallyRemovedAmount > 0) {
+            OrderItem storage partialOrder = gn.orders[partiallyRemovedOrderId];
+            require(
+                partialOrder.orderId == partiallyRemovedOrderId &&
+                    partialOrder.amount > partiallyRemovedAmount,
+                "OSTLib: Invalid partial removal"
+            );
+
+            partialOrder.amount -= partiallyRemovedAmount;
+            gn.orderTotalAmount -= partiallyRemovedAmount;
+            partiallyRemovedOrder = PartiallyRemovedOrder(
+                partiallyRemovedOrderId,
+                partialOrder.maker,
+                partiallyRemovedAmount,
+                _calculateFutureValue(value, partiallyRemovedAmount)
+            );
+        }
+    }
+
+    function migrateOrderChunks(Tree storage self, uint256 value) internal {
+        Node storage gn = self.nodes[value];
+        PriceChunkMetadata storage metadata = self.chunkMetadata[value];
+
+        require(exists(self, value), "Value does not exist");
+        require(gn.orderCounter > 0, "No orders to migrate");
+
+        require(metadata.firstChunkId == 0, "Already migrated");
+        _migrateChunkMetadata(self, value);
     }
 
     /**
@@ -1331,10 +1419,7 @@ library OrderStatisticsTreeLib {
         uint256 amount
     ) internal returns (uint48) {
         Node storage gn = self.nodes[value];
-        require(
-            gn.orders[orderId].maker == address(0),
-            "OrderStatisticsTreeLib: Order id already exists"
-        );
+        require(gn.orders[orderId].maker == address(0), "OSTLib: Order id already exists");
 
         gn.orderCounter += 1;
         gn.orderTotalAmount += amount;
@@ -1351,10 +1436,7 @@ library OrderStatisticsTreeLib {
         uint256 value,
         uint48 orderId
     ) internal returns (uint256 amount) {
-        require(
-            isActiveOrderId(self, value, orderId),
-            "OrderStatisticsTreeLib: Order does not exist"
-        );
+        require(isActiveOrderId(self, value, orderId), "OSTLib: Order does not exist");
         Node storage gn = self.nodes[value];
 
         OrderItem memory order = gn.orders[orderId];
@@ -1375,39 +1457,6 @@ library OrderStatisticsTreeLib {
         delete gn.orders[order.orderId];
         gn.orderCounter -= 1;
         gn.orderTotalAmount -= order.amount;
-    }
-
-    /**
-     * @dev Remove the OrderItems older than or equal `orderId` from the list
-     */
-    function _removeOrders(Tree storage self, uint256 value, uint48 orderId) internal {
-        require(
-            isActiveOrderId(self, value, orderId),
-            "OrderStatisticsTreeLib: Order does not exist"
-        );
-        Node storage gn = self.nodes[value];
-
-        OrderItem memory order = gn.orders[orderId];
-        uint48 cursor = gn.head;
-        uint256 removedCount = 1;
-        uint256 removedAmount = gn.orders[cursor].amount;
-
-        while (cursor != orderId) {
-            cursor = gn.orders[cursor].next;
-            removedCount++;
-            removedAmount += gn.orders[cursor].amount;
-        }
-
-        if (gn.tail == orderId) {
-            _setHead(self, value, 0);
-            _setTail(self, value, 0);
-        } else {
-            _setHead(self, value, order.next);
-            gn.orders[order.next].prev = 0;
-        }
-
-        gn.orderCounter -= removedCount;
-        gn.orderTotalAmount -= removedAmount;
     }
 
     /**
@@ -1436,6 +1485,198 @@ library OrderStatisticsTreeLib {
 
         gn.orders[prevId].next = nextId;
         gn.orders[nextId].prev = prevId;
+    }
+
+    function _ensureChunkMetadata(Tree storage self, uint256 value) private {
+        PriceChunkMetadata storage metadata = self.chunkMetadata[value];
+
+        if (self.nodes[value].orderCounter > 0 && metadata.firstChunkId == 0) {
+            _migrateChunkMetadata(self, value);
+        }
+    }
+
+    function _migrateChunkMetadata(Tree storage self, uint256 value) private {
+        Node storage gn = self.nodes[value];
+        PriceChunkMetadata storage metadata = self.chunkMetadata[value];
+
+        uint48 orderId = gn.head;
+        while (orderId != 0) {
+            OrderItem storage order = gn.orders[orderId];
+            _addOrderToChunk(metadata, orderId, order.amount);
+            orderId = order.next;
+        }
+    }
+
+    function _addOrderToChunk(
+        PriceChunkMetadata storage metadata,
+        uint48 orderId,
+        uint256 amount
+    ) private {
+        uint32 chunkId = metadata.lastChunkId;
+
+        if (chunkId == 0 || metadata.chunks[chunkId].orderCount == ORDER_CHUNK_SIZE) {
+            require(
+                metadata.activeChunkCount < MAX_ACTIVE_CHUNKS_PER_PRICE,
+                "OSTLib: Too many orders"
+            );
+
+            uint32 newChunkId = metadata.lastAllocatedChunkId + 1;
+            delete metadata.chunks[newChunkId];
+
+            OrderChunk storage newChunk = metadata.chunks[newChunkId];
+            newChunk.prevChunkId = metadata.lastChunkId;
+
+            bool wasSingleChunk = metadata.firstChunkId == metadata.lastChunkId &&
+                metadata.lastChunkId != 0;
+
+            if (metadata.lastChunkId != 0) {
+                metadata.chunks[metadata.lastChunkId].nextChunkId = newChunkId;
+            } else {
+                metadata.firstChunkId = newChunkId;
+            }
+
+            metadata.lastChunkId = newChunkId;
+            metadata.lastAllocatedChunkId = newChunkId;
+            metadata.activeChunkCount += 1;
+            chunkId = newChunkId;
+
+            if (wasSingleChunk) {
+                metadata.explicitMappingStartOrderId = orderId;
+            }
+        }
+
+        OrderChunk storage chunk = metadata.chunks[chunkId];
+        if (chunk.orderCount == 0) {
+            chunk.firstOrderId = orderId;
+        }
+        chunk.totalAmount += amount;
+        chunk.orderCount += 1;
+
+        if (metadata.firstChunkId != metadata.lastChunkId) {
+            metadata.orderChunkIds[orderId] = chunkId;
+        }
+    }
+
+    /**
+     * @dev Orders created before explicitMappingStartOrderId belong to the first chunk.
+     * This lookup relies on order IDs increasing monotonically.
+     */
+    function _getActiveOrderChunkId(
+        PriceChunkMetadata storage metadata,
+        uint48 orderId
+    ) private view returns (uint32 chunkId) {
+        uint32 firstChunkId = metadata.firstChunkId;
+
+        if (
+            firstChunkId == metadata.lastChunkId || orderId < metadata.explicitMappingStartOrderId
+        ) {
+            return firstChunkId;
+        }
+
+        return metadata.orderChunkIds[orderId];
+    }
+
+    function _removeOrderFromChunk(
+        PriceChunkMetadata storage metadata,
+        uint48 orderId,
+        uint256 amount,
+        uint48 nextOrderId
+    ) private {
+        uint32 chunkId = _getActiveOrderChunkId(metadata, orderId);
+        require(chunkId != 0, "OSTLib: Chunk not found");
+
+        OrderChunk storage chunk = metadata.chunks[chunkId];
+        chunk.totalAmount -= amount;
+        chunk.orderCount -= 1;
+
+        if (chunk.orderCount == 0) {
+            _unlinkChunk(metadata, chunkId);
+        } else if (chunk.firstOrderId == orderId) {
+            chunk.firstOrderId = nextOrderId;
+        }
+    }
+
+    function _removeOrdersFromBoundaryChunk(
+        Node storage gn,
+        OrderChunk storage chunk,
+        uint256 amount
+    )
+        private
+        returns (
+            uint256 removedAmount,
+            uint256 removedCount,
+            uint48 partiallyRemovedOrderId,
+            uint256 partiallyRemovedAmount,
+            uint256 remainingAmount
+        )
+    {
+        remainingAmount = amount;
+        uint48 orderId = chunk.firstOrderId;
+
+        while (orderId != 0 && remainingAmount > 0) {
+            OrderItem storage currentOrder = gn.orders[orderId];
+            uint48 nextOrderId = currentOrder.next;
+
+            if (currentOrder.amount <= remainingAmount) {
+                remainingAmount -= currentOrder.amount;
+                removedAmount += currentOrder.amount;
+                removedCount += 1;
+                orderId = nextOrderId;
+            } else {
+                partiallyRemovedOrderId = orderId;
+                partiallyRemovedAmount = remainingAmount;
+                remainingAmount = 0;
+            }
+        }
+
+        chunk.totalAmount -= removedAmount + partiallyRemovedAmount;
+        chunk.orderCount -= uint16(removedCount);
+        chunk.firstOrderId = partiallyRemovedOrderId != 0 ? partiallyRemovedOrderId : orderId;
+    }
+
+    function _unlinkChunkPrefix(
+        PriceChunkMetadata storage metadata,
+        uint32 firstRemainingChunkId,
+        uint32 removedChunkCount
+    ) private {
+        metadata.activeChunkCount -= removedChunkCount;
+
+        if (firstRemainingChunkId == 0) {
+            metadata.firstChunkId = 0;
+            metadata.lastChunkId = 0;
+            metadata.explicitMappingStartOrderId = 0;
+        } else {
+            metadata.firstChunkId = firstRemainingChunkId;
+            metadata.chunks[firstRemainingChunkId].prevChunkId = 0;
+
+            if (metadata.firstChunkId == metadata.lastChunkId) {
+                metadata.explicitMappingStartOrderId = 0;
+            }
+        }
+    }
+
+    function _unlinkChunk(PriceChunkMetadata storage metadata, uint32 chunkId) private {
+        OrderChunk storage chunk = metadata.chunks[chunkId];
+        uint32 prevChunkId = chunk.prevChunkId;
+        uint32 nextChunkId = chunk.nextChunkId;
+
+        if (prevChunkId == 0) {
+            metadata.firstChunkId = nextChunkId;
+        } else {
+            metadata.chunks[prevChunkId].nextChunkId = nextChunkId;
+        }
+
+        if (nextChunkId == 0) {
+            metadata.lastChunkId = prevChunkId;
+        } else {
+            metadata.chunks[nextChunkId].prevChunkId = prevChunkId;
+        }
+
+        metadata.activeChunkCount -= 1;
+
+        if (metadata.firstChunkId == metadata.lastChunkId) {
+            metadata.explicitMappingStartOrderId = 0;
+        }
     }
 
     function _calculateFutureValue(
