@@ -79,6 +79,55 @@ contract OrderStatisticsTreeContract {
         return tree.getOrderById(value, orderId);
     }
 
+    function getFutureValue(uint256 value, uint48 orderId) public view returns (uint256) {
+        return tree.getFutureValue(value, orderId);
+    }
+
+    function getNodeOrderIds(uint256 value) public view returns (uint48[] memory) {
+        return tree.getNodeOrderIds(value);
+    }
+
+    function getOrder(
+        uint256 value,
+        uint48 orderId
+    ) public view returns (OrderStatisticsTreeLib.OrderItem memory) {
+        return tree.nodes[value].orders[orderId];
+    }
+
+    function getChunkMetadata(
+        uint256 value
+    )
+        public
+        view
+        returns (
+            uint32 firstChunkId,
+            uint32 lastChunkId,
+            uint32 lastAllocatedChunkId,
+            uint48 explicitMappingStartOrderId,
+            uint32 activeChunkCount
+        )
+    {
+        OrderStatisticsTreeLib.PriceChunkMetadata storage metadata = tree.chunkMetadata[value];
+        return (
+            metadata.firstChunkId,
+            metadata.lastChunkId,
+            metadata.lastAllocatedChunkId,
+            metadata.explicitMappingStartOrderId,
+            metadata.activeChunkCount
+        );
+    }
+
+    function getChunk(
+        uint256 value,
+        uint32 chunkId
+    ) public view returns (OrderStatisticsTreeLib.OrderChunk memory) {
+        return tree.chunkMetadata[value].chunks[chunkId];
+    }
+
+    function getOrderChunkId(uint256 value, uint48 orderId) public view returns (uint32) {
+        return tree.chunkMetadata[value].orderChunkIds[orderId];
+    }
+
     function getRootCount() public view returns (uint256 _orderCounter) {
         _orderCounter = tree.count();
     }
@@ -92,9 +141,38 @@ contract OrderStatisticsTreeContract {
         tree.insertOrder(value, orderId, user, amount);
     }
 
+    function insertOrders(
+        uint256 value,
+        uint48 firstOrderId,
+        uint16 count,
+        address user,
+        uint256 amount
+    ) public {
+        for (uint48 orderId = firstOrderId; orderId < firstOrderId + count; orderId++) {
+            tree.insertOrder(value, orderId, user, amount);
+        }
+    }
+
     function removeAmountValue(uint256 value, uint48 orderId) public {
         emit OrderRemoved("delete", value, orderId);
         tree.removeOrder(value, orderId);
+    }
+
+    function removeOrders(
+        uint256 value,
+        uint256 amount
+    ) public returns (PartiallyRemovedOrder memory) {
+        return tree.removeOrders(value, amount);
+    }
+
+    /// @dev Reproduces state written by the pre-chunk implementation for migration tests.
+    function insertLegacyOrder(uint256 value, uint48 orderId, address user, uint256 amount) public {
+        tree.insert(value);
+        tree.addTail(value, orderId, user, amount);
+    }
+
+    function migrateOrderChunks(uint256 value) public {
+        tree.migrateOrderChunks(value);
     }
 
     function calculateDroppedAmountFromLeft(
