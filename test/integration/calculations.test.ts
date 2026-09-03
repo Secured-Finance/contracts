@@ -28,6 +28,7 @@ describe('Integration Test: Calculations', async () => {
 
   let genesisDate: number;
   let ethMaturities: BigNumber[];
+  let snapshotId: string;
 
   let signers: Signers;
 
@@ -666,20 +667,37 @@ describe('Integration Test: Calculations', async () => {
       const depositAmount = orderAmount.mul(3).div(2);
 
       before(async () => {
-        [alice] = await getUsers(1);
+        [alice, bob] = await getUsers(2);
         ethMaturities = await lendingMarketController.getMaturities(hexETH);
+        snapshotId = await ethers.provider.send('evm_snapshot', []);
+
+        const marketUnitPrice =
+          await lendingMarketController.getCurrentMinDebtUnitPrice(
+            hexETH,
+            ethMaturities[0],
+          );
+
+        await tokenVault.connect(bob).deposit(hexETH, orderAmount.mul(2), {
+          value: orderAmount.mul(2),
+        });
+        await lendingMarketController
+          .connect(bob)
+          .executeOrder(
+            hexETH,
+            ethMaturities[0],
+            Side.BORROW,
+            orderAmount,
+            marketUnitPrice,
+          );
+        await lendingMarketController
+          .connect(bob)
+          .executeOrder(hexETH, ethMaturities[0], Side.LEND, orderAmount, '0');
       });
 
       after(async () => {
-        const { activeOrders } = await lendingMarketReader[
-          'getOrders(bytes32,address)'
-        ](hexETH, alice.address);
-
-        for (const order of activeOrders) {
-          await lendingMarketController
-            .connect(alice)
-            .cancelOrder(hexETH, order.maturity, order.orderId);
-        }
+        await ethers.provider.send('evm_revert', [snapshotId]);
+        snapshotId = await ethers.provider.send('evm_snapshot', []);
+        ethMaturities = await lendingMarketController.getMaturities(hexETH);
       });
 
       it('Deposit ETH', async () => {
@@ -696,7 +714,18 @@ describe('Integration Test: Calculations', async () => {
       });
 
       it('Estimate a borrowing order result', async () => {
-        const orderUnitPrice = '8000';
+        const currentMinDebtUnitPrice =
+          await lendingMarketController.getCurrentMinDebtUnitPrice(
+            hexETH,
+            ethMaturities[0],
+          );
+        const { minBorrowUnitPrice: orderUnitPrice } =
+          await lendingMarketController.getOrderUnitPriceRange(
+            hexETH,
+            ethMaturities[0],
+          );
+
+        expect(orderUnitPrice).to.lt(currentMinDebtUnitPrice);
 
         const estimation = await lendingMarketController
           .connect(alice)
@@ -722,12 +751,6 @@ describe('Integration Test: Calculations', async () => {
           );
 
         const aliceCoverage = await tokenVault.getCoverage(alice.address);
-        const currentMinDebtUnitPrice =
-          await lendingMarketController.getCurrentMinDebtUnitPrice(
-            hexETH,
-            ethMaturities[0],
-          );
-
         const adjustedPV = orderAmount
           .mul(currentMinDebtUnitPrice)
           .div(orderUnitPrice);

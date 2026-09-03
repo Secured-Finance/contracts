@@ -7,7 +7,7 @@ import {ILendingMarket} from "./interfaces/ILendingMarket.sol";
 import {Contracts} from "./libraries/Contracts.sol";
 import {Constants} from "./libraries/Constants.sol";
 import {OrderActionLogic} from "./libraries/logics/OrderActionLogic.sol";
-import {OrderBookLogic} from "./libraries/logics/OrderBookLogic.sol";
+import {OrderBookLogic, ItayoseFinalizeResult, ItayoseProcessStatus, ItayoseSettlementResult} from "./libraries/logics/OrderBookLogic.sol";
 import {OrderReaderLogic} from "./libraries/logics/OrderReaderLogic.sol";
 import {RoundingUint256} from "./libraries/math/RoundingUint256.sol";
 import {FilledOrder, PartiallyFilledOrder} from "./libraries/OrderBookLib.sol";
@@ -434,12 +434,22 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     }
 
     /**
-     * @notice Gets the market itayose logs.
+     * @notice Gets the immutable price-discovery result once an Itayose process is initialized.
+     * @dev A non-zero log does not mean the process is finalized. Use isReady for completion.
      * @param _maturity The market maturity
-     * @return ItayoseLog of the market
      */
     function getItayoseLog(uint256 _maturity) external view override returns (ItayoseLog memory) {
         return Storage.slot().itayoseLogs[_maturity];
+    }
+
+    /**
+     * @notice Gets the resumable Itayose process status.
+     * @param _orderBookId The order book id
+     */
+    function getItayoseProcessStatus(
+        uint8 _orderBookId
+    ) external view override returns (ItayoseProcessStatus memory) {
+        return OrderBookLogic.getItayoseProcessStatus(_orderBookId);
     }
 
     /**
@@ -820,17 +830,9 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     }
 
     /**
-     * @notice Executes Itayose to aggregate pre-orders and determine the opening unit price.
-     * After this action, the market opens.
-     * @dev If the opening date had already passed when this contract was created, this Itayose need not be executed.
-     * @param _orderBookId The order book id
-     * @return openingUnitPrice The opening price when Itayose is executed
-     * @return totalOffsetAmount The total filled amount when Itayose is executed
-     * @return openingDate The timestamp when the market opens
-     * @return partiallyFilledLendingOrder Partially filled lending order on the order book
-     * @return partiallyFilledBorrowingOrder Partially filled borrowing order on the order book
+     * @notice Initializes an Itayose process and fixes its price-discovery result.
      */
-    function executeItayoseCall(
+    function initializeItayose(
         uint8 _orderBookId
     )
         external
@@ -838,15 +840,41 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         whenNotPaused
         onlyLendingMarketController
         ifItayosePeriod(_orderBookId)
-        returns (
-            uint256 openingUnitPrice,
-            uint256 totalOffsetAmount,
-            uint256 openingDate,
-            PartiallyFilledOrder memory partiallyFilledLendingOrder,
-            PartiallyFilledOrder memory partiallyFilledBorrowingOrder
-        )
+        returns (ItayoseProcessStatus memory)
     {
-        return OrderBookLogic.executeItayoseCall(_orderBookId);
+        return OrderBookLogic.initializeItayose(_orderBookId);
+    }
+
+    /**
+     * @notice Settles one bounded Itayose batch.
+     */
+    function executeItayoseSettlement(
+        uint8 _orderBookId
+    )
+        external
+        override
+        whenNotPaused
+        onlyLendingMarketController
+        ifItayosePeriod(_orderBookId)
+        returns (ItayoseSettlementResult memory)
+    {
+        return OrderBookLogic.executeItayoseSettlement(_orderBookId);
+    }
+
+    /**
+     * @notice Finalizes a fully settled Itayose process and opens the market.
+     */
+    function finalizeItayose(
+        uint8 _orderBookId
+    )
+        external
+        override
+        whenNotPaused
+        onlyLendingMarketController
+        ifItayosePeriod(_orderBookId)
+        returns (ItayoseFinalizeResult memory)
+    {
+        return OrderBookLogic.finalizeItayose(_orderBookId);
     }
 
     /**

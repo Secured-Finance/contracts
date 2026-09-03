@@ -531,6 +531,32 @@ library OrderBookLib {
         );
     }
 
+    function getItayoseBoundaryUnitPrice(
+        OrderBook storage self,
+        ProtocolTypes.Side _takerSide,
+        uint256 _maxPriceLevels
+    ) internal view returns (uint256 boundaryUnitPrice) {
+        if (_takerSide == ProtocolTypes.Side.LEND) {
+            OrderStatisticsTreeLib.Tree storage orders = self.borrowOrders[self.maturity];
+            boundaryUnitPrice = orders.first();
+
+            for (uint256 i = 1; i < _maxPriceLevels; i++) {
+                uint256 nextUnitPrice = orders.next(boundaryUnitPrice);
+                if (nextUnitPrice == 0) break;
+                boundaryUnitPrice = nextUnitPrice;
+            }
+        } else {
+            OrderStatisticsTreeLib.Tree storage orders = self.lendOrders[self.maturity];
+            boundaryUnitPrice = orders.last();
+
+            for (uint256 i = 1; i < _maxPriceLevels; i++) {
+                uint256 previousUnitPrice = orders.prev(boundaryUnitPrice);
+                if (previousUnitPrice == 0) break;
+                boundaryUnitPrice = previousUnitPrice;
+            }
+        }
+    }
+
     function migrateOrderChunks(
         OrderBook storage self,
         ProtocolTypes.Side _side,

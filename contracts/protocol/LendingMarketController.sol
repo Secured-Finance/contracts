@@ -15,6 +15,7 @@ import {FundManagementLogic} from "./libraries/logics/FundManagementLogic.sol";
 import {LendingMarketOperationLogic} from "./libraries/logics/LendingMarketOperationLogic.sol";
 import {LendingMarketUserLogic} from "./libraries/logics/LendingMarketUserLogic.sol";
 import {LiquidationLogic} from "./libraries/logics/LiquidationLogic.sol";
+import {ItayoseProcessStatus} from "./libraries/logics/OrderBookLogic.sol";
 // mixins
 import {MixinAccessControl} from "./mixins/MixinAccessControl.sol";
 import {MixinAddressResolver} from "./mixins/MixinAddressResolver.sol";
@@ -200,6 +201,62 @@ contract LendingMarketController is
                 _maturity,
                 Storage.slot().minDebtUnitPrices[_ccy]
             );
+    }
+
+    /**
+     * @notice Gets the min debt unit price at an arbitrary reference timestamp.
+     */
+    function getMinDebtUnitPriceAt(
+        bytes32 _ccy,
+        uint256 _maturity,
+        uint256 _referenceTimestamp
+    ) external view override returns (uint256) {
+        return
+            FundManagementLogic.getMinDebtUnitPriceAt(
+                _maturity,
+                Storage.slot().minDebtUnitPrices[_ccy],
+                _referenceTimestamp
+            );
+    }
+
+    /**
+     * @notice Gets the currently accepted limit-order unit price range.
+     * @dev The range does not indicate whether order entry is currently executable.
+     */
+    function getOrderUnitPriceRange(
+        bytes32 _ccy,
+        uint256 _maturity
+    )
+        external
+        view
+        override
+        ifValidMaturity(_ccy, _maturity)
+        returns (
+            uint256 minLendUnitPrice,
+            uint256 maxLendUnitPrice,
+            uint256 minBorrowUnitPrice,
+            uint256 maxBorrowUnitPrice,
+            uint256 referenceUnitPrice,
+            bool isMinDebtUnitPriceReference
+        )
+    {
+        return LendingMarketOperationLogic.getOrderUnitPriceRange(_ccy, _maturity);
+    }
+
+    /**
+     * @notice Gets the resumable Itayose process status.
+     */
+    function getItayoseProcessStatus(
+        bytes32 _ccy,
+        uint256 _maturity
+    )
+        external
+        view
+        override
+        ifValidMaturity(_ccy, _maturity)
+        returns (ItayoseProcessStatus memory)
+    {
+        return LendingMarketOperationLogic.getItayoseProcessStatus(_ccy, _maturity);
     }
 
     /**
@@ -840,25 +897,19 @@ contract LendingMarketController is
         bytes32 _ccy,
         uint256 _maturity
     ) external override nonReentrant ifActive returns (bool) {
-        (
-            PartiallyFilledOrder memory partiallyFilledLendingOrder,
-            PartiallyFilledOrder memory partiallyFilledBorrowingOrder
-        ) = LendingMarketOperationLogic.executeItayoseCall(_ccy, _maturity);
-
-        LendingMarketUserLogic.updateFundsForMaker(
-            _ccy,
-            _maturity,
-            ProtocolTypes.Side.LEND,
-            partiallyFilledLendingOrder
-        );
-        LendingMarketUserLogic.updateFundsForMaker(
-            _ccy,
-            _maturity,
-            ProtocolTypes.Side.BORROW,
-            partiallyFilledBorrowingOrder
-        );
-
+        LendingMarketOperationLogic.executeItayoseCall(_ccy, _maturity);
         return true;
+    }
+
+    /**
+     * @notice Executes one resumable Itayose process step.
+     * @return completed True when this step finalized the order book
+     */
+    function executeItayoseStep(
+        bytes32 _ccy,
+        uint256 _maturity
+    ) external override nonReentrant ifActive returns (bool completed) {
+        return LendingMarketOperationLogic.executeItayoseStep(_ccy, _maturity);
     }
 
     /**

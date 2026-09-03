@@ -4,43 +4,47 @@ pragma solidity 0.8.19;
 // dependencies
 import {IERC20} from "../../../dependencies/openzeppelin/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "../../../dependencies/openzeppelin/token/ERC20/extensions/IERC20Metadata.sol";
+import {Math} from "../../../dependencies/openzeppelin/utils/math/Math.sol";
 import {SafeCast} from "../../../dependencies/openzeppelin/utils/math/SafeCast.sol";
 import {Strings} from "../../../dependencies/openzeppelin/utils/Strings.sol";
 // interfaces
 import {ILendingMarket} from "../../interfaces/ILendingMarket.sol";
-import {ILendingMarketController} from "../../interfaces/ILendingMarketController.sol";
 import {IFutureValueVault} from "../../interfaces/IFutureValueVault.sol";
 import {AutoRollLog} from "../../interfaces/IGenesisValueVault.sol";
 // libraries
 import {AddressResolverLib} from "../AddressResolverLib.sol";
 import {BokkyPooBahsDateTimeLibrary as TimeLibrary} from "../BokkyPooBahsDateTimeLibrary.sol";
 import {Constants} from "../Constants.sol";
-import {FilledOrder, PartiallyFilledOrder} from "../OrderBookLib.sol";
 import {RoundingUint256} from "../math/RoundingUint256.sol";
 import {RoundingInt256} from "../math/RoundingInt256.sol";
+import {FundManagementLogic} from "./FundManagementLogic.sol";
+import {ItayoseFinalizeResult, ItayoseProcessStatus, ItayoseSettlementResult} from "./OrderBookLogic.sol";
 // types
 import {ProtocolTypes} from "../../types/ProtocolTypes.sol";
 // storages
 import {LendingMarketControllerStorage as Storage, ZCTokenInfo, TerminationCurrencyCache, ObservationPeriodLog} from "../../storages/LendingMarketControllerStorage.sol";
+import {ItayoseLog} from "../../storages/LendingMarketStorage.sol";
 
 library LendingMarketOperationLogic {
     using SafeCast for uint256;
     using RoundingUint256 for uint256;
-    using SafeCast for uint256;
     using RoundingInt256 for int256;
 
     uint256 public constant OBSERVATION_PERIOD = 6 hours;
     uint8 public constant COMPOUND_FACTOR_DECIMALS = 18;
     uint8 public constant ZC_TOKEN_BASE_DECIMALS = 26;
     uint256 public constant PRE_ORDER_BASE_PERIOD = 7 days;
+    uint256 public constant UNIT_PRICE_RANGE = 1000;
 
     error InvalidCompoundFactor();
-    error TooManyTokenDecimals(address tokenAddress, uint8 decimals);
     error InvalidCurrency();
+    error TooManyTokenDecimals(address tokenAddress, uint8 decimals);
     error InvalidOpeningDate();
     error InvalidPreOpeningDate();
     error InvalidTimestamp();
     error InvalidMinDebtUnitPrice();
+    error InvalidOrderUnitPrice(uint256 unitPrice, uint256 minUnitPrice, uint256 maxUnitPrice);
+    error IncompleteItayoseProcess(bytes32 ccy, uint256 maturity, ItayoseProcessStatus status);
     error LendingMarketNotInitialized();
     error NotEnoughOrderBooks();
     error AlreadyZCTokenExists(address tokenAddress);
@@ -68,6 +72,26 @@ library LendingMarketOperationLogic {
 
     event OrderBooksRotated(bytes32 ccy, uint256 oldMaturity, uint256 newMaturity);
     event EmergencyTerminationExecuted(uint256 timestamp);
+
+    event ItayoseProcessInitialized(
+        bytes32 indexed ccy,
+        uint256 indexed maturity,
+        uint256 openingUnitPrice,
+        uint256 lastLendUnitPrice,
+        uint256 lastBorrowUnitPrice,
+        uint256 totalOffsetAmount
+    );
+
+    event ItayoseSettlementProgress(
+        bytes32 indexed ccy,
+        uint256 indexed maturity,
+        ProtocolTypes.Side makerSide,
+        uint256 batchFilledAmount,
+        uint256 remainingLendOffsetAmount,
+        uint256 remainingBorrowOffsetAmount
+    );
+
+    event ItayoseProcessFinalized(bytes32 indexed ccy, uint256 indexed maturity);
 
     event ZCTokenCreated(
         bytes32 indexed ccy,
@@ -134,10 +158,212 @@ library LendingMarketOperationLogic {
     }
 
     function updateMinDebtUnitPrice(bytes32 _ccy, uint256 _minDebtUnitPrice) public {
-        if (_minDebtUnitPrice > Constants.PRICE_DIGIT) revert InvalidMinDebtUnitPrice();
+        if (_minDebtUnitPrice > Constants.PRICE_DIGIT) {
+            revert InvalidMinDebtUnitPrice();
+        }
 
         Storage.slot().minDebtUnitPrices[_ccy] = _minDebtUnitPrice;
         emit MinDebtUnitPriceUpdated(_ccy, _minDebtUnitPrice);
+    }
+
+    function getOrderUnitPriceRange(
+        bytes32 _ccy,
+        uint256 _maturity
+    )
+        public
+        view
+        returns (
+            uint256 minLendUnitPrice,
+            uint256 maxLendUnitPrice,
+            uint256 minBorrowUnitPrice,
+            uint256 maxBorrowUnitPrice,
+            uint256 referenceUnitPrice,
+            bool isMinDebtUnitPriceReference
+        )
+    {
+        uint256 minUnitPrice;
+        uint256 maxUnitPrice;
+        bool isPreOrderPeriod;
+
+        (
+            minUnitPrice,
+            maxUnitPrice,
+            referenceUnitPrice,
+            isPreOrderPeriod,
+            isMinDebtUnitPriceReference
+        ) = _getBaseOrderUnitPriceRange(_ccy, _maturity);
+
+        maxLendUnitPrice = maxUnitPrice;
+        minBorrowUnitPrice = minUnitPrice;
+
+        if (isPreOrderPeriod) {
+            minLendUnitPrice = minUnitPrice;
+            maxBorrowUnitPrice = maxUnitPrice;
+        } else {
+            minLendUnitPrice = 1;
+            maxBorrowUnitPrice = Constants.PRICE_DIGIT;
+        }
+    }
+
+    function _getBaseOrderUnitPriceRange(
+        bytes32 _ccy,
+        uint256 _maturity
+    )
+        private
+        view
+        returns (
+            uint256 minUnitPrice,
+            uint256 maxUnitPrice,
+            uint256 referenceUnitPrice,
+            bool isPreOrderPeriod,
+            bool isMinDebtUnitPriceReference
+        )
+    {
+        ILendingMarket market = ILendingMarket(Storage.slot().lendingMarkets[_ccy]);
+        uint8 orderBookId = Storage.slot().maturityOrderBookIds[_ccy][_maturity];
+        (, , uint256 openingDate, ) = market.getOrderBookDetail(orderBookId);
+        isPreOrderPeriod = market.isPreOrderPeriod(orderBookId);
+
+        if (isPreOrderPeriod) {
+            (bool hasPreviousOpening, uint256 convertedUnitPrice) = _getPreviousOpeningUnitPrice(
+                _ccy,
+                _maturity,
+                openingDate,
+                orderBookId,
+                market
+            );
+
+            if (hasPreviousOpening) {
+                referenceUnitPrice = convertedUnitPrice;
+                minUnitPrice = convertedUnitPrice > UNIT_PRICE_RANGE
+                    ? convertedUnitPrice - UNIT_PRICE_RANGE
+                    : 1;
+                maxUnitPrice = Math.min(
+                    Constants.PRICE_DIGIT,
+                    convertedUnitPrice + UNIT_PRICE_RANGE
+                );
+                return (minUnitPrice, maxUnitPrice, referenceUnitPrice, isPreOrderPeriod, false);
+            }
+        } else {
+            uint256 marketUnitPrice = market.getMarketUnitPrice(orderBookId);
+            if (marketUnitPrice != 0) {
+                referenceUnitPrice = marketUnitPrice;
+                minUnitPrice = marketUnitPrice > UNIT_PRICE_RANGE
+                    ? marketUnitPrice - UNIT_PRICE_RANGE
+                    : 1;
+                maxUnitPrice = Math.min(Constants.PRICE_DIGIT, marketUnitPrice + UNIT_PRICE_RANGE);
+                return (minUnitPrice, maxUnitPrice, referenceUnitPrice, isPreOrderPeriod, false);
+            }
+        }
+
+        (minUnitPrice, maxUnitPrice, referenceUnitPrice) = _getMinDebtUnitPriceRange(
+            _ccy,
+            _maturity,
+            openingDate
+        );
+        isMinDebtUnitPriceReference = true;
+    }
+
+    function getItayoseProcessStatus(
+        bytes32 _ccy,
+        uint256 _maturity
+    ) public view returns (ItayoseProcessStatus memory) {
+        return
+            ILendingMarket(Storage.slot().lendingMarkets[_ccy]).getItayoseProcessStatus(
+                Storage.slot().maturityOrderBookIds[_ccy][_maturity]
+            );
+    }
+
+    function validateOrderUnitPrice(
+        bytes32 _ccy,
+        uint256 _maturity,
+        ProtocolTypes.Side _side,
+        uint256 _unitPrice
+    ) external view {
+        if (_unitPrice == 0) return;
+
+        uint256 minUnitPrice;
+        uint256 maxUnitPrice;
+        if (_side == ProtocolTypes.Side.LEND) {
+            (minUnitPrice, maxUnitPrice, , , , ) = getOrderUnitPriceRange(_ccy, _maturity);
+        } else {
+            (, , minUnitPrice, maxUnitPrice, , ) = getOrderUnitPriceRange(_ccy, _maturity);
+        }
+
+        if (_unitPrice < minUnitPrice || _unitPrice > maxUnitPrice) {
+            revert InvalidOrderUnitPrice(_unitPrice, minUnitPrice, maxUnitPrice);
+        }
+    }
+
+    function _getPreviousOpeningUnitPrice(
+        bytes32 _ccy,
+        uint256 _maturity,
+        uint256 _openingDate,
+        uint8 _orderBookId,
+        ILendingMarket _market
+    ) private view returns (bool hasPreviousOpening, uint256 convertedUnitPrice) {
+        // Only the immediately preceding active order book is eligible as the reference.
+        // Its Itayose must be finalized before the next order book enters the pre-order period.
+        // If it is not finalized, do not scan older order books: fall back to the min-debt range
+        // to avoid using a stale opening price and performing additional external storage reads.
+        uint8[] storage orderBookIds = Storage.slot().orderBookIdLists[_ccy];
+        uint8 previousOrderBookId;
+
+        for (uint256 i; i < orderBookIds.length; i++) {
+            if (orderBookIds[i] == _orderBookId) {
+                if (i != 0) previousOrderBookId = orderBookIds[i - 1];
+                break;
+            }
+        }
+
+        if (previousOrderBookId == 0 || !_market.isReady(previousOrderBookId)) {
+            return (false, 0);
+        }
+
+        (, uint256 previousMaturity, uint256 previousOpeningDate, ) = _market.getOrderBookDetail(
+            previousOrderBookId
+        );
+        ItayoseLog memory previousLog = _market.getItayoseLog(previousMaturity);
+
+        if (
+            previousLog.openingUnitPrice == 0 ||
+            previousMaturity <= previousOpeningDate ||
+            _maturity <= _openingDate
+        ) return (false, 0);
+
+        uint256 sourceDuration = previousMaturity - previousOpeningDate;
+        uint256 destinationDuration = _maturity - _openingDate;
+        uint256 previousOpeningUnitPrice = previousLog.openingUnitPrice;
+
+        convertedUnitPrice =
+            (Constants.PRICE_DIGIT * previousOpeningUnitPrice * sourceDuration) /
+            (((Constants.PRICE_DIGIT - previousOpeningUnitPrice) * destinationDuration) +
+                (previousOpeningUnitPrice * sourceDuration));
+        if (convertedUnitPrice == 0) convertedUnitPrice = 1;
+        if (convertedUnitPrice > Constants.PRICE_DIGIT) {
+            convertedUnitPrice = Constants.PRICE_DIGIT;
+        }
+        hasPreviousOpening = true;
+    }
+
+    function _getMinDebtUnitPriceRange(
+        bytes32 _ccy,
+        uint256 _maturity,
+        uint256 _openingDate
+    )
+        private
+        view
+        returns (uint256 minUnitPrice, uint256 maxUnitPrice, uint256 referenceUnitPrice)
+    {
+        referenceUnitPrice = FundManagementLogic.getMinDebtUnitPriceAt(
+            _maturity,
+            Storage.slot().minDebtUnitPrices[_ccy],
+            _openingDate
+        );
+        if (referenceUnitPrice == 0) referenceUnitPrice = 1;
+
+        minUnitPrice = referenceUnitPrice;
+        maxUnitPrice = Math.min(Constants.PRICE_DIGIT, referenceUnitPrice + UNIT_PRICE_RANGE * 2);
     }
 
     function createOrderBook(bytes32 _ccy, uint256 _openingDate, uint256 _preOpeningDate) public {
@@ -162,7 +388,6 @@ library LendingMarketOperationLogic {
         }
 
         if (_openingDate >= newMaturity) revert InvalidOpeningDate();
-
         uint8 orderBookId = market.createOrderBook(newMaturity, _openingDate, _preOpeningDate);
 
         Storage.slot().orderBookIdLists[_ccy].push(orderBookId);
@@ -174,46 +399,107 @@ library LendingMarketOperationLogic {
         emit OrderBookCreated(_ccy, orderBookId, _openingDate, _preOpeningDate, newMaturity);
     }
 
-    function executeItayoseCall(
-        bytes32 _ccy,
-        uint256 _maturity
-    )
-        external
-        returns (
-            PartiallyFilledOrder memory partiallyFilledLendingOrder,
-            PartiallyFilledOrder memory partiallyFilledBorrowingOrder
-        )
-    {
+    function executeItayoseCall(bytes32 _ccy, uint256 _maturity) external {
         ILendingMarket market = ILendingMarket(Storage.slot().lendingMarkets[_ccy]);
         uint8 orderBookId = Storage.slot().maturityOrderBookIds[_ccy][_maturity];
-        uint256 openingUnitPrice;
-        uint256 openingDate;
-        uint256 totalOffsetAmount;
+        ItayoseProcessStatus memory status = market.getItayoseProcessStatus(orderBookId);
 
-        (
-            openingUnitPrice,
-            totalOffsetAmount,
-            openingDate,
-            partiallyFilledLendingOrder,
-            partiallyFilledBorrowingOrder
-        ) = market.executeItayoseCall(orderBookId);
+        if (!status.isInProgress) {
+            status = _initializeItayose(_ccy, _maturity, market, orderBookId);
+        }
 
-        // Updates the pending order amount for both side orders.
-        // Since the partially filled orders are updated with `updateFundsForMaker()`,
-        // their amount is subtracted from `pendingOrderAmounts`.
-        Storage.slot().pendingOrderAmounts[_ccy][_maturity] +=
-            (totalOffsetAmount * 2) -
-            partiallyFilledLendingOrder.amount -
-            partiallyFilledBorrowingOrder.amount;
-
-        // Save the openingUnitPrice as first compound factor
-        // if it is a first Itayose call at the nearest market.
-        if (openingUnitPrice > 0 && Storage.slot().orderBookIdLists[_ccy][0] == orderBookId) {
-            // Convert the openingUnitPrice determined by Itayose to the unit price on the Genesis Date.
-            uint256 convertedUnitPrice = _convertUnitPrice(
-                openingUnitPrice,
+        while (status.remainingBorrowOffsetAmount > 0 || status.remainingLendOffsetAmount > 0) {
+            ItayoseSettlementResult memory settlement = _executeItayoseSettlement(
+                _ccy,
                 _maturity,
-                openingDate,
+                market,
+                orderBookId
+            );
+            status.remainingLendOffsetAmount = settlement.remainingLendOffsetAmount;
+            status.remainingBorrowOffsetAmount = settlement.remainingBorrowOffsetAmount;
+        }
+
+        _finalizeItayose(_ccy, _maturity, market, orderBookId);
+    }
+
+    function executeItayoseStep(bytes32 _ccy, uint256 _maturity) public returns (bool completed) {
+        ILendingMarket market = ILendingMarket(Storage.slot().lendingMarkets[_ccy]);
+        uint8 orderBookId = Storage.slot().maturityOrderBookIds[_ccy][_maturity];
+        ItayoseProcessStatus memory status = market.getItayoseProcessStatus(orderBookId);
+
+        if (!status.isInProgress) {
+            _initializeItayose(_ccy, _maturity, market, orderBookId);
+        } else if (status.remainingBorrowOffsetAmount > 0 || status.remainingLendOffsetAmount > 0) {
+            _executeItayoseSettlement(_ccy, _maturity, market, orderBookId);
+        } else {
+            _finalizeItayose(_ccy, _maturity, market, orderBookId);
+            completed = true;
+        }
+    }
+
+    function _initializeItayose(
+        bytes32 _ccy,
+        uint256 _maturity,
+        ILendingMarket _market,
+        uint8 _orderBookId
+    ) private returns (ItayoseProcessStatus memory status) {
+        status = _market.initializeItayose(_orderBookId);
+
+        emit ItayoseProcessInitialized(
+            _ccy,
+            _maturity,
+            status.openingUnitPrice,
+            status.lastLendUnitPrice,
+            status.lastBorrowUnitPrice,
+            status.totalOffsetAmount
+        );
+    }
+
+    function _executeItayoseSettlement(
+        bytes32 _ccy,
+        uint256 _maturity,
+        ILendingMarket _market,
+        uint8 _orderBookId
+    ) private returns (ItayoseSettlementResult memory result) {
+        result = _market.executeItayoseSettlement(_orderBookId);
+
+        // The partial maker is accounted for immediately, while full orders remain in
+        // pendingOrderAmounts until their owners run lazy cleanup.
+        Storage.slot().pendingOrderAmounts[_ccy][_maturity] +=
+            result.batchFilledAmount -
+            result.partiallyFilledOrder.amount;
+        FundManagementLogic.updateFundsForMaker(
+            _ccy,
+            _maturity,
+            result.makerSide,
+            result.partiallyFilledOrder
+        );
+
+        emit ItayoseSettlementProgress(
+            _ccy,
+            _maturity,
+            result.makerSide,
+            result.batchFilledAmount,
+            result.remainingLendOffsetAmount,
+            result.remainingBorrowOffsetAmount
+        );
+    }
+
+    function _finalizeItayose(
+        bytes32 _ccy,
+        uint256 _maturity,
+        ILendingMarket _market,
+        uint8 _orderBookId
+    ) private {
+        ItayoseFinalizeResult memory result = _market.finalizeItayose(_orderBookId);
+
+        if (
+            result.openingUnitPrice > 0 && Storage.slot().orderBookIdLists[_ccy][0] == _orderBookId
+        ) {
+            uint256 convertedUnitPrice = _convertUnitPrice(
+                result.openingUnitPrice,
+                _maturity,
+                result.openingDate,
                 Storage.slot().genesisDates[_ccy]
             );
 
@@ -222,6 +508,8 @@ library LendingMarketOperationLogic {
                 convertedUnitPrice
             );
         }
+
+        emit ItayoseProcessFinalized(_ccy, _maturity);
     }
 
     function rotateOrderBooks(bytes32 _ccy) external {
@@ -238,6 +526,10 @@ library LendingMarketOperationLogic {
 
         uint8 maturedOrderBookId = orderBookIds[0];
         uint8 destinationOrderBookId = orderBookIds[1];
+
+        _requireItayoseComplete(_ccy, market, maturedOrderBookId);
+        _requireItayoseComplete(_ccy, market, destinationOrderBookId);
+
         uint256 maturedOrderBookMaturity = maturities[0];
         uint256 destinationOrderBookMaturity = maturities[1];
 
@@ -280,9 +572,19 @@ library LendingMarketOperationLogic {
     }
 
     function executeEmergencyTermination() external {
+        bytes32[] memory currencies = AddressResolverLib.currencyController().getCurrencies();
+        for (uint256 i; i < currencies.length; i++) {
+            bytes32 ccy = currencies[i];
+            ILendingMarket market = ILendingMarket(Storage.slot().lendingMarkets[ccy]);
+            uint8[] storage orderBookIds = Storage.slot().orderBookIdLists[ccy];
+
+            for (uint256 j; j < orderBookIds.length; j++) {
+                _requireNoItayoseInProgress(ccy, market, orderBookIds[j]);
+            }
+        }
+
         Storage.slot().terminationDate = block.timestamp;
 
-        bytes32[] memory currencies = AddressResolverLib.currencyController().getCurrencies();
         bytes32[] memory collateralCurrencies = AddressResolverLib
             .tokenVault()
             .getCollateralCurrencies();
@@ -309,6 +611,30 @@ library LendingMarketOperationLogic {
         }
 
         emit EmergencyTerminationExecuted(block.timestamp);
+    }
+
+    function _requireItayoseComplete(
+        bytes32 _ccy,
+        ILendingMarket _market,
+        uint8 _orderBookId
+    ) private view {
+        ItayoseProcessStatus memory status = _market.getItayoseProcessStatus(_orderBookId);
+
+        if (status.isInProgress || (!status.isReady && _market.isItayosePeriod(_orderBookId))) {
+            revert IncompleteItayoseProcess(_ccy, _market.getMaturity(_orderBookId), status);
+        }
+    }
+
+    function _requireNoItayoseInProgress(
+        bytes32 _ccy,
+        ILendingMarket _market,
+        uint8 _orderBookId
+    ) private view {
+        ItayoseProcessStatus memory status = _market.getItayoseProcessStatus(_orderBookId);
+
+        if (status.isInProgress) {
+            revert IncompleteItayoseProcess(_ccy, _market.getMaturity(_orderBookId), status);
+        }
     }
 
     function pauseLendingMarket(bytes32 _ccy) public {

@@ -54,7 +54,7 @@ describe('LendingMarket - Operations', () => {
     ).to.be.revertedWith('Pausable: paused');
 
     await expect(
-      lendingMarketCaller.executeItayoseCall(targetCurrency, 1),
+      lendingMarketCaller.initializeItayose(targetCurrency, 1),
     ).to.be.revertedWith('Pausable: paused');
 
     await lendingMarketCaller.unpause(targetCurrency);

@@ -4,9 +4,34 @@ pragma solidity 0.8.19;
 import {Constants} from "../Constants.sol";
 import {OrderBookLib, FilledOrder, PartiallyFilledOrder} from "../OrderBookLib.sol";
 import {ProtocolTypes} from "../../types/ProtocolTypes.sol";
-import {LendingMarketStorage as Storage, ItayoseLog} from "../../storages/LendingMarketStorage.sol";
+import {LendingMarketStorage as Storage, ItayoseLog, ItayoseProcess} from "../../storages/LendingMarketStorage.sol";
 import {RoundingUint256} from "../math/RoundingUint256.sol";
-import {ILendingMarket} from "../../interfaces/ILendingMarket.sol";
+
+struct ItayoseSettlementResult {
+    ProtocolTypes.Side makerSide;
+    uint256 batchFilledAmount;
+    uint256 remainingLendOffsetAmount;
+    uint256 remainingBorrowOffsetAmount;
+    PartiallyFilledOrder partiallyFilledOrder;
+}
+
+struct ItayoseFinalizeResult {
+    uint256 openingUnitPrice;
+    uint256 totalOffsetAmount;
+    uint256 openingDate;
+}
+
+struct ItayoseProcessStatus {
+    uint256 openingUnitPrice;
+    uint256 lastLendUnitPrice;
+    uint256 lastBorrowUnitPrice;
+    uint256 totalOffsetAmount;
+    uint256 remainingLendOffsetAmount;
+    uint256 remainingBorrowOffsetAmount;
+    bool isInProgress;
+    bool isFinalizable;
+    bool isReady;
+}
 
 library OrderBookLogic {
     using OrderBookLib for OrderBookLib.OrderBook;
@@ -15,6 +40,16 @@ library OrderBookLogic {
     error InvalidOrderFeeRate();
     error InvalidCircuitBreakerLimitRange();
     error OrderBookNotMatured();
+    error ItayoseProcessAlreadyInitialized();
+    error ItayoseProcessNotInitialized();
+    error ItayoseSettlementAlreadyCompleted();
+    error ItayoseProcessNotFinalizable();
+    error ItayoseSettlementDidNotProgress();
+    error UnexpectedPartialFill();
+
+    // Provisional value based on the existing performance measurement where 500 price levels
+    // consumed approximately 8M gas. The performance test phase may tune this value.
+    uint256 internal constant MAX_ITAYOSE_PRICE_LEVELS_PER_CALL = 500;
 
     event OrderFeeRateUpdated(bytes32 ccy, uint256 previousRate, uint256 rate);
     event CircuitBreakerLimitRangeUpdated(bytes32 ccy, uint256 previousRate, uint256 rate);
@@ -189,7 +224,26 @@ library OrderBookLogic {
             uint256 totalOffsetAmount
         )
     {
-        return _getOrderBook(_orderBookId).calculateItayoseResult();
+        OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
+        ItayoseProcess storage process = Storage.slot().itayoseProcesses[orderBook.maturity];
+
+        if (process.isInProgress) {
+            ItayoseLog storage log = Storage.slot().itayoseLogs[orderBook.maturity];
+            return (
+                log.openingUnitPrice,
+                log.lastLendUnitPrice,
+                log.lastBorrowUnitPrice,
+                process.totalOffsetAmount
+            );
+        }
+
+        return orderBook.calculateItayoseResult();
+    }
+
+    function getItayoseProcessStatus(
+        uint8 _orderBookId
+    ) external view returns (ItayoseProcessStatus memory status) {
+        return _getItayoseProcessStatus(_getOrderBook(_orderBookId));
     }
 
     function getMaturities(
@@ -264,74 +318,150 @@ library OrderBookLogic {
         }
     }
 
-    function executeItayoseCall(
-        uint8 _orderBookId
-    )
-        external
-        returns (
-            uint256 openingUnitPrice,
-            uint256 totalOffsetAmount,
-            uint256 openingDate,
-            PartiallyFilledOrder memory partiallyFilledLendingOrder,
-            PartiallyFilledOrder memory partiallyFilledBorrowingOrder
-        )
-    {
-        uint256 lastLendUnitPrice;
-        uint256 lastBorrowUnitPrice;
+    function initializeItayose(uint8 _orderBookId) external returns (ItayoseProcessStatus memory) {
         OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
+        uint256 maturity = orderBook.maturity;
+        ItayoseProcess storage process = Storage.slot().itayoseProcesses[maturity];
 
-        (openingUnitPrice, lastLendUnitPrice, lastBorrowUnitPrice, totalOffsetAmount) = orderBook
-            .calculateItayoseResult();
-
-        if (totalOffsetAmount > 0) {
-            ProtocolTypes.Side[2] memory sides = [
-                ProtocolTypes.Side.LEND,
-                ProtocolTypes.Side.BORROW
-            ];
-
-            for (uint256 i; i < sides.length; i++) {
-                ProtocolTypes.Side partiallyFilledOrderSide;
-                PartiallyFilledOrder memory partiallyFilledOrder;
-                FilledOrder memory filledOrder;
-                (filledOrder, partiallyFilledOrder, , ) = orderBook.fillOrders(
-                    sides[i],
-                    totalOffsetAmount,
-                    0,
-                    0
-                );
-
-                if (filledOrder.futureValue > 0) {
-                    orderBook.setInitialBlockUnitPrice(openingUnitPrice);
-                }
-
-                if (partiallyFilledOrder.futureValue > 0) {
-                    if (sides[i] == ProtocolTypes.Side.LEND) {
-                        partiallyFilledOrderSide = ProtocolTypes.Side.BORROW;
-                        partiallyFilledBorrowingOrder = partiallyFilledOrder;
-                    } else {
-                        partiallyFilledOrderSide = ProtocolTypes.Side.LEND;
-                        partiallyFilledLendingOrder = partiallyFilledOrder;
-                    }
-                }
-            }
-
-            emit ItayoseExecuted(
-                Storage.slot().ccy,
-                orderBook.maturity,
-                openingUnitPrice,
-                lastLendUnitPrice,
-                lastBorrowUnitPrice,
-                totalOffsetAmount
-            );
+        if (process.isInProgress || Storage.slot().isReady[maturity]) {
+            revert ItayoseProcessAlreadyInitialized();
         }
 
-        Storage.slot().isReady[orderBook.maturity] = true;
-        Storage.slot().itayoseLogs[orderBook.maturity] = ItayoseLog(
-            openingUnitPrice,
-            lastLendUnitPrice,
-            lastBorrowUnitPrice
+        ItayoseLog memory log;
+        (
+            log.openingUnitPrice,
+            log.lastLendUnitPrice,
+            log.lastBorrowUnitPrice,
+            process.totalOffsetAmount
+        ) = orderBook.calculateItayoseResult();
+
+        process.isInProgress = true;
+        process.remainingLendOffsetAmount = process.totalOffsetAmount;
+        process.remainingBorrowOffsetAmount = process.totalOffsetAmount;
+        Storage.slot().itayoseLogs[maturity] = log;
+
+        if (process.totalOffsetAmount > 0) {
+            orderBook.setInitialBlockUnitPrice(log.openingUnitPrice);
+        }
+
+        return _getItayoseProcessStatus(orderBook);
+    }
+
+    function executeItayoseSettlement(
+        uint8 _orderBookId
+    ) external returns (ItayoseSettlementResult memory result) {
+        OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
+        ItayoseProcess storage process = Storage.slot().itayoseProcesses[orderBook.maturity];
+
+        if (!process.isInProgress) revert ItayoseProcessNotInitialized();
+
+        if (process.remainingBorrowOffsetAmount > 0) {
+            // fillOrders receives the taker side. LEND therefore settles BORROW makers.
+            result = _settleItayoseSide(orderBook, process, ProtocolTypes.Side.LEND);
+        } else if (process.remainingLendOffsetAmount > 0) {
+            // fillOrders receives the taker side. BORROW therefore settles LEND makers.
+            result = _settleItayoseSide(orderBook, process, ProtocolTypes.Side.BORROW);
+        } else {
+            revert ItayoseSettlementAlreadyCompleted();
+        }
+
+        result.remainingLendOffsetAmount = process.remainingLendOffsetAmount;
+        result.remainingBorrowOffsetAmount = process.remainingBorrowOffsetAmount;
+    }
+
+    function finalizeItayose(
+        uint8 _orderBookId
+    ) external returns (ItayoseFinalizeResult memory result) {
+        OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
+        uint256 maturity = orderBook.maturity;
+        ItayoseProcess storage process = Storage.slot().itayoseProcesses[maturity];
+
+        if (!process.isInProgress) revert ItayoseProcessNotInitialized();
+        if (process.remainingLendOffsetAmount != 0 || process.remainingBorrowOffsetAmount != 0)
+            revert ItayoseProcessNotFinalizable();
+
+        ItayoseLog storage log = Storage.slot().itayoseLogs[maturity];
+        result.openingUnitPrice = log.openingUnitPrice;
+        result.totalOffsetAmount = process.totalOffsetAmount;
+        result.openingDate = orderBook.openingDate;
+
+        Storage.slot().isReady[maturity] = true;
+        process.isInProgress = false;
+
+        if (process.totalOffsetAmount > 0) {
+            emit ItayoseExecuted(
+                Storage.slot().ccy,
+                maturity,
+                log.openingUnitPrice,
+                log.lastLendUnitPrice,
+                log.lastBorrowUnitPrice,
+                process.totalOffsetAmount
+            );
+        }
+    }
+
+    function _settleItayoseSide(
+        OrderBookLib.OrderBook storage orderBook,
+        ItayoseProcess storage process,
+        ProtocolTypes.Side takerSide
+    ) private returns (ItayoseSettlementResult memory result) {
+        uint256 remainingOffsetAmount = takerSide == ProtocolTypes.Side.LEND
+            ? process.remainingBorrowOffsetAmount
+            : process.remainingLendOffsetAmount;
+        uint256 boundaryUnitPrice = orderBook.getItayoseBoundaryUnitPrice(
+            takerSide,
+            MAX_ITAYOSE_PRICE_LEVELS_PER_CALL
         );
-        openingDate = orderBook.openingDate;
+
+        FilledOrder memory filledOrder;
+        (filledOrder, result.partiallyFilledOrder, , ) = orderBook.fillOrders(
+            takerSide,
+            remainingOffsetAmount,
+            0,
+            boundaryUnitPrice
+        );
+
+        if (filledOrder.amount == 0) revert ItayoseSettlementDidNotProgress();
+
+        remainingOffsetAmount -= filledOrder.amount;
+        if (
+            remainingOffsetAmount > 0 &&
+            (result.partiallyFilledOrder.orderId != 0 ||
+                result.partiallyFilledOrder.maker != address(0) ||
+                result.partiallyFilledOrder.amount != 0 ||
+                result.partiallyFilledOrder.futureValue != 0)
+        ) revert UnexpectedPartialFill();
+
+        if (takerSide == ProtocolTypes.Side.LEND) {
+            process.remainingBorrowOffsetAmount = remainingOffsetAmount;
+        } else {
+            process.remainingLendOffsetAmount = remainingOffsetAmount;
+        }
+
+        result.makerSide = takerSide == ProtocolTypes.Side.LEND
+            ? ProtocolTypes.Side.BORROW
+            : ProtocolTypes.Side.LEND;
+        result.batchFilledAmount = filledOrder.amount;
+    }
+
+    function _getItayoseProcessStatus(
+        OrderBookLib.OrderBook storage orderBook
+    ) private view returns (ItayoseProcessStatus memory status) {
+        ItayoseProcess storage process = Storage.slot().itayoseProcesses[orderBook.maturity];
+        ItayoseLog storage log = Storage.slot().itayoseLogs[orderBook.maturity];
+
+        status.openingUnitPrice = log.openingUnitPrice;
+        status.lastLendUnitPrice = log.lastLendUnitPrice;
+        status.lastBorrowUnitPrice = log.lastBorrowUnitPrice;
+        status.totalOffsetAmount = process.totalOffsetAmount;
+        status.remainingLendOffsetAmount = process.remainingLendOffsetAmount;
+        status.remainingBorrowOffsetAmount = process.remainingBorrowOffsetAmount;
+        status.isInProgress = process.isInProgress;
+        status.isFinalizable =
+            process.isInProgress &&
+            process.remainingLendOffsetAmount == 0 &&
+            process.remainingBorrowOffsetAmount == 0;
+        status.isReady = Storage.slot().isReady[orderBook.maturity];
     }
 
     function _nextOrderBookId() internal returns (uint8) {
