@@ -34,28 +34,30 @@ import {
 
 const deployContracts = async () => {
   // Deploy libraries
-  const [
-    depositManagementLogic,
-    lendingMarketOperationLogic,
-    orderReaderLogic,
-    orderBookLogic,
-    quickSort,
-  ] = await Promise.all(
-    [
-      'DepositManagementLogic',
-      'LendingMarketOperationLogic',
-      'OrderReaderLogic',
-      'OrderBookLogic',
-      'QuickSort',
-    ].map((library) =>
-      ethers.getContractFactory(library).then((factory) => factory.deploy()),
-    ),
-  );
+  const [depositManagementLogic, orderReaderLogic, orderBookLogic, quickSort] =
+    await Promise.all(
+      [
+        'DepositManagementLogic',
+        'OrderReaderLogic',
+        'OrderBookLogic',
+        'QuickSort',
+      ].map((library) =>
+        ethers.getContractFactory(library).then((factory) => factory.deploy()),
+      ),
+    );
 
   const fundManagementLogic = await ethers
     .getContractFactory('FundManagementLogic', {
       libraries: {
         QuickSort: quickSort.address,
+      },
+    })
+    .then((factory) => factory.deploy());
+
+  const lendingMarketOperationLogic = await ethers
+    .getContractFactory('LendingMarketOperationLogic', {
+      libraries: {
+        FundManagementLogic: fundManagementLogic.address,
       },
     })
     .then((factory) => factory.deploy());

@@ -15,6 +15,7 @@ library OrderActionLogic {
     using RoundingUint256 for uint256;
 
     error InvalidAmount();
+    error InvalidPreOrderUnitPrice();
     error InvalidFutureValue();
     error EmptyOrderBook();
     error OppositeSideOrderExists();
@@ -297,6 +298,7 @@ library OrderActionLogic {
         uint256 _amount,
         uint256 _unitPrice
     ) external {
+        if (_unitPrice == 0) revert InvalidPreOrderUnitPrice();
         if (_amount == 0) revert InvalidAmount();
 
         OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);

@@ -13,6 +13,7 @@ import {
   MIN_DEBT_UNIT_PRICE,
   ORDER_FEE_RATE,
 } from '../../common/constants';
+import { calculateFutureValue } from '../../common/orders';
 import { deployContracts } from './utils';
 
 describe('LendingMarketController - Terminations', () => {
@@ -321,7 +322,7 @@ describe('LendingMarketController - Terminations', () => {
           maturities[0],
           Side.BORROW,
           '100000000000000000',
-          '8000',
+          '9500',
         );
 
       await lendingMarketControllerProxy
@@ -331,7 +332,7 @@ describe('LendingMarketController - Terminations', () => {
           maturities[0],
           Side.LEND,
           '100000000000000000',
-          '7999',
+          '9499',
         );
 
       await expect(
@@ -349,7 +350,9 @@ describe('LendingMarketController - Terminations', () => {
       await lendingMarketControllerProxy
         .getPosition(targetCurrency, maturities[0], alice.address)
         .then(({ futureValue, presentValue }) => {
-          expect(futureValue).to.equal('-62500000000000000');
+          expect(futureValue).to.equal(
+            calculateFutureValue('-50000000000000000', '9500'),
+          );
           expect(presentValue).to.equal('-50000000000000000');
         });
 
@@ -417,7 +420,7 @@ describe('LendingMarketController - Terminations', () => {
           maturities[0],
           Side.BORROW,
           '100000000000000000',
-          '8000',
+          '9500',
         );
 
       await lendingMarketControllerProxy
@@ -427,7 +430,7 @@ describe('LendingMarketController - Terminations', () => {
           maturities[0],
           Side.LEND,
           '100000000000000000',
-          '7999',
+          '9499',
         );
 
       await expect(
@@ -456,7 +459,7 @@ describe('LendingMarketController - Terminations', () => {
           maturities[0],
           Side.LEND,
           '100000000000000000',
-          '8000',
+          '9500',
         );
 
       await lendingMarketControllerProxy
@@ -466,7 +469,7 @@ describe('LendingMarketController - Terminations', () => {
           maturities[0],
           Side.LEND,
           '100000000000000000',
-          '7999',
+          '9499',
         );
 
       await expect(
@@ -477,7 +480,7 @@ describe('LendingMarketController - Terminations', () => {
             maturities[0],
             Side.BORROW,
             '200000000000000000',
-            '8000',
+            '9500',
           ),
       ).to.emit(fundManagementLogic, 'OrderFilled');
 
@@ -493,9 +496,13 @@ describe('LendingMarketController - Terminations', () => {
       );
 
       expect(position1.presentValue).to.equal('-50000000000000000');
-      expect(position1.futureValue).to.equal('-62500000000000000');
+      expect(position1.futureValue).to.equal(
+        calculateFutureValue('-50000000000000000', '9500'),
+      );
       expect(position2.presentValue).to.equal('100000000000000000');
-      expect(position2.futureValue).to.equal('125000000000000000');
+      expect(position2.futureValue).to.equal(
+        calculateFutureValue('100000000000000000', '9500'),
+      );
 
       expect(
         await lendingMarketControllerProxy.isRedemptionRequired(bob.address),
@@ -551,7 +558,7 @@ describe('LendingMarketController - Terminations', () => {
           maturities[0],
           Side.BORROW,
           '100000000000000000',
-          '8000',
+          '9500',
         );
 
       await expect(
@@ -576,7 +583,7 @@ describe('LendingMarketController - Terminations', () => {
           maturities[1],
           Side.LEND,
           '100000000000000000',
-          '8000',
+          '9500',
         );
       await lendingMarketControllerProxy
         .connect(dave)
@@ -585,7 +592,7 @@ describe('LendingMarketController - Terminations', () => {
           maturities[1],
           Side.BORROW,
           '100000000000000000',
-          '8000',
+          '9500',
         );
 
       await time.increaseTo(maturities[0].toString());
@@ -640,7 +647,7 @@ describe('LendingMarketController - Terminations', () => {
           maturities[0],
           Side.BORROW,
           '100000000000000000',
-          '8000',
+          '9500',
         );
 
       await lendingMarketControllerProxy
@@ -650,7 +657,7 @@ describe('LendingMarketController - Terminations', () => {
           maturities[0],
           Side.LEND,
           '100000000000000000',
-          '7999',
+          '9499',
         );
 
       await expect(
@@ -687,7 +694,7 @@ describe('LendingMarketController - Terminations', () => {
           maturities[0],
           Side.BORROW,
           '100000000000000000',
-          '8000',
+          '9500',
         );
 
       await lendingMarketControllerProxy
@@ -697,7 +704,7 @@ describe('LendingMarketController - Terminations', () => {
           maturities[0],
           Side.LEND,
           '100000000000000000',
-          '7999',
+          '9499',
         );
 
       await expect(
@@ -770,7 +777,7 @@ describe('LendingMarketController - Terminations', () => {
           maturities[0],
           Side.LEND,
           '100000000000000000',
-          '8000',
+          '9500',
         );
 
       await lendingMarketControllerProxy
@@ -780,7 +787,7 @@ describe('LendingMarketController - Terminations', () => {
           maturities[0],
           Side.BORROW,
           '100000000000000000',
-          '8000',
+          '9500',
         );
 
       // Mock TokenVault to return 0 balance for all collateral currencies

@@ -29,6 +29,7 @@ library LendingMarketUserLogic {
     using RoundingUint256 for uint256;
 
     error InvalidAmount();
+    error InvalidPreOrderUnitPrice();
     error AmountIsZero();
     error FutureValueIsZero();
     error TooManyActiveOrders();
@@ -142,6 +143,7 @@ library LendingMarketUserLogic {
         uint256 _amount,
         uint256 _unitPrice
     ) external {
+        LendingMarketOperationLogic.validateOrderUnitPrice(_ccy, _maturity, _side, _unitPrice);
         if (_amount == 0) revert InvalidAmount();
 
         uint256 activeOrderCount = FundManagementLogic.cleanUpFunds(_ccy, _user);
@@ -185,17 +187,26 @@ library LendingMarketUserLogic {
 
         if (activeOrderCount > Constants.MAXIMUM_ORDER_COUNT) revert TooManyActiveOrders();
 
-        updateFundsForTaker(
-            _ccy,
-            _maturity,
-            _user,
-            _side,
-            filledAmount,
-            filledOrder.futureValue,
-            feeInFV
-        );
+        if (
+            FundManagementLogic.updateFundsForTaker(
+                _ccy,
+                _maturity,
+                _user,
+                _side,
+                filledAmount,
+                filledOrder.futureValue,
+                feeInFV
+            )
+        ) {
+            LendingMarketOperationLogic.updateOrderLogs(
+                _ccy,
+                _maturity,
+                filledAmount,
+                filledOrder.futureValue
+            );
+        }
 
-        updateFundsForMaker(
+        FundManagementLogic.updateFundsForMaker(
             _ccy,
             _maturity,
             _side == ProtocolTypes.Side.LEND ? ProtocolTypes.Side.BORROW : ProtocolTypes.Side.LEND,
@@ -220,6 +231,8 @@ library LendingMarketUserLogic {
         uint256 _amount,
         uint256 _unitPrice
     ) external {
+        if (_unitPrice == 0) revert InvalidPreOrderUnitPrice();
+        LendingMarketOperationLogic.validateOrderUnitPrice(_ccy, _maturity, _side, _unitPrice);
         if (_amount == 0) revert InvalidAmount();
 
         uint256 activeOrderCount = FundManagementLogic.cleanUpFunds(_ccy, _user);
@@ -283,17 +296,26 @@ library LendingMarketUserLogic {
                 futureValue
             );
 
-            updateFundsForTaker(
-                _ccy,
-                _maturity,
-                _user,
-                side,
-                filledOrder.amount,
-                filledOrder.futureValue,
-                feeInFV
-            );
+            if (
+                FundManagementLogic.updateFundsForTaker(
+                    _ccy,
+                    _maturity,
+                    _user,
+                    side,
+                    filledOrder.amount,
+                    filledOrder.futureValue,
+                    feeInFV
+                )
+            ) {
+                LendingMarketOperationLogic.updateOrderLogs(
+                    _ccy,
+                    _maturity,
+                    filledOrder.amount,
+                    filledOrder.futureValue
+                );
+            }
 
-            updateFundsForMaker(
+            FundManagementLogic.updateFundsForMaker(
                 _ccy,
                 _maturity,
                 side == ProtocolTypes.Side.LEND
@@ -323,74 +345,6 @@ library LendingMarketUserLogic {
         }
 
         _isCovered(_user, _ccy);
-    }
-
-    function updateFundsForTaker(
-        bytes32 _ccy,
-        uint256 _maturity,
-        address _user,
-        ProtocolTypes.Side _side,
-        uint256 _filledAmount,
-        uint256 _filledAmountInFV,
-        uint256 _feeInFV
-    ) public {
-        if (_filledAmountInFV != 0) {
-            FundManagementLogic.updateFunds(
-                _ccy,
-                _maturity,
-                _user,
-                _side,
-                _filledAmount,
-                _filledAmountInFV,
-                _feeInFV
-            );
-
-            LendingMarketOperationLogic.updateOrderLogs(
-                _ccy,
-                _maturity,
-                _filledAmount,
-                _filledAmountInFV
-            );
-
-            emit FundManagementLogic.OrderFilled(
-                _user,
-                _ccy,
-                _side,
-                _maturity,
-                _filledAmount,
-                _filledAmountInFV,
-                _feeInFV
-            );
-        }
-    }
-
-    function updateFundsForMaker(
-        bytes32 _ccy,
-        uint256 _maturity,
-        ProtocolTypes.Side _side,
-        PartiallyFilledOrder memory partiallyFilledOrder
-    ) public {
-        if (partiallyFilledOrder.futureValue != 0) {
-            FundManagementLogic.updateFunds(
-                _ccy,
-                _maturity,
-                partiallyFilledOrder.maker,
-                _side,
-                partiallyFilledOrder.amount,
-                partiallyFilledOrder.futureValue,
-                0
-            );
-
-            emit FundManagementLogic.OrderPartiallyFilled(
-                partiallyFilledOrder.orderId,
-                partiallyFilledOrder.maker,
-                _ccy,
-                _side,
-                _maturity,
-                partiallyFilledOrder.amount,
-                partiallyFilledOrder.futureValue
-            );
-        }
     }
 
     function withdrawZCToken(

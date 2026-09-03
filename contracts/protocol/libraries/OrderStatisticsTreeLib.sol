@@ -31,7 +31,7 @@ library OrderStatisticsTreeLib {
     using RoundingUint256 for uint256;
     uint256 private constant EMPTY = 0;
     uint16 private constant ORDER_CHUNK_SIZE = 100;
-    uint32 private constant MAX_ACTIVE_CHUNKS_PER_PRICE = 2000;
+    uint32 private constant MAX_ACTIVE_CHUNKS_PER_PRICE = 1000;
 
     struct Node {
         uint256 parent;

@@ -90,6 +90,18 @@ describe('Integration Test: Auto-rolls', async () => {
       .executeItayoseCall(hexETH, maturities[maturities.length - 1]);
   };
 
+  const getReferenceUnitPrice = async (maturity: BigNumber) => {
+    const { referenceUnitPrice } =
+      await lendingMarketController.getOrderUnitPriceRange(hexETH, maturity);
+    return referenceUnitPrice;
+  };
+
+  const getMaxLendUnitPrice = async (maturity: BigNumber) => {
+    const { maxLendUnitPrice } =
+      await lendingMarketController.getOrderUnitPriceRange(hexETH, maturity);
+    return maxLendUnitPrice;
+  };
+
   const resetContractInstances = async () => {
     maturities = await lendingMarketController.getMaturities(hexETH);
 
@@ -661,7 +673,10 @@ describe('Integration Test: Auto-rolls', async () => {
           .executeOrder(hexETH, maturities[0], Side.BORROW, orderAmount, 0),
       ).to.emit(fundManagementLogic, 'OrderFilled');
 
-      await createSampleETHOrders(owner, maturities[1], '9600');
+      const maxLendUnitPrice = (
+        await getMaxLendUnitPrice(maturities[1])
+      ).toString();
+      await createSampleETHOrders(owner, maturities[1], maxLendUnitPrice);
 
       // Check future value
       const { futureValue: aliceActualFV } =
@@ -743,7 +758,10 @@ describe('Integration Test: Auto-rolls', async () => {
     before(async () => {
       [alice, bob] = await getUsers(2);
       await resetContractInstances();
-      await executeAutoRoll('9600');
+      const maxLendUnitPrice = (
+        await getMaxLendUnitPrice(maturities[1])
+      ).toString();
+      await executeAutoRoll(maxLendUnitPrice);
     });
 
     it('Fill an order', async () => {
@@ -772,7 +790,10 @@ describe('Integration Test: Auto-rolls', async () => {
           .executeOrder(hexETH, maturities[0], Side.BORROW, orderAmount, 0),
       ).to.emit(fundManagementLogic, 'OrderFilled');
 
-      await createSampleETHOrders(owner, maturities[1], '9600');
+      const maxLendUnitPrice = (
+        await getMaxLendUnitPrice(maturities[1])
+      ).toString();
+      await createSampleETHOrders(owner, maturities[1], maxLendUnitPrice);
 
       // Check future value
       const { futureValue: aliceActualFV } =
@@ -856,7 +877,10 @@ describe('Integration Test: Auto-rolls', async () => {
     before(async () => {
       [alice, bob, carol, dave] = await getUsers(4);
       await resetContractInstances();
-      await executeAutoRoll('9800');
+      const maxLendUnitPrice = (
+        await getMaxLendUnitPrice(maturities[1])
+      ).toString();
+      await executeAutoRoll(maxLendUnitPrice);
       await resetContractInstances();
       await executeAutoRoll();
       await resetContractInstances();
@@ -867,6 +891,7 @@ describe('Integration Test: Auto-rolls', async () => {
         value: orderAmount.mul(10),
       });
 
+      const referenceUnitPrice = await getReferenceUnitPrice(maturities[0]);
       for (const [i, user] of [alice, bob, carol].entries()) {
         await expect(
           lendingMarketController
@@ -876,7 +901,7 @@ describe('Integration Test: Auto-rolls', async () => {
               maturities[0],
               Side.LEND,
               orderAmount,
-              9800 - i,
+              referenceUnitPrice.sub(i),
               {
                 value: orderAmount,
               },
@@ -994,7 +1019,10 @@ describe('Integration Test: Auto-rolls', async () => {
     before(async () => {
       [alice, bob, carol] = await getUsers(3);
       await resetContractInstances();
-      await executeAutoRoll('9600');
+      const maxLendUnitPrice = (
+        await getMaxLendUnitPrice(maturities[1])
+      ).toString();
+      await executeAutoRoll(maxLendUnitPrice);
     });
 
     it('Fill an order', async () => {
@@ -1029,7 +1057,10 @@ describe('Integration Test: Auto-rolls', async () => {
           ),
       ).to.emit(fundManagementLogic, 'OrderFilled');
 
-      await createSampleETHOrders(carol, maturities[1], '9600');
+      const maxLendUnitPrice = (
+        await getMaxLendUnitPrice(maturities[1])
+      ).toString();
+      await createSampleETHOrders(carol, maturities[1], maxLendUnitPrice);
 
       // Check future value
       const { futureValue: aliceActualFV } =
@@ -1053,7 +1084,10 @@ describe('Integration Test: Auto-rolls', async () => {
         );
 
       // Auto-roll
-      await executeAutoRoll('9600');
+      const maxLendUnitPrice = (
+        await getMaxLendUnitPrice(maturities[1])
+      ).toString();
+      await executeAutoRoll(maxLendUnitPrice);
 
       // Check future value
       const { futureValue: aliceActualFV } =
@@ -1094,6 +1128,7 @@ describe('Integration Test: Auto-rolls', async () => {
         value: orderAmount.mul(2),
       });
 
+      const referenceUnitPrice = await getReferenceUnitPrice(maturities[0]);
       await expect(
         lendingMarketController
           .connect(bob)
@@ -1102,7 +1137,7 @@ describe('Integration Test: Auto-rolls', async () => {
             maturities[0],
             Side.LEND,
             orderAmount,
-            9800,
+            referenceUnitPrice,
             {
               value: orderAmount,
             },
@@ -1116,7 +1151,10 @@ describe('Integration Test: Auto-rolls', async () => {
     });
 
     it(`Execute auto-roll and Clean up funds`, async () => {
-      await executeAutoRoll('8000');
+      const maxLendUnitPrice = (
+        await getMaxLendUnitPrice(maturities[1])
+      ).toString();
+      await executeAutoRoll(maxLendUnitPrice);
 
       const aliceCoverageBefore = await tokenVault.getCoverage(alice.address);
       const bobCoverageBefore = await tokenVault.getCoverage(bob.address);
@@ -1139,7 +1177,10 @@ describe('Integration Test: Auto-rolls', async () => {
     before(async () => {
       [alice, bob, carol] = await getUsers(3);
       await resetContractInstances();
-      await executeAutoRoll('9600');
+      const maxLendUnitPrice = (
+        await getMaxLendUnitPrice(maturities[1])
+      ).toString();
+      await executeAutoRoll(maxLendUnitPrice);
     });
 
     it('Fill an order', async () => {
@@ -1174,7 +1215,10 @@ describe('Integration Test: Auto-rolls', async () => {
           ),
       ).to.emit(fundManagementLogic, 'OrderFilled');
 
-      await createSampleETHOrders(carol, maturities[1], '9600');
+      const maxLendUnitPrice = (
+        await getMaxLendUnitPrice(maturities[1])
+      ).toString();
+      await createSampleETHOrders(carol, maturities[1], maxLendUnitPrice);
 
       // Check future value
       const { futureValue: aliceActualFV } =
@@ -1198,7 +1242,10 @@ describe('Integration Test: Auto-rolls', async () => {
         );
 
       // Auto-roll
-      await executeAutoRoll('9600');
+      const maxLendUnitPrice = (
+        await getMaxLendUnitPrice(maturities[1])
+      ).toString();
+      await executeAutoRoll(maxLendUnitPrice);
 
       // Check future value
       const { futureValue: aliceActualFV } =
@@ -1239,6 +1286,7 @@ describe('Integration Test: Auto-rolls', async () => {
         value: orderAmount.mul(2),
       });
 
+      const referenceUnitPrice = await getReferenceUnitPrice(maturities[1]);
       await expect(
         lendingMarketController
           .connect(bob)
@@ -1247,7 +1295,7 @@ describe('Integration Test: Auto-rolls', async () => {
             maturities[1],
             Side.LEND,
             orderAmount,
-            9800,
+            referenceUnitPrice,
             {
               value: orderAmount,
             },
@@ -1261,6 +1309,7 @@ describe('Integration Test: Auto-rolls', async () => {
     });
 
     it('Fill an order', async () => {
+      const referenceUnitPrice = await getReferenceUnitPrice(maturities[2]);
       await expect(
         lendingMarketController
           .connect(bob)
@@ -1269,7 +1318,7 @@ describe('Integration Test: Auto-rolls', async () => {
             maturities[2],
             Side.LEND,
             orderAmount.div(2),
-            9900,
+            referenceUnitPrice,
             {
               value: orderAmount.div(2),
             },
@@ -1289,15 +1338,24 @@ describe('Integration Test: Auto-rolls', async () => {
     });
 
     it(`Execute auto-roll (1st time)`, async () => {
-      await executeAutoRoll('9900');
+      const maxLendUnitPrice = (
+        await getMaxLendUnitPrice(maturities[1])
+      ).toString();
+      await executeAutoRoll(maxLendUnitPrice);
     });
 
     it(`Execute auto-roll (2st time)`, async () => {
-      await executeAutoRoll('9800');
+      const maxLendUnitPrice = (
+        await getMaxLendUnitPrice(maturities[1])
+      ).toString();
+      await executeAutoRoll(maxLendUnitPrice);
     });
 
     it(`Execute auto-roll (3nd time) and Clean up funds`, async () => {
-      await executeAutoRoll('9000');
+      const maxLendUnitPrice = (
+        await getMaxLendUnitPrice(maturities[1])
+      ).toString();
+      await executeAutoRoll(maxLendUnitPrice);
 
       const aliceCoverageBefore = await tokenVault.getCoverage(alice.address);
       const bobCoverageBefore = await tokenVault.getCoverage(bob.address);
@@ -1320,7 +1378,10 @@ describe('Integration Test: Auto-rolls', async () => {
     before(async () => {
       [alice, bob, carol] = await getUsers(3);
       await resetContractInstances();
-      await executeAutoRoll('9600');
+      const maxLendUnitPrice = (
+        await getMaxLendUnitPrice(maturities[1])
+      ).toString();
+      await executeAutoRoll(maxLendUnitPrice);
     });
 
     it('Fill an order', async () => {
@@ -1328,6 +1389,7 @@ describe('Integration Test: Auto-rolls', async () => {
         value: orderAmount.mul(2),
       });
 
+      const referenceUnitPrice = await getReferenceUnitPrice(maturities[0]);
       await expect(
         lendingMarketController
           .connect(alice)
@@ -1336,7 +1398,7 @@ describe('Integration Test: Auto-rolls', async () => {
             maturities[0],
             Side.LEND,
             orderAmount,
-            '9600',
+            referenceUnitPrice,
             {
               value: orderAmount,
             },
@@ -1357,7 +1419,9 @@ describe('Integration Test: Auto-rolls', async () => {
           alice.address,
         );
 
-      expect(aliceActualFV).to.equal(calculateFutureValue(orderAmount, 9600));
+      expect(aliceActualFV).to.equal(
+        calculateFutureValue(orderAmount, referenceUnitPrice),
+      );
     });
 
     it('Advance time', async () => {
@@ -1401,7 +1465,7 @@ describe('Integration Test: Auto-rolls', async () => {
             maturities[0],
             Side.LEND,
             orderAmount,
-            9600,
+            0,
             {
               value: orderAmount,
             },
@@ -1424,7 +1488,10 @@ describe('Integration Test: Auto-rolls', async () => {
         );
 
       // Auto-roll
-      await createSampleETHOrders(carol, maturities[1], '9600');
+      const maxLendUnitPrice = (
+        await getMaxLendUnitPrice(maturities[1])
+      ).toString();
+      await createSampleETHOrders(carol, maturities[1], maxLendUnitPrice);
       await time.increaseTo(maturities[1].toString());
       await lendingMarketController.connect(owner).rotateOrderBooks(hexETH);
 

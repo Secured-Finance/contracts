@@ -60,7 +60,7 @@ describe('Integration Test: Emergency terminations', async () => {
     user: SignerWithAddress,
     maturity: BigNumber,
     unitPrice: string,
-    diffAmount = '1000',
+    diffAmount = '100',
   ) => {
     await tokenVault.connect(user).deposit(hexETH, orderAmountInETH, {
       value: orderAmountInETH,
@@ -91,7 +91,7 @@ describe('Integration Test: Emergency terminations', async () => {
     user: SignerWithAddress,
     maturity: BigNumber,
     unitPrice: string,
-    diffAmount = '1000',
+    diffAmount = '100',
   ) => {
     await wFILToken.connect(user).approve(tokenVault.address, orderAmountInETH);
     await tokenVault.connect(user).deposit(hexWFIL, orderAmountInETH);
@@ -183,7 +183,7 @@ describe('Integration Test: Emergency terminations', async () => {
               maturities[0],
               Side.BORROW,
               orderAmountInETH,
-              8000,
+              9600,
             ),
         ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
@@ -234,7 +234,7 @@ describe('Integration Test: Emergency terminations', async () => {
               maturities[0],
               Side.BORROW,
               orderAmountInFIL,
-              8000,
+              9600,
             ),
         ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
@@ -265,8 +265,8 @@ describe('Integration Test: Emergency terminations', async () => {
       });
 
       it('Execute emergency termination', async () => {
-        await createSampleETHOrders(carol, maturities[0], '8000');
-        await createSampleFILOrders(carol, maturities[0], '8000');
+        await createSampleETHOrders(carol, maturities[0], '9600');
+        await createSampleFILOrders(carol, maturities[0], '9600');
 
         await expect(
           lendingMarketController.executeEmergencyTermination(),
@@ -416,7 +416,7 @@ describe('Integration Test: Emergency terminations', async () => {
               maturities[0],
               Side.BORROW,
               orderAmountInETH,
-              8000,
+              9600,
             ),
         ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
@@ -437,8 +437,8 @@ describe('Integration Test: Emergency terminations', async () => {
       it('Execute auto-roll', async () => {
         // Move to 6 hours (21600 sec) before maturity.
         await time.increaseTo(maturities[0].sub('21600').toString());
-        await createSampleETHOrders(carol, maturities[0], '8000', '0');
-        await createSampleETHOrders(carol, maturities[1], '8000', '0');
+        await createSampleETHOrders(carol, maturities[0], '9600', '0');
+        await createSampleETHOrders(carol, maturities[1], '9600', '0');
 
         await time.increaseTo(maturities[0].toString());
         await lendingMarketController.connect(owner).rotateOrderBooks(hexETH);
@@ -510,7 +510,7 @@ describe('Integration Test: Emergency terminations', async () => {
               maturities[0],
               Side.BORROW,
               orderAmountInETH,
-              8000,
+              9600,
             ),
         ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
@@ -548,7 +548,7 @@ describe('Integration Test: Emergency terminations', async () => {
               maturities[0],
               Side.BORROW,
               orderAmountInFIL.div(10),
-              8000,
+              9600,
             ),
         ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
@@ -566,8 +566,8 @@ describe('Integration Test: Emergency terminations', async () => {
       });
 
       it('Update a price feed to change the wFIL price', async () => {
-        await createSampleETHOrders(carol, maturities[0], '8000');
-        await createSampleFILOrders(carol, maturities[0], '8000');
+        await createSampleETHOrders(carol, maturities[0], '9600');
+        await createSampleFILOrders(carol, maturities[0], '9600');
 
         const coverageBefore = await tokenVault.getCoverage(bob.address);
         expect(coverageBefore).lt('8000');
@@ -623,7 +623,7 @@ describe('Integration Test: Emergency terminations', async () => {
               maturities[0],
               Side.BORROW,
               orderAmountInETH,
-              8000,
+              9600,
             ),
         ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
@@ -661,7 +661,7 @@ describe('Integration Test: Emergency terminations', async () => {
               maturities[0],
               Side.BORROW,
               orderAmountInFIL,
-              8000,
+              9600,
             ),
         ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
@@ -693,7 +693,7 @@ describe('Integration Test: Emergency terminations', async () => {
               maturities[0],
               Side.BORROW,
               orderAmountInETH.mul(1000),
-              8000,
+              9600,
             ),
         ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
@@ -712,8 +712,8 @@ describe('Integration Test: Emergency terminations', async () => {
       });
 
       it('Update a price feed to change the wFIL price', async () => {
-        await createSampleETHOrders(carol, maturities[0], '8000');
-        await createSampleFILOrders(carol, maturities[0], '8000');
+        await createSampleETHOrders(carol, maturities[0], '9600');
+        await createSampleFILOrders(carol, maturities[0], '9600');
 
         const coverageBefore = await tokenVault.getCoverage(bob.address);
         expect(coverageBefore).lt('8000');

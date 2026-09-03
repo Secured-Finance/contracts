@@ -14,6 +14,7 @@ import {ILiquidationReceiver} from "../../interfaces/ILiquidationReceiver.sol";
 import {AddressResolverLib} from "../AddressResolverLib.sol";
 import {QuickSort} from "../QuickSort.sol";
 import {Constants} from "../Constants.sol";
+import {PartiallyFilledOrder} from "../OrderBookLib.sol";
 import {RoundingUint256} from "../math/RoundingUint256.sol";
 import {RoundingInt256} from "../math/RoundingInt256.sol";
 // types
@@ -194,7 +195,7 @@ library FundManagementLogic {
         return currentAmount;
     }
 
-    function updateFunds(
+    function _updateFunds(
         bytes32 _ccy,
         uint256 _maturity,
         address _user,
@@ -202,7 +203,7 @@ library FundManagementLogic {
         uint256 _filledAmount,
         uint256 _filledAmountInFV,
         uint256 _feeInFV
-    ) external {
+    ) private {
         address futureValueVault = Storage.slot().futureValueVaults[_ccy];
         uint8 orderBookId = Storage.slot().maturityOrderBookIds[_ccy][_maturity];
 
@@ -241,6 +242,52 @@ library FundManagementLogic {
                 Storage.slot().usedCurrencies[reserveFundAddr].add(_ccy);
             }
         }
+    }
+
+    function updateFundsForTaker(
+        bytes32 _ccy,
+        uint256 _maturity,
+        address _user,
+        ProtocolTypes.Side _side,
+        uint256 _filledAmount,
+        uint256 _filledAmountInFV,
+        uint256 _feeInFV
+    ) public returns (bool updated) {
+        if (_filledAmountInFV == 0) return false;
+
+        _updateFunds(_ccy, _maturity, _user, _side, _filledAmount, _filledAmountInFV, _feeInFV);
+
+        emit OrderFilled(_user, _ccy, _side, _maturity, _filledAmount, _filledAmountInFV, _feeInFV);
+        return true;
+    }
+
+    function updateFundsForMaker(
+        bytes32 _ccy,
+        uint256 _maturity,
+        ProtocolTypes.Side _side,
+        PartiallyFilledOrder memory _partiallyFilledOrder
+    ) public {
+        if (_partiallyFilledOrder.futureValue == 0) return;
+
+        _updateFunds(
+            _ccy,
+            _maturity,
+            _partiallyFilledOrder.maker,
+            _side,
+            _partiallyFilledOrder.amount,
+            _partiallyFilledOrder.futureValue,
+            0
+        );
+
+        emit OrderPartiallyFilled(
+            _partiallyFilledOrder.orderId,
+            _partiallyFilledOrder.maker,
+            _ccy,
+            _side,
+            _maturity,
+            _partiallyFilledOrder.amount,
+            _partiallyFilledOrder.futureValue
+        );
     }
 
     function registerCurrencyAndMaturity(
@@ -573,15 +620,25 @@ library FundManagementLogic {
         uint256 _maturity,
         uint256 _minDebtUnitPrice
     ) public view returns (uint256) {
-        if (_minDebtUnitPrice == 0) return 0;
+        return getMinDebtUnitPriceAt(_maturity, _minDebtUnitPrice, block.timestamp);
+    }
 
-        return
-            _maturity > block.timestamp
-                ? BASE_MIN_DEBT_UNIT_PRICE -
-                    ((BASE_MIN_DEBT_UNIT_PRICE - _minDebtUnitPrice) *
-                        (_maturity - block.timestamp)) /
-                    Constants.SECONDS_IN_YEAR
-                : BASE_MIN_DEBT_UNIT_PRICE;
+    function getMinDebtUnitPriceAt(
+        uint256 _maturity,
+        uint256 _minDebtUnitPrice,
+        uint256 _referenceTimestamp
+    ) public pure returns (uint256) {
+        if (_minDebtUnitPrice == 0) return 0;
+        if (_minDebtUnitPrice >= BASE_MIN_DEBT_UNIT_PRICE) {
+            return BASE_MIN_DEBT_UNIT_PRICE;
+        }
+
+        if (_maturity <= _referenceTimestamp) return BASE_MIN_DEBT_UNIT_PRICE;
+
+        uint256 reduction = ((BASE_MIN_DEBT_UNIT_PRICE - _minDebtUnitPrice) *
+            (_maturity - _referenceTimestamp)) / Constants.SECONDS_IN_YEAR;
+
+        return reduction >= BASE_MIN_DEBT_UNIT_PRICE ? 1 : BASE_MIN_DEBT_UNIT_PRICE - reduction;
     }
 
     function calculateFunds(

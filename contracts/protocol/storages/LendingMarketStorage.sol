@@ -1,13 +1,19 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.19;
 
-import {ProtocolTypes} from "../types/ProtocolTypes.sol";
 import {OrderBookLib} from "../libraries/OrderBookLib.sol";
 
 struct ItayoseLog {
     uint256 openingUnitPrice;
     uint256 lastLendUnitPrice;
     uint256 lastBorrowUnitPrice;
+}
+
+struct ItayoseProcess {
+    bool isInProgress;
+    uint256 totalOffsetAmount;
+    uint256 remainingLendOffsetAmount;
+    uint256 remainingBorrowOffsetAmount;
 }
 
 library LendingMarketStorage {
@@ -25,6 +31,7 @@ library LendingMarketStorage {
         mapping(uint8 orderBookId => OrderBookLib.OrderBook orderBook) orderBooks;
         mapping(uint256 maturity => bool isReady) isReady;
         mapping(uint256 maturity => ItayoseLog log) itayoseLogs;
+        mapping(uint256 maturity => ItayoseProcess process) itayoseProcesses;
     }
 
     function slot() internal pure returns (Storage storage r) {

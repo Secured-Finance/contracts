@@ -16,8 +16,28 @@ describe('LendingMarketOperationLogic', function () {
   });
 
   async function deployOnceFixture() {
+    const QuickSort = await ethers.getContractFactory('QuickSort');
+    const quickSort = await QuickSort.deploy();
+    await quickSort.deployed();
+
+    const FundManagementLogic = await ethers.getContractFactory(
+      'FundManagementLogic',
+      {
+        libraries: {
+          QuickSort: quickSort.address,
+        },
+      },
+    );
+    const fundManagementLogic = await FundManagementLogic.deploy();
+    await fundManagementLogic.deployed();
+
     const LendingMarketOperationLogic = await ethers.getContractFactory(
       'LendingMarketOperationLogic',
+      {
+        libraries: {
+          FundManagementLogic: fundManagementLogic.address,
+        },
+      },
     );
     const lib = await LendingMarketOperationLogic.deploy();
     await lib.deployed();

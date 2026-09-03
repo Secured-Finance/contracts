@@ -36,6 +36,36 @@ describe('LendingMarket - Itayose', () => {
     return lendingMarketCaller.getOrderBookId(targetCurrency);
   };
 
+  const executeItayose = async () => {
+    await lendingMarketCaller.initializeItayose(
+      targetCurrency,
+      currentOrderBookId,
+    );
+
+    let status = await lendingMarketCaller.getItayoseProcessStatus(
+      targetCurrency,
+      currentOrderBookId,
+    );
+    while (
+      !status.remainingLendOffsetAmount.isZero() ||
+      !status.remainingBorrowOffsetAmount.isZero()
+    ) {
+      await lendingMarketCaller.executeItayoseSettlement(
+        targetCurrency,
+        currentOrderBookId,
+      );
+      status = await lendingMarketCaller.getItayoseProcessStatus(
+        targetCurrency,
+        currentOrderBookId,
+      );
+    }
+
+    return lendingMarketCaller.finalizeItayose(
+      targetCurrency,
+      currentOrderBookId,
+    );
+  };
+
   before(async () => {
     [owner, alice, bob, ...signers] = await ethers.getSigners();
     targetCurrency = ethers.utils.formatBytes32String('Test');
@@ -186,15 +216,13 @@ describe('LendingMarket - Itayose', () => {
       // Increase 47 hours
       await time.increase(169200);
 
-      await lendingMarketCaller
-        .executeItayoseCall(targetCurrency, currentOrderBookId)
-        .then(async (tx) => {
-          if (test.shouldItayoseExecuted) {
-            await expect(tx).to.emit(orderBookLogic, 'ItayoseExecuted');
-          } else {
-            await expect(tx).not.to.emit(orderBookLogic, 'ItayoseExecuted');
-          }
-        });
+      await executeItayose().then(async (tx) => {
+        if (test.shouldItayoseExecuted) {
+          await expect(tx).to.emit(orderBookLogic, 'ItayoseExecuted');
+        } else {
+          await expect(tx).not.to.emit(orderBookLogic, 'ItayoseExecuted');
+        }
+      });
 
       const { openingUnitPrice } = await lendingMarket.getItayoseLog(maturity);
 
@@ -221,12 +249,10 @@ describe('LendingMarket - Itayose', () => {
     // Increase 47 hours
     await time.increase(169200);
 
-    await expect(
-      lendingMarketCaller.executeItayoseCall(
-        targetCurrency,
-        currentOrderBookId,
-      ),
-    ).to.not.emit(orderBookLogic, 'ItayoseExecuted');
+    await expect(executeItayose()).to.not.emit(
+      orderBookLogic,
+      'ItayoseExecuted',
+    );
   });
 
   it('Fail to create a pre-order due to an existing order with a past maturity', async () => {
@@ -254,11 +280,9 @@ describe('LendingMarket - Itayose', () => {
     // Increase 48 hours
     await time.increase(172800);
 
-    await lendingMarketCaller
-      .executeItayoseCall(targetCurrency, currentOrderBookId)
-      .then(async (tx) => {
-        await expect(tx).to.emit(orderBookLogic, 'ItayoseExecuted');
-      });
+    await executeItayose().then(async (tx) => {
+      await expect(tx).to.emit(orderBookLogic, 'ItayoseExecuted');
+    });
 
     // Create the order book 255 times for testing of the circulated `lastOrderBookId`
     // to avoid exceeding the maximum value of uint8.
@@ -366,16 +390,13 @@ describe('LendingMarket - Itayose', () => {
 
   it('Fail to execute the Itayose call due to not in the Itayose period', async () => {
     await expect(
-      lendingMarketCaller.executeItayoseCall(
-        targetCurrency,
-        currentOrderBookId,
-      ),
+      lendingMarketCaller.initializeItayose(targetCurrency, currentOrderBookId),
     ).to.be.revertedWith('NotItayosePeriod');
   });
 
   it('Fail to execute the Itayose call due to invalid caller', async () => {
     await expect(
-      lendingMarket.executeItayoseCall(currentOrderBookId),
+      lendingMarket.initializeItayose(currentOrderBookId),
     ).to.be.revertedWith('OnlyAcceptedContract("LendingMarketController")');
   });
 });

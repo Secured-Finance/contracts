@@ -161,26 +161,26 @@ describe('LendingMarketController - Itayose', () => {
     const orders = [
       {
         side: Side.BORROW,
-        unitPrice: '8500',
+        unitPrice: '9900',
         amount: '300000000000000',
         user: carol,
       },
       {
         side: Side.BORROW,
-        unitPrice: '8000',
+        unitPrice: '9600',
         amount: '100000000000000',
         user: alice,
       },
       {
         side: Side.LEND,
-        unitPrice: '8300',
+        unitPrice: '9800',
         amount: '200000000000000',
         user: bob,
       },
     ];
 
     // the matching amount of the above orders
-    const expectedOpeningPrice = '8300';
+    const expectedOpeningPrice = '9800';
     const expectedFilledAmount = BigNumber.from('100000000000000');
     const expectedPartiallyFilledAmount = BigNumber.from('100000000000000');
 
@@ -241,8 +241,8 @@ describe('LendingMarketController - Itayose', () => {
 
     expect(openingUnitPrice).to.equal(expectedOpeningPrice);
     expect(estimation.openingUnitPrice).to.equal(expectedOpeningPrice);
-    expect(estimation.lastLendUnitPrice).to.equal('8300');
-    expect(estimation.lastBorrowUnitPrice).to.equal('8000');
+    expect(estimation.lastLendUnitPrice).to.equal('9800');
+    expect(estimation.lastBorrowUnitPrice).to.equal('9600');
 
     const pendingOrderAmount =
       await lendingMarketControllerProxy.getPendingOrderAmount(
@@ -324,26 +324,26 @@ describe('LendingMarketController - Itayose', () => {
     const orders = [
       {
         side: Side.BORROW,
-        unitPrice: '8500',
+        unitPrice: '9800',
         amount: '300000000000000',
         user: carol,
       },
       {
         side: Side.LEND,
-        unitPrice: '8600',
+        unitPrice: '9900',
         amount: '200000000000000',
         user: alice,
       },
       {
         side: Side.LEND,
-        unitPrice: '8300',
+        unitPrice: '9700',
         amount: '200000000000000',
         user: bob,
       },
     ];
 
     // the matching amount of the above orders
-    const expectedOpeningPrice = '8500';
+    const expectedOpeningPrice = '9800';
     const expectedFilledAmount = BigNumber.from('200000000000000');
     const expectedPartiallyFilledAmount = BigNumber.from('200000000000000');
 
@@ -404,8 +404,8 @@ describe('LendingMarketController - Itayose', () => {
 
     expect(openingUnitPrice).to.equal(expectedOpeningPrice);
     expect(estimation.openingUnitPrice).to.equal(expectedOpeningPrice);
-    expect(estimation.lastLendUnitPrice).to.equal('8600');
-    expect(estimation.lastBorrowUnitPrice).to.equal('8500');
+    expect(estimation.lastLendUnitPrice).to.equal('9900');
+    expect(estimation.lastBorrowUnitPrice).to.equal('9800');
 
     const pendingOrderAmount =
       await lendingMarketControllerProxy.getPendingOrderAmount(
@@ -429,32 +429,32 @@ describe('LendingMarketController - Itayose', () => {
     const orders = [
       {
         side: Side.BORROW,
-        unitPrice: '8020',
+        unitPrice: '9720',
         amount: '100000000000000',
         user: carol,
       },
       {
         side: Side.BORROW,
-        unitPrice: '8000',
+        unitPrice: '9700',
         amount: '200000000000000',
         user: alice,
       },
       {
         side: Side.LEND,
-        unitPrice: '8100',
+        unitPrice: '9800',
         amount: '200000000000000',
         user: bob,
       },
       {
         side: Side.LEND,
-        unitPrice: '8010',
+        unitPrice: '9710',
         amount: '300000000000000',
         user: dave,
       },
     ];
 
     // the matching amount of the above orders
-    const expectedOpeningPrice = '8050';
+    const expectedOpeningPrice = '9750';
     const expectedFilledAmount = BigNumber.from('200000000000000');
     const expectedPartiallyFilledAmount = BigNumber.from('0');
 
@@ -506,7 +506,7 @@ describe('LendingMarketController - Itayose', () => {
           maturities[0],
           Side.LEND,
           '100000000000000',
-          '8020',
+          '9720',
         ),
     ).to.emit(fundManagementLogic, 'OrderFilled');
 
@@ -518,7 +518,7 @@ describe('LendingMarketController - Itayose', () => {
       );
 
     expect(carolFV.abs()).to.equal(
-      calculateFutureValue(BigNumber.from('100000000000000'), '8020'),
+      calculateFutureValue(BigNumber.from('100000000000000'), '9720'),
     );
   });
 
@@ -533,32 +533,32 @@ describe('LendingMarketController - Itayose', () => {
     const orders = [
       {
         side: Side.BORROW,
-        unitPrice: '8070',
+        unitPrice: '9770',
         amount: '100000000000000',
         user: carol,
       },
       {
         side: Side.BORROW,
-        unitPrice: '8000',
+        unitPrice: '9700',
         amount: '200000000000000',
         user: alice,
       },
       {
         side: Side.LEND,
-        unitPrice: '8100',
+        unitPrice: '9800',
         amount: '200000000000000',
         user: bob,
       },
       {
         side: Side.LEND,
-        unitPrice: '8060',
+        unitPrice: '9760',
         amount: '300000000000000',
         user: dave,
       },
     ];
 
     // the matching amount of the above orders
-    const expectedOpeningPrice = '8050';
+    const expectedOpeningPrice = '9750';
     const expectedFilledAmount = BigNumber.from('200000000000000');
     const expectedPartiallyFilledAmount = BigNumber.from('0');
 
@@ -610,7 +610,7 @@ describe('LendingMarketController - Itayose', () => {
           maturities[0],
           Side.BORROW,
           '300000000000000',
-          '8060',
+          '9760',
         ),
     ).to.emit(fundManagementLogic, 'OrderFilled');
 
@@ -622,7 +622,7 @@ describe('LendingMarketController - Itayose', () => {
       );
 
     expect(daveFV.abs()).to.equal(
-      calculateFutureValue(BigNumber.from('300000000000000'), '8060'),
+      calculateFutureValue(BigNumber.from('300000000000000'), '9760'),
     );
   });
 
@@ -636,7 +636,7 @@ describe('LendingMarketController - Itayose', () => {
         maturities[1],
         Side.BORROW,
         '50000000000000000',
-        '8000',
+        '9600',
       );
     await lendingMarketControllerProxy
       .connect(bob)
@@ -645,7 +645,7 @@ describe('LendingMarketController - Itayose', () => {
         maturities[1],
         Side.BORROW,
         '100000000000000000',
-        '8800',
+        '9900',
       );
 
     await time.increaseTo(maturities[0].toString());
@@ -660,26 +660,26 @@ describe('LendingMarketController - Itayose', () => {
     const orders = [
       {
         side: Side.BORROW,
-        unitPrice: '8500',
+        unitPrice: '9900',
         amount: '300000000000000',
         user: carol,
       },
       {
         side: Side.BORROW,
-        unitPrice: '8000',
+        unitPrice: '9600',
         amount: '100000000000000',
         user: alice,
       },
       {
         side: Side.LEND,
-        unitPrice: '8300',
+        unitPrice: '9800',
         amount: '200000000000000',
         user: bob,
       },
     ];
 
     // the matching amount of the above orders
-    const expectedOpeningPrice = '8300';
+    const expectedOpeningPrice = '9800';
     const expectedOffsetAmount = BigNumber.from('100000000000000');
     const expectedPartiallyFilledAmount = BigNumber.from('100000000000000');
 
@@ -759,19 +759,19 @@ describe('LendingMarketController - Itayose', () => {
     const orders = [
       {
         side: Side.BORROW,
-        unitPrice: '8000',
+        unitPrice: '9900',
         amount: '300000000000000',
         user: carol,
       },
       {
         side: Side.BORROW,
-        unitPrice: '7300',
+        unitPrice: '9600',
         amount: '100000000000000',
         user: alice,
       },
       {
         side: Side.LEND,
-        unitPrice: '7500',
+        unitPrice: '9700',
         amount: '200000000000000',
         user: bob,
       },
@@ -800,7 +800,7 @@ describe('LendingMarketController - Itayose', () => {
     const { openingUnitPrice } = await lendingMarketProxy.getItayoseLog(
       maturity,
     );
-    expect(openingUnitPrice).to.equal('7500');
+    expect(openingUnitPrice).to.equal('9700');
 
     const { futureValue: carolFVBefore } =
       await lendingMarketControllerProxy.getPosition(
@@ -819,7 +819,7 @@ describe('LendingMarketController - Itayose', () => {
           maturity,
           Side.LEND,
           '300000000000000',
-          '8500',
+          '9900',
         ),
     ).to.emit(fundManagementLogic, 'OrderFilled');
 
@@ -830,7 +830,9 @@ describe('LendingMarketController - Itayose', () => {
         carol.address,
       );
 
-    expect(carolFVAfter).to.equal('-375000000000000');
+    expect(carolFVAfter).to.equal(
+      calculateFutureValue(BigNumber.from('-300000000000000'), '9900'),
+    );
   });
 
   it('Fill orders that are not filled with Itayose call and the same as the opening unit price', async () => {
@@ -846,19 +848,19 @@ describe('LendingMarketController - Itayose', () => {
     const orders = [
       {
         side: Side.BORROW,
-        unitPrice: '8500',
+        unitPrice: '9900',
         amount: '300000000000000',
         user: carol,
       },
       {
         side: Side.BORROW,
-        unitPrice: '7800',
+        unitPrice: '9600',
         amount: '100000000000000',
         user: alice,
       },
       {
         side: Side.LEND,
-        unitPrice: '8000',
+        unitPrice: '9700',
         amount: '200000000000000',
         user: bob,
       },
@@ -887,7 +889,7 @@ describe('LendingMarketController - Itayose', () => {
     const { openingUnitPrice } = await lendingMarketProxy.getItayoseLog(
       maturity,
     );
-    expect(openingUnitPrice).to.equal('8000');
+    expect(openingUnitPrice).to.equal('9700');
 
     const { futureValue: bobFVBefore } =
       await lendingMarketControllerProxy.getPosition(
@@ -896,7 +898,9 @@ describe('LendingMarketController - Itayose', () => {
         bob.address,
       );
 
-    expect(bobFVBefore).to.equal('125000000000000');
+    expect(bobFVBefore).to.equal(
+      calculateFutureValue(BigNumber.from('100000000000000'), '9700'),
+    );
 
     await expect(
       lendingMarketControllerProxy
@@ -906,7 +910,7 @@ describe('LendingMarketController - Itayose', () => {
           maturity,
           Side.BORROW,
           '100000000000000',
-          '8000',
+          '9700',
         ),
     ).to.emit(fundManagementLogic, 'OrderFilled');
 
@@ -917,7 +921,9 @@ describe('LendingMarketController - Itayose', () => {
         bob.address,
       );
 
-    expect(bobFVAfter).to.equal('250000000000000');
+    expect(bobFVAfter).to.equal(
+      calculateFutureValue(BigNumber.from('100000000000000'), '9700').mul(2),
+    );
   });
 
   it('Filled pre-order should be returned as inactive orders with opening unit price', async () => {
@@ -931,34 +937,34 @@ describe('LendingMarketController - Itayose', () => {
     const orders = [
       {
         side: Side.BORROW,
-        unitPrice: '8070',
+        unitPrice: '9770',
         amount: '100000000000000',
         user: alice,
       },
       {
         side: Side.BORROW,
-        unitPrice: '8000',
+        unitPrice: '9700',
         amount: '200000000000000',
         user: alice,
       },
       {
         side: Side.LEND,
-        unitPrice: '8100',
+        unitPrice: '9800',
         amount: '200000000000000',
         user: bob,
       },
       {
         side: Side.LEND,
-        unitPrice: '8060',
+        unitPrice: '9760',
         amount: '300000000000000',
         user: bob,
       },
     ];
 
     // the matching amount of the above orders
-    const expectedOpeningPrice = '8050';
-    const expectedLastLendUnitPrice = '8100';
-    const expectedLastBorrowUnitPrice = '8000';
+    const expectedOpeningPrice = '9750';
+    const expectedLastLendUnitPrice = '9800';
+    const expectedLastBorrowUnitPrice = '9700';
 
     for (const order of orders) {
       await expect(
@@ -1000,7 +1006,7 @@ describe('LendingMarketController - Itayose', () => {
 
     expect(aliceOrders.activeOrders[0].ccy).to.equal(targetCurrency);
     expect(aliceOrders.activeOrders[0].side).to.equal(Side.BORROW);
-    expect(aliceOrders.activeOrders[0].unitPrice).to.equal('8070');
+    expect(aliceOrders.activeOrders[0].unitPrice).to.equal('9770');
     expect(aliceOrders.activeOrders[0].maturity).to.equal(maturities[0]);
     expect(aliceOrders.activeOrders[0].amount).to.equal('100000000000000');
     expect(aliceOrders.activeOrders[0].isPreOrder).to.equal(true);
@@ -1022,7 +1028,7 @@ describe('LendingMarketController - Itayose', () => {
 
     expect(bobOrders.activeOrders[0].ccy).to.equal(targetCurrency);
     expect(bobOrders.activeOrders[0].side).to.equal(Side.LEND);
-    expect(bobOrders.activeOrders[0].unitPrice).to.equal('8060');
+    expect(bobOrders.activeOrders[0].unitPrice).to.equal('9760');
     expect(bobOrders.activeOrders[0].maturity).to.equal(maturities[0]);
     expect(bobOrders.activeOrders[0].amount).to.equal('300000000000000');
     expect(bobOrders.activeOrders[0].isPreOrder).to.equal(true);
@@ -1056,7 +1062,7 @@ describe('LendingMarketController - Itayose', () => {
 
     expect(bobOrders.inactiveOrders[1].ccy).to.equal(targetCurrency);
     expect(bobOrders.inactiveOrders[1].side).to.equal(Side.LEND);
-    expect(bobOrders.inactiveOrders[1].unitPrice).to.equal('8060');
+    expect(bobOrders.inactiveOrders[1].unitPrice).to.equal('9760');
     expect(bobOrders.inactiveOrders[1].maturity).to.equal(maturities[0]);
     expect(bobOrders.inactiveOrders[1].amount).to.equal('300000000000000');
     expect(bobOrders.inactiveOrders[1].isPreOrder).to.equal(true);
@@ -1083,7 +1089,7 @@ describe('LendingMarketController - Itayose', () => {
           maturities[0],
           Side.LEND,
           '10000000000000000',
-          '8800',
+          '9600',
           deadline,
           v,
           r,
@@ -1108,7 +1114,7 @@ describe('LendingMarketController - Itayose', () => {
           maturities[0],
           Side.LEND,
           '100000000000000000',
-          '8000',
+          '9600',
         );
     }
 
@@ -1120,7 +1126,7 @@ describe('LendingMarketController - Itayose', () => {
           maturities[0],
           Side.LEND,
           '100000000000000000',
-          '8000',
+          '9600',
         ),
     ).to.be.revertedWith('TooManyActiveOrders');
   });

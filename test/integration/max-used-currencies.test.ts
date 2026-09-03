@@ -65,7 +65,7 @@ describe('Integration Test: Used Currencies Restriction', () => {
   };
 
   const borrowAmount = BigNumber.from('10000000000000000'); // 0.01 ETH equivalent
-  const borrowUnitPrice = '9000';
+  const borrowUnitPrice = '9600';
 
   // Helper function to convert ETH amount to other currencies
   const convertToTokenAmount = (

@@ -4,6 +4,7 @@ pragma solidity 0.8.19;
 import "../types/ProtocolTypes.sol";
 import {ItayoseLog} from "../storages/LendingMarketStorage.sol";
 import {OrderBookLib, FilledOrder, PartiallyFilledOrder} from "../libraries/OrderBookLib.sol";
+import {ItayoseFinalizeResult, ItayoseProcessStatus, ItayoseSettlementResult} from "../libraries/logics/OrderBookLogic.sol";
 
 interface ILendingMarket {
     error NoOrderExists();
@@ -12,6 +13,15 @@ interface ILendingMarket {
     error AlreadyItayosePeriod();
     error NotItayosePeriod();
     error NotPreOrderPeriod();
+
+    event ItayoseExecuted(
+        bytes32 ccy,
+        uint256 maturity,
+        uint256 openingUnitPrice,
+        uint256 lastLendUnitPrice,
+        uint256 lastBorrowUnitPrice,
+        uint256 offsetAmount
+    );
 
     function minimumReliableAmountInBaseCurrency() external view returns (uint256);
 
@@ -118,7 +128,15 @@ interface ILendingMarket {
 
     function isPreOrderPeriod(uint8 orderBookId) external view returns (bool);
 
+    /**
+     * @notice Gets the immutable price-discovery result once an Itayose process is initialized.
+     * @dev A non-zero log does not mean the process is finalized. Use isReady for completion.
+     */
     function getItayoseLog(uint256 maturity) external view returns (ItayoseLog memory);
+
+    function getItayoseProcessStatus(
+        uint8 orderBookId
+    ) external view returns (ItayoseProcessStatus memory);
 
     function getOrder(
         uint8 orderBookId,
@@ -252,17 +270,13 @@ interface ILendingMarket {
             uint256 feeInFV
         );
 
-    function executeItayoseCall(
+    function initializeItayose(uint8 orderBookId) external returns (ItayoseProcessStatus memory);
+
+    function executeItayoseSettlement(
         uint8 orderBookId
-    )
-        external
-        returns (
-            uint256 openingUnitPrice,
-            uint256 totalOffsetAmount,
-            uint256 openingDate,
-            PartiallyFilledOrder memory partiallyFilledLendingOrder,
-            PartiallyFilledOrder memory partiallyFilledBorrowingOrder
-        );
+    ) external returns (ItayoseSettlementResult memory);
+
+    function finalizeItayose(uint8 orderBookId) external returns (ItayoseFinalizeResult memory);
 
     function cleanUpOrders(
         uint8 orderBookId,

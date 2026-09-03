@@ -137,7 +137,7 @@ describe('Integration Test: Itayose', async () => {
             maturities[0],
             Side.LEND,
             orderAmount,
-            8000,
+            9000,
             {
               value: orderAmount,
             },
@@ -172,7 +172,7 @@ describe('Integration Test: Itayose', async () => {
           maturities[1],
           Side.LEND,
           orderAmount.mul(2),
-          8300,
+          9000,
           {
             value: orderAmount.mul(2),
           },
@@ -184,7 +184,7 @@ describe('Integration Test: Itayose', async () => {
           maturities[1],
           Side.BORROW,
           orderAmount.mul(2),
-          8300,
+          9000,
         );
 
       // Auto-roll
@@ -256,7 +256,7 @@ describe('Integration Test: Itayose', async () => {
             maturities[0],
             Side.LEND,
             orderAmount,
-            8000,
+            9000,
             {
               value: orderAmount,
             },

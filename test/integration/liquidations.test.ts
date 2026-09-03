@@ -57,6 +57,7 @@ describe('Integration Test: Liquidations', async () => {
 
   let liquidatorFeeRate: BigNumber;
   let liquidationProtocolFeeRate: BigNumber;
+  let snapshotId: string;
 
   const initialETHBalance = BigNumber.from('1000000000000000000');
   const initialFILBalance = BigNumber.from('1000000000000000000000');
@@ -135,13 +136,32 @@ describe('Integration Test: Liquidations', async () => {
         .approve(tokenVault.address, ethers.constants.MaxUint256);
     });
 
-  const rotateAllMarkets = async (unitPrice = '9600') => {
+  const rotateAllMarkets = async () => {
     const { timestamp } = await ethers.provider.getBlock('latest');
 
     if (usdcMaturities[0].gt(timestamp)) {
       await time.increaseTo(usdcMaturities[0].sub('21600').toString());
     }
 
+    const getDefaultUnitPrice = async (
+      currency: string,
+      maturity: BigNumber,
+    ) => {
+      const defaultUnitPrice = BigNumber.from('9600');
+      const { maxLendUnitPrice, minBorrowUnitPrice } =
+        await lendingMarketController.getOrderUnitPriceRange(
+          currency,
+          maturity,
+        );
+      return defaultUnitPrice.lt(minBorrowUnitPrice)
+        ? minBorrowUnitPrice
+        : defaultUnitPrice.gt(maxLendUnitPrice)
+        ? maxLendUnitPrice
+        : defaultUnitPrice;
+    };
+    const filUnitPrice = await getDefaultUnitPrice(hexWFIL, filMaturities[1]);
+    const usdcUnitPrice = await getDefaultUnitPrice(hexUSDC, usdcMaturities[1]);
+
     await lendingMarketController
       .connect(owner)
       .executeOrder(
@@ -149,7 +169,7 @@ describe('Integration Test: Liquidations', async () => {
         filMaturities[1],
         Side.BORROW,
         '100000000',
-        unitPrice,
+        filUnitPrice,
       );
 
     await lendingMarketController
@@ -159,7 +179,7 @@ describe('Integration Test: Liquidations', async () => {
         filMaturities[1],
         Side.LEND,
         '100000000',
-        unitPrice,
+        filUnitPrice,
       );
 
     await lendingMarketController
@@ -169,7 +189,7 @@ describe('Integration Test: Liquidations', async () => {
         usdcMaturities[1],
         Side.BORROW,
         '100000',
-        unitPrice,
+        usdcUnitPrice,
       );
 
     await lendingMarketController
@@ -179,7 +199,7 @@ describe('Integration Test: Liquidations', async () => {
         usdcMaturities[1],
         Side.LEND,
         '100000',
-        unitPrice,
+        usdcUnitPrice,
       );
 
     if (usdcMaturities[0].gt(timestamp)) {
@@ -228,12 +248,12 @@ describe('Integration Test: Liquidations', async () => {
     );
   };
 
-  const resetContractInstances = async (
-    user: SignerWithAddress = owner,
-    unitPrice?: string,
-  ) => {
+  const resetContractInstances = async (user: SignerWithAddress = owner) => {
+    await ethers.provider.send('evm_revert', [snapshotId]);
+    snapshotId = await ethers.provider.send('evm_snapshot', []);
+
     await resetMaturities();
-    await rotateAllMarkets(unitPrice);
+    await rotateAllMarkets();
 
     [ethMaturities, filMaturities, usdcMaturities] = await Promise.all(
       [hexETH, hexWFIL, hexUSDC].map((hexCcy) =>
@@ -326,6 +346,9 @@ describe('Integration Test: Liquidations', async () => {
 
     ({ liquidatorFeeRate, liquidationProtocolFeeRate } =
       await tokenVault.getLiquidationConfiguration());
+
+    [alice, bob, carol] = await getUsers(3);
+    snapshotId = await ethers.provider.send('evm_snapshot', []);
   });
 
   describe('Liquidations on FIL(non-collateral currency) market by ETH', async () => {
@@ -336,7 +359,6 @@ describe('Integration Test: Liquidations', async () => {
       let aliceInitialBalance: BigNumber;
 
       before(async () => {
-        [alice, bob, carol] = await getUsers(3);
         await resetContractInstances(carol);
       });
 
@@ -562,7 +584,6 @@ describe('Integration Test: Liquidations', async () => {
       let aliceInitialBalance: BigNumber;
 
       before(async () => {
-        [alice, bob] = await getUsers(2);
         await resetContractInstances();
       });
 
@@ -712,7 +733,6 @@ describe('Integration Test: Liquidations', async () => {
       let aliceInitialBalance: BigNumber;
 
       before(async () => {
-        [alice, bob] = await getUsers(2);
         await resetContractInstances();
       });
 
@@ -840,7 +860,6 @@ describe('Integration Test: Liquidations', async () => {
       let aliceInitialBalance: BigNumber;
 
       before(async () => {
-        [alice, bob, carol] = await getUsers(3);
         await resetContractInstances(carol);
       });
 
@@ -991,7 +1010,6 @@ describe('Integration Test: Liquidations', async () => {
       let aliceInitialBalance: BigNumber;
 
       before(async () => {
-        [alice, bob, carol] = await getUsers(3);
         await resetContractInstances(carol);
       });
 
@@ -1134,7 +1152,6 @@ describe('Integration Test: Liquidations', async () => {
       let bobInitialBalance: BigNumber;
 
       before(async () => {
-        [alice, bob, carol] = await getUsers(3);
         await resetContractInstances(carol);
 
         lendingInfo = new LendingInfo(bob.address);
@@ -1319,7 +1336,6 @@ describe('Integration Test: Liquidations', async () => {
       let bobInitialBalance: BigNumber;
 
       before(async () => {
-        [alice, bob, carol] = await getUsers(3);
         await resetContractInstances(carol);
 
         lendingInfo = new LendingInfo(bob.address);
@@ -1550,7 +1566,6 @@ describe('Integration Test: Liquidations', async () => {
       let bobInitialBalance: BigNumber;
 
       before(async () => {
-        [alice, bob, carol] = await getUsers(3);
         await resetContractInstances(carol);
 
         lendingInfo = new LendingInfo(bob.address);
@@ -1741,7 +1756,6 @@ describe('Integration Test: Liquidations', async () => {
       let lendingInfo: LendingInfo;
 
       before(async () => {
-        [alice, bob, carol] = await getUsers(3);
         await resetContractInstances(carol);
 
         lendingInfo = new LendingInfo(alice.address);
@@ -1868,8 +1882,6 @@ describe('Integration Test: Liquidations', async () => {
   });
 
   describe('Liquidations on multiple market', async () => {
-    let alice: SignerWithAddress;
-    let bob: SignerWithAddress;
     let lendingInfo: LendingInfo;
 
     const filledOrderAmountInFIL = BigNumber.from('200000000000000000000');
@@ -1877,8 +1889,7 @@ describe('Integration Test: Liquidations', async () => {
     const depositAmountInETH = BigNumber.from('1750000000000000000');
 
     beforeEach(async () => {
-      [alice, bob] = await getUsers(2);
-      await resetContractInstances(owner, '9500');
+      await resetContractInstances(owner);
       lendingInfo = new LendingInfo(alice.address);
 
       const aliceFILBalanceBefore = await wFILToken.balanceOf(alice.address);
@@ -2011,7 +2022,7 @@ describe('Integration Test: Liquidations', async () => {
       });
 
       await wFilToETHPriceFeed.updateAnswer(
-        wFilToETHRate.mul('110').div('100'),
+        wFilToETHRate.mul('120').div('100'),
       );
 
       const lendingInfoBefore = await lendingInfo.load('Before2', {
@@ -2054,7 +2065,7 @@ describe('Integration Test: Liquidations', async () => {
       });
 
       await wFilToETHPriceFeed.updateAnswer(
-        wFilToETHRate.mul('110').div('100'),
+        wFilToETHRate.mul('120').div('100'),
       );
 
       const lendingInfoBefore = await lendingInfo.load('Before2', {
@@ -2121,7 +2132,6 @@ describe('Integration Test: Liquidations', async () => {
       let lendingInfo: LendingInfo;
 
       before(async () => {
-        [alice, bob, carol] = await getUsers(3);
         await resetContractInstances(carol);
 
         lendingInfo = new LendingInfo(alice.address);
@@ -2219,7 +2229,6 @@ describe('Integration Test: Liquidations', async () => {
       let aliceInitialBalance: BigNumber;
 
       before(async () => {
-        [alice, bob, carol] = await getUsers(3);
         await resetContractInstances(carol);
 
         lendingInfo = new LendingInfo(alice.address);
@@ -2365,7 +2374,6 @@ describe('Integration Test: Liquidations', async () => {
       let aliceInitialBalance: BigNumber;
 
       before(async () => {
-        [alice, bob, carol] = await getUsers(3);
         await resetContractInstances(carol);
 
         lendingInfo = new LendingInfo(alice.address);
@@ -2511,7 +2519,6 @@ describe('Integration Test: Liquidations', async () => {
       let aliceInitialBalance: BigNumber;
 
       before(async () => {
-        [alice, bob] = await getUsers(2);
         await resetContractInstances();
       });
 
@@ -2642,7 +2649,6 @@ describe('Integration Test: Liquidations', async () => {
       let aliceInitialBalance: BigNumber;
 
       before(async () => {
-        [alice, bob, carol] = await getUsers(3);
         await resetContractInstances(carol);
 
         lendingInfo = new LendingInfo(alice.address);
@@ -2791,7 +2797,6 @@ describe('Integration Test: Liquidations', async () => {
       const orderUnitPrice = '9600';
 
       before(async () => {
-        [alice, bob, carol] = await getUsers(3);
         await resetContractInstances();
       });
 

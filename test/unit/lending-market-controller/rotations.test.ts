@@ -144,7 +144,7 @@ describe('LendingMarketController - Rotations', () => {
           maturities[0],
           Side.LEND,
           '100000000000000000',
-          '7800',
+          '9400',
         );
       await lendingMarketControllerProxy
         .connect(bob)
@@ -153,7 +153,7 @@ describe('LendingMarketController - Rotations', () => {
           maturities[0],
           Side.BORROW,
           '100000000000000000',
-          '8200',
+          '9540',
         );
 
       await lendingMarketControllerProxy
@@ -163,7 +163,7 @@ describe('LendingMarketController - Rotations', () => {
           maturities[1],
           Side.LEND,
           '100000000000000000',
-          '9000',
+          '9800',
         );
       await lendingMarketControllerProxy
         .connect(bob)
@@ -172,7 +172,7 @@ describe('LendingMarketController - Rotations', () => {
           maturities[1],
           Side.BORROW,
           '100000000000000000',
-          '9000',
+          '9800',
         );
 
       await time.increaseTo(maturities[0].toString());
@@ -253,8 +253,9 @@ describe('LendingMarketController - Rotations', () => {
 
     it('Rotate markets multiple times under condition where users have lending positions that are offset after the auto-rolls every time', async () => {
       const accounts = [alice, bob];
+      const unitPrices = ['9500', '9000', '8500', '8200'];
+      let orderAmount = BigNumber.from('100000000000000000');
 
-      let unitPrice = BigNumber.from('8000');
       for (let i = 0; i < 4; i++) {
         await expect(
           lendingMarketControllerProxy
@@ -263,8 +264,8 @@ describe('LendingMarketController - Rotations', () => {
               targetCurrency,
               maturities[i],
               i % 2 === 0 ? Side.LEND : Side.BORROW,
-              '100000000000000000',
-              unitPrice,
+              orderAmount,
+              unitPrices[i],
             ),
         ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
@@ -275,12 +276,13 @@ describe('LendingMarketController - Rotations', () => {
               targetCurrency,
               maturities[i],
               i % 2 === 0 ? Side.BORROW : Side.LEND,
-              '100000000000000000',
-              unitPrice,
+              orderAmount,
+              unitPrices[i],
             ),
         ).to.emit(fundManagementLogic, 'OrderFilled');
 
-        unitPrice = unitPrice.mul('100').div('130');
+        // Increase the next opposite position enough to offset the previous one.
+        orderAmount = orderAmount.mul(130).div(100);
       }
 
       const gvLog = {};
@@ -295,7 +297,7 @@ describe('LendingMarketController - Rotations', () => {
             maturities[1],
             Side.LEND,
             '100000000000000000',
-            '8000',
+            '9000',
           );
         await lendingMarketControllerProxy
           .connect(carol)
@@ -304,7 +306,7 @@ describe('LendingMarketController - Rotations', () => {
             maturities[1],
             Side.BORROW,
             '100000000000000000',
-            '8000',
+            '9000',
           );
 
         await time.increaseTo(maturities[0].toString());
@@ -387,7 +389,7 @@ describe('LendingMarketController - Rotations', () => {
           maturities[0],
           Side.LEND,
           '100000000000000000',
-          '8000',
+          '9500',
         );
       await lendingMarketControllerProxy
         .connect(bob)
@@ -396,7 +398,7 @@ describe('LendingMarketController - Rotations', () => {
           maturities[0],
           Side.BORROW,
           '100000000000000000',
-          '8000',
+          '9500',
         );
 
       // Move to 6 hours (21600 sec) before maturity.
@@ -444,7 +446,7 @@ describe('LendingMarketController - Rotations', () => {
           maturities[0],
           Side.LEND,
           '100000000000000000',
-          '8000',
+          '9500',
         );
       await lendingMarketControllerProxy
         .connect(bob)
@@ -453,7 +455,7 @@ describe('LendingMarketController - Rotations', () => {
           maturities[0],
           Side.BORROW,
           '100000000000000000',
-          '8000',
+          '9500',
         );
 
       // Move to 6 hours (21600 sec) before maturity.
@@ -466,7 +468,7 @@ describe('LendingMarketController - Rotations', () => {
           maturities[1],
           Side.LEND,
           '100000000000000000',
-          '8000',
+          '9500',
         );
       await lendingMarketControllerProxy
         .connect(dave)
@@ -475,7 +477,7 @@ describe('LendingMarketController - Rotations', () => {
           maturities[1],
           Side.BORROW,
           '100000000000000000',
-          '8000',
+          '9500',
         );
 
       await lendingMarketControllerProxy
@@ -521,7 +523,7 @@ describe('LendingMarketController - Rotations', () => {
       );
 
       expect(autoRollLogAfter.prev).to.equal(maturities[0]);
-      expect(autoRollLogAfter.unitPrice).to.equal('8571');
+      expect(autoRollLogAfter.unitPrice).to.equal('9661');
 
       const [aliceFVAfter, bobFVAfter] = await Promise.all(
         [alice, bob].map(async ({ address }) =>
@@ -539,7 +541,7 @@ describe('LendingMarketController - Rotations', () => {
           calculateAutoRolledLendingCompoundFactor(
             autoRollLogBefore.lendingCompoundFactor,
             maturities[1].sub(maturities[0]),
-            8571,
+            9661,
           ),
           gvDecimals,
         ),
@@ -552,7 +554,7 @@ describe('LendingMarketController - Rotations', () => {
           calculateAutoRolledBorrowingCompoundFactor(
             autoRollLogBefore.borrowingCompoundFactor,
             maturities[1].sub(maturities[0]),
-            8571,
+            9661,
           ),
           gvDecimals,
         ),
@@ -581,7 +583,7 @@ describe('LendingMarketController - Rotations', () => {
       };
 
       const estimatedUnitPrice = await calculateUnitPrice(
-        8000,
+        9500,
         maturities[1],
         maturities[0],
       );
@@ -593,7 +595,7 @@ describe('LendingMarketController - Rotations', () => {
           maturities[1],
           Side.LEND,
           '100000000000000000',
-          '8000',
+          '9500',
         );
       await lendingMarketControllerProxy
         .connect(bob)
@@ -602,7 +604,7 @@ describe('LendingMarketController - Rotations', () => {
           maturities[1],
           Side.BORROW,
           '100000000000000000',
-          '8000',
+          '9500',
         );
 
       await time.increaseTo(maturities[0].toString());
@@ -631,7 +633,7 @@ describe('LendingMarketController - Rotations', () => {
           maturities[1],
           Side.LEND,
           '100000000000000000',
-          '8500',
+          '9600',
         );
       await lendingMarketControllerProxy
         .connect(bob)
@@ -640,7 +642,7 @@ describe('LendingMarketController - Rotations', () => {
           maturities[1],
           Side.BORROW,
           '100000000000000000',
-          '8500',
+          '9600',
         );
 
       await lendingMarketControllerProxy
@@ -650,7 +652,7 @@ describe('LendingMarketController - Rotations', () => {
           maturities[2],
           Side.LEND,
           '100000000000000000',
-          '8100',
+          '9520',
         );
       await lendingMarketControllerProxy
         .connect(bob)
@@ -659,7 +661,7 @@ describe('LendingMarketController - Rotations', () => {
           maturities[2],
           Side.BORROW,
           '100000000000000000',
-          '8100',
+          '9520',
         );
 
       await time.increaseTo(maturities[0].toString());
@@ -678,7 +680,7 @@ describe('LendingMarketController - Rotations', () => {
       );
 
       expect(autoRollLog.prev).to.equal(maturities[1]);
-      expect(autoRollLog.unitPrice).to.equal('8500');
+      expect(autoRollLog.unitPrice).to.equal('9600');
     });
 
     it('Rotate markets using the past auto-roll price as no orders are filled', async () => {
@@ -692,7 +694,7 @@ describe('LendingMarketController - Rotations', () => {
           maturities[1],
           Side.LEND,
           '100000000000000000',
-          '8500',
+          '9600',
         );
       await lendingMarketControllerProxy
         .connect(bob)
@@ -701,7 +703,7 @@ describe('LendingMarketController - Rotations', () => {
           maturities[1],
           Side.BORROW,
           '100000000000000000',
-          '8500',
+          '9600',
         );
 
       await time.increaseTo(maturities[0].toString());
@@ -720,7 +722,7 @@ describe('LendingMarketController - Rotations', () => {
       );
 
       expect(autoRollLog.prev).to.equal(maturities[1]);
-      expect(autoRollLog.unitPrice).to.equal('8500');
+      expect(autoRollLog.unitPrice).to.equal('9600');
     });
 
     it('Rotate markets including one market that has orders adjusted by with the residual amount.', async () => {
@@ -731,7 +733,7 @@ describe('LendingMarketController - Rotations', () => {
           maturities[0],
           Side.LEND,
           '1111111111',
-          '8000',
+          '9500',
         );
       await lendingMarketControllerProxy
         .connect(alice)
@@ -740,7 +742,7 @@ describe('LendingMarketController - Rotations', () => {
           maturities[0],
           Side.LEND,
           '1111111111',
-          '8000',
+          '9500',
         );
       await lendingMarketControllerProxy
         .connect(alice)
@@ -749,7 +751,7 @@ describe('LendingMarketController - Rotations', () => {
           maturities[0],
           Side.LEND,
           '1111111111',
-          '8000',
+          '9500',
         );
       await lendingMarketControllerProxy
         .connect(bob)
@@ -834,7 +836,7 @@ describe('LendingMarketController - Rotations', () => {
           maturities[0],
           Side.LEND,
           '1111111111',
-          '8000',
+          '9500',
         );
       await lendingMarketControllerProxy
         .connect(alice)
@@ -843,7 +845,7 @@ describe('LendingMarketController - Rotations', () => {
           maturities[0],
           Side.LEND,
           '1111111111',
-          '8000',
+          '9500',
         );
       await lendingMarketControllerProxy
         .connect(alice)
@@ -852,7 +854,7 @@ describe('LendingMarketController - Rotations', () => {
           maturities[0],
           Side.LEND,
           '1111111111',
-          '8000',
+          '9500',
         );
       await lendingMarketControllerProxy
         .connect(bob)
@@ -861,7 +863,7 @@ describe('LendingMarketController - Rotations', () => {
           maturities[0],
           Side.BORROW,
           '3333333333',
-          '8000',
+          '9500',
         );
 
       await time.increaseTo(openingDate);
@@ -928,7 +930,7 @@ describe('LendingMarketController - Rotations', () => {
           maturities[0],
           Side.LEND,
           '1111111111',
-          '8000',
+          '9500',
         );
       await lendingMarketControllerProxy
         .connect(alice)
@@ -937,7 +939,7 @@ describe('LendingMarketController - Rotations', () => {
           maturities[0],
           Side.LEND,
           '1111111111',
-          '8000',
+          '9500',
         );
       await lendingMarketControllerProxy
         .connect(alice)
@@ -946,7 +948,7 @@ describe('LendingMarketController - Rotations', () => {
           maturities[0],
           Side.LEND,
           '2000000000',
-          '8000',
+          '9500',
         );
       await lendingMarketControllerProxy
         .connect(bob)
@@ -955,7 +957,7 @@ describe('LendingMarketController - Rotations', () => {
           maturities[0],
           Side.BORROW,
           '3333333333',
-          '8000',
+          '9500',
         );
 
       await time.increaseTo(openingDate);

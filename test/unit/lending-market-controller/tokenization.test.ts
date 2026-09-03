@@ -104,7 +104,7 @@ describe('LendingMarketController - Tokenization', () => {
       INITIAL_COMPOUND_FACTOR,
       ORDER_FEE_RATE,
       CIRCUIT_BREAKER_LIMIT_RANGE,
-      0,
+      MIN_DEBT_UNIT_PRICE,
     );
     for (let i = 0; i < marketCount; i++) {
       await lendingMarketControllerProxy.createOrderBook(
@@ -278,13 +278,13 @@ describe('LendingMarketController - Tokenization', () => {
 
       await lendingMarketControllerProxy
         .connect(alice)
-        .executeOrder(targetCurrency, maturities[0], Side.LEND, value, '8000');
+        .executeOrder(targetCurrency, maturities[0], Side.LEND, value, '9500');
 
       await lendingMarketControllerProxy
         .connect(bob)
         .executeOrder(targetCurrency, maturities[0], Side.BORROW, value, '0');
 
-      const estimatedAmount = calculateFutureValue(value, 8000);
+      const estimatedAmount = calculateFutureValue(value, 9500);
       const withdrawableAmount =
         await lendingMarketControllerProxy.getWithdrawableZCTokenAmount(
           targetCurrency,
@@ -337,7 +337,7 @@ describe('LendingMarketController - Tokenization', () => {
           maturities[0],
           Side.LEND,
           lendAmount,
-          '8000',
+          '9500',
         );
 
       await lendingMarketControllerProxy
@@ -357,7 +357,7 @@ describe('LendingMarketController - Tokenization', () => {
           maturities[1],
           Side.BORROW,
           borrowAmount,
-          '8000',
+          '9500',
         );
 
       await lendingMarketControllerProxy
@@ -383,7 +383,7 @@ describe('LendingMarketController - Tokenization', () => {
       );
       const estimatedAmount = calculateFutureValue(
         availableAmount.mul(PCT_DIGIT).div(HAIRCUT),
-        8000,
+        9500,
       );
 
       expect(withdrawableAmount).to.equal(estimatedAmount);
@@ -426,7 +426,7 @@ describe('LendingMarketController - Tokenization', () => {
           maturities[0],
           Side.LEND,
           lendAmount,
-          '8000',
+          '9500',
         );
 
       await lendingMarketControllerProxy
@@ -446,7 +446,7 @@ describe('LendingMarketController - Tokenization', () => {
           maturities[1],
           Side.BORROW,
           borrowAmount,
-          '8000',
+          '9500',
         );
 
       await lendingMarketControllerProxy
@@ -481,7 +481,7 @@ describe('LendingMarketController - Tokenization', () => {
         availableAmount
           .add(unallocatedCollateralAmount)
           .sub(discountedUnallocatedCollateralAmount),
-        8000,
+        9500,
       );
 
       expect(withdrawableAmount).to.equal(estimatedAmount);
@@ -526,7 +526,7 @@ describe('LendingMarketController - Tokenization', () => {
           maturities[0],
           Side.LEND,
           value.mul(2),
-          '8000',
+          '9500',
         );
 
       await lendingMarketControllerProxy
@@ -546,7 +546,7 @@ describe('LendingMarketController - Tokenization', () => {
           maturities[1],
           Side.BORROW,
           value.mul(PCT_DIGIT).div(HAIRCUT).div(2),
-          '8000',
+          '9500',
         );
 
       await lendingMarketControllerProxy
@@ -596,7 +596,7 @@ describe('LendingMarketController - Tokenization', () => {
         unallocatedCollateralAmount
           .add(availableAmount)
           .sub(unallocatedCollateralAmount.mul(HAIRCUT).div(PCT_DIGIT)),
-        8000,
+        9500,
       );
 
       expect(withdrawableAmount).to.equal(estimatedAmount);
@@ -637,7 +637,7 @@ describe('LendingMarketController - Tokenization', () => {
           maturities[0],
           Side.LEND,
           value.mul(2),
-          '8000',
+          '9500',
         );
 
       await lendingMarketControllerProxy
@@ -657,7 +657,7 @@ describe('LendingMarketController - Tokenization', () => {
           maturities[1],
           Side.BORROW,
           value.mul(PCT_DIGIT).div(HAIRCUT).div(2),
-          '8000',
+          '9500',
         );
 
       await lendingMarketControllerProxy
@@ -721,7 +721,7 @@ describe('LendingMarketController - Tokenization', () => {
 
       await lendingMarketControllerProxy
         .connect(alice)
-        .executeOrder(targetCurrency, maturities[0], Side.LEND, value, '8000');
+        .executeOrder(targetCurrency, maturities[0], Side.LEND, value, '9500');
 
       await lendingMarketControllerProxy
         .connect(bob)
@@ -746,7 +746,7 @@ describe('LendingMarketController - Tokenization', () => {
         maturities[0],
       );
 
-      const estimatedAmount = calculateFutureValue(value, 8000)
+      const estimatedAmount = calculateFutureValue(value, 9500)
         .mul(BigNumber.from(10).pow(38))
         .div(autoRollLog.lendingCompoundFactor);
 
@@ -802,7 +802,7 @@ describe('LendingMarketController - Tokenization', () => {
           maturities[0],
           Side.LEND,
           lendAmount,
-          '8000',
+          '9500',
         );
 
       await lendingMarketControllerProxy
@@ -822,7 +822,7 @@ describe('LendingMarketController - Tokenization', () => {
           maturities[2],
           Side.BORROW,
           borrowAmount,
-          '8000',
+          '9500',
         );
 
       await lendingMarketControllerProxy
@@ -844,36 +844,32 @@ describe('LendingMarketController - Tokenization', () => {
       const compoundFactor =
         await genesisValueVaultProxy.getLendingCompoundFactor(targetCurrency);
 
-      const { presentValue: aliceLendPV } =
-        await lendingMarketControllerProxy.getPosition(
+      const { unallocatedCollateralAmount } =
+        await lendingMarketControllerProxy.calculateFunds(
           targetCurrency,
-          maturities[1],
           alice.address,
+          LIQUIDATION_THRESHOLD_RATE,
         );
 
-      const { presentValue: aliceBorrowPV } =
-        await lendingMarketControllerProxy.getPosition(
-          targetCurrency,
-          maturities[2],
-          alice.address,
-        );
-
-      const availableAmount = totalCollateral.sub(
-        totalUsedCollateral.mul(LIQUIDATION_THRESHOLD_RATE).div(PCT_DIGIT),
-      );
-      const unallocatedCollateralAmount = aliceLendPV.add(
-        aliceBorrowPV.mul(LIQUIDATION_THRESHOLD_RATE).div(PCT_DIGIT),
-      );
+      // Match the rounding order in _getWithdrawableAmount().
+      const availableAmount = totalCollateral
+        .mul(PCT_DIGIT)
+        .sub(totalUsedCollateral.mul(LIQUIDATION_THRESHOLD_RATE))
+        .add(PCT_DIGIT / 2)
+        .div(PCT_DIGIT);
       const discountedUnallocatedCollateralAmount = unallocatedCollateralAmount
         .mul(HAIRCUT)
+        .add(PCT_DIGIT / 2)
         .div(PCT_DIGIT);
 
-      const estimatedAmount = calculateFutureValue(
-        availableAmount
-          .add(unallocatedCollateralAmount)
-          .sub(discountedUnallocatedCollateralAmount),
+      const withdrawableAmountInPV = availableAmount
+        .add(unallocatedCollateralAmount)
+        .sub(discountedUnallocatedCollateralAmount);
+      const withdrawableAmountInFV = calculateFutureValue(
+        withdrawableAmountInPV,
         10000,
-      )
+      );
+      const estimatedAmount = withdrawableAmountInFV
         .mul(BigNumber.from(10).pow(38))
         .div(compoundFactor);
 
@@ -928,7 +924,7 @@ describe('LendingMarketController - Tokenization', () => {
           maturities[0],
           Side.LEND,
           value.mul(2),
-          '8000',
+          '9500',
         );
 
       await lendingMarketControllerProxy
@@ -948,7 +944,7 @@ describe('LendingMarketController - Tokenization', () => {
           maturities[1],
           Side.LEND,
           value.mul(1),
-          '8000',
+          '9500',
         );
 
       await lendingMarketControllerProxy
@@ -968,7 +964,7 @@ describe('LendingMarketController - Tokenization', () => {
           maturities[2],
           Side.BORROW,
           value.mul(PCT_DIGIT).div(HAIRCUT).div(2),
-          '8000',
+          '9500',
         );
 
       await lendingMarketControllerProxy
@@ -1023,7 +1019,7 @@ describe('LendingMarketController - Tokenization', () => {
 
       await lendingMarketControllerProxy
         .connect(alice)
-        .executeOrder(targetCurrency, maturities[0], Side.LEND, value, '8000');
+        .executeOrder(targetCurrency, maturities[0], Side.LEND, value, '9500');
 
       await lendingMarketControllerProxy
         .connect(bob)
@@ -1066,7 +1062,7 @@ describe('LendingMarketController - Tokenization', () => {
 
       await lendingMarketControllerProxy
         .connect(alice)
-        .executeOrder(targetCurrency, maturities[0], Side.LEND, value, '8000');
+        .executeOrder(targetCurrency, maturities[0], Side.LEND, value, '9500');
 
       await lendingMarketControllerProxy
         .connect(bob)
@@ -1114,7 +1110,7 @@ describe('LendingMarketController - Tokenization', () => {
 
       await lendingMarketControllerProxy
         .connect(alice)
-        .executeOrder(targetCurrency, maturities[0], Side.LEND, value, '8000');
+        .executeOrder(targetCurrency, maturities[0], Side.LEND, value, '9500');
 
       await lendingMarketControllerProxy
         .connect(bob)
@@ -1127,7 +1123,7 @@ describe('LendingMarketController - Tokenization', () => {
           alice.address,
         );
 
-      const expectedAmount = calculateFutureValue(value, 8000);
+      const expectedAmount = calculateFutureValue(value, 9500);
 
       // Verify that the return value matches the full withdrawable amount
       const withdrawnAmount = await lendingMarketControllerProxy
@@ -1168,13 +1164,13 @@ describe('LendingMarketController - Tokenization', () => {
 
       await lendingMarketControllerProxy
         .connect(alice)
-        .executeOrder(targetCurrency, maturities[0], Side.LEND, value, '8000');
+        .executeOrder(targetCurrency, maturities[0], Side.LEND, value, '9500');
 
       await lendingMarketControllerProxy
         .connect(bob)
         .executeOrder(targetCurrency, maturities[0], Side.BORROW, value, '0');
 
-      const expectedAmount = calculateFutureValue(value, 8000);
+      const expectedAmount = calculateFutureValue(value, 9500);
       // Request more than withdrawable
       const requestedAmount = expectedAmount.mul(2);
 
@@ -1211,7 +1207,7 @@ describe('LendingMarketController - Tokenization', () => {
 
       await lendingMarketControllerProxy
         .connect(alice)
-        .executeOrder(targetCurrency, maturities[0], Side.LEND, value, '8000');
+        .executeOrder(targetCurrency, maturities[0], Side.LEND, value, '9500');
 
       await lendingMarketControllerProxy
         .connect(bob)
@@ -1229,7 +1225,7 @@ describe('LendingMarketController - Tokenization', () => {
         .withdrawZCToken(targetCurrency, maturities[0], withdrawableAmount);
 
       const currentBalance = await zcToken.balanceOf(alice.address);
-      expect(currentBalance).to.equal(calculateFutureValue(value, 8000));
+      expect(currentBalance).to.equal(calculateFutureValue(value, 9500));
 
       await expect(
         lendingMarketControllerProxy
@@ -1255,7 +1251,7 @@ describe('LendingMarketController - Tokenization', () => {
 
       await lendingMarketControllerProxy
         .connect(alice)
-        .executeOrder(targetCurrency, maturities[0], Side.LEND, value, '8000');
+        .executeOrder(targetCurrency, maturities[0], Side.LEND, value, '9500');
 
       await lendingMarketControllerProxy
         .connect(bob)
@@ -1277,7 +1273,7 @@ describe('LendingMarketController - Tokenization', () => {
         targetCurrency,
         maturities[0],
       );
-      const estimatedAmount = calculateFutureValue(value, 8000)
+      const estimatedAmount = calculateFutureValue(value, 9500)
         .mul(BigNumber.from(10).pow(38))
         .div(autoRollLog.lendingCompoundFactor);
 
@@ -1319,7 +1315,7 @@ describe('LendingMarketController - Tokenization', () => {
 
       await lendingMarketControllerProxy
         .connect(alice)
-        .executeOrder(targetCurrency, maturities[0], Side.LEND, value, '8000');
+        .executeOrder(targetCurrency, maturities[0], Side.LEND, value, '9500');
 
       await lendingMarketControllerProxy
         .connect(bob)
@@ -1334,7 +1330,7 @@ describe('LendingMarketController - Tokenization', () => {
         targetCurrency,
         maturities[0],
       );
-      const expectedAmount = calculateFutureValue(value, 8000)
+      const expectedAmount = calculateFutureValue(value, 9500)
         .mul(BigNumber.from(10).pow(38))
         .div(autoRollLog.lendingCompoundFactor);
 
@@ -1370,7 +1366,7 @@ describe('LendingMarketController - Tokenization', () => {
 
       await lendingMarketControllerProxy
         .connect(alice)
-        .executeOrder(targetCurrency, maturities[0], Side.LEND, value, '8000');
+        .executeOrder(targetCurrency, maturities[0], Side.LEND, value, '9500');
 
       await lendingMarketControllerProxy
         .connect(bob)

@@ -181,7 +181,7 @@ describe('LendingMarketController - Calculations', () => {
           maturities[0],
           Side.LEND,
           '1000000000',
-          '8000',
+          '9500',
         );
 
       await lendingMarketControllerProxy
@@ -191,7 +191,7 @@ describe('LendingMarketController - Calculations', () => {
           maturities[0],
           Side.BORROW,
           '1000000000',
-          '8000',
+          '9500',
         );
 
       await lendingMarketControllerProxy
@@ -201,7 +201,7 @@ describe('LendingMarketController - Calculations', () => {
           maturities[1],
           Side.BORROW,
           '2000000000',
-          '8000',
+          '9500',
         );
 
       await lendingMarketControllerProxy
@@ -211,7 +211,7 @@ describe('LendingMarketController - Calculations', () => {
           maturities[1],
           Side.LEND,
           '2000000000',
-          '8000',
+          '9500',
         );
 
       const totalFunds =
@@ -291,18 +291,18 @@ describe('LendingMarketController - Calculations', () => {
           {
             side: Side.LEND,
             amount: '100000000000000000',
-            unitPrice: '8000',
+            unitPrice: '9500',
           },
         ],
         input: {
           side: Side.BORROW,
           amount: '100000000000000000',
-          unitPrice: '8000',
+          unitPrice: '9500',
         },
         result: {
-          lastUnitPrice: '8000',
+          lastUnitPrice: '9500',
           filledAmount: '100000000000000000',
-          filledAmountInFV: calculateFutureValue('100000000000000000', '8000'),
+          filledAmountInFV: calculateFutureValue('100000000000000000', '9500'),
           coverage: '1000',
         },
       },
@@ -313,18 +313,18 @@ describe('LendingMarketController - Calculations', () => {
           {
             side: Side.BORROW,
             amount: '100000000000000000',
-            unitPrice: '8000',
+            unitPrice: '9500',
           },
         ],
         input: {
           side: Side.LEND,
           amount: '100000000000000000',
-          unitPrice: '8000',
+          unitPrice: '9500',
         },
         result: {
-          lastUnitPrice: '8000',
+          lastUnitPrice: '9500',
           filledAmount: '100000000000000000',
-          filledAmountInFV: calculateFutureValue('100000000000000000', '8000'),
+          filledAmountInFV: calculateFutureValue('100000000000000000', '9500'),
           coverage: '1000',
         },
       },
@@ -334,26 +334,26 @@ describe('LendingMarketController - Calculations', () => {
           {
             side: Side.LEND,
             amount: '200000000000000000',
-            unitPrice: '8000',
+            unitPrice: '9500',
           },
           {
             side: Side.LEND,
             amount: '100000000000000000',
-            unitPrice: '8010',
+            unitPrice: '9510',
           },
         ],
         input: {
           side: Side.BORROW,
           amount: '200000000000000000',
-          unitPrice: '8000',
+          unitPrice: '9500',
         },
         result: {
-          lastUnitPrice: '8000',
+          lastUnitPrice: '9500',
           filledAmount: '200000000000000000',
           filledAmountInFV: calculateFutureValue(
             '100000000000000000',
-            '8000',
-          ).add(calculateFutureValue('100000000000000000', '8010')),
+            '9500',
+          ).add(calculateFutureValue('100000000000000000', '9510')),
           coverage: '1000',
         },
       },
@@ -363,28 +363,28 @@ describe('LendingMarketController - Calculations', () => {
           {
             side: Side.LEND,
             amount: '200000000000000000',
-            unitPrice: '8000',
+            unitPrice: '9300',
           },
           {
             side: Side.LEND,
             amount: '200000000000000000',
-            unitPrice: '9000',
+            unitPrice: '9800',
           },
           {
             side: Side.BORROW,
             amount: '100000000000000000',
-            unitPrice: '9000',
+            unitPrice: '9800',
           },
         ],
         input: {
           side: Side.BORROW,
           amount: '200000000000000000',
-          unitPrice: '8000',
+          unitPrice: '9300',
         },
         result: {
-          lastUnitPrice: '9000',
+          lastUnitPrice: '9800',
           filledAmount: '100000000000000000',
-          filledAmountInFV: calculateFutureValue('100000000000000000', '9000'),
+          filledAmountInFV: calculateFutureValue('100000000000000000', '9800'),
           coverage: '1000',
         },
       },
@@ -425,28 +425,28 @@ describe('LendingMarketController - Calculations', () => {
           {
             side: Side.LEND,
             amount: '200000000000000000',
-            unitPrice: '8200',
+            unitPrice: '9540',
           },
           {
             side: Side.BORROW,
             amount: '200000000000000000',
-            unitPrice: '8200',
+            unitPrice: '9540',
           },
           {
             side: Side.LEND,
             amount: '5000000000000000',
-            unitPrice: '8000',
+            unitPrice: '9500',
           },
         ],
         input: {
           side: Side.BORROW,
           amount: '5000000000000000',
-          unitPrice: '8000',
+          unitPrice: '9500',
         },
         result: {
-          lastUnitPrice: '8000',
+          lastUnitPrice: '9500',
           filledAmount: '5000000000000000',
-          filledAmountInFV: calculateFutureValue('5000000000000000', '8000'),
+          filledAmountInFV: calculateFutureValue('5000000000000000', '9500'),
           coverage: '1000',
         },
       },
