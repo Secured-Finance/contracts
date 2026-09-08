@@ -423,6 +423,68 @@ describe('LendingMarketController - Operations', () => {
         );
       });
 
+      it('Calculates min debt prices at boundary and long-duration timestamps', async () => {
+        const referenceTimestamp = 1000000000;
+
+        expect(
+          await lendingMarketControllerProxy.getMinDebtUnitPriceAt(
+            targetCurrency,
+            referenceTimestamp + SECONDS_IN_YEAR * 2,
+            referenceTimestamp,
+          ),
+        ).to.equal(6600);
+        expect(
+          await lendingMarketControllerProxy.getMinDebtUnitPriceAt(
+            targetCurrency,
+            referenceTimestamp + SECONDS_IN_YEAR * 10,
+            referenceTimestamp,
+          ),
+        ).to.equal(1);
+        expect(
+          await lendingMarketControllerProxy.getMinDebtUnitPriceAt(
+            targetCurrency,
+            referenceTimestamp,
+            referenceTimestamp,
+          ),
+        ).to.equal(BASE_MIN_DEBT_UNIT_PRICE);
+
+        await lendingMarketControllerProxy.updateMinDebtUnitPrice(
+          targetCurrency,
+          0,
+        );
+        expect(
+          await lendingMarketControllerProxy.getMinDebtUnitPriceAt(
+            targetCurrency,
+            referenceTimestamp + SECONDS_IN_YEAR,
+            referenceTimestamp,
+          ),
+        ).to.equal(0);
+
+        await lendingMarketControllerProxy.updateMinDebtUnitPrice(
+          targetCurrency,
+          BASE_MIN_DEBT_UNIT_PRICE,
+        );
+        expect(
+          await lendingMarketControllerProxy.getMinDebtUnitPriceAt(
+            targetCurrency,
+            referenceTimestamp + SECONDS_IN_YEAR,
+            referenceTimestamp,
+          ),
+        ).to.equal(BASE_MIN_DEBT_UNIT_PRICE);
+
+        await lendingMarketControllerProxy.updateMinDebtUnitPrice(
+          targetCurrency,
+          10000,
+        );
+        expect(
+          await lendingMarketControllerProxy.getMinDebtUnitPriceAt(
+            targetCurrency,
+            referenceTimestamp + SECONDS_IN_YEAR,
+            referenceTimestamp,
+          ),
+        ).to.equal(BASE_MIN_DEBT_UNIT_PRICE);
+      });
+
       it('Update the order fee rate', async () => {
         expect(
           await lendingMarketControllerProxy.getOrderFeeRate(targetCurrency),
@@ -703,6 +765,211 @@ describe('LendingMarketController - Operations', () => {
             10001,
           ),
         ).revertedWith('InvalidMinDebtUnitPrice');
+      });
+    });
+
+    describe('Order unit price ranges', async () => {
+      it('Returns and enforces side-specific fallback ranges without a market price', async () => {
+        const range = await lendingMarketControllerProxy.getOrderUnitPriceRange(
+          targetCurrency,
+          maturities[0],
+        );
+        const expectedReference =
+          await lendingMarketControllerProxy.getMinDebtUnitPriceAt(
+            targetCurrency,
+            maturities[0],
+            genesisDate,
+          );
+        const expectedMax = expectedReference.add(2000).gt(10000)
+          ? BigNumber.from(10000)
+          : expectedReference.add(2000);
+
+        expect(range.minLendUnitPrice).to.equal(1);
+        expect(range.maxLendUnitPrice).to.equal(expectedMax);
+        expect(range.minBorrowUnitPrice).to.equal(expectedReference);
+        expect(range.maxBorrowUnitPrice).to.equal(10000);
+        expect(range.referenceUnitPrice).to.equal(expectedReference);
+        expect(range.isMinDebtUnitPriceReference).to.equal(true);
+
+        await lendingMarketControllerProxy
+          .connect(alice)
+          .executeOrder(
+            targetCurrency,
+            maturities[0],
+            Side.BORROW,
+            '100000000000000000',
+            range.minBorrowUnitPrice,
+          );
+        await lendingMarketControllerProxy
+          .connect(bob)
+          .executeOrder(
+            targetCurrency,
+            maturities[0],
+            Side.LEND,
+            '100000000000000000',
+            range.maxLendUnitPrice,
+          );
+
+        await expect(
+          lendingMarketControllerProxy
+            .connect(carol)
+            .executeOrder(
+              targetCurrency,
+              maturities[0],
+              Side.BORROW,
+              '100000000000000000',
+              10001,
+            ),
+        ).to.be.reverted;
+        await expect(
+          lendingMarketControllerProxy
+            .connect(carol)
+            .executeOrder(
+              targetCurrency,
+              maturities[0],
+              Side.LEND,
+              '100000000000000000',
+              range.maxLendUnitPrice.add(1),
+            ),
+        ).to.be.reverted;
+      });
+
+      it('Switches to the market-price range after a reliable fill', async () => {
+        const marketUnitPrice = BigNumber.from(8500);
+
+        await lendingMarketControllerProxy.updateMinDebtUnitPrice(
+          targetCurrency,
+          3000,
+        );
+        await lendingMarketControllerProxy
+          .connect(alice)
+          .executeOrder(
+            targetCurrency,
+            maturities[0],
+            Side.LEND,
+            '100000000000000000',
+            marketUnitPrice,
+          );
+        await lendingMarketControllerProxy
+          .connect(bob)
+          .executeOrder(
+            targetCurrency,
+            maturities[0],
+            Side.BORROW,
+            '100000000000000000',
+            marketUnitPrice,
+          );
+
+        const range = await lendingMarketControllerProxy.getOrderUnitPriceRange(
+          targetCurrency,
+          maturities[0],
+        );
+        expect(range.minLendUnitPrice).to.equal(1);
+        expect(range.maxLendUnitPrice).to.equal(9500);
+        expect(range.minBorrowUnitPrice).to.equal(7500);
+        expect(range.maxBorrowUnitPrice).to.equal(10000);
+        expect(range.referenceUnitPrice).to.equal(marketUnitPrice);
+        expect(range.isMinDebtUnitPriceReference).to.equal(false);
+
+        await expect(
+          lendingMarketControllerProxy
+            .connect(carol)
+            .executeOrder(
+              targetCurrency,
+              maturities[0],
+              Side.LEND,
+              '100000000000000000',
+              9501,
+            ),
+        ).to.be.reverted;
+        await expect(
+          lendingMarketControllerProxy
+            .connect(carol)
+            .executeOrder(
+              targetCurrency,
+              maturities[0],
+              Side.BORROW,
+              '100000000000000000',
+              7499,
+            ),
+        ).to.be.reverted;
+      });
+
+      it('Clamps fallback and market-price ranges to valid unit price boundaries', async () => {
+        await lendingMarketControllerProxy.updateMinDebtUnitPrice(
+          targetCurrency,
+          0,
+        );
+        const zeroMinDebtRange =
+          await lendingMarketControllerProxy.getOrderUnitPriceRange(
+            targetCurrency,
+            maturities[0],
+          );
+        expect(zeroMinDebtRange.referenceUnitPrice).to.equal(1);
+        expect(zeroMinDebtRange.minLendUnitPrice).to.equal(1);
+        expect(zeroMinDebtRange.maxLendUnitPrice).to.equal(2001);
+        expect(zeroMinDebtRange.minBorrowUnitPrice).to.equal(1);
+        expect(zeroMinDebtRange.maxBorrowUnitPrice).to.equal(10000);
+
+        await lendingMarketControllerProxy
+          .connect(alice)
+          .executeOrder(
+            targetCurrency,
+            maturities[0],
+            Side.LEND,
+            '100000000000000000',
+            1,
+          );
+        await lendingMarketControllerProxy
+          .connect(bob)
+          .executeOrder(
+            targetCurrency,
+            maturities[0],
+            Side.BORROW,
+            '100000000000000000',
+            1,
+          );
+
+        const lowerBoundaryRange =
+          await lendingMarketControllerProxy.getOrderUnitPriceRange(
+            targetCurrency,
+            maturities[0],
+          );
+        expect(lowerBoundaryRange.referenceUnitPrice).to.equal(1);
+        expect(lowerBoundaryRange.minBorrowUnitPrice).to.equal(1);
+        expect(lowerBoundaryRange.maxLendUnitPrice).to.equal(1001);
+
+        await lendingMarketControllerProxy.updateMinDebtUnitPrice(
+          targetCurrency,
+          10000,
+        );
+        await lendingMarketControllerProxy
+          .connect(carol)
+          .executeOrder(
+            targetCurrency,
+            maturities[1],
+            Side.LEND,
+            '100000000000000000',
+            10000,
+          );
+        await lendingMarketControllerProxy
+          .connect(owner)
+          .executeOrder(
+            targetCurrency,
+            maturities[1],
+            Side.BORROW,
+            '100000000000000000',
+            10000,
+          );
+
+        const upperBoundaryRange =
+          await lendingMarketControllerProxy.getOrderUnitPriceRange(
+            targetCurrency,
+            maturities[1],
+          );
+        expect(upperBoundaryRange.referenceUnitPrice).to.equal(10000);
+        expect(upperBoundaryRange.maxLendUnitPrice).to.equal(10000);
+        expect(upperBoundaryRange.minBorrowUnitPrice).to.equal(9000);
       });
     });
 

@@ -66,6 +66,34 @@ describe('LendingMarket - Itayose', () => {
     );
   };
 
+  const placeMatchedPreOrders = async (
+    amount = '100000000000000',
+    unitPrice = '8300',
+  ) => {
+    await lendingMarketCaller
+      .connect(alice)
+      .executePreOrder(
+        targetCurrency,
+        currentOrderBookId,
+        Side.BORROW,
+        amount,
+        unitPrice,
+      );
+    await lendingMarketCaller
+      .connect(bob)
+      .executePreOrder(
+        targetCurrency,
+        currentOrderBookId,
+        Side.LEND,
+        amount,
+        unitPrice,
+      );
+  };
+
+  const enterItayosePeriod = async () => {
+    await time.increaseTo(currentOpeningDate - 3600);
+  };
+
   before(async () => {
     [owner, alice, bob, ...signers] = await ethers.getSigners();
     targetCurrency = ethers.utils.formatBytes32String('Test');
@@ -255,6 +283,303 @@ describe('LendingMarket - Itayose', () => {
     );
   });
 
+  it('Progresses through initialization, BORROW settlement, LEND settlement, and finalization', async () => {
+    const amount = BigNumber.from('100000000000000');
+    const unitPrice = BigNumber.from(8300);
+
+    await placeMatchedPreOrders(amount.toString(), unitPrice.toString());
+    await enterItayosePeriod();
+
+    const statusBefore = await lendingMarketCaller.getItayoseProcessStatus(
+      targetCurrency,
+      currentOrderBookId,
+    );
+    expect(statusBefore.isInProgress).to.equal(false);
+    expect(statusBefore.isFinalizable).to.equal(false);
+    expect(statusBefore.isReady).to.equal(false);
+
+    await lendingMarketCaller.initializeItayose(
+      targetCurrency,
+      currentOrderBookId,
+    );
+
+    const initialized = await lendingMarketCaller.getItayoseProcessStatus(
+      targetCurrency,
+      currentOrderBookId,
+    );
+    expect(initialized.openingUnitPrice).to.equal(unitPrice);
+    expect(initialized.lastLendUnitPrice).to.equal(unitPrice);
+    expect(initialized.lastBorrowUnitPrice).to.equal(unitPrice);
+    expect(initialized.totalOffsetAmount).to.equal(amount);
+    expect(initialized.remainingLendOffsetAmount).to.equal(amount);
+    expect(initialized.remainingBorrowOffsetAmount).to.equal(amount);
+    expect(initialized.isInProgress).to.equal(true);
+    expect(initialized.isFinalizable).to.equal(false);
+    expect(initialized.isReady).to.equal(false);
+    expect(await lendingMarket.isOpened(currentOrderBookId)).to.equal(false);
+    expect(await lendingMarket.isItayosePeriod(currentOrderBookId)).to.equal(
+      true,
+    );
+
+    const log = await lendingMarket.getItayoseLog(maturity);
+    expect(log.openingUnitPrice).to.equal(unitPrice);
+    expect(log.lastLendUnitPrice).to.equal(unitPrice);
+    expect(log.lastBorrowUnitPrice).to.equal(unitPrice);
+
+    const estimation = await lendingMarket.getItayoseEstimation(
+      currentOrderBookId,
+    );
+    expect(estimation.openingUnitPrice).to.equal(unitPrice);
+    expect(estimation.lastLendUnitPrice).to.equal(unitPrice);
+    expect(estimation.lastBorrowUnitPrice).to.equal(unitPrice);
+    expect(estimation.totalOffsetAmount).to.equal(amount);
+
+    const borrowSettlement =
+      await lendingMarketCaller.callStatic.executeItayoseSettlement(
+        targetCurrency,
+        currentOrderBookId,
+      );
+    expect(borrowSettlement.makerSide).to.equal(Side.BORROW);
+    expect(borrowSettlement.batchFilledAmount).to.equal(amount);
+    expect(borrowSettlement.partiallyFilledOrder.orderId).to.equal(0);
+
+    await lendingMarketCaller.executeItayoseSettlement(
+      targetCurrency,
+      currentOrderBookId,
+    );
+    const borrowSettled = await lendingMarketCaller.getItayoseProcessStatus(
+      targetCurrency,
+      currentOrderBookId,
+    );
+    expect(borrowSettled.remainingBorrowOffsetAmount).to.equal(0);
+    expect(borrowSettled.remainingLendOffsetAmount).to.equal(amount);
+    expect(borrowSettled.isFinalizable).to.equal(false);
+
+    const lendSettlement =
+      await lendingMarketCaller.callStatic.executeItayoseSettlement(
+        targetCurrency,
+        currentOrderBookId,
+      );
+    expect(lendSettlement.makerSide).to.equal(Side.LEND);
+    expect(lendSettlement.batchFilledAmount).to.equal(amount);
+
+    await lendingMarketCaller.executeItayoseSettlement(
+      targetCurrency,
+      currentOrderBookId,
+    );
+    const finalizable = await lendingMarketCaller.getItayoseProcessStatus(
+      targetCurrency,
+      currentOrderBookId,
+    );
+    expect(finalizable.remainingBorrowOffsetAmount).to.equal(0);
+    expect(finalizable.remainingLendOffsetAmount).to.equal(0);
+    expect(finalizable.isInProgress).to.equal(true);
+    expect(finalizable.isFinalizable).to.equal(true);
+    expect(finalizable.isReady).to.equal(false);
+
+    await expect(
+      lendingMarketCaller.finalizeItayose(targetCurrency, currentOrderBookId),
+    ).to.emit(orderBookLogic, 'ItayoseExecuted');
+
+    const finalized = await lendingMarketCaller.getItayoseProcessStatus(
+      targetCurrency,
+      currentOrderBookId,
+    );
+    expect(finalized.isInProgress).to.equal(false);
+    expect(finalized.isFinalizable).to.equal(false);
+    expect(finalized.isReady).to.equal(true);
+
+    const estimationAfterFinalize = await lendingMarket.getItayoseEstimation(
+      currentOrderBookId,
+    );
+    expect(estimationAfterFinalize.openingUnitPrice).to.equal(0);
+    expect(estimationAfterFinalize.totalOffsetAmount).to.equal(0);
+  });
+
+  it('Settles more than 500 price levels across multiple batches', async function () {
+    // Instrumenting hundreds of stateful order transactions exhausts the coverage process heap.
+    if (process.env.TEST_TYPE === 'coverage') this.skip();
+
+    const amountPerPrice = BigNumber.from('100000000');
+    const priceLevelCount = 501;
+    const firstUnitPrice = 8000;
+    const totalAmount = amountPerPrice.mul(priceLevelCount);
+
+    for (let i = 0; i < priceLevelCount; i++) {
+      await lendingMarketCaller
+        .connect(alice)
+        .executePreOrder(
+          targetCurrency,
+          currentOrderBookId,
+          Side.BORROW,
+          amountPerPrice,
+          firstUnitPrice + i,
+        );
+    }
+    await lendingMarketCaller
+      .connect(bob)
+      .executePreOrder(
+        targetCurrency,
+        currentOrderBookId,
+        Side.LEND,
+        totalAmount,
+        firstUnitPrice + priceLevelCount - 1,
+      );
+    await enterItayosePeriod();
+
+    await lendingMarketCaller.initializeItayose(
+      targetCurrency,
+      currentOrderBookId,
+    );
+
+    const firstBorrowBatch =
+      await lendingMarketCaller.callStatic.executeItayoseSettlement(
+        targetCurrency,
+        currentOrderBookId,
+      );
+    expect(firstBorrowBatch.makerSide).to.equal(Side.BORROW);
+    expect(firstBorrowBatch.batchFilledAmount).to.equal(
+      amountPerPrice.mul(500),
+    );
+    expect(firstBorrowBatch.remainingBorrowOffsetAmount).to.equal(
+      amountPerPrice,
+    );
+    expect(firstBorrowBatch.partiallyFilledOrder.orderId).to.equal(0);
+    await lendingMarketCaller.executeItayoseSettlement(
+      targetCurrency,
+      currentOrderBookId,
+    );
+
+    const secondBorrowBatch =
+      await lendingMarketCaller.callStatic.executeItayoseSettlement(
+        targetCurrency,
+        currentOrderBookId,
+      );
+    expect(secondBorrowBatch.makerSide).to.equal(Side.BORROW);
+    expect(secondBorrowBatch.batchFilledAmount).to.equal(amountPerPrice);
+    expect(secondBorrowBatch.remainingBorrowOffsetAmount).to.equal(0);
+    await lendingMarketCaller.executeItayoseSettlement(
+      targetCurrency,
+      currentOrderBookId,
+    );
+
+    const lendBatch =
+      await lendingMarketCaller.callStatic.executeItayoseSettlement(
+        targetCurrency,
+        currentOrderBookId,
+      );
+    expect(lendBatch.makerSide).to.equal(Side.LEND);
+    expect(lendBatch.batchFilledAmount).to.equal(totalAmount);
+    expect(lendBatch.remainingLendOffsetAmount).to.equal(0);
+    await lendingMarketCaller.executeItayoseSettlement(
+      targetCurrency,
+      currentOrderBookId,
+    );
+
+    await lendingMarketCaller.finalizeItayose(
+      targetCurrency,
+      currentOrderBookId,
+    );
+    const finalized = await lendingMarketCaller.getItayoseProcessStatus(
+      targetCurrency,
+      currentOrderBookId,
+    );
+    expect(finalized.isInProgress).to.equal(false);
+    expect(finalized.isReady).to.equal(true);
+  });
+
+  it('Rejects phase calls whose process preconditions are not satisfied', async () => {
+    await placeMatchedPreOrders();
+    await enterItayosePeriod();
+
+    await expect(
+      lendingMarketCaller.executeItayoseSettlement(
+        targetCurrency,
+        currentOrderBookId,
+      ),
+    ).to.be.reverted;
+    await expect(
+      lendingMarketCaller.finalizeItayose(targetCurrency, currentOrderBookId),
+    ).to.be.reverted;
+
+    await lendingMarketCaller.initializeItayose(
+      targetCurrency,
+      currentOrderBookId,
+    );
+
+    await expect(
+      lendingMarketCaller.initializeItayose(targetCurrency, currentOrderBookId),
+    ).to.be.reverted;
+    await expect(
+      lendingMarketCaller.finalizeItayose(targetCurrency, currentOrderBookId),
+    ).to.be.reverted;
+
+    await lendingMarketCaller.executeItayoseSettlement(
+      targetCurrency,
+      currentOrderBookId,
+    );
+    await lendingMarketCaller.executeItayoseSettlement(
+      targetCurrency,
+      currentOrderBookId,
+    );
+
+    await expect(
+      lendingMarketCaller.executeItayoseSettlement(
+        targetCurrency,
+        currentOrderBookId,
+      ),
+    ).to.be.reverted;
+
+    await lendingMarketCaller.finalizeItayose(
+      targetCurrency,
+      currentOrderBookId,
+    );
+    await expect(
+      lendingMarketCaller.finalizeItayose(targetCurrency, currentOrderBookId),
+    ).to.be.reverted;
+  });
+
+  it('Finalizes a zero-offset process without emitting ItayoseExecuted', async () => {
+    await enterItayosePeriod();
+
+    await lendingMarketCaller.initializeItayose(
+      targetCurrency,
+      currentOrderBookId,
+    );
+    const initialized = await lendingMarketCaller.getItayoseProcessStatus(
+      targetCurrency,
+      currentOrderBookId,
+    );
+    expect(initialized.totalOffsetAmount).to.equal(0);
+    expect(initialized.isFinalizable).to.equal(true);
+
+    await expect(
+      lendingMarketCaller.executeItayoseSettlement(
+        targetCurrency,
+        currentOrderBookId,
+      ),
+    ).to.be.reverted;
+    await expect(
+      lendingMarketCaller.finalizeItayose(targetCurrency, currentOrderBookId),
+    ).to.not.emit(orderBookLogic, 'ItayoseExecuted');
+
+    expect(await lendingMarket.isReady(currentOrderBookId)).to.equal(true);
+  });
+
+  it('Rejects a zero unit price pre-order explicitly', async () => {
+    await expect(
+      lendingMarketCaller
+        .connect(alice)
+        .executePreOrder(
+          targetCurrency,
+          currentOrderBookId,
+          Side.LEND,
+          '100000000000000',
+          0,
+        ),
+    ).to.be.revertedWith('InvalidPreOrderUnitPrice');
+  });
+
   it('Fail to create a pre-order due to an existing order with a past maturity', async () => {
     const orderBookIdBefore = currentOrderBookId;
 
@@ -397,6 +722,12 @@ describe('LendingMarket - Itayose', () => {
   it('Fail to execute the Itayose call due to invalid caller', async () => {
     await expect(
       lendingMarket.initializeItayose(currentOrderBookId),
+    ).to.be.revertedWith('OnlyAcceptedContract("LendingMarketController")');
+    await expect(
+      lendingMarket.executeItayoseSettlement(currentOrderBookId),
+    ).to.be.revertedWith('OnlyAcceptedContract("LendingMarketController")');
+    await expect(
+      lendingMarket.finalizeItayose(currentOrderBookId),
     ).to.be.revertedWith('OnlyAcceptedContract("LendingMarketController")');
   });
 });

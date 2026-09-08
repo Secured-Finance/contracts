@@ -828,6 +828,50 @@ describe('LendingMarketController - Rotations', () => {
       await initializeCurrency(targetCurrency, openingDate);
     });
 
+    it('Rejects rotation when Itayose is due but has not started', async () => {
+      await time.increaseTo(openingDate);
+
+      await expect(
+        lendingMarketControllerProxy.rotateOrderBooks(targetCurrency),
+      ).to.be.reverted;
+    });
+
+    it('Rejects rotation while an Itayose process is in progress', async () => {
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .executePreOrder(
+          targetCurrency,
+          maturities[0],
+          Side.BORROW,
+          '100000000000000',
+          9500,
+        );
+      await lendingMarketControllerProxy
+        .connect(bob)
+        .executePreOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '100000000000000',
+          9500,
+        );
+      await time.increaseTo(openingDate);
+      await lendingMarketControllerProxy.executeItayoseStep(
+        targetCurrency,
+        maturities[0],
+      );
+
+      const status = await lendingMarketControllerProxy.getItayoseProcessStatus(
+        targetCurrency,
+        maturities[0],
+      );
+      expect(status.isInProgress).to.equal(true);
+
+      await expect(
+        lendingMarketControllerProxy.rotateOrderBooks(targetCurrency),
+      ).to.be.reverted;
+    });
+
     it('Rotate markets including one market that has pre-orders adjusted by with the residual amount.', async () => {
       await lendingMarketControllerProxy
         .connect(alice)

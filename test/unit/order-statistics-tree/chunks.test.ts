@@ -10,7 +10,7 @@ const OrderStatisticsTree = artifacts.require(
 const PRICE = 8000;
 const AMOUNT = 10;
 const CHUNK_SIZE = 100;
-const MAX_ACTIVE_CHUNKS_PER_PRICE = 2000;
+const MAX_ACTIVE_CHUNKS_PER_PRICE = 1000;
 
 describe('OrderStatisticsTree - order chunks', () => {
   let ost: Contract;
