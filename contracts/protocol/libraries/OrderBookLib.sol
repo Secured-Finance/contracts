@@ -668,21 +668,17 @@ library OrderBookLib {
                 openingUnitPrice = lendUnitPrice;
                 totalOffsetAmount += borrowAmount;
                 lendAmount -= borrowAmount;
-                borrowUnitPrice = borrowOrders.next(borrowUnitPrice);
-                borrowAmount = borrowOrders.getNodeTotalAmount(borrowUnitPrice);
+                (borrowUnitPrice, borrowAmount) = borrowOrders.nextWithTotalAmount(borrowUnitPrice);
             } else if (lendAmount < borrowAmount) {
                 openingUnitPrice = borrowUnitPrice;
                 totalOffsetAmount += lendAmount;
                 borrowAmount -= lendAmount;
-                lendUnitPrice = lendOrders.prev(lendUnitPrice);
-                lendAmount = lendOrders.getNodeTotalAmount(lendUnitPrice);
+                (lendUnitPrice, lendAmount) = lendOrders.prevWithTotalAmount(lendUnitPrice);
             } else {
                 openingUnitPrice = (lendUnitPrice + borrowUnitPrice).div(2);
                 totalOffsetAmount += lendAmount;
-                lendUnitPrice = lendOrders.prev(lendUnitPrice);
-                borrowUnitPrice = borrowOrders.next(borrowUnitPrice);
-                lendAmount = lendOrders.getNodeTotalAmount(lendUnitPrice);
-                borrowAmount = borrowOrders.getNodeTotalAmount(borrowUnitPrice);
+                (lendUnitPrice, lendAmount) = lendOrders.prevWithTotalAmount(lendUnitPrice);
+                (borrowUnitPrice, borrowAmount) = borrowOrders.nextWithTotalAmount(borrowUnitPrice);
             }
         }
     }

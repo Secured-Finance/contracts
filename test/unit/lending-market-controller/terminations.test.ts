@@ -137,6 +137,76 @@ describe('LendingMarketController - Terminations', () => {
       expect(terminationCollateralRatio).to.equal(0);
     });
 
+    it('Allows termination when a due Itayose process has not started', async () => {
+      const { timestamp } = await ethers.provider.getBlock('latest');
+      const openingDate = timestamp + 7200;
+
+      await lendingMarketControllerProxy.createOrderBook(
+        targetCurrency,
+        openingDate,
+        openingDate - 604800,
+      );
+      await time.increaseTo(openingDate);
+
+      await expect(
+        lendingMarketControllerProxy.executeEmergencyTermination(),
+      ).to.emit(lendingMarketOperationLogic, 'EmergencyTerminationExecuted');
+    });
+
+    it('Rejects termination during Itayose and succeeds after finalization', async () => {
+      const { timestamp } = await ethers.provider.getBlock('latest');
+      const openingDate = timestamp + 7200;
+
+      await lendingMarketControllerProxy.createOrderBook(
+        targetCurrency,
+        openingDate,
+        openingDate - 604800,
+      );
+      maturities = await lendingMarketControllerProxy.getMaturities(
+        targetCurrency,
+      );
+      const maturity = maturities[maturities.length - 1];
+      const range = await lendingMarketControllerProxy.getOrderUnitPriceRange(
+        targetCurrency,
+        maturity,
+      );
+
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .executePreOrder(
+          targetCurrency,
+          maturity,
+          Side.BORROW,
+          '100000000000000',
+          range.referenceUnitPrice,
+        );
+      await lendingMarketControllerProxy
+        .connect(bob)
+        .executePreOrder(
+          targetCurrency,
+          maturity,
+          Side.LEND,
+          '100000000000000',
+          range.referenceUnitPrice,
+        );
+      await time.increaseTo(openingDate);
+      await lendingMarketControllerProxy.executeItayoseStep(
+        targetCurrency,
+        maturity,
+      );
+
+      await expect(lendingMarketControllerProxy.executeEmergencyTermination())
+        .to.be.reverted;
+
+      await lendingMarketControllerProxy.executeItayoseCall(
+        targetCurrency,
+        maturity,
+      );
+      await expect(
+        lendingMarketControllerProxy.executeEmergencyTermination(),
+      ).to.emit(lendingMarketOperationLogic, 'EmergencyTerminationExecuted');
+    });
+
     it('Execute an emergency termination without an order and check all inactivated functions', async () => {
       await mockTokenVault.mock.executeForcedReset.returns('50000000000000000');
       await mockTokenVault.mock.isCollateral.returns(true);

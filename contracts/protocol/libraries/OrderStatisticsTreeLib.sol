@@ -80,16 +80,20 @@ library OrderStatisticsTreeLib {
     function first(Tree storage self) internal view returns (uint256 value) {
         value = self.root;
         if (value == EMPTY) return 0;
-        while (self.nodes[value].left != EMPTY) {
-            value = self.nodes[value].left;
+        uint256 left = self.nodes[value].left;
+        while (left != EMPTY) {
+            value = left;
+            left = self.nodes[value].left;
         }
     }
 
     function last(Tree storage self) internal view returns (uint256 value) {
         value = self.root;
         if (value == EMPTY) return 0;
-        while (self.nodes[value].right != EMPTY) {
-            value = self.nodes[value].right;
+        uint256 right = self.nodes[value].right;
+        while (right != EMPTY) {
+            value = right;
+            right = self.nodes[value].right;
         }
     }
 
@@ -99,28 +103,72 @@ library OrderStatisticsTreeLib {
 
     function next(Tree storage self, uint256 value) internal view returns (uint256 cursor) {
         require(value != EMPTY, "OSTLib: Value cannot be zero");
-        if (self.nodes[value].right != EMPTY) {
-            cursor = treeMinimum(self, self.nodes[value].right);
+        Node storage node = self.nodes[value];
+        uint256 right = node.right;
+        if (right != EMPTY) {
+            cursor = treeMinimum(self, right);
         } else {
-            cursor = self.nodes[value].parent;
-            while (cursor != EMPTY && value == self.nodes[cursor].right) {
+            cursor = node.parent;
+            while (cursor != EMPTY) {
+                Node storage cursorNode = self.nodes[cursor];
+                if (value != cursorNode.right) break;
+
                 value = cursor;
-                cursor = self.nodes[cursor].parent;
+                cursor = cursorNode.parent;
             }
         }
     }
 
     function prev(Tree storage self, uint256 value) internal view returns (uint256 cursor) {
         require(value != EMPTY, "OSTLib: Value cannot be zero");
-        if (self.nodes[value].left != EMPTY) {
-            cursor = treeMaximum(self, self.nodes[value].left);
+        Node storage node = self.nodes[value];
+        uint256 left = node.left;
+        if (left != EMPTY) {
+            cursor = treeMaximum(self, left);
         } else {
-            cursor = self.nodes[value].parent;
-            while (cursor != EMPTY && value == self.nodes[cursor].left) {
+            cursor = node.parent;
+            while (cursor != EMPTY) {
+                Node storage cursorNode = self.nodes[cursor];
+                if (value != cursorNode.left) break;
+
                 value = cursor;
-                cursor = self.nodes[cursor].parent;
+                cursor = cursorNode.parent;
             }
         }
+    }
+
+    function nextWithTotalAmount(
+        Tree storage self,
+        uint256 value
+    ) internal view returns (uint256 cursor, uint256 totalAmount) {
+        require(value != EMPTY, "OSTLib: Value cannot be zero");
+
+        // Probe only the adjacent price so dense trees avoid traversal without scanning sparse gaps.
+        if (value < Constants.PRICE_DIGIT) {
+            cursor = value + 1;
+            totalAmount = self.nodes[cursor].orderTotalAmount;
+            if (totalAmount > 0) return (cursor, totalAmount);
+        }
+
+        cursor = next(self, value);
+        totalAmount = self.nodes[cursor].orderTotalAmount;
+    }
+
+    function prevWithTotalAmount(
+        Tree storage self,
+        uint256 value
+    ) internal view returns (uint256 cursor, uint256 totalAmount) {
+        require(value != EMPTY, "OSTLib: Value cannot be zero");
+
+        // Probe only the adjacent price so dense trees avoid traversal without scanning sparse gaps.
+        if (value > 1) {
+            cursor = value - 1;
+            totalAmount = self.nodes[cursor].orderTotalAmount;
+            if (totalAmount > 0) return (cursor, totalAmount);
+        }
+
+        cursor = prev(self, value);
+        totalAmount = self.nodes[cursor].orderTotalAmount;
     }
 
     function search(
@@ -335,15 +383,19 @@ library OrderStatisticsTreeLib {
     }
 
     function treeMinimum(Tree storage self, uint256 value) private view returns (uint256) {
-        while (self.nodes[value].left != EMPTY) {
-            value = self.nodes[value].left;
+        uint256 left = self.nodes[value].left;
+        while (left != EMPTY) {
+            value = left;
+            left = self.nodes[value].left;
         }
         return value;
     }
 
     function treeMaximum(Tree storage self, uint256 value) private view returns (uint256) {
-        while (self.nodes[value].right != EMPTY) {
-            value = self.nodes[value].right;
+        uint256 right = self.nodes[value].right;
+        while (right != EMPTY) {
+            value = right;
+            right = self.nodes[value].right;
         }
         return value;
     }
