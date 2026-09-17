@@ -51,6 +51,8 @@ const func: DeployFunction = async function ({
       })),
     );
   }
+
+  DeploymentStorage.instance.clear();
 };
 
 func.tags = ['Simulation'];

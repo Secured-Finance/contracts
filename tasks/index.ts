@@ -3,6 +3,7 @@ import './add-order-books';
 import './change-owners';
 import './create-fvm-proposal';
 import './fork';
+import './get-token-vault-balances';
 import './migrate-order-chunks';
 import './open-markets';
 import './recover-user-funds';

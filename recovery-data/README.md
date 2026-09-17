@@ -99,6 +99,67 @@ Otherwise the task creates the normal Safe or FVM proposal. ERC-20 calls are
 ordered as allowance reset, approval, correction, and allowance cleanup. Native
 funding is attached to `executeCorrections` as transaction value.
 
+## Fork execution test
+
+The fork test deploys and upgrades FutureValueVault, the Controller, and
+LendingMarket through the existing deployment scripts, deploys
+`OrderBookIncidentRecovery`, grants its required operator roles by impersonating
+the on-chain administrators, invokes the actual `recover-user-funds` task, and
+validates the result. It intentionally does not change the protocol pause state
+or fund the recovery Receiver. The test is skipped unless
+`RUN_RECOVERY_FORK_TEST=true`.
+
+Start an Anvil fork at the reviewed block while preserving the source chain ID.
+For Filecoin USDFC, whose recovery evidence was calculated at block `6351734`:
+
+```bash
+anvil \
+  --fork-url "$FILECOIN_ARCHIVE_RPC" \
+  --fork-block-number 6351734 \
+  --chain-id 314 \
+  --auto-impersonate
+```
+
+After starting the fork, run the test through the production Hardhat network
+name, not `localhost`. The setup uses the first local account as the recovery
+owner and resolves the protocol administrators from the fork. TokenVault and
+the target LendingMarket must already be paused. Set
+`RECOVERY_TEST_RECEIVER_ADDRESS` to the controlled recovery account used by the
+test; collateral coverage is not required. The test verifies that affected
+users have no active orders, FV or GV positions, or Deposit after execution and
+that all signed positions and remaining Deposit were moved to this Receiver.
+
+```bash
+FORK_RPC_ENDPOINT=http://127.0.0.1:8545 \
+USE_DEFAULT_ACCOUNTS=true \
+ENABLE_AUTO_UPDATE=true \
+NATIVE_CURRENCY_SYMBOL=FIL \
+RUN_RECOVERY_FORK_TEST=true \
+RECOVERY_TEST_CURRENCY=USDFC \
+RECOVERY_TEST_TOKEN_HOLDER_ADDRESS=<reviewed-usdfc-holder> \
+RECOVERY_TEST_RECEIVER_ADDRESS=<controlled-recovery-receiver> \
+npx hardhat test test/fork/order-book-incident-recovery.fork.test.ts --network filecoin-mainnet
+```
+
+The first local account is the executor and funding source. The test gives it
+enough native balance automatically. For an ERC-20 recovery,
+`RECOVERY_TEST_TOKEN_HOLDER_ADDRESS` identifies an account on the fork from
+which the executor's funding shortfall can be transferred. The test does not
+change the receiver's collateral because the recovery flow intentionally
+permits the controlled account to remain undercollateralized.
+
+The test checks:
+
+- Deposit, FV and `pendingOrderAmounts` changes calculated from the manifest;
+- TokenVault's real token balance and `totalDepositAmount`;
+- execution flags and recovery events for every reviewed ID;
+- zero retained recovery balance and zero ERC-20 allowance;
+- unchanged order-book IDs, maturities and non-auto-rolled state;
+- continued LendingMarket and TokenVault pause state; and
+- for each asset transfer, exact full-position movement, zero remaining user
+  Deposit, consistent supplies and total Deposit, receiver registration, and
+  recorded coverage state.
+
 # Current storage gap
 
 ```
