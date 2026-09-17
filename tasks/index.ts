@@ -5,6 +5,7 @@ import './create-fvm-proposal';
 import './fork';
 import './migrate-order-chunks';
 import './open-markets';
+import './recover-user-funds';
 import './register-orders';
 import './unfork';
 import './update-price-feed';

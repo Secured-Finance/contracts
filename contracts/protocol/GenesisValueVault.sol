@@ -501,6 +501,15 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         address _receiver,
         int256 _amount
     ) external override onlyLendingMarketController {
+        int256 senderBalance = Storage.slot().balances[_ccy][_sender];
+        int256 receiverBalance = Storage.slot().balances[_ccy][_receiver];
+
+        _updateTotalSupply(_ccy, -_amount, senderBalance);
+        _updateTotalSupply(_ccy, _amount, receiverBalance);
+
+        if (receiverBalance == 0) {
+            Storage.slot().userMaturities[_ccy][_receiver] = getCurrentMaturity(_ccy);
+        }
         Storage.slot().balances[_ccy][_sender] -= _amount;
         Storage.slot().balances[_ccy][_receiver] += _amount;
 

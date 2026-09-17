@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "network": "filecoin-mainnet",
+  "chainId": "314",
+  "currency": "FIL",
+  "batches": [
+    {
+      "batchId": "0xd196560478e04be8dbda1f63698456246e4bbbdd2920f004cf9ffb511df71262",
+      "user": "0xEB4c4d64FB27d8D433b856C167104b745BDEd215",
+      "fundingAmount": "8068027851988696232939",
+      "fundingTransactions": [
+        {
+          "transactionHash": "0x2ffe435ba76d23d5f2b305ca0c9252834b0f780b7f074e39ff1c8b8a540e12ca",
+          "tokenVaultBalanceBefore": "8068027851988696232939",
+          "tokenVaultBalanceAfter": "8108027851988696232939"
+        },
+        {
+          "transactionHash": "0xc0445ae7aaf2d742711a868df47d4b9474cad68bccd2fce9a8de341c35d3f6c0",
+          "tokenVaultBalanceBefore": "8108027851988696232939",
+          "tokenVaultBalanceAfter": "0"
+        }
+      ],
+      "retainedLendPositions": [],
+      "corrections": [
+        {
+          "correctionId": "0x2d2783ee598f1ae59fd3ced0cc0e8a48052ace50877a956f7e9a35b6d4357b6c",
+          "maturity": "1798156800",
+          "correctionSide": "BORROW",
+          "erroneousDroppedPV": "6081020888991522174",
+          "unitPrice": "3",
+          "expectedFV": "20270069629971740580000"
+        },
+        {
+          "correctionId": "0x548973fe8b3c4a15921ccc1cee4d83fa8cc2f33573873f9e8a4b6b7953a73147",
+          "maturity": "1798156800",
+          "correctionSide": "BORROW",
+          "erroneousDroppedPV": "1",
+          "unitPrice": "9600",
+          "expectedFV": "1"
+        },
+        {
+          "correctionId": "0xe56f47061904345c24132707f517fb469d4d8727db16ce13e2cef38b74b667c6",
+          "maturity": "1798156800",
+          "correctionSide": "LEND",
+          "erroneousDroppedPV": "4",
+          "unitPrice": "10000",
+          "expectedFV": "4"
+        },
+        {
+          "correctionId": "0x6adfe8755b988dfbeb2159253133b36c70ac06f0dc598f405a4c039e120e2d60",
+          "maturity": "1798156800",
+          "correctionSide": "LEND",
+          "erroneousDroppedPV": "8108027851988696232939",
+          "unitPrice": "9975",
+          "expectedFV": "8128348723798191712220"
+        }
+      ]
+    }
+  ]
+}

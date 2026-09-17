@@ -761,6 +761,82 @@ describe('GenesisValueVault', () => {
         )
           .emit(genesisValueVaultProxy, 'Transfer')
           .withArgs(targetCurrency, alice.address, bob.address, aliceBalance);
+
+        expect(
+          await genesisValueVaultProxy.getBalance(
+            targetCurrency,
+            alice.address,
+            0,
+          ),
+        ).to.equal(0);
+        expect(
+          await genesisValueVaultProxy.getBalance(
+            targetCurrency,
+            bob.address,
+            0,
+          ),
+        ).to.equal(aliceBalance);
+        expect(
+          await genesisValueVaultProxy.getTotalLendingSupply(targetCurrency),
+        ).to.equal(aliceBalance);
+        expect(
+          await genesisValueVaultProxy.getTotalBorrowingSupply(targetCurrency),
+        ).to.equal(0);
+      });
+
+      it('Updates total supplies when opposite balances are consolidated', async () => {
+        await genesisValueVaultCaller.updateGenesisValueWithFutureValue(
+          targetCurrency,
+          alice.address,
+          maturity,
+          fvAmount.mul(2),
+        );
+        await genesisValueVaultCaller.updateGenesisValueWithFutureValue(
+          targetCurrency,
+          bob.address,
+          maturity,
+          -fvAmount,
+        );
+
+        const aliceBalance = await genesisValueVaultProxy.getBalance(
+          targetCurrency,
+          alice.address,
+          0,
+        );
+        const bobBalance = await genesisValueVaultProxy.getBalance(
+          targetCurrency,
+          bob.address,
+          0,
+        );
+
+        await genesisValueVaultCaller.transferFrom(
+          targetCurrency,
+          alice.address,
+          bob.address,
+          aliceBalance,
+        );
+
+        const receiverBalance = aliceBalance.add(bobBalance);
+        expect(
+          await genesisValueVaultProxy.getBalance(
+            targetCurrency,
+            alice.address,
+            0,
+          ),
+        ).to.equal(0);
+        expect(
+          await genesisValueVaultProxy.getBalance(
+            targetCurrency,
+            bob.address,
+            0,
+          ),
+        ).to.equal(receiverBalance);
+        expect(
+          await genesisValueVaultProxy.getTotalLendingSupply(targetCurrency),
+        ).to.equal(receiverBalance);
+        expect(
+          await genesisValueVaultProxy.getTotalBorrowingSupply(targetCurrency),
+        ).to.equal(0);
       });
 
       it('Fail to transfer balance to another user due to execution by non-accepted contract', async () => {

@@ -13,6 +13,7 @@ import { getNodeEndpoint } from './deployment';
 interface TransactionData {
   to: string;
   data: string;
+  value: string;
 }
 
 const enum MethodType {
@@ -73,10 +74,11 @@ class FVMProposal {
     return this.chainId.length !== 3;
   }
 
-  async add(to: string, data: string) {
+  async add(to: string, data: string, value = '0') {
     this.transactions.push({
       to,
       data,
+      value,
     });
   }
 
@@ -107,7 +109,7 @@ class FVMProposal {
         this.multisigWallet,
         this.signer,
         lookupId,
-        '0',
+        transaction.value,
         MethodType.InvokeEVM,
         bigintToArray(transaction.data) as unknown as any[],
       );

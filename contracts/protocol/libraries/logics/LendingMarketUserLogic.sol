@@ -7,6 +7,7 @@ import {SafeCast} from "../../../dependencies/openzeppelin/utils/math/SafeCast.s
 // interfaces
 import {ILendingMarket} from "../../interfaces/ILendingMarket.sol";
 import {ILendingMarketController} from "../../interfaces/ILendingMarketController.sol";
+import {IGenesisValueVault} from "../../interfaces/IGenesisValueVault.sol";
 import {IFutureValueVault} from "../../interfaces/IFutureValueVault.sol";
 import {IZCToken} from "../../interfaces/IZCToken.sol";
 // libraries
@@ -805,5 +806,89 @@ library LendingMarketUserLogic {
 
         if (!isEnoughDepositInOrderCcy) revert NotEnoughDeposit(_ccy);
         if (!isEnoughCollateral) revert NotEnoughCollateral();
+    }
+
+    // This temporary function applies the inverse storage updates for an order that was
+    // erroneously treated as filled. Remove it after the incident recovery is complete.
+    function recoverUserFunds(
+        bytes32 _ccy,
+        uint256 _maturity,
+        address _user,
+        ProtocolTypes.Side _side,
+        uint256 _amount,
+        uint256 _unitPrice
+    ) external {
+        if (Storage.slot().maturityOrderBookIds[_ccy][_maturity] == 0) {
+            revert ILendingMarketController.InvalidMaturity();
+        }
+        if (_amount == 0 || _unitPrice == 0) revert InvalidAmount();
+
+        uint256 futureValue = FundManagementLogic._calculateFVFromPV(_amount, _unitPrice);
+
+        // Reproduce the normal event sequence: LendingMarket records the opposite-side order
+        // execution first, then FundManagementLogic emits OrderFilled after updating funds.
+        ILendingMarket(Storage.slot().lendingMarkets[_ccy]).emitOrderExecuted(
+            _user,
+            _side,
+            _ccy,
+            _maturity,
+            _amount,
+            _amount,
+            _unitPrice,
+            futureValue
+        );
+
+        // Register both dimensions before creating the offsetting FV balance. Registering only
+        // usedCurrencies would make the maturity invisible to fund calculation and cleanup.
+        FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, _user);
+        FundManagementLogic.updateFundsForTaker(
+            _ccy,
+            _maturity,
+            _user,
+            _side,
+            _amount,
+            futureValue,
+            0
+        );
+    }
+
+    function transferAssetsForRecovery(bytes32 _ccy, address _user, address _receiver) external {
+        // Materialize lazy order fills and Genesis Value fluctuations before reading the balances
+        // that will be transferred.
+        FundManagementLogic.cleanUpFunds(_ccy, _user);
+        IGenesisValueVault genesisValueVault = AddressResolverLib.genesisValueVault();
+        genesisValueVault.cleanUpBalance(_ccy, _user, 0);
+
+        IFutureValueVault futureValueVault = IFutureValueVault(
+            Storage.slot().futureValueVaults[_ccy]
+        );
+        uint256[] memory maturities = FundManagementLogic.getUsedMaturities(_ccy, _user);
+
+        for (uint256 i; i < maturities.length; ++i) {
+            uint256 maturity = maturities[i];
+            uint8 orderBookId = Storage.slot().maturityOrderBookIds[_ccy][maturity];
+            if (orderBookId == 0) revert ILendingMarketController.InvalidMaturity();
+
+            (int256 balance, uint256 balanceMaturity) = futureValueVault.getBalance(
+                orderBookId,
+                _user
+            );
+            if (balance == 0) continue;
+            if (balanceMaturity != maturity) revert InvalidAmount();
+
+            FundManagementLogic.registerCurrencyAndMaturity(_ccy, maturity, _receiver);
+            futureValueVault.transferFrom(orderBookId, _user, _receiver, balance, maturity);
+        }
+
+        int256 genesisValue = genesisValueVault.getBalance(_ccy, _user, 0);
+        if (genesisValue != 0) {
+            FundManagementLogic.registerCurrency(_ccy, _receiver);
+            genesisValueVault.transferFrom(_ccy, _user, _receiver, genesisValue);
+        }
+
+        uint256 depositAmount = AddressResolverLib.tokenVault().getDepositAmount(_user, _ccy);
+        if (depositAmount != 0) {
+            AddressResolverLib.tokenVault().transferFrom(_ccy, _user, _receiver, depositAmount);
+        }
     }
 }

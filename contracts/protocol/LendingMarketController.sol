@@ -331,24 +331,25 @@ contract LendingMarketController is
      * @return isInsufficientDepositAmount The boolean if the order amount for lending in the selected currency is insufficient
      * for the deposit amount or not
      */
-    function getOrderEstimation(
-        GetOrderEstimationParams calldata _params
-    )
-        external
-        view
-        override
-        returns (
-            uint256 lastUnitPrice,
-            uint256 filledAmount,
-            uint256 filledAmountInFV,
-            uint256 orderFeeInFV,
-            uint256 placedAmount,
-            uint256 coverage,
-            bool isInsufficientDepositAmount
-        )
-    {
-        return LendingMarketUserLogic.getOrderEstimation(_params);
-    }
+    // Temporarily disabled during incident recovery to make room for the recovery entry points.
+    // function getOrderEstimation(
+    //     GetOrderEstimationParams calldata _params
+    // )
+    //     external
+    //     view
+    //     override
+    //     returns (
+    //         uint256 lastUnitPrice,
+    //         uint256 filledAmount,
+    //         uint256 filledAmountInFV,
+    //         uint256 orderFeeInFV,
+    //         uint256 placedAmount,
+    //         uint256 coverage,
+    //         bool isInsufficientDepositAmount
+    //     )
+    // {
+    //     return LendingMarketUserLogic.getOrderEstimation(_params);
+    // }
 
     /**
      * @notice Gets the estimated order result by the calculation of the amount to be filled when executing an order in the order books.
@@ -369,23 +370,24 @@ contract LendingMarketController is
      * @return isInsufficientDepositAmount The boolean if the order amount for lending in the selected currency is insufficient
      * for the deposit amount or not
      */
-    function getOrderEstimationFromFV(
-        GetOrderEstimationFromFVParams calldata _params
-    )
-        external
-        view
-        override
-        returns (
-            uint256 lastUnitPrice,
-            uint256 filledAmount,
-            uint256 filledAmountInFV,
-            uint256 orderFeeInFV,
-            uint256 coverage,
-            bool isInsufficientDepositAmount
-        )
-    {
-        return LendingMarketUserLogic.getOrderEstimationFromFV(_params);
-    }
+    // Temporarily disabled during incident recovery to make room for the recovery entry points.
+    // function getOrderEstimationFromFV(
+    //     GetOrderEstimationFromFVParams calldata _params
+    // )
+    //     external
+    //     view
+    //     override
+    //     returns (
+    //         uint256 lastUnitPrice,
+    //         uint256 filledAmount,
+    //         uint256 filledAmountInFV,
+    //         uint256 orderFeeInFV,
+    //         uint256 coverage,
+    //         bool isInsufficientDepositAmount
+    //     )
+    // {
+    //     return LendingMarketUserLogic.getOrderEstimationFromFV(_params);
+    // }
 
     /**
      * @notice Gets maturities for the selected currency.
@@ -1063,6 +1065,60 @@ contract LendingMarketController is
         address _user
     ) external override nonReentrant returns (uint256 totalActiveOrderCount) {
         return FundManagementLogic.cleanUpFunds(_ccy, _user);
+    }
+
+    /**
+     * @notice Restores pending order amounts omitted by the order-book incident.
+     * @dev This temporary recovery entry point must be removed after the incident recovery.
+     */
+    function addPendingOrderAmountForRecovery(
+        bytes32 _ccy,
+        uint256 _maturity,
+        uint256 _amount
+    ) external override onlyOperator {
+        Storage.slot().pendingOrderAmounts[_ccy][_maturity] += _amount;
+    }
+
+    /**
+     * @notice Cancels all active orders for a user during incident recovery.
+     * @dev This temporary recovery entry point must be removed after the incident recovery.
+     */
+    function cancelOrdersForRecovery(bytes32 _ccy, address _user) external override onlyOperator {
+        ILendingMarket(Storage.slot().lendingMarkets[_ccy]).cancelOrdersForRecovery(
+            Storage.slot().orderBookIdLists[_ccy],
+            _user
+        );
+    }
+
+    /**
+     * @notice Applies a fee-free offsetting fill to repair funds affected by an erroneous fill.
+     * @dev This temporary recovery entry point must be removed after the incident recovery.
+     * The caller must pass the opposite side of the erroneous fill. The recovery orchestration
+     * contract is responsible for correction-id replay protection and pause management.
+     */
+    function recoverUserFunds(
+        bytes32 _ccy,
+        uint256 _maturity,
+        address _user,
+        ProtocolTypes.Side _side,
+        uint256 _amount,
+        uint256 _unitPrice
+    ) external override onlyOperator {
+        LendingMarketUserLogic.recoverUserFunds(_ccy, _maturity, _user, _side, _amount, _unitPrice);
+    }
+
+    /**
+     * @notice Transfers all of a user's current FV and GV positions and remaining Deposit to a
+     * recovery account.
+     * @dev This temporary recovery entry point must be removed after the incident recovery.
+     * TokenVault must be unpaused while transferring the Deposit.
+     */
+    function transferAssetsForRecovery(
+        bytes32 _ccy,
+        address _user,
+        address _receiver
+    ) external override onlyOperator {
+        LendingMarketUserLogic.transferAssetsForRecovery(_ccy, _user, _receiver);
     }
 
     /**

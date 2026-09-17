@@ -144,34 +144,35 @@ interface ILendingMarketController {
 
     function getPendingOrderAmount(bytes32 _ccy, uint256 _maturity) external view returns (uint256);
 
-    function getOrderEstimation(
-        GetOrderEstimationParams calldata params
-    )
-        external
-        view
-        returns (
-            uint256 lastUnitPrice,
-            uint256 filledAmount,
-            uint256 filledAmountInFV,
-            uint256 orderFeeInFV,
-            uint256 placedAmount,
-            uint256 coverage,
-            bool isInsufficientDepositAmount
-        );
+    // Temporarily disabled during incident recovery.
+    // function getOrderEstimation(
+    //     GetOrderEstimationParams calldata params
+    // )
+    //     external
+    //     view
+    //     returns (
+    //         uint256 lastUnitPrice,
+    //         uint256 filledAmount,
+    //         uint256 filledAmountInFV,
+    //         uint256 orderFeeInFV,
+    //         uint256 placedAmount,
+    //         uint256 coverage,
+    //         bool isInsufficientDepositAmount
+    //     );
 
-    function getOrderEstimationFromFV(
-        GetOrderEstimationFromFVParams calldata _params
-    )
-        external
-        view
-        returns (
-            uint256 lastUnitPrice,
-            uint256 filledAmount,
-            uint256 filledAmountInFV,
-            uint256 orderFeeInFV,
-            uint256 coverage,
-            bool isInsufficientDepositAmount
-        );
+    // function getOrderEstimationFromFV(
+    //     GetOrderEstimationFromFVParams calldata _params
+    // )
+    //     external
+    //     view
+    //     returns (
+    //         uint256 lastUnitPrice,
+    //         uint256 filledAmount,
+    //         uint256 filledAmountInFV,
+    //         uint256 orderFeeInFV,
+    //         uint256 coverage,
+    //         bool isInsufficientDepositAmount
+    //     );
 
     function getMaturities(bytes32 ccy) external view returns (uint256[] memory);
 
@@ -334,6 +335,25 @@ interface ILendingMarketController {
     function cleanUpAllFunds(address user) external returns (bool);
 
     function cleanUpFunds(bytes32 ccy, address user) external returns (uint256 activeOrderCount);
+
+    function addPendingOrderAmountForRecovery(
+        bytes32 ccy,
+        uint256 maturity,
+        uint256 amount
+    ) external;
+
+    function cancelOrdersForRecovery(bytes32 ccy, address user) external;
+
+    function recoverUserFunds(
+        bytes32 ccy,
+        uint256 maturity,
+        address user,
+        ProtocolTypes.Side side,
+        uint256 amount,
+        uint256 unitPrice
+    ) external;
+
+    function transferAssetsForRecovery(bytes32 ccy, address user, address receiver) external;
 
     function updateMinDebtUnitPrice(bytes32 _ccy, uint256 _minDebtUnitPrice) external;
 

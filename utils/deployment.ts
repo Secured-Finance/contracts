@@ -153,11 +153,11 @@ class Proposal {
     this.safeTransactions = [];
   }
 
-  async add(to: string, data: string) {
+  async add(to: string, data: string, value = '0') {
     this.safeTransactions.push({
       to,
       data,
-      value: '0',
+      value,
       operation: 0, // Call operation
     });
   }

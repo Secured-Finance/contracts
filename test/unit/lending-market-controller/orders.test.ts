@@ -485,6 +485,204 @@ describe('LendingMarketController - Orders', () => {
       await initializeCurrency(targetCurrency);
     });
 
+    // Temporarily added during incident recovery for the temporary recovery function
+    describe('Recovery', () => {
+      const amount = BigNumber.from('970000000000000000');
+      const unitPrice = BigNumber.from('9700');
+      const futureValue = BigNumber.from('1000000000000000000');
+
+      it('Applies a BORROW correction and registers its currency and maturity', async () => {
+        const tx = await lendingMarketControllerProxy.recoverUserFunds(
+          targetCurrency,
+          maturities[0],
+          alice.address,
+          Side.BORROW,
+          amount,
+          unitPrice,
+        );
+
+        await expect(tx)
+          .to.emit(orderActionLogic, 'OrderExecuted')
+          .withArgs(
+            alice.address,
+            Side.BORROW,
+            targetCurrency,
+            maturities[0],
+            amount,
+            0,
+            amount,
+            unitPrice,
+            futureValue,
+            0,
+            0,
+            0,
+            0,
+            false,
+          );
+        await expect(tx)
+          .to.emit(fundManagementLogic, 'OrderFilled')
+          .withArgs(
+            alice.address,
+            targetCurrency,
+            Side.BORROW,
+            maturities[0],
+            amount,
+            futureValue,
+            0,
+          );
+
+        const receipt = await tx.wait();
+        const orderExecutedTopic =
+          orderActionLogic.interface.getEventTopic('OrderExecuted');
+        const orderFilledTopic =
+          fundManagementLogic.interface.getEventTopic('OrderFilled');
+        const orderExecutedLogIndex = receipt.logs.findIndex(
+          (log) => log.topics[0] === orderExecutedTopic,
+        );
+        const orderFilledLogIndex = receipt.logs.findIndex(
+          (log) => log.topics[0] === orderFilledTopic,
+        );
+        expect(orderExecutedLogIndex).to.be.greaterThan(-1);
+        expect(orderFilledLogIndex).to.be.greaterThan(orderExecutedLogIndex);
+
+        expect(
+          await lendingMarketControllerProxy.getPendingOrderAmount(
+            targetCurrency,
+            maturities[0],
+          ),
+        ).to.equal(0);
+        expect(
+          await lendingMarketControllerProxy.getUsedCurrencies(alice.address),
+        ).to.deep.equal([targetCurrency]);
+        expect(
+          await lendingMarketControllerProxy.getUsedMaturities(
+            targetCurrency,
+            alice.address,
+          ),
+        ).to.deep.equal([maturities[0]]);
+
+        const [balance, balanceMaturity] = await futureValueVault.getBalance(
+          orderBookIds[0],
+          alice.address,
+        );
+        expect(balance).to.equal(futureValue.mul(-1));
+        expect(balanceMaturity).to.equal(maturities[0]);
+      });
+
+      it('Adds a pending order amount separately from the correction', async () => {
+        await lendingMarketControllerProxy.addPendingOrderAmountForRecovery(
+          targetCurrency,
+          maturities[0],
+          amount,
+        );
+
+        expect(
+          await lendingMarketControllerProxy.getPendingOrderAmount(
+            targetCurrency,
+            maturities[0],
+          ),
+        ).to.equal(amount);
+      });
+
+      it('Applies a LEND correction with no order fee', async () => {
+        const tx = await lendingMarketControllerProxy.recoverUserFunds(
+          targetCurrency,
+          maturities[0],
+          alice.address,
+          Side.LEND,
+          amount,
+          unitPrice,
+        );
+
+        await expect(tx)
+          .to.emit(orderActionLogic, 'OrderExecuted')
+          .withArgs(
+            alice.address,
+            Side.LEND,
+            targetCurrency,
+            maturities[0],
+            amount,
+            0,
+            amount,
+            unitPrice,
+            futureValue,
+            0,
+            0,
+            0,
+            0,
+            false,
+          );
+        await expect(tx)
+          .to.emit(fundManagementLogic, 'OrderFilled')
+          .withArgs(
+            alice.address,
+            targetCurrency,
+            Side.LEND,
+            maturities[0],
+            amount,
+            futureValue,
+            0,
+          );
+
+        const [balance, balanceMaturity] = await futureValueVault.getBalance(
+          orderBookIds[0],
+          alice.address,
+        );
+        expect(balance).to.equal(futureValue);
+        expect(balanceMaturity).to.equal(maturities[0]);
+      });
+
+      it('Rejects recovery by a non-operator', async () => {
+        await expect(
+          lendingMarketControllerProxy
+            .connect(alice)
+            .recoverUserFunds(
+              targetCurrency,
+              maturities[0],
+              alice.address,
+              Side.BORROW,
+              amount,
+              unitPrice,
+            ),
+        ).to.be.revertedWith('CallerNotOperator');
+      });
+
+      it('Rejects invalid recovery parameters', async () => {
+        await expect(
+          lendingMarketControllerProxy.recoverUserFunds(
+            targetCurrency,
+            1,
+            alice.address,
+            Side.BORROW,
+            amount,
+            unitPrice,
+          ),
+        ).to.be.revertedWith('InvalidMaturity');
+
+        await expect(
+          lendingMarketControllerProxy.recoverUserFunds(
+            targetCurrency,
+            maturities[0],
+            alice.address,
+            Side.BORROW,
+            0,
+            unitPrice,
+          ),
+        ).to.be.revertedWith('InvalidAmount');
+
+        await expect(
+          lendingMarketControllerProxy.recoverUserFunds(
+            targetCurrency,
+            maturities[0],
+            alice.address,
+            Side.BORROW,
+            amount,
+            0,
+          ),
+        ).to.be.revertedWith('InvalidAmount');
+      });
+    });
+
     it('Get a market currency data', async () => {
       expect(await lendingMarket.getCurrency()).to.equal(targetCurrency);
     });

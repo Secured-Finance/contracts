@@ -1,0 +1,122 @@
+{
+  "version": 1,
+  "network": "filecoin-mainnet",
+  "chainId": "314",
+  "currency": "USDFC",
+  "batches": [
+    {
+      "batchId": "0xda239cf500d6dbe883dce2c334545e89b9fc49afab454f5b64f093e3a8740a19",
+      "user": "0xd744c1C8D36F2E226D1b40ba2e4a995654B72e8d",
+      "fundingAmount": "0",
+      "fundingTransactions": [
+        {
+          "transactionHash": "0xe77b27d0f79e6ba1a1ff807bb132467438326005e7313016438efd19d0f56690",
+          "tokenVaultBalanceBefore": "28892462187763603405991",
+          "tokenVaultBalanceAfter": "28919131534404426108545"
+        }
+      ],
+      "retainedLendPositions": [],
+      "corrections": [
+        {
+          "correctionId": "0x307ae1051ec08f0b420d1267f163e20e461ec553634f5473c369fb528204c21d",
+          "maturity": "1798156800",
+          "correctionSide": "BORROW",
+          "erroneousDroppedPV": "21669346640822702554",
+          "unitPrice": "3",
+          "expectedFV": "72231155469409008513333"
+        },
+        {
+          "correctionId": "0x25c29617dde52a9ebb4cacb7180dcf8cd533282c1c6c7b8095472021a38b1247",
+          "maturity": "1798156800",
+          "correctionSide": "BORROW",
+          "erroneousDroppedPV": "1",
+          "unitPrice": "9600",
+          "expectedFV": "1"
+        }
+      ]
+    },
+    {
+      "batchId": "0x6b84b99d4d40429bdad14b642c93f6a13ad3cda4467cb0de2739d6b091b29655",
+      "user": "0xFDA3BbE9Ec1eF8aa9d1bD06Cf3F4dfB848371268",
+      "fundingAmount": "28919131534404426108545",
+      "fundingTransactions": [
+        {
+          "transactionHash": "0x76f3f2bd845a970be52815f2515af1814ee7f806f09fca6935f0dd12c94e3a2a",
+          "tokenVaultBalanceBefore": "28919131534404426108545",
+          "tokenVaultBalanceAfter": "28945820883055229428126"
+        },
+        {
+          "transactionHash": "0x8a49c8096329637e4ddeb8ccda41c96093d519b64e7b61d5bd5c53fdf707dbb3",
+          "tokenVaultBalanceBefore": "28945820883055229428126",
+          "tokenVaultBalanceAfter": "0"
+        }
+      ],
+      "retainedLendPositions": [],
+      "corrections": [
+        {
+          "correctionId": "0xe76a9da68ccc5cd405304f197e9c3faf186e9f372737e2492c3c0217323ad3ac",
+          "maturity": "1798156800",
+          "correctionSide": "BORROW",
+          "erroneousDroppedPV": "21689348650803319581",
+          "unitPrice": "3",
+          "expectedFV": "72297828836011065270000"
+        },
+        {
+          "correctionId": "0xcb7b8532fb24f1c077b1d42be9742da4046d247871ec94e45b6b6f43b36ae95e",
+          "maturity": "1798156800",
+          "correctionSide": "BORROW",
+          "erroneousDroppedPV": "1",
+          "unitPrice": "9600",
+          "expectedFV": "1"
+        },
+        {
+          "correctionId": "0x6a40c88198e918f114882615347c398ce0c492fbe6675d02ede08adafaf22878",
+          "maturity": "1798156800",
+          "correctionSide": "LEND",
+          "erroneousDroppedPV": "28946820883055229428126",
+          "unitPrice": "9975",
+          "expectedFV": "29019369306321032008146"
+        },
+        {
+          "correctionId": "0x323e54db04a18950987f18f85884865956157bbf6010a41cdbebbbdf707c9d9b",
+          "maturity": "1798156800",
+          "correctionSide": "LEND",
+          "erroneousDroppedPV": "4",
+          "unitPrice": "10000",
+          "expectedFV": "4"
+        }
+      ]
+    },
+    {
+      "batchId": "0x0db519e397f6c567808c424b95d8815638cc18a1c058cc8d9786323fae427931",
+      "user": "0x93841e6EEc6A6ce80553B4B8776aB94555809b14",
+      "fundingAmount": "0",
+      "fundingTransactions": [
+        {
+          "transactionHash": "0x87c396063d3045706f9bb31e7ce9d045fe184aae1cb4537ffb2a4b9440188ba6",
+          "tokenVaultBalanceBefore": "0",
+          "tokenVaultBalanceAfter": "12000000000000000000"
+        }
+      ],
+      "retainedLendPositions": [],
+      "corrections": [
+        {
+          "correctionId": "0x2952b17b6dcbc89524c70b6dfbc552a4901415484777c4582dab02130e38e5d1",
+          "maturity": "1790294400",
+          "correctionSide": "BORROW",
+          "erroneousDroppedPV": "100000000000000000000",
+          "unitPrice": "3",
+          "expectedFV": "333333333333333333333333"
+        },
+        {
+          "correctionId": "0x3e84bb7d2fade46fc531fe01736937e07d88abdc9be09fb4cee0f384caea0003",
+          "maturity": "1790294400",
+          "correctionSide": "BORROW",
+          "erroneousDroppedPV": "1000000000000000000",
+          "unitPrice": "9400",
+          "expectedFV": "1063829787234042553"
+        }
+      ]
+    }
+  ]
+}

@@ -293,6 +293,8 @@ interface ILendingMarket {
             uint256 maturity
         );
 
+    function cancelOrdersForRecovery(uint8[] calldata orderBookIds, address user) external;
+
     function updateOrderFeeRate(uint256 orderFeeRate) external;
 
     function updateCircuitBreakerLimitRange(uint256 limitRange) external;
@@ -300,4 +302,15 @@ interface ILendingMarket {
     function pause() external;
 
     function unpause() external;
+
+    function emitOrderExecuted(
+        address user,
+        ProtocolTypes.Side side,
+        bytes32 ccy,
+        uint256 maturity,
+        uint256 inputAmount,
+        uint256 filledAmount,
+        uint256 filledUnitPrice,
+        uint256 filledAmountInFV
+    ) external;
 }

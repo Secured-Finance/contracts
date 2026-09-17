@@ -419,6 +419,46 @@ describe('FutureValueVault', () => {
         );
     });
 
+    it('Nets opposite-side supplies when transferring positions', async () => {
+      await futureValueVaultCaller.increase(
+        currentOrderBookId,
+        alice.address,
+        amount,
+        maturity,
+      );
+      await futureValueVaultCaller.decrease(
+        currentOrderBookId,
+        bob.address,
+        amount * 2,
+        maturity,
+      );
+
+      await futureValueVaultCaller.transferFrom(
+        currentOrderBookId,
+        alice.address,
+        bob.address,
+        amount,
+        maturity,
+      );
+
+      const [aliceBalance] = await futureValueVaultProxy.getBalance(
+        currentOrderBookId,
+        alice.address,
+      );
+      const [bobBalance] = await futureValueVaultProxy.getBalance(
+        currentOrderBookId,
+        bob.address,
+      );
+      expect(aliceBalance).to.equal(0);
+      expect(bobBalance).to.equal(-amount);
+      expect(
+        await futureValueVaultProxy.getTotalLendingSupply(maturity),
+      ).to.equal(0);
+      expect(
+        await futureValueVaultProxy.getTotalBorrowingSupply(maturity),
+      ).to.equal(amount);
+    });
+
     it('Fail to transfer balance because sender has balance in the past maturity', async () => {
       await futureValueVaultCaller.increase(
         currentOrderBookId,

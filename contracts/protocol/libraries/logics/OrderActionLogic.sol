@@ -567,4 +567,34 @@ library OrderActionLogic {
     ) private view returns (OrderBookLib.OrderBook storage) {
         return Storage.slot().orderBooks[_orderBookId];
     }
+
+    // This temporary function emits the synthetic opposite-side order execution used for
+    // incident recovery. Remove it after the incident recovery is complete.
+    function emitOrderExecuted(
+        address _user,
+        ProtocolTypes.Side _side,
+        bytes32 _ccy,
+        uint256 _maturity,
+        uint256 _inputAmount,
+        uint256 _filledAmount,
+        uint256 _filledUnitPrice,
+        uint256 _filledAmountInFV
+    ) external {
+        emit OrderExecuted(
+            _user,
+            _side,
+            _ccy,
+            _maturity,
+            _inputAmount,
+            0,
+            _filledAmount,
+            _filledUnitPrice,
+            _filledAmountInFV,
+            0,
+            0,
+            0,
+            0,
+            false
+        );
+    }
 }
