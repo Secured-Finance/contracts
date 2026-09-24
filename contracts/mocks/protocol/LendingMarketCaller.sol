@@ -3,7 +3,7 @@ pragma solidity 0.8.19;
 
 import {IBeaconProxyController} from "../../protocol/interfaces/IBeaconProxyController.sol";
 import {ILendingMarket} from "../../protocol/interfaces/ILendingMarket.sol";
-import {FilledOrder, PartiallyFilledOrder} from "../../protocol/libraries/OrderBookLib.sol";
+import {ItayoseFinalizeResult, ItayoseProcessStatus, ItayoseSettlementResult} from "../../protocol/libraries/logics/OrderBookLogic.sol";
 import {ProtocolTypes} from "../../protocol/types/ProtocolTypes.sol";
 
 contract LendingMarketCaller {
@@ -116,20 +116,32 @@ contract LendingMarketCaller {
         ILendingMarket(lendingMarkets[_ccy]).cancelOrder(_orderBookId, _user, _orderId);
     }
 
-    function executeItayoseCall(
+    function initializeItayose(
         bytes32 _ccy,
         uint8 _orderBookId
-    )
-        external
-        returns (
-            uint256 openingUnitPrice,
-            uint256 totalOffsetAmount,
-            uint256 openingDate,
-            PartiallyFilledOrder memory lendingOrder,
-            PartiallyFilledOrder memory borrowingOrder
-        )
-    {
-        return ILendingMarket(lendingMarkets[_ccy]).executeItayoseCall(_orderBookId);
+    ) external returns (ItayoseProcessStatus memory) {
+        return ILendingMarket(lendingMarkets[_ccy]).initializeItayose(_orderBookId);
+    }
+
+    function executeItayoseSettlement(
+        bytes32 _ccy,
+        uint8 _orderBookId
+    ) external returns (ItayoseSettlementResult memory) {
+        return ILendingMarket(lendingMarkets[_ccy]).executeItayoseSettlement(_orderBookId);
+    }
+
+    function finalizeItayose(
+        bytes32 _ccy,
+        uint8 _orderBookId
+    ) external returns (ItayoseFinalizeResult memory) {
+        return ILendingMarket(lendingMarkets[_ccy]).finalizeItayose(_orderBookId);
+    }
+
+    function getItayoseProcessStatus(
+        bytes32 _ccy,
+        uint8 _orderBookId
+    ) external view returns (ItayoseProcessStatus memory) {
+        return ILendingMarket(lendingMarkets[_ccy]).getItayoseProcessStatus(_orderBookId);
     }
 
     function cleanUpOrders(bytes32 _ccy, uint8 _orderBookId, address _user) external {

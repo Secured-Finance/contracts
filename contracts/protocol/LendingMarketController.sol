@@ -15,6 +15,7 @@ import {FundManagementLogic} from "./libraries/logics/FundManagementLogic.sol";
 import {LendingMarketOperationLogic} from "./libraries/logics/LendingMarketOperationLogic.sol";
 import {LendingMarketUserLogic} from "./libraries/logics/LendingMarketUserLogic.sol";
 import {LiquidationLogic} from "./libraries/logics/LiquidationLogic.sol";
+import {ItayoseProcessStatus} from "./libraries/logics/OrderBookLogic.sol";
 // mixins
 import {MixinAccessControl} from "./mixins/MixinAccessControl.sol";
 import {MixinAddressResolver} from "./mixins/MixinAddressResolver.sol";
@@ -203,6 +204,62 @@ contract LendingMarketController is
     }
 
     /**
+     * @notice Gets the min debt unit price at an arbitrary reference timestamp.
+     */
+    function getMinDebtUnitPriceAt(
+        bytes32 _ccy,
+        uint256 _maturity,
+        uint256 _referenceTimestamp
+    ) external view override returns (uint256) {
+        return
+            FundManagementLogic.getMinDebtUnitPriceAt(
+                _maturity,
+                Storage.slot().minDebtUnitPrices[_ccy],
+                _referenceTimestamp
+            );
+    }
+
+    /**
+     * @notice Gets the currently accepted limit-order unit price range.
+     * @dev The range does not indicate whether order entry is currently executable.
+     */
+    function getOrderUnitPriceRange(
+        bytes32 _ccy,
+        uint256 _maturity
+    )
+        external
+        view
+        override
+        ifValidMaturity(_ccy, _maturity)
+        returns (
+            uint256 minLendUnitPrice,
+            uint256 maxLendUnitPrice,
+            uint256 minBorrowUnitPrice,
+            uint256 maxBorrowUnitPrice,
+            uint256 referenceUnitPrice,
+            bool isMinDebtUnitPriceReference
+        )
+    {
+        return LendingMarketOperationLogic.getOrderUnitPriceRange(_ccy, _maturity);
+    }
+
+    /**
+     * @notice Gets the resumable Itayose process status.
+     */
+    function getItayoseProcessStatus(
+        bytes32 _ccy,
+        uint256 _maturity
+    )
+        external
+        view
+        override
+        ifValidMaturity(_ccy, _maturity)
+        returns (ItayoseProcessStatus memory)
+    {
+        return LendingMarketOperationLogic.getItayoseProcessStatus(_ccy, _maturity);
+    }
+
+    /**
      * @notice Gets the genesis date when the first market opens for the selected currency.
      * @param _ccy Currency name in bytes32
      * @return The genesis date
@@ -274,24 +331,25 @@ contract LendingMarketController is
      * @return isInsufficientDepositAmount The boolean if the order amount for lending in the selected currency is insufficient
      * for the deposit amount or not
      */
-    function getOrderEstimation(
-        GetOrderEstimationParams calldata _params
-    )
-        external
-        view
-        override
-        returns (
-            uint256 lastUnitPrice,
-            uint256 filledAmount,
-            uint256 filledAmountInFV,
-            uint256 orderFeeInFV,
-            uint256 placedAmount,
-            uint256 coverage,
-            bool isInsufficientDepositAmount
-        )
-    {
-        return LendingMarketUserLogic.getOrderEstimation(_params);
-    }
+    // Temporarily disabled during incident recovery to make room for the recovery entry points.
+    // function getOrderEstimation(
+    //     GetOrderEstimationParams calldata _params
+    // )
+    //     external
+    //     view
+    //     override
+    //     returns (
+    //         uint256 lastUnitPrice,
+    //         uint256 filledAmount,
+    //         uint256 filledAmountInFV,
+    //         uint256 orderFeeInFV,
+    //         uint256 placedAmount,
+    //         uint256 coverage,
+    //         bool isInsufficientDepositAmount
+    //     )
+    // {
+    //     return LendingMarketUserLogic.getOrderEstimation(_params);
+    // }
 
     /**
      * @notice Gets the estimated order result by the calculation of the amount to be filled when executing an order in the order books.
@@ -312,23 +370,24 @@ contract LendingMarketController is
      * @return isInsufficientDepositAmount The boolean if the order amount for lending in the selected currency is insufficient
      * for the deposit amount or not
      */
-    function getOrderEstimationFromFV(
-        GetOrderEstimationFromFVParams calldata _params
-    )
-        external
-        view
-        override
-        returns (
-            uint256 lastUnitPrice,
-            uint256 filledAmount,
-            uint256 filledAmountInFV,
-            uint256 orderFeeInFV,
-            uint256 coverage,
-            bool isInsufficientDepositAmount
-        )
-    {
-        return LendingMarketUserLogic.getOrderEstimationFromFV(_params);
-    }
+    // Temporarily disabled during incident recovery to make room for the recovery entry points.
+    // function getOrderEstimationFromFV(
+    //     GetOrderEstimationFromFVParams calldata _params
+    // )
+    //     external
+    //     view
+    //     override
+    //     returns (
+    //         uint256 lastUnitPrice,
+    //         uint256 filledAmount,
+    //         uint256 filledAmountInFV,
+    //         uint256 orderFeeInFV,
+    //         uint256 coverage,
+    //         bool isInsufficientDepositAmount
+    //     )
+    // {
+    //     return LendingMarketUserLogic.getOrderEstimationFromFV(_params);
+    // }
 
     /**
      * @notice Gets maturities for the selected currency.
@@ -587,7 +646,7 @@ contract LendingMarketController is
         ProtocolTypes.Side _side,
         uint256 _amount,
         uint256 _unitPrice
-    ) external override nonReentrant ifValidMaturity(_ccy, _maturity) ifActive returns (bool) {
+    ) public override nonReentrant ifValidMaturity(_ccy, _maturity) ifActive returns (bool) {
         LendingMarketUserLogic.executeOrder(
             _ccy,
             _maturity,
@@ -615,24 +674,9 @@ contract LendingMarketController is
         ProtocolTypes.Side _side,
         uint256 _amount,
         uint256 _unitPrice
-    )
-        external
-        payable
-        override
-        nonReentrant
-        ifValidMaturity(_ccy, _maturity)
-        ifActive
-        returns (bool)
-    {
+    ) external payable override ifValidMaturity(_ccy, _maturity) ifActive returns (bool) {
         tokenVault().depositFrom{value: msg.value}(msg.sender, _ccy, _amount);
-        LendingMarketUserLogic.executeOrder(
-            _ccy,
-            _maturity,
-            msg.sender,
-            _side,
-            _amount,
-            _unitPrice
-        );
+        executeOrder(_ccy, _maturity, _side, _amount, _unitPrice);
         return true;
     }
 
@@ -661,7 +705,7 @@ contract LendingMarketController is
         uint8 _permitV,
         bytes32 _permitR,
         bytes32 _permitS
-    ) external override nonReentrant ifValidMaturity(_ccy, _maturity) ifActive returns (bool) {
+    ) external override ifValidMaturity(_ccy, _maturity) ifActive returns (bool) {
         tokenVault().depositWithPermitFrom(
             msg.sender,
             _ccy,
@@ -672,14 +716,7 @@ contract LendingMarketController is
             _permitS
         );
 
-        LendingMarketUserLogic.executeOrder(
-            _ccy,
-            _maturity,
-            msg.sender,
-            _side,
-            _amount,
-            _unitPrice
-        );
+        executeOrder(_ccy, _maturity, _side, _amount, _unitPrice);
         return true;
     }
 
@@ -729,24 +766,9 @@ contract LendingMarketController is
         ProtocolTypes.Side _side,
         uint256 _amount,
         uint256 _unitPrice
-    )
-        external
-        payable
-        override
-        nonReentrant
-        ifValidMaturity(_ccy, _maturity)
-        ifActive
-        returns (bool)
-    {
+    ) external payable override ifValidMaturity(_ccy, _maturity) ifActive returns (bool) {
         tokenVault().depositFrom{value: msg.value}(msg.sender, _ccy, _amount);
-        LendingMarketUserLogic.executePreOrder(
-            _ccy,
-            _maturity,
-            msg.sender,
-            _side,
-            _amount,
-            _unitPrice
-        );
+        executePreOrder(_ccy, _maturity, _side, _amount, _unitPrice);
 
         return true;
     }
@@ -776,7 +798,7 @@ contract LendingMarketController is
         uint8 _permitV,
         bytes32 _permitR,
         bytes32 _permitS
-    ) external override nonReentrant ifValidMaturity(_ccy, _maturity) ifActive returns (bool) {
+    ) external override ifValidMaturity(_ccy, _maturity) ifActive returns (bool) {
         tokenVault().depositWithPermitFrom(
             msg.sender,
             _ccy,
@@ -787,14 +809,7 @@ contract LendingMarketController is
             _permitS
         );
 
-        LendingMarketUserLogic.executePreOrder(
-            _ccy,
-            _maturity,
-            msg.sender,
-            _side,
-            _amount,
-            _unitPrice
-        );
+        executePreOrder(_ccy, _maturity, _side, _amount, _unitPrice);
 
         return true;
     }
@@ -884,25 +899,19 @@ contract LendingMarketController is
         bytes32 _ccy,
         uint256 _maturity
     ) external override nonReentrant ifActive returns (bool) {
-        (
-            PartiallyFilledOrder memory partiallyFilledLendingOrder,
-            PartiallyFilledOrder memory partiallyFilledBorrowingOrder
-        ) = LendingMarketOperationLogic.executeItayoseCall(_ccy, _maturity);
-
-        LendingMarketUserLogic.updateFundsForMaker(
-            _ccy,
-            _maturity,
-            ProtocolTypes.Side.LEND,
-            partiallyFilledLendingOrder
-        );
-        LendingMarketUserLogic.updateFundsForMaker(
-            _ccy,
-            _maturity,
-            ProtocolTypes.Side.BORROW,
-            partiallyFilledBorrowingOrder
-        );
-
+        LendingMarketOperationLogic.executeItayoseCall(_ccy, _maturity);
         return true;
+    }
+
+    /**
+     * @notice Executes one resumable Itayose process step.
+     * @return completed True when this step finalized the order book
+     */
+    function executeItayoseStep(
+        bytes32 _ccy,
+        uint256 _maturity
+    ) external override nonReentrant ifActive returns (bool completed) {
+        return LendingMarketOperationLogic.executeItayoseStep(_ccy, _maturity);
     }
 
     /**
@@ -1059,6 +1068,60 @@ contract LendingMarketController is
     }
 
     /**
+     * @notice Restores pending order amounts omitted by the order-book incident.
+     * @dev This temporary recovery entry point must be removed after the incident recovery.
+     */
+    function addPendingOrderAmountForRecovery(
+        bytes32 _ccy,
+        uint256 _maturity,
+        uint256 _amount
+    ) external override onlyOperator {
+        Storage.slot().pendingOrderAmounts[_ccy][_maturity] += _amount;
+    }
+
+    /**
+     * @notice Cancels all active orders for a user during incident recovery.
+     * @dev This temporary recovery entry point must be removed after the incident recovery.
+     */
+    function cancelOrdersForRecovery(bytes32 _ccy, address _user) external override onlyOperator {
+        ILendingMarket(Storage.slot().lendingMarkets[_ccy]).cancelOrdersForRecovery(
+            Storage.slot().orderBookIdLists[_ccy],
+            _user
+        );
+    }
+
+    /**
+     * @notice Applies a fee-free offsetting fill to repair funds affected by an erroneous fill.
+     * @dev This temporary recovery entry point must be removed after the incident recovery.
+     * The caller must pass the opposite side of the erroneous fill. The recovery orchestration
+     * contract is responsible for correction-id replay protection and pause management.
+     */
+    function recoverUserFunds(
+        bytes32 _ccy,
+        uint256 _maturity,
+        address _user,
+        ProtocolTypes.Side _side,
+        uint256 _amount,
+        uint256 _unitPrice
+    ) external override onlyOperator {
+        LendingMarketUserLogic.recoverUserFunds(_ccy, _maturity, _user, _side, _amount, _unitPrice);
+    }
+
+    /**
+     * @notice Transfers all of a user's current FV and GV positions and remaining Deposit to a
+     * recovery account.
+     * @dev This temporary recovery entry point must be removed after the incident recovery.
+     * TokenVault must be unpaused while transferring the Deposit.
+     */
+    function transferAssetsForRecovery(
+        bytes32 _ccy,
+        address _user,
+        address _receiver
+    ) external override onlyOperator {
+        LendingMarketUserLogic.transferAssetsForRecovery(_ccy, _user, _receiver);
+    }
+
+    /**
      * @notice Updates the min debt unit price for the selected currency.
      * @param _ccy Currency name in bytes32
      * @param _minDebtUnitPrice The min debt unit price
@@ -1076,15 +1139,16 @@ contract LendingMarketController is
      * @param _ccy Currency name in bytes32
      * @param _maturity The maturity of the order book
      * @param _amount The amount of ZCToken to mint
+     * @return withdrawnAmount Actual amount withdrawn
      */
     function withdrawZCToken(
         bytes32 _ccy,
         uint256 _maturity,
         uint256 _amount
-    ) external override nonReentrant ifActive {
+    ) external override nonReentrant ifActive returns (uint256 withdrawnAmount) {
         if (_maturity != 0 && !isValidMaturity(_ccy, _maturity)) revert InvalidMaturity();
 
-        LendingMarketUserLogic.withdrawZCToken(_ccy, _maturity, msg.sender, _amount);
+        return LendingMarketUserLogic.withdrawZCToken(_ccy, _maturity, msg.sender, _amount);
     }
 
     /**

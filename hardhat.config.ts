@@ -30,6 +30,7 @@ const networkConfig = (chainId: number): HttpNetworkUserConfig => ({
   saveDeployments: true,
   gasPrice: 'auto',
   gasMultiplier: 3,
+  timeout: 300000,
   httpHeaders: process.env.GLIF_API_KEY
     ? {
         Authorization: `Bearer ${process.env.GLIF_API_KEY}`,
@@ -44,7 +45,10 @@ const config: HardhatUserConfig = {
     alice: 1,
   },
   networks: {
-    hardhat: { accounts: { count: 100 } },
+    hardhat: {
+      accounts: { count: 100 },
+      hardfork: 'cancun',
+    },
     localhost: {
       url: process.env.DEV_RPC_ENDPOINT || 'http://127.0.0.1:8545',
       chainId: parseInt(process.env.DEV_CHAIN_ID || '31337'),

@@ -22,6 +22,7 @@ interface ICurrencyController {
         uint256 updatedAt,
         uint256 blockTimestamp
     );
+    error PriceFeedNotRegistered(bytes32 ccy);
 
     event CurrencyAdded(bytes32 indexed ccy, uint256 haircut);
     event CurrencyRemoved(bytes32 indexed ccy);

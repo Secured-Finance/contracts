@@ -95,15 +95,20 @@ abstract contract MixinWallet is Ownable {
      * @param _tokenVault TokenVault contract instance
      * @param _ccy Currency name in bytes32
      * @param _amount Amount of funds to deposit
+     * @return withdrawnAmount Actual amount withdrawn
      */
-    function _withdraw(ITokenVault _tokenVault, bytes32 _ccy, uint256 _amount) internal {
-        _tokenVault.withdraw(_ccy, _amount);
+    function _withdraw(
+        ITokenVault _tokenVault,
+        bytes32 _ccy,
+        uint256 _amount
+    ) internal returns (uint256 withdrawnAmount) {
+        withdrawnAmount = _tokenVault.withdraw(_ccy, _amount);
 
         address tokenAddress = _tokenVault.getTokenAddress(_ccy);
         if (TransferHelper.isNative(tokenAddress)) {
-            TransferHelper.safeTransferETH(msg.sender, _amount);
+            TransferHelper.safeTransferETH(msg.sender, withdrawnAmount);
         } else {
-            TransferHelper.safeTransfer(tokenAddress, msg.sender, _amount);
+            TransferHelper.safeTransfer(tokenAddress, msg.sender, withdrawnAmount);
         }
     }
 }

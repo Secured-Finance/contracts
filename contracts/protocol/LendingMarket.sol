@@ -7,7 +7,7 @@ import {ILendingMarket} from "./interfaces/ILendingMarket.sol";
 import {Contracts} from "./libraries/Contracts.sol";
 import {Constants} from "./libraries/Constants.sol";
 import {OrderActionLogic} from "./libraries/logics/OrderActionLogic.sol";
-import {OrderBookLogic} from "./libraries/logics/OrderBookLogic.sol";
+import {OrderBookLogic, ItayoseFinalizeResult, ItayoseProcessStatus, ItayoseSettlementResult} from "./libraries/logics/OrderBookLogic.sol";
 import {OrderReaderLogic} from "./libraries/logics/OrderReaderLogic.sol";
 import {RoundingUint256} from "./libraries/math/RoundingUint256.sol";
 import {FilledOrder, PartiallyFilledOrder} from "./libraries/OrderBookLib.sol";
@@ -434,12 +434,22 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     }
 
     /**
-     * @notice Gets the market itayose logs.
+     * @notice Gets the immutable price-discovery result once an Itayose process is initialized.
+     * @dev A non-zero log does not mean the process is finalized. Use isReady for completion.
      * @param _maturity The market maturity
-     * @return ItayoseLog of the market
      */
     function getItayoseLog(uint256 _maturity) external view override returns (ItayoseLog memory) {
         return Storage.slot().itayoseLogs[_maturity];
+    }
+
+    /**
+     * @notice Gets the resumable Itayose process status.
+     * @param _orderBookId The order book id
+     */
+    function getItayoseProcessStatus(
+        uint8 _orderBookId
+    ) external view override returns (ItayoseProcessStatus memory) {
+        return OrderBookLogic.getItayoseProcessStatus(_orderBookId);
     }
 
     /**
@@ -622,6 +632,21 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     }
 
     /**
+     * @notice Builds chunk metadata for a legacy price level after the chunk-index upgrade.
+     * @dev Permissionless and callable only while the price level has orders and no chunk metadata.
+     * @param _orderBookId The order book id
+     * @param _side The order side to migrate
+     * @param _unitPrice The unit price to migrate
+     */
+    function migrateOrderChunks(
+        uint8 _orderBookId,
+        ProtocolTypes.Side _side,
+        uint256 _unitPrice
+    ) external {
+        OrderBookLogic.migrateOrderChunks(_orderBookId, _side, _unitPrice);
+    }
+
+    /**
      * @notice Creates a new order book.
      * @param _maturity The initial maturity of the order book
      * @param _openingDate The timestamp when the order book opens
@@ -639,7 +664,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         uint8 _maturedOrderBookId,
         uint8 _newNearestOrderBookId,
         uint256 _autoRollUnitPrice
-    ) external override onlyLendingMarketController {
+    ) external override whenNotPaused onlyLendingMarketController {
         OrderBookLogic.executeAutoRoll(
             _maturedOrderBookId,
             _newNearestOrderBookId,
@@ -666,6 +691,33 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         ifNotItayosePeriod(_orderBookId)
     {
         OrderActionLogic.cancelOrder(_orderBookId, _user, _orderId);
+    }
+
+    /**
+     * @notice Cancels all active orders for a user during incident recovery.
+     * @dev This temporary recovery entry point must be removed after the incident recovery.
+     */
+    function cancelOrdersForRecovery(
+        uint8[] calldata _orderBookIds,
+        address _user
+    ) external override onlyLendingMarketController {
+        for (uint256 i; i < _orderBookIds.length; ++i) {
+            (uint48[] memory lendOrderIds, ) = OrderReaderLogic.getLendOrderIds(
+                _orderBookIds[i],
+                _user
+            );
+            for (uint256 j; j < lendOrderIds.length; ++j) {
+                OrderActionLogic.cancelOrder(_orderBookIds[i], _user, lendOrderIds[j]);
+            }
+
+            (uint48[] memory borrowOrderIds, ) = OrderReaderLogic.getBorrowOrderIds(
+                _orderBookIds[i],
+                _user
+            );
+            for (uint256 j; j < borrowOrderIds.length; ++j) {
+                OrderActionLogic.cancelOrder(_orderBookIds[i], _user, borrowOrderIds[j]);
+            }
+        }
     }
 
     /**
@@ -805,17 +857,9 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     }
 
     /**
-     * @notice Executes Itayose to aggregate pre-orders and determine the opening unit price.
-     * After this action, the market opens.
-     * @dev If the opening date had already passed when this contract was created, this Itayose need not be executed.
-     * @param _orderBookId The order book id
-     * @return openingUnitPrice The opening price when Itayose is executed
-     * @return totalOffsetAmount The total filled amount when Itayose is executed
-     * @return openingDate The timestamp when the market opens
-     * @return partiallyFilledLendingOrder Partially filled lending order on the order book
-     * @return partiallyFilledBorrowingOrder Partially filled borrowing order on the order book
+     * @notice Initializes an Itayose process and fixes its price-discovery result.
      */
-    function executeItayoseCall(
+    function initializeItayose(
         uint8 _orderBookId
     )
         external
@@ -823,15 +867,41 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         whenNotPaused
         onlyLendingMarketController
         ifItayosePeriod(_orderBookId)
-        returns (
-            uint256 openingUnitPrice,
-            uint256 totalOffsetAmount,
-            uint256 openingDate,
-            PartiallyFilledOrder memory partiallyFilledLendingOrder,
-            PartiallyFilledOrder memory partiallyFilledBorrowingOrder
-        )
+        returns (ItayoseProcessStatus memory)
     {
-        return OrderBookLogic.executeItayoseCall(_orderBookId);
+        return OrderBookLogic.initializeItayose(_orderBookId);
+    }
+
+    /**
+     * @notice Settles one bounded Itayose batch.
+     */
+    function executeItayoseSettlement(
+        uint8 _orderBookId
+    )
+        external
+        override
+        whenNotPaused
+        onlyLendingMarketController
+        ifItayosePeriod(_orderBookId)
+        returns (ItayoseSettlementResult memory)
+    {
+        return OrderBookLogic.executeItayoseSettlement(_orderBookId);
+    }
+
+    /**
+     * @notice Finalizes a fully settled Itayose process and opens the market.
+     */
+    function finalizeItayose(
+        uint8 _orderBookId
+    )
+        external
+        override
+        whenNotPaused
+        onlyLendingMarketController
+        ifItayosePeriod(_orderBookId)
+        returns (ItayoseFinalizeResult memory)
+    {
+        return OrderBookLogic.finalizeItayose(_orderBookId);
     }
 
     /**
@@ -866,5 +936,32 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      */
     function unpause() external override onlyLendingMarketController {
         _unpause();
+    }
+
+    /**
+     * @notice Emits the synthetic order execution used for incident recovery.
+     * @dev This temporary recovery entry point must be removed after the incident recovery.
+     * Only LendingMarketController can call this function.
+     */
+    function emitOrderExecuted(
+        address _user,
+        ProtocolTypes.Side _side,
+        bytes32 _ccy,
+        uint256 _maturity,
+        uint256 _inputAmount,
+        uint256 _filledAmount,
+        uint256 _filledUnitPrice,
+        uint256 _filledAmountInFV
+    ) external override onlyLendingMarketController {
+        OrderActionLogic.emitOrderExecuted(
+            _user,
+            _side,
+            _ccy,
+            _maturity,
+            _inputAmount,
+            _filledAmount,
+            _filledUnitPrice,
+            _filledAmountInFV
+        );
     }
 }

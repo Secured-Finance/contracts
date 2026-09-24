@@ -18,8 +18,11 @@ library DepositManagementLogic {
     using EnumerableSet for EnumerableSet.Bytes32Set;
     using RoundingUint256 for uint256;
 
+    uint256 public constant MAX_DEPOSIT_CURRENCIES = 10;
+
     error NotEnoughDeposit(bytes32 ccy);
     error ProtocolIsInsolvent(bytes32 ccy);
+    error TooManyDepositCurrencies();
 
     struct CalculatedFundVars {
         uint256 plusDepositAmountInAdditionalFundsCcy;
@@ -334,6 +337,11 @@ library DepositManagementLogic {
         }
     }
 
+    function canDepositCurrency(address _user, bytes32 _ccy) public view returns (bool) {
+        EnumerableSet.Bytes32Set storage currencySet = Storage.slot().usedCurrencies[_user];
+        return currencySet.contains(_ccy) || currencySet.length() < MAX_DEPOSIT_CURRENCIES;
+    }
+
     function addDepositAmount(address _user, bytes32 _ccy, uint256 _amount) public {
         Storage.slot().depositAmounts[_user][_ccy] += _amount;
         Storage.slot().usedCurrencies[_user].add(_ccy);
@@ -363,6 +371,10 @@ library DepositManagementLogic {
     }
 
     function deposit(address _caller, bytes32 _ccy, uint256 _amount, address _onBehalfOf) public {
+        if (!canDepositCurrency(_onBehalfOf, _ccy)) {
+            revert TooManyDepositCurrencies();
+        }
+
         TransferHelper.depositAssets(
             Storage.slot().tokenAddresses[_ccy],
             _caller,

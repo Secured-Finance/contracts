@@ -14,6 +14,7 @@ import {ILiquidationReceiver} from "../../interfaces/ILiquidationReceiver.sol";
 import {AddressResolverLib} from "../AddressResolverLib.sol";
 import {QuickSort} from "../QuickSort.sol";
 import {Constants} from "../Constants.sol";
+import {PartiallyFilledOrder} from "../OrderBookLib.sol";
 import {RoundingUint256} from "../math/RoundingUint256.sol";
 import {RoundingInt256} from "../math/RoundingInt256.sol";
 // types
@@ -30,6 +31,7 @@ library FundManagementLogic {
     using RoundingInt256 for int256;
 
     uint256 public constant BASE_MIN_DEBT_UNIT_PRICE = 9600;
+    uint256 public constant MAX_EXPOSURE_CURRENCIES = 5;
 
     error NotRedemptionPeriod();
     error NotRepaymentPeriod();
@@ -37,6 +39,8 @@ library FundManagementLogic {
     error NoRepaymentAmount();
     error AlreadyRedeemed();
     error InsufficientCollateral();
+    error TooManyExposureCurrencies();
+    error ProtocolIsInsolvent();
 
     struct CalculatedTotalFundInBaseCurrencyVars {
         address user;
@@ -191,7 +195,7 @@ library FundManagementLogic {
         return currentAmount;
     }
 
-    function updateFunds(
+    function _updateFunds(
         bytes32 _ccy,
         uint256 _maturity,
         address _user,
@@ -199,7 +203,7 @@ library FundManagementLogic {
         uint256 _filledAmount,
         uint256 _filledAmountInFV,
         uint256 _feeInFV
-    ) external {
+    ) private {
         address futureValueVault = Storage.slot().futureValueVaults[_ccy];
         uint8 orderBookId = Storage.slot().maturityOrderBookIds[_ccy][_maturity];
 
@@ -230,22 +234,84 @@ library FundManagementLogic {
                 _maturity
             );
 
-            registerCurrencyAndMaturity(_ccy, _maturity, reserveFundAddr);
+            // NOTE: Register without checking `MAX_EXPOSURE_CURRENCIES` to ensure that ReserveFund always receives fees.
+            // en: By skipping the check of `MAX_EXPOSURE_CURRENCIES`, it is expected that the gas cost will increase
+            // due to the increase of `usedCurrencies`, but since the `cleanUpFunds` function is called for ReserveFund
+            // every time the `rotateOrderBooks` function is called, the increase in gas cost is limited.
+            if (Storage.slot().usedMaturities[_ccy][reserveFundAddr].add(_maturity)) {
+                Storage.slot().usedCurrencies[reserveFundAddr].add(_ccy);
+            }
         }
     }
 
-    function registerCurrencyAndMaturity(bytes32 _ccy, uint256 _maturity, address _user) public {
-        if (!Storage.slot().usedMaturities[_ccy][_user].contains(_maturity)) {
-            Storage.slot().usedMaturities[_ccy][_user].add(_maturity);
+    function updateFundsForTaker(
+        bytes32 _ccy,
+        uint256 _maturity,
+        address _user,
+        ProtocolTypes.Side _side,
+        uint256 _filledAmount,
+        uint256 _filledAmountInFV,
+        uint256 _feeInFV
+    ) public returns (bool updated) {
+        if (_filledAmountInFV == 0) return false;
 
-            registerCurrency(_ccy, _user);
-        }
+        _updateFunds(_ccy, _maturity, _user, _side, _filledAmount, _filledAmountInFV, _feeInFV);
+
+        emit OrderFilled(_user, _ccy, _side, _maturity, _filledAmount, _filledAmountInFV, _feeInFV);
+        return true;
     }
 
-    function registerCurrency(bytes32 _ccy, address _user) public {
-        if (!Storage.slot().usedCurrencies[_user].contains(_ccy)) {
-            Storage.slot().usedCurrencies[_user].add(_ccy);
+    function updateFundsForMaker(
+        bytes32 _ccy,
+        uint256 _maturity,
+        ProtocolTypes.Side _side,
+        PartiallyFilledOrder memory _partiallyFilledOrder
+    ) public {
+        if (_partiallyFilledOrder.futureValue == 0) return;
+
+        _updateFunds(
+            _ccy,
+            _maturity,
+            _partiallyFilledOrder.maker,
+            _side,
+            _partiallyFilledOrder.amount,
+            _partiallyFilledOrder.futureValue,
+            0
+        );
+
+        emit OrderPartiallyFilled(
+            _partiallyFilledOrder.orderId,
+            _partiallyFilledOrder.maker,
+            _ccy,
+            _side,
+            _maturity,
+            _partiallyFilledOrder.amount,
+            _partiallyFilledOrder.futureValue
+        );
+    }
+
+    function registerCurrencyAndMaturity(
+        bytes32 _ccy,
+        uint256 _maturity,
+        address _user
+    ) public returns (bool isNewCurrency) {
+        if (Storage.slot().usedMaturities[_ccy][_user].add(_maturity)) {
+            return registerCurrency(_ccy, _user);
         }
+        return false;
+    }
+
+    function registerCurrency(bytes32 _ccy, address _user) public returns (bool isNewCurrency) {
+        EnumerableSet.Bytes32Set storage currencySet = Storage.slot().usedCurrencies[_user];
+        if (!currencySet.contains(_ccy)) {
+            if (currencySet.length() >= MAX_EXPOSURE_CURRENCIES) {
+                revert TooManyExposureCurrencies();
+            }
+
+            currencySet.add(_ccy);
+            return true;
+        }
+        return false;
     }
 
     function executeRedemption(bytes32 _ccy, uint256 _maturity, address _user) external {
@@ -339,6 +405,11 @@ library FundManagementLogic {
                 terminationRatioTotal += terminationCollateralRatios[i];
             }
 
+            // If all collateral ratios are zero, the protocol is completely insolvent
+            if (terminationRatioTotal == 0) {
+                revert ProtocolIsInsolvent();
+            }
+
             for (uint256 i; i < collateralCurrencies.length; i++) {
                 bytes32 ccy = collateralCurrencies[i];
                 uint256 addedAmount = _convertFromBaseCurrencyAtMarketTerminationPrice(
@@ -363,10 +434,17 @@ library FundManagementLogic {
         address _user,
         uint256 _minDebtUnitPrice
     ) public view returns (ActualFunds memory actualFunds) {
+        uint8[] memory orderBookIdList = Storage.slot().orderBookIdLists[_ccy];
+
+        // Return empty funds if no order book exists for this currency
+        if (orderBookIdList.length == 0) {
+            return actualFunds;
+        }
+
         CalculateActualFundsVars memory vars;
         vars.market = ILendingMarket(Storage.slot().lendingMarkets[_ccy]);
         vars.futureValueVault = IFutureValueVault(Storage.slot().futureValueVaults[_ccy]);
-        vars.defaultOrderBookId = Storage.slot().orderBookIdLists[_ccy][0];
+        vars.defaultOrderBookId = orderBookIdList[0];
         vars.minDebtUnitPrice = _minDebtUnitPrice;
 
         if (_maturity == 0) {
@@ -542,15 +620,25 @@ library FundManagementLogic {
         uint256 _maturity,
         uint256 _minDebtUnitPrice
     ) public view returns (uint256) {
-        if (_minDebtUnitPrice == 0) return 0;
+        return getMinDebtUnitPriceAt(_maturity, _minDebtUnitPrice, block.timestamp);
+    }
 
-        return
-            _maturity > block.timestamp
-                ? BASE_MIN_DEBT_UNIT_PRICE -
-                    ((BASE_MIN_DEBT_UNIT_PRICE - _minDebtUnitPrice) *
-                        (_maturity - block.timestamp)) /
-                    Constants.SECONDS_IN_YEAR
-                : BASE_MIN_DEBT_UNIT_PRICE;
+    function getMinDebtUnitPriceAt(
+        uint256 _maturity,
+        uint256 _minDebtUnitPrice,
+        uint256 _referenceTimestamp
+    ) public pure returns (uint256) {
+        if (_minDebtUnitPrice == 0) return 0;
+        if (_minDebtUnitPrice >= BASE_MIN_DEBT_UNIT_PRICE) {
+            return BASE_MIN_DEBT_UNIT_PRICE;
+        }
+
+        if (_maturity <= _referenceTimestamp) return BASE_MIN_DEBT_UNIT_PRICE;
+
+        uint256 reduction = ((BASE_MIN_DEBT_UNIT_PRICE - _minDebtUnitPrice) *
+            (_maturity - _referenceTimestamp)) / Constants.SECONDS_IN_YEAR;
+
+        return reduction >= BASE_MIN_DEBT_UNIT_PRICE ? 1 : BASE_MIN_DEBT_UNIT_PRICE - reduction;
     }
 
     function calculateFunds(
@@ -1139,6 +1227,9 @@ library FundManagementLogic {
 
         int256 remainingAmount = _amount - totalRemovedAmount;
 
+        // Note: orderBookIdList is guaranteed to be non-empty here because
+        // this function is only called from executeRedemption/executeRepayment
+        // which have the ifValidMaturity modifier that ensures the maturity exists.
         bool isDefaultMarket = Storage.slot().maturityOrderBookIds[_ccy][_maturity] ==
             Storage.slot().orderBookIdLists[_ccy][0];
 

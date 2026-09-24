@@ -230,9 +230,14 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
         if (hasBalanceAtPastMaturity(_orderBookId, _receiver, _maturity))
             revert PastMaturityBalanceExists({user: _receiver});
 
+        int256 senderBalance = Storage.slot().balances[_orderBookId][_sender];
+        int256 receiverBalance = Storage.slot().balances[_orderBookId][_receiver];
         Storage.slot().balanceMaturities[_orderBookId][_receiver] = _maturity;
         Storage.slot().balances[_orderBookId][_sender] -= _amount;
         Storage.slot().balances[_orderBookId][_receiver] += _amount;
+
+        _updateTotalSupply(_maturity, -_amount, senderBalance);
+        _updateTotalSupply(_maturity, _amount, receiverBalance);
 
         emit Transfer(_sender, _receiver, _orderBookId, _maturity, _amount);
     }

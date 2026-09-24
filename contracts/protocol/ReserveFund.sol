@@ -90,8 +90,12 @@ contract ReserveFund is
      * @dev Withdraw funds by the caller from the token vault.
      * @param _ccy Currency name in bytes32
      * @param _amount Amount of funds to deposit
+     * @return withdrawnAmount Actual amount withdrawn
      */
-    function withdraw(bytes32 _ccy, uint256 _amount) external onlyOwner {
-        _withdraw(tokenVault(), _ccy, _amount);
+    function withdraw(
+        bytes32 _ccy,
+        uint256 _amount
+    ) external onlyOwner returns (uint256 withdrawnAmount) {
+        return _withdraw(tokenVault(), _ccy, _amount);
     }
 }

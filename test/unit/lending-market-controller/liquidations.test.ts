@@ -52,7 +52,7 @@ describe('LendingMarketController - Liquidations', () => {
     return users;
   };
 
-  const initialize = async (
+  const initializeCurrency = async (
     currency: string,
     compoundFactor: string | BigNumber = INITIAL_COMPOUND_FACTOR,
   ) => {
@@ -76,7 +76,7 @@ describe('LendingMarketController - Liquidations', () => {
     maturities = await lendingMarketControllerProxy.getMaturities(currency);
   };
 
-  before(async () => {
+  const initialize = async () => {
     [owner, ...signers] = await ethers.getSigners();
 
     ({
@@ -109,9 +109,13 @@ describe('LendingMarketController - Liquidations', () => {
       ethers.constants.AddressZero,
     );
     await mockERC20.mock.decimals.returns(18);
-  });
+  };
 
   beforeEach(async () => {
+    if (currencyIdx % 5 === 0) {
+      await initialize();
+    }
+
     targetCurrency = ethers.utils.formatBytes32String(`Test${currencyIdx}`);
     currencyIdx++;
 
@@ -123,6 +127,7 @@ describe('LendingMarketController - Liquidations', () => {
     await mockTokenVault.mock.getDepositAmount.returns(100);
     await mockTokenVault.mock.transferFrom.returns(0);
     await mockTokenVault.mock.isCovered.returns(true, true);
+    await mockTokenVault.mock.canDepositCurrency.returns(true);
     await mockTokenVault.mock.isCollateral.returns(true);
     await mockTokenVault.mock.getTokenAddress.returns(mockERC20.address);
     await mockReserveFund.mock.isPaused.returns(true);
@@ -137,7 +142,7 @@ describe('LendingMarketController - Liquidations', () => {
     ].returns([2, 3]);
     await mockCurrencyController.mock.currencyExists.returns(true);
 
-    await initialize(targetCurrency);
+    await initializeCurrency(targetCurrency);
   });
 
   describe('External liquidator', async () => {
@@ -287,7 +292,7 @@ describe('LendingMarketController - Liquidations', () => {
   describe('Liquidations', async () => {
     it("Liquidate less than 50% borrowing position in case the one position doesn't cover liquidation amount", async () => {
       const orderAmount = ethers.BigNumber.from('100000000000000000');
-      const orderRate = ethers.BigNumber.from('8000');
+      const orderRate = ethers.BigNumber.from('9500');
 
       [alice, bob, carol] = getUsers(3);
 
@@ -345,7 +350,7 @@ describe('LendingMarketController - Liquidations', () => {
 
     it('Liquidate 50% borrowing position in case the one position cover liquidation amount', async () => {
       const orderAmount = ethers.BigNumber.from('100000000000000000');
-      const orderRate = ethers.BigNumber.from('8000');
+      const orderRate = ethers.BigNumber.from('9500');
 
       [alice, bob, carol] = getUsers(3);
 
@@ -403,7 +408,7 @@ describe('LendingMarketController - Liquidations', () => {
 
     it('Liquidate borrowing position using zero-coupon bonds', async () => {
       const orderAmount = ethers.BigNumber.from('100000000000000000');
-      const orderRate = ethers.BigNumber.from('8000');
+      const orderRate = ethers.BigNumber.from('9500');
 
       [alice, bob, carol] = getUsers(3);
 
@@ -467,7 +472,7 @@ describe('LendingMarketController - Liquidations', () => {
 
     it('Liquidate insolvent user using the reserve fund', async () => {
       const orderAmount = ethers.BigNumber.from('100000000000000000');
-      const orderRate = ethers.BigNumber.from('8000');
+      const orderRate = ethers.BigNumber.from('9500');
 
       [alice, bob, carol] = getUsers(3);
 
@@ -533,7 +538,7 @@ describe('LendingMarketController - Liquidations', () => {
 
     it('Liquidate insolvent user without using the reserve fund', async () => {
       const orderAmount = ethers.BigNumber.from('100000000000000000');
-      const orderRate = ethers.BigNumber.from('8000');
+      const orderRate = ethers.BigNumber.from('9500');
 
       [alice, bob, carol] = getUsers(3);
 
@@ -599,7 +604,7 @@ describe('LendingMarketController - Liquidations', () => {
 
     it('Liquidate borrowing position after auto-roll', async () => {
       const orderAmount = ethers.BigNumber.from('100000000000000000');
-      const orderRate = ethers.BigNumber.from('8000');
+      const orderRate = ethers.BigNumber.from('9500');
 
       [alice, bob, carol] = getUsers(3);
 
@@ -698,7 +703,7 @@ describe('LendingMarketController - Liquidations', () => {
           maturities[0],
           Side.BORROW,
           '100000000',
-          '8000',
+          '9500',
         );
 
       await lendingMarketControllerProxy
@@ -708,7 +713,7 @@ describe('LendingMarketController - Liquidations', () => {
           maturities[0],
           Side.LEND,
           '100000000',
-          '8000',
+          '9500',
         );
 
       await expect(
@@ -735,7 +740,7 @@ describe('LendingMarketController - Liquidations', () => {
           maturities[0],
           Side.BORROW,
           '100000000',
-          '8000',
+          '9500',
         );
 
       await lendingMarketControllerProxy
@@ -745,7 +750,7 @@ describe('LendingMarketController - Liquidations', () => {
           maturities[0],
           Side.LEND,
           '100000000',
-          '8000',
+          '9500',
         );
 
       // Set up for the mocks
@@ -769,7 +774,7 @@ describe('LendingMarketController - Liquidations', () => {
 
     it('Execute repayment & redemption', async () => {
       const orderAmount = ethers.BigNumber.from('100000000000000000');
-      const orderRate = ethers.BigNumber.from('8000');
+      const orderRate = ethers.BigNumber.from('9500');
 
       await mockCurrencyController.mock.currencyExists.returns(false);
 
@@ -843,7 +848,7 @@ describe('LendingMarketController - Liquidations', () => {
 
     it('Execute repayment & redemption after auto-roll', async () => {
       const orderAmount = ethers.BigNumber.from('100000000000000000');
-      const orderRate = ethers.BigNumber.from('8000');
+      const orderRate = ethers.BigNumber.from('9500');
 
       [alice, bob] = getUsers(2);
 
@@ -926,7 +931,7 @@ describe('LendingMarketController - Liquidations', () => {
 
     it('Force repayment of overdue borrowing positions', async () => {
       const orderAmount = ethers.BigNumber.from('100000000000000000');
-      const orderRate = ethers.BigNumber.from('8000');
+      const orderRate = ethers.BigNumber.from('9500');
 
       await mockTokenVault.mock.getLiquidationAmount.returns(0, 0, 0);
       await mockCurrencyController.mock.currencyExists
@@ -1013,7 +1018,7 @@ describe('LendingMarketController - Liquidations', () => {
           collateralCurrency,
           targetCurrency,
           maturities[0],
-          '125000000000000000',
+          calculateFutureValue(orderAmount, orderRate),
         );
     });
 
@@ -1237,7 +1242,7 @@ describe('LendingMarketController - Liquidations', () => {
         const targetCurrency = ethers.utils.formatBytes32String(
           `RepaymentTest${currencyIdx}`,
         );
-        initialize(targetCurrency, compoundFactor);
+        await initializeCurrency(targetCurrency, compoundFactor);
 
         const orderAmount = ethers.BigNumber.from('100000000000000000');
         const orderRate = ethers.BigNumber.from('10000');

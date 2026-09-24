@@ -10,6 +10,7 @@ interface ITokenVault {
     error InvalidToken();
     error InvalidAmount(bytes32 ccy, uint256 amount, uint256 msgValue);
     error AmountIsZero();
+    error InvalidAddress();
     error CallerNotBaseCurrency(address caller);
     error MarketTerminated();
     error RedemptionIsRequired();
@@ -30,6 +31,8 @@ interface ITokenVault {
     function isCollateral(bytes32[] calldata ccys) external view returns (bool[] memory);
 
     function isRegisteredCurrency(bytes32 ccy) external view returns (bool);
+
+    function canDepositCurrency(address user, bytes32 ccy) external view returns (bool);
 
     function getTokenAddress(bytes32 ccy) external view returns (address);
 
@@ -107,7 +110,7 @@ interface ITokenVault {
         bytes32 permitS
     ) external;
 
-    function withdraw(bytes32 ccy, uint256 amount) external;
+    function withdraw(bytes32 ccy, uint256 amount) external returns (uint256 withdrawnAmount);
 
     function addDepositAmount(address user, bytes32 ccy, uint256 amount) external;
 

@@ -209,6 +209,10 @@ library OrderBookLib {
         amounts = new uint256[](_limit);
         quantities = new uint256[](_limit);
 
+        if (_limit == 0) {
+            return (unitPrices, amounts, quantities, 0);
+        }
+
         uint256 unitPrice;
 
         if (_start == 0) {
@@ -262,6 +266,10 @@ library OrderBookLib {
         unitPrices = new uint256[](_limit);
         amounts = new uint256[](_limit);
         quantities = new uint256[](_limit);
+
+        if (_limit == 0) {
+            return (unitPrices, amounts, quantities, 0);
+        }
 
         uint256 unitPrice;
 
@@ -523,6 +531,44 @@ library OrderBookLib {
         );
     }
 
+    function getItayoseBoundaryUnitPrice(
+        OrderBook storage self,
+        ProtocolTypes.Side _takerSide,
+        uint256 _maxPriceLevels
+    ) internal view returns (uint256 boundaryUnitPrice) {
+        if (_takerSide == ProtocolTypes.Side.LEND) {
+            OrderStatisticsTreeLib.Tree storage orders = self.borrowOrders[self.maturity];
+            boundaryUnitPrice = orders.first();
+
+            for (uint256 i = 1; i < _maxPriceLevels; i++) {
+                uint256 nextUnitPrice = orders.next(boundaryUnitPrice);
+                if (nextUnitPrice == 0) break;
+                boundaryUnitPrice = nextUnitPrice;
+            }
+        } else {
+            OrderStatisticsTreeLib.Tree storage orders = self.lendOrders[self.maturity];
+            boundaryUnitPrice = orders.last();
+
+            for (uint256 i = 1; i < _maxPriceLevels; i++) {
+                uint256 previousUnitPrice = orders.prev(boundaryUnitPrice);
+                if (previousUnitPrice == 0) break;
+                boundaryUnitPrice = previousUnitPrice;
+            }
+        }
+    }
+
+    function migrateOrderChunks(
+        OrderBook storage self,
+        ProtocolTypes.Side _side,
+        uint256 _unitPrice
+    ) internal {
+        if (_side == ProtocolTypes.Side.LEND) {
+            self.lendOrders[self.maturity].migrateOrderChunks(_unitPrice);
+        } else {
+            self.borrowOrders[self.maturity].migrateOrderChunks(_unitPrice);
+        }
+    }
+
     function setInitialBlockUnitPrice(OrderBook storage self, uint256 _unitPrice) internal {
         self.blockUnitPriceHistory = uint16(_unitPrice);
         self.lastBlockUnitPriceTimestamp = uint48(block.timestamp);
@@ -622,21 +668,17 @@ library OrderBookLib {
                 openingUnitPrice = lendUnitPrice;
                 totalOffsetAmount += borrowAmount;
                 lendAmount -= borrowAmount;
-                borrowUnitPrice = borrowOrders.next(borrowUnitPrice);
-                borrowAmount = borrowOrders.getNodeTotalAmount(borrowUnitPrice);
+                (borrowUnitPrice, borrowAmount) = borrowOrders.nextWithTotalAmount(borrowUnitPrice);
             } else if (lendAmount < borrowAmount) {
                 openingUnitPrice = borrowUnitPrice;
                 totalOffsetAmount += lendAmount;
                 borrowAmount -= lendAmount;
-                lendUnitPrice = lendOrders.prev(lendUnitPrice);
-                lendAmount = lendOrders.getNodeTotalAmount(lendUnitPrice);
+                (lendUnitPrice, lendAmount) = lendOrders.prevWithTotalAmount(lendUnitPrice);
             } else {
                 openingUnitPrice = (lendUnitPrice + borrowUnitPrice).div(2);
                 totalOffsetAmount += lendAmount;
-                lendUnitPrice = lendOrders.prev(lendUnitPrice);
-                borrowUnitPrice = borrowOrders.next(borrowUnitPrice);
-                lendAmount = lendOrders.getNodeTotalAmount(lendUnitPrice);
-                borrowAmount = borrowOrders.getNodeTotalAmount(borrowUnitPrice);
+                (lendUnitPrice, lendAmount) = lendOrders.prevWithTotalAmount(lendUnitPrice);
+                (borrowUnitPrice, borrowAmount) = borrowOrders.nextWithTotalAmount(borrowUnitPrice);
             }
         }
     }

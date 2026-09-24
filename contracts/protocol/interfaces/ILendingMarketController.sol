@@ -2,14 +2,34 @@
 pragma solidity 0.8.19;
 
 import {ProtocolTypes} from "../types/ProtocolTypes.sol";
+import {ItayoseProcessStatus} from "../libraries/logics/OrderBookLogic.sol";
 import {ZCTokenInfo, TerminationCurrencyCache} from "../storages/LendingMarketControllerStorage.sol";
 
 interface ILendingMarketController {
     error InvalidMaturity();
-    error InvalidCurrency();
     error MarketTerminated();
     error NotTerminated();
     error AlreadyInitialized();
+
+    event ItayoseProcessInitialized(
+        bytes32 indexed ccy,
+        uint256 indexed maturity,
+        uint256 openingUnitPrice,
+        uint256 lastLendUnitPrice,
+        uint256 lastBorrowUnitPrice,
+        uint256 totalOffsetAmount
+    );
+
+    event ItayoseSettlementProgress(
+        bytes32 indexed ccy,
+        uint256 indexed maturity,
+        ProtocolTypes.Side makerSide,
+        uint256 batchFilledAmount,
+        uint256 remainingLendOffsetAmount,
+        uint256 remainingBorrowOffsetAmount
+    );
+
+    event ItayoseProcessFinalized(bytes32 indexed ccy, uint256 indexed maturity);
 
     struct AdditionalFunds {
         bytes32 ccy;
@@ -88,6 +108,32 @@ interface ILendingMarketController {
         uint256 _maturity
     ) external view returns (uint256);
 
+    function getMinDebtUnitPriceAt(
+        bytes32 ccy,
+        uint256 maturity,
+        uint256 referenceTimestamp
+    ) external view returns (uint256);
+
+    function getOrderUnitPriceRange(
+        bytes32 ccy,
+        uint256 maturity
+    )
+        external
+        view
+        returns (
+            uint256 minLendUnitPrice,
+            uint256 maxLendUnitPrice,
+            uint256 minBorrowUnitPrice,
+            uint256 maxBorrowUnitPrice,
+            uint256 referenceUnitPrice,
+            bool isMinDebtUnitPriceReference
+        );
+
+    function getItayoseProcessStatus(
+        bytes32 ccy,
+        uint256 maturity
+    ) external view returns (ItayoseProcessStatus memory);
+
     function getGenesisDate(bytes32 ccy) external view returns (uint256);
 
     function getLendingMarket(bytes32 ccy) external view returns (address);
@@ -98,34 +144,35 @@ interface ILendingMarketController {
 
     function getPendingOrderAmount(bytes32 _ccy, uint256 _maturity) external view returns (uint256);
 
-    function getOrderEstimation(
-        GetOrderEstimationParams calldata params
-    )
-        external
-        view
-        returns (
-            uint256 lastUnitPrice,
-            uint256 filledAmount,
-            uint256 filledAmountInFV,
-            uint256 orderFeeInFV,
-            uint256 placedAmount,
-            uint256 coverage,
-            bool isInsufficientDepositAmount
-        );
+    // Temporarily disabled during incident recovery.
+    // function getOrderEstimation(
+    //     GetOrderEstimationParams calldata params
+    // )
+    //     external
+    //     view
+    //     returns (
+    //         uint256 lastUnitPrice,
+    //         uint256 filledAmount,
+    //         uint256 filledAmountInFV,
+    //         uint256 orderFeeInFV,
+    //         uint256 placedAmount,
+    //         uint256 coverage,
+    //         bool isInsufficientDepositAmount
+    //     );
 
-    function getOrderEstimationFromFV(
-        GetOrderEstimationFromFVParams calldata _params
-    )
-        external
-        view
-        returns (
-            uint256 lastUnitPrice,
-            uint256 filledAmount,
-            uint256 filledAmountInFV,
-            uint256 orderFeeInFV,
-            uint256 coverage,
-            bool isInsufficientDepositAmount
-        );
+    // function getOrderEstimationFromFV(
+    //     GetOrderEstimationFromFVParams calldata _params
+    // )
+    //     external
+    //     view
+    //     returns (
+    //         uint256 lastUnitPrice,
+    //         uint256 filledAmount,
+    //         uint256 filledAmountInFV,
+    //         uint256 orderFeeInFV,
+    //         uint256 coverage,
+    //         bool isInsufficientDepositAmount
+    //     );
 
     function getMaturities(bytes32 ccy) external view returns (uint256[] memory);
 
@@ -253,6 +300,8 @@ interface ILendingMarketController {
 
     function executeItayoseCall(bytes32 ccy, uint256 maturity) external returns (bool);
 
+    function executeItayoseStep(bytes32 ccy, uint256 maturity) external returns (bool completed);
+
     function executeRedemption(bytes32 _ccy, uint256 _maturity) external returns (bool);
 
     function executeRepayment(bytes32 _ccy, uint256 _maturity) external returns (bool);
@@ -287,9 +336,32 @@ interface ILendingMarketController {
 
     function cleanUpFunds(bytes32 ccy, address user) external returns (uint256 activeOrderCount);
 
+    function addPendingOrderAmountForRecovery(
+        bytes32 ccy,
+        uint256 maturity,
+        uint256 amount
+    ) external;
+
+    function cancelOrdersForRecovery(bytes32 ccy, address user) external;
+
+    function recoverUserFunds(
+        bytes32 ccy,
+        uint256 maturity,
+        address user,
+        ProtocolTypes.Side side,
+        uint256 amount,
+        uint256 unitPrice
+    ) external;
+
+    function transferAssetsForRecovery(bytes32 ccy, address user, address receiver) external;
+
     function updateMinDebtUnitPrice(bytes32 _ccy, uint256 _minDebtUnitPrice) external;
 
-    function withdrawZCToken(bytes32 _ccy, uint256 _maturity, uint256 _amount) external;
+    function withdrawZCToken(
+        bytes32 _ccy,
+        uint256 _maturity,
+        uint256 _amount
+    ) external returns (uint256 withdrawnAmount);
 
     function depositZCToken(bytes32 _ccy, uint256 _maturity, uint256 _amount) external;
 }

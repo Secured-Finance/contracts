@@ -7,6 +7,7 @@ import {SafeCast} from "../../../dependencies/openzeppelin/utils/math/SafeCast.s
 // interfaces
 import {ILendingMarket} from "../../interfaces/ILendingMarket.sol";
 import {ILendingMarketController} from "../../interfaces/ILendingMarketController.sol";
+import {IGenesisValueVault} from "../../interfaces/IGenesisValueVault.sol";
 import {IFutureValueVault} from "../../interfaces/IFutureValueVault.sol";
 import {IZCToken} from "../../interfaces/IZCToken.sol";
 // libraries
@@ -29,9 +30,11 @@ library LendingMarketUserLogic {
     using RoundingUint256 for uint256;
 
     error InvalidAmount();
+    error InvalidPreOrderUnitPrice();
     error AmountIsZero();
     error FutureValueIsZero();
     error TooManyActiveOrders();
+    error TooManyDepositCurrencies();
     error NotEnoughCollateral();
     error NotEnoughDeposit(bytes32 ccy);
 
@@ -141,10 +144,26 @@ library LendingMarketUserLogic {
         uint256 _amount,
         uint256 _unitPrice
     ) external {
+        LendingMarketOperationLogic.validateOrderUnitPrice(_ccy, _maturity, _side, _unitPrice);
         if (_amount == 0) revert InvalidAmount();
 
         uint256 activeOrderCount = FundManagementLogic.cleanUpFunds(_ccy, _user);
-        FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, _user);
+
+        bool isNewCurrency = FundManagementLogic.registerCurrencyAndMaturity(
+            _ccy,
+            _maturity,
+            _user
+        );
+
+        if (_side == ProtocolTypes.Side.BORROW && isNewCurrency) {
+            // Check if the deposit currency can be added for borrow orders because borrowed currency is added as a new deposit currency.
+            // NOTE: Even if this check works, deposit currencies can exceed the max `MAX_DEPOSIT_CURRENCIES` due to the lazy evaluation feature.
+            // However, it will always be less than or equal to `MAX_DEPOSIT_CURRENCIES` + `MAX_EXPOSURE_CURRENCIES`.
+            // To save calculation gas costs, this gap is allowed.
+            if (!AddressResolverLib.tokenVault().canDepositCurrency(_user, _ccy)) {
+                revert TooManyDepositCurrencies();
+            }
+        }
 
         (
             FilledOrder memory filledOrder,
@@ -169,17 +188,26 @@ library LendingMarketUserLogic {
 
         if (activeOrderCount > Constants.MAXIMUM_ORDER_COUNT) revert TooManyActiveOrders();
 
-        updateFundsForTaker(
-            _ccy,
-            _maturity,
-            _user,
-            _side,
-            filledAmount,
-            filledOrder.futureValue,
-            feeInFV
-        );
+        if (
+            FundManagementLogic.updateFundsForTaker(
+                _ccy,
+                _maturity,
+                _user,
+                _side,
+                filledAmount,
+                filledOrder.futureValue,
+                feeInFV
+            )
+        ) {
+            LendingMarketOperationLogic.updateOrderLogs(
+                _ccy,
+                _maturity,
+                filledAmount,
+                filledOrder.futureValue
+            );
+        }
 
-        updateFundsForMaker(
+        FundManagementLogic.updateFundsForMaker(
             _ccy,
             _maturity,
             _side == ProtocolTypes.Side.LEND ? ProtocolTypes.Side.BORROW : ProtocolTypes.Side.LEND,
@@ -193,8 +221,6 @@ library LendingMarketUserLogic {
             filledAmount -
             partiallyFilledOrder.amount;
 
-        Storage.slot().usedCurrencies[_user].add(_ccy);
-
         _isCovered(_user, _ccy);
     }
 
@@ -206,13 +232,26 @@ library LendingMarketUserLogic {
         uint256 _amount,
         uint256 _unitPrice
     ) external {
+        if (_unitPrice == 0) revert InvalidPreOrderUnitPrice();
+        LendingMarketOperationLogic.validateOrderUnitPrice(_ccy, _maturity, _side, _unitPrice);
         if (_amount == 0) revert InvalidAmount();
 
         uint256 activeOrderCount = FundManagementLogic.cleanUpFunds(_ccy, _user);
 
         if (activeOrderCount + 1 > Constants.MAXIMUM_ORDER_COUNT) revert TooManyActiveOrders();
 
-        FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, _user);
+        bool isNewCurrency = FundManagementLogic.registerCurrencyAndMaturity(
+            _ccy,
+            _maturity,
+            _user
+        );
+
+        if (_side == ProtocolTypes.Side.BORROW && isNewCurrency) {
+            // Check if the deposit currency can be added for borrow orders
+            if (!AddressResolverLib.tokenVault().canDepositCurrency(_user, _ccy)) {
+                revert TooManyDepositCurrencies();
+            }
+        }
 
         ILendingMarket(Storage.slot().lendingMarkets[_ccy]).executePreOrder(
             Storage.slot().maturityOrderBookIds[_ccy][_maturity],
@@ -221,8 +260,6 @@ library LendingMarketUserLogic {
             _amount,
             _unitPrice
         );
-
-        Storage.slot().usedCurrencies[_user].add(_ccy);
 
         _isCovered(_user, _ccy);
     }
@@ -260,17 +297,26 @@ library LendingMarketUserLogic {
                 futureValue
             );
 
-            updateFundsForTaker(
-                _ccy,
-                _maturity,
-                _user,
-                side,
-                filledOrder.amount,
-                filledOrder.futureValue,
-                feeInFV
-            );
+            if (
+                FundManagementLogic.updateFundsForTaker(
+                    _ccy,
+                    _maturity,
+                    _user,
+                    side,
+                    filledOrder.amount,
+                    filledOrder.futureValue,
+                    feeInFV
+                )
+            ) {
+                LendingMarketOperationLogic.updateOrderLogs(
+                    _ccy,
+                    _maturity,
+                    filledOrder.amount,
+                    filledOrder.futureValue
+                );
+            }
 
-            updateFundsForMaker(
+            FundManagementLogic.updateFundsForMaker(
                 _ccy,
                 _maturity,
                 side == ProtocolTypes.Side.LEND
@@ -302,86 +348,18 @@ library LendingMarketUserLogic {
         _isCovered(_user, _ccy);
     }
 
-    function updateFundsForTaker(
-        bytes32 _ccy,
-        uint256 _maturity,
-        address _user,
-        ProtocolTypes.Side _side,
-        uint256 _filledAmount,
-        uint256 _filledAmountInFV,
-        uint256 _feeInFV
-    ) public {
-        if (_filledAmountInFV != 0) {
-            FundManagementLogic.updateFunds(
-                _ccy,
-                _maturity,
-                _user,
-                _side,
-                _filledAmount,
-                _filledAmountInFV,
-                _feeInFV
-            );
-
-            LendingMarketOperationLogic.updateOrderLogs(
-                _ccy,
-                _maturity,
-                _filledAmount,
-                _filledAmountInFV
-            );
-
-            emit FundManagementLogic.OrderFilled(
-                _user,
-                _ccy,
-                _side,
-                _maturity,
-                _filledAmount,
-                _filledAmountInFV,
-                _feeInFV
-            );
-        }
-    }
-
-    function updateFundsForMaker(
-        bytes32 _ccy,
-        uint256 _maturity,
-        ProtocolTypes.Side _side,
-        PartiallyFilledOrder memory partiallyFilledOrder
-    ) public {
-        if (partiallyFilledOrder.futureValue != 0) {
-            FundManagementLogic.updateFunds(
-                _ccy,
-                _maturity,
-                partiallyFilledOrder.maker,
-                _side,
-                partiallyFilledOrder.amount,
-                partiallyFilledOrder.futureValue,
-                0
-            );
-
-            emit FundManagementLogic.OrderPartiallyFilled(
-                partiallyFilledOrder.orderId,
-                partiallyFilledOrder.maker,
-                _ccy,
-                _side,
-                _maturity,
-                partiallyFilledOrder.amount,
-                partiallyFilledOrder.futureValue
-            );
-        }
-    }
-
     function withdrawZCToken(
         bytes32 _ccy,
         uint256 _maturity,
         address _user,
         uint256 _amount
-    ) public {
+    ) public returns (uint256 withdrawnAmount) {
         FundManagementLogic.cleanUpFunds(_ccy, _user);
 
         if (_maturity == 0) {
-            _withdrawZCPerpetualToken(_ccy, _user, _amount);
+            return _withdrawZCPerpetualToken(_ccy, _user, _amount);
         } else {
-            _withdrawZCToken(_ccy, _maturity, _user, _amount);
+            return _withdrawZCToken(_ccy, _maturity, _user, _amount);
         }
     }
 
@@ -395,11 +373,11 @@ library LendingMarketUserLogic {
 
         if (_maturity == 0) {
             _depositZCPerpetualToken(_ccy, _user, _amount);
+            FundManagementLogic.registerCurrency(_ccy, _user);
         } else {
             _depositZCToken(_ccy, _maturity, _user, _amount);
+            FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, _user);
         }
-
-        FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, _user);
     }
 
     function getWithdrawableZCTokenAmount(
@@ -611,7 +589,7 @@ library LendingMarketUserLogic {
         uint256 _maturity,
         address _user,
         uint256 _amount
-    ) internal {
+    ) internal returns (uint256 withdrawableAmount) {
         uint8 orderBookId = Storage.slot().maturityOrderBookIds[_ccy][_maturity];
         uint256 maxWithdrawableAmount = _getWithdrawableZCTokenAmount(_ccy, _maturity, _user);
 
@@ -621,13 +599,13 @@ library LendingMarketUserLogic {
 
         if (_amount == 0) revert AmountIsZero();
 
-        uint256 lockedAmount = IFutureValueVault(Storage.slot().futureValueVaults[_ccy]).lock(
+        withdrawableAmount = IFutureValueVault(Storage.slot().futureValueVaults[_ccy]).lock(
             orderBookId,
             _user,
             _amount,
             _maturity
         );
-        IZCToken(Storage.slot().zcTokens[_ccy][_maturity]).mint(_user, lockedAmount);
+        IZCToken(Storage.slot().zcTokens[_ccy][_maturity]).mint(_user, withdrawableAmount);
     }
 
     function _depositZCToken(
@@ -656,7 +634,11 @@ library LendingMarketUserLogic {
         );
     }
 
-    function _withdrawZCPerpetualToken(bytes32 _ccy, address _user, uint256 _amount) internal {
+    function _withdrawZCPerpetualToken(
+        bytes32 _ccy,
+        address _user,
+        uint256 _amount
+    ) internal returns (uint256 withdrawableAmount) {
         uint256 maxWithdrawableAmount = _getWithdrawableZCPerpetualTokenAmount(_ccy, _user);
 
         if (maxWithdrawableAmount < _amount) {
@@ -665,8 +647,8 @@ library LendingMarketUserLogic {
 
         if (_amount == 0) revert AmountIsZero();
 
-        uint256 lockedAmount = AddressResolverLib.genesisValueVault().lock(_ccy, _user, _amount);
-        IZCToken(Storage.slot().zcTokens[_ccy][0]).mint(_user, lockedAmount);
+        withdrawableAmount = AddressResolverLib.genesisValueVault().lock(_ccy, _user, _amount);
+        IZCToken(Storage.slot().zcTokens[_ccy][0]).mint(_user, withdrawableAmount);
     }
 
     function _depositZCPerpetualToken(bytes32 _ccy, address _user, uint256 _amount) internal {
@@ -824,5 +806,89 @@ library LendingMarketUserLogic {
 
         if (!isEnoughDepositInOrderCcy) revert NotEnoughDeposit(_ccy);
         if (!isEnoughCollateral) revert NotEnoughCollateral();
+    }
+
+    // This temporary function applies the inverse storage updates for an order that was
+    // erroneously treated as filled. Remove it after the incident recovery is complete.
+    function recoverUserFunds(
+        bytes32 _ccy,
+        uint256 _maturity,
+        address _user,
+        ProtocolTypes.Side _side,
+        uint256 _amount,
+        uint256 _unitPrice
+    ) external {
+        if (Storage.slot().maturityOrderBookIds[_ccy][_maturity] == 0) {
+            revert ILendingMarketController.InvalidMaturity();
+        }
+        if (_amount == 0 || _unitPrice == 0) revert InvalidAmount();
+
+        uint256 futureValue = FundManagementLogic._calculateFVFromPV(_amount, _unitPrice);
+
+        // Reproduce the normal event sequence: LendingMarket records the opposite-side order
+        // execution first, then FundManagementLogic emits OrderFilled after updating funds.
+        ILendingMarket(Storage.slot().lendingMarkets[_ccy]).emitOrderExecuted(
+            _user,
+            _side,
+            _ccy,
+            _maturity,
+            _amount,
+            _amount,
+            _unitPrice,
+            futureValue
+        );
+
+        // Register both dimensions before creating the offsetting FV balance. Registering only
+        // usedCurrencies would make the maturity invisible to fund calculation and cleanup.
+        FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, _user);
+        FundManagementLogic.updateFundsForTaker(
+            _ccy,
+            _maturity,
+            _user,
+            _side,
+            _amount,
+            futureValue,
+            0
+        );
+    }
+
+    function transferAssetsForRecovery(bytes32 _ccy, address _user, address _receiver) external {
+        // Materialize lazy order fills and Genesis Value fluctuations before reading the balances
+        // that will be transferred.
+        FundManagementLogic.cleanUpFunds(_ccy, _user);
+        IGenesisValueVault genesisValueVault = AddressResolverLib.genesisValueVault();
+        genesisValueVault.cleanUpBalance(_ccy, _user, 0);
+
+        IFutureValueVault futureValueVault = IFutureValueVault(
+            Storage.slot().futureValueVaults[_ccy]
+        );
+        uint256[] memory maturities = FundManagementLogic.getUsedMaturities(_ccy, _user);
+
+        for (uint256 i; i < maturities.length; ++i) {
+            uint256 maturity = maturities[i];
+            uint8 orderBookId = Storage.slot().maturityOrderBookIds[_ccy][maturity];
+            if (orderBookId == 0) revert ILendingMarketController.InvalidMaturity();
+
+            (int256 balance, uint256 balanceMaturity) = futureValueVault.getBalance(
+                orderBookId,
+                _user
+            );
+            if (balance == 0) continue;
+            if (balanceMaturity != maturity) revert InvalidAmount();
+
+            FundManagementLogic.registerCurrencyAndMaturity(_ccy, maturity, _receiver);
+            futureValueVault.transferFrom(orderBookId, _user, _receiver, balance, maturity);
+        }
+
+        int256 genesisValue = genesisValueVault.getBalance(_ccy, _user, 0);
+        if (genesisValue != 0) {
+            FundManagementLogic.registerCurrency(_ccy, _receiver);
+            genesisValueVault.transferFrom(_ccy, _user, _receiver, genesisValue);
+        }
+
+        uint256 depositAmount = AddressResolverLib.tokenVault().getDepositAmount(_user, _ccy);
+        if (depositAmount != 0) {
+            AddressResolverLib.tokenVault().transferFrom(_ccy, _user, _receiver, depositAmount);
+        }
     }
 }

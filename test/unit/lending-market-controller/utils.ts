@@ -26,9 +26,6 @@ const LendingMarketReader = artifacts.require('LendingMarketReader');
 const MockERC20 = artifacts.require('MockERC20');
 const OrderBookLogic = artifacts.require('OrderBookLogic');
 const OrderReaderLogic = artifacts.require('OrderReaderLogic');
-const LendingMarketOperationLogic = artifacts.require(
-  'LendingMarketOperationLogic',
-);
 const QuickSort = artifacts.require('QuickSort');
 
 const { deployContract, deployMockContract } = waffle;
@@ -45,14 +42,18 @@ const deployContracts = async (owner: SignerWithAddress) => {
 
   // Deploy libraries
   const quickSort = await deployContract(owner, QuickSort);
-  const lendingMarketOperationLogic = await deployContract(
-    owner,
-    LendingMarketOperationLogic,
-  );
 
   const fundManagementLogic = await ethers
     .getContractFactory('FundManagementLogic', {
       libraries: { QuickSort: quickSort.address },
+    })
+    .then((factory) => factory.deploy());
+
+  const lendingMarketOperationLogic = await ethers
+    .getContractFactory('LendingMarketOperationLogic', {
+      libraries: {
+        FundManagementLogic: fundManagementLogic.address,
+      },
     })
     .then((factory) => factory.deploy());
 
