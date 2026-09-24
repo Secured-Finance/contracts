@@ -38,6 +38,12 @@ error NotItayosePeriod()
 error NotPreOrderPeriod()
 ```
 
+### ItayoseExecuted
+
+```solidity
+event ItayoseExecuted(bytes32 ccy, uint256 maturity, uint256 openingUnitPrice, uint256 lastLendUnitPrice, uint256 lastBorrowUnitPrice, uint256 offsetAmount)
+```
+
 ### minimumReliableAmountInBaseCurrency
 
 ```solidity
@@ -194,6 +200,16 @@ function isPreOrderPeriod(uint8 orderBookId) external view returns (bool)
 function getItayoseLog(uint256 maturity) external view returns (struct ItayoseLog)
 ```
 
+Gets the immutable price-discovery result once an Itayose process is initialized.
+
+_A non-zero log does not mean the process is finalized. Use isReady for completion._
+
+### getItayoseProcessStatus
+
+```solidity
+function getItayoseProcessStatus(uint8 orderBookId) external view returns (struct ItayoseProcessStatus)
+```
+
 ### getOrder
 
 ```solidity
@@ -272,16 +288,34 @@ function executePreOrder(uint8 orderBookId, enum ProtocolTypes.Side side, addres
 function unwindPosition(uint8 orderBookId, enum ProtocolTypes.Side side, address user, uint256 futureValue) external returns (struct FilledOrder filledOrder, struct PartiallyFilledOrder partiallyFilledOrder, uint256 feeInFV)
 ```
 
-### executeItayoseCall
+### initializeItayose
 
 ```solidity
-function executeItayoseCall(uint8 orderBookId) external returns (uint256 openingUnitPrice, uint256 totalOffsetAmount, uint256 openingDate, struct PartiallyFilledOrder partiallyFilledLendingOrder, struct PartiallyFilledOrder partiallyFilledBorrowingOrder)
+function initializeItayose(uint8 orderBookId) external returns (struct ItayoseProcessStatus)
+```
+
+### executeItayoseSettlement
+
+```solidity
+function executeItayoseSettlement(uint8 orderBookId) external returns (struct ItayoseSettlementResult)
+```
+
+### finalizeItayose
+
+```solidity
+function finalizeItayose(uint8 orderBookId) external returns (struct ItayoseFinalizeResult)
 ```
 
 ### cleanUpOrders
 
 ```solidity
 function cleanUpOrders(uint8 orderBookId, address user) external returns (uint256 activeLendOrderCount, uint256 activeBorrowOrderCount, uint256 removedLendOrderFutureValue, uint256 removedBorrowOrderFutureValue, uint256 removedLendOrderAmount, uint256 removedBorrowOrderAmount, uint256 maturity)
+```
+
+### cancelOrdersForRecovery
+
+```solidity
+function cancelOrdersForRecovery(uint8[] orderBookIds, address user) external
 ```
 
 ### updateOrderFeeRate
@@ -306,5 +340,11 @@ function pause() external
 
 ```solidity
 function unpause() external
+```
+
+### emitOrderExecuted
+
+```solidity
+function emitOrderExecuted(address user, enum ProtocolTypes.Side side, bytes32 ccy, uint256 maturity, uint256 inputAmount, uint256 filledAmount, uint256 filledUnitPrice, uint256 filledAmountInFV) external
 ```
 

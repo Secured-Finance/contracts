@@ -138,7 +138,7 @@ Adds new currency into the protocol and links with existing price feed.
 | _decimals | uint8 | Currency decimals |
 | _haircut | uint256 | Remaining ratio after haircut |
 | _priceFeeds | address[] | Array with the contract address of price feed |
-| _heartbeats | uint256[] | Array with the heartbeat of price feed |
+| _heartbeats | uint256[] | Array with the heartbeat of price feed NOTE: Only standard ERC20 tokens are supported. The following token types are NOT supported: - Fee-on-transfer tokens (e.g., tokens that deduct fees during transfers) - Rebasing tokens (e.g., tokens that change balance automatically) - Tokens with non-standard transfer/approval behavior |
 
 ### removeCurrency
 

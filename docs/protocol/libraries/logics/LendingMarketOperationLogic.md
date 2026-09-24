@@ -26,22 +26,28 @@ uint8 ZC_TOKEN_BASE_DECIMALS
 uint256 PRE_ORDER_BASE_PERIOD
 ```
 
+### UNIT_PRICE_RANGE
+
+```solidity
+uint256 UNIT_PRICE_RANGE
+```
+
 ### InvalidCompoundFactor
 
 ```solidity
 error InvalidCompoundFactor()
 ```
 
-### TooManyTokenDecimals
-
-```solidity
-error TooManyTokenDecimals(address tokenAddress, uint8 decimals)
-```
-
 ### InvalidCurrency
 
 ```solidity
 error InvalidCurrency()
+```
+
+### TooManyTokenDecimals
+
+```solidity
+error TooManyTokenDecimals(address tokenAddress, uint8 decimals)
 ```
 
 ### InvalidOpeningDate
@@ -66,6 +72,18 @@ error InvalidTimestamp()
 
 ```solidity
 error InvalidMinDebtUnitPrice()
+```
+
+### InvalidOrderUnitPrice
+
+```solidity
+error InvalidOrderUnitPrice(uint256 unitPrice, uint256 minUnitPrice, uint256 maxUnitPrice)
+```
+
+### IncompleteItayoseProcess
+
+```solidity
+error IncompleteItayoseProcess(bytes32 ccy, uint256 maturity, struct ItayoseProcessStatus status)
 ```
 
 ### LendingMarketNotInitialized
@@ -122,6 +140,24 @@ event OrderBooksRotated(bytes32 ccy, uint256 oldMaturity, uint256 newMaturity)
 event EmergencyTerminationExecuted(uint256 timestamp)
 ```
 
+### ItayoseProcessInitialized
+
+```solidity
+event ItayoseProcessInitialized(bytes32 ccy, uint256 maturity, uint256 openingUnitPrice, uint256 lastLendUnitPrice, uint256 lastBorrowUnitPrice, uint256 totalOffsetAmount)
+```
+
+### ItayoseSettlementProgress
+
+```solidity
+event ItayoseSettlementProgress(bytes32 ccy, uint256 maturity, enum ProtocolTypes.Side makerSide, uint256 batchFilledAmount, uint256 remainingLendOffsetAmount, uint256 remainingBorrowOffsetAmount)
+```
+
+### ItayoseProcessFinalized
+
+```solidity
+event ItayoseProcessFinalized(bytes32 ccy, uint256 maturity)
+```
+
 ### ZCTokenCreated
 
 ```solidity
@@ -140,6 +176,42 @@ function initializeLendingMarket(bytes32 _ccy, uint256 _genesisDate, uint256 _co
 function updateMinDebtUnitPrice(bytes32 _ccy, uint256 _minDebtUnitPrice) public
 ```
 
+### getOrderUnitPriceRange
+
+```solidity
+function getOrderUnitPriceRange(bytes32 _ccy, uint256 _maturity) public view returns (uint256 minLendUnitPrice, uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice, uint256 maxBorrowUnitPrice, uint256 referenceUnitPrice, bool isMinDebtUnitPriceReference)
+```
+
+### _getBaseOrderUnitPriceRange
+
+```solidity
+function _getBaseOrderUnitPriceRange(bytes32 _ccy, uint256 _maturity) private view returns (uint256 minUnitPrice, uint256 maxUnitPrice, uint256 referenceUnitPrice, bool isPreOrderPeriod, bool isMinDebtUnitPriceReference)
+```
+
+### getItayoseProcessStatus
+
+```solidity
+function getItayoseProcessStatus(bytes32 _ccy, uint256 _maturity) public view returns (struct ItayoseProcessStatus)
+```
+
+### validateOrderUnitPrice
+
+```solidity
+function validateOrderUnitPrice(bytes32 _ccy, uint256 _maturity, enum ProtocolTypes.Side _side, uint256 _unitPrice) external view
+```
+
+### _getPreviousOpeningUnitPrice
+
+```solidity
+function _getPreviousOpeningUnitPrice(bytes32 _ccy, uint256 _maturity, uint256 _openingDate, uint8 _orderBookId, contract ILendingMarket _market) private view returns (bool hasPreviousOpening, uint256 convertedUnitPrice)
+```
+
+### _getMinDebtUnitPriceRange
+
+```solidity
+function _getMinDebtUnitPriceRange(bytes32 _ccy, uint256 _maturity, uint256 _openingDate) private view returns (uint256 minUnitPrice, uint256 maxUnitPrice, uint256 referenceUnitPrice)
+```
+
 ### createOrderBook
 
 ```solidity
@@ -149,7 +221,31 @@ function createOrderBook(bytes32 _ccy, uint256 _openingDate, uint256 _preOpening
 ### executeItayoseCall
 
 ```solidity
-function executeItayoseCall(bytes32 _ccy, uint256 _maturity) external returns (struct PartiallyFilledOrder partiallyFilledLendingOrder, struct PartiallyFilledOrder partiallyFilledBorrowingOrder)
+function executeItayoseCall(bytes32 _ccy, uint256 _maturity) external
+```
+
+### executeItayoseStep
+
+```solidity
+function executeItayoseStep(bytes32 _ccy, uint256 _maturity) public returns (bool completed)
+```
+
+### _initializeItayose
+
+```solidity
+function _initializeItayose(bytes32 _ccy, uint256 _maturity, contract ILendingMarket _market, uint8 _orderBookId) private returns (struct ItayoseProcessStatus status)
+```
+
+### _executeItayoseSettlement
+
+```solidity
+function _executeItayoseSettlement(bytes32 _ccy, uint256 _maturity, contract ILendingMarket _market, uint8 _orderBookId) private returns (struct ItayoseSettlementResult result)
+```
+
+### _finalizeItayose
+
+```solidity
+function _finalizeItayose(bytes32 _ccy, uint256 _maturity, contract ILendingMarket _market, uint8 _orderBookId) private
 ```
 
 ### rotateOrderBooks
@@ -162,6 +258,18 @@ function rotateOrderBooks(bytes32 _ccy) external
 
 ```solidity
 function executeEmergencyTermination() external
+```
+
+### _requireItayoseComplete
+
+```solidity
+function _requireItayoseComplete(bytes32 _ccy, contract ILendingMarket _market, uint8 _orderBookId) private view
+```
+
+### _requireNoItayoseInProgress
+
+```solidity
+function _requireNoItayoseInProgress(bytes32 _ccy, contract ILendingMarket _market, uint8 _orderBookId) private view
 ```
 
 ### pauseLendingMarket

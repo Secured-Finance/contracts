@@ -8,12 +8,6 @@
 error InvalidMaturity()
 ```
 
-### InvalidCurrency
-
-```solidity
-error InvalidCurrency()
-```
-
 ### MarketTerminated
 
 ```solidity
@@ -30,6 +24,24 @@ error NotTerminated()
 
 ```solidity
 error AlreadyInitialized()
+```
+
+### ItayoseProcessInitialized
+
+```solidity
+event ItayoseProcessInitialized(bytes32 ccy, uint256 maturity, uint256 openingUnitPrice, uint256 lastLendUnitPrice, uint256 lastBorrowUnitPrice, uint256 totalOffsetAmount)
+```
+
+### ItayoseSettlementProgress
+
+```solidity
+event ItayoseSettlementProgress(bytes32 ccy, uint256 maturity, enum ProtocolTypes.Side makerSide, uint256 batchFilledAmount, uint256 remainingLendOffsetAmount, uint256 remainingBorrowOffsetAmount)
+```
+
+### ItayoseProcessFinalized
+
+```solidity
+event ItayoseProcessFinalized(bytes32 ccy, uint256 maturity)
 ```
 
 ### AdditionalFunds
@@ -160,6 +172,24 @@ function getMinDebtUnitPrice(bytes32 _ccy) external view returns (uint256)
 function getCurrentMinDebtUnitPrice(bytes32 _ccy, uint256 _maturity) external view returns (uint256)
 ```
 
+### getMinDebtUnitPriceAt
+
+```solidity
+function getMinDebtUnitPriceAt(bytes32 ccy, uint256 maturity, uint256 referenceTimestamp) external view returns (uint256)
+```
+
+### getOrderUnitPriceRange
+
+```solidity
+function getOrderUnitPriceRange(bytes32 ccy, uint256 maturity) external view returns (uint256 minLendUnitPrice, uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice, uint256 maxBorrowUnitPrice, uint256 referenceUnitPrice, bool isMinDebtUnitPriceReference)
+```
+
+### getItayoseProcessStatus
+
+```solidity
+function getItayoseProcessStatus(bytes32 ccy, uint256 maturity) external view returns (struct ItayoseProcessStatus)
+```
+
 ### getGenesisDate
 
 ```solidity
@@ -188,18 +218,6 @@ function getOrderBookId(bytes32 _ccy, uint256 _maturity) external view returns (
 
 ```solidity
 function getPendingOrderAmount(bytes32 _ccy, uint256 _maturity) external view returns (uint256)
-```
-
-### getOrderEstimation
-
-```solidity
-function getOrderEstimation(struct ILendingMarketController.GetOrderEstimationParams params) external view returns (uint256 lastUnitPrice, uint256 filledAmount, uint256 filledAmountInFV, uint256 orderFeeInFV, uint256 placedAmount, uint256 coverage, bool isInsufficientDepositAmount)
-```
-
-### getOrderEstimationFromFV
-
-```solidity
-function getOrderEstimationFromFV(struct ILendingMarketController.GetOrderEstimationFromFVParams _params) external view returns (uint256 lastUnitPrice, uint256 filledAmount, uint256 filledAmountInFV, uint256 orderFeeInFV, uint256 coverage, bool isInsufficientDepositAmount)
 ```
 
 ### getMaturities
@@ -352,6 +370,12 @@ function unwindPositionWithCap(bytes32 ccy, uint256 maturity, uint256 maxFutureV
 function executeItayoseCall(bytes32 ccy, uint256 maturity) external returns (bool)
 ```
 
+### executeItayoseStep
+
+```solidity
+function executeItayoseStep(bytes32 ccy, uint256 maturity) external returns (bool completed)
+```
+
 ### executeRedemption
 
 ```solidity
@@ -424,6 +448,30 @@ function cleanUpAllFunds(address user) external returns (bool)
 function cleanUpFunds(bytes32 ccy, address user) external returns (uint256 activeOrderCount)
 ```
 
+### addPendingOrderAmountForRecovery
+
+```solidity
+function addPendingOrderAmountForRecovery(bytes32 ccy, uint256 maturity, uint256 amount) external
+```
+
+### cancelOrdersForRecovery
+
+```solidity
+function cancelOrdersForRecovery(bytes32 ccy, address user) external
+```
+
+### recoverUserFunds
+
+```solidity
+function recoverUserFunds(bytes32 ccy, uint256 maturity, address user, enum ProtocolTypes.Side side, uint256 amount, uint256 unitPrice) external
+```
+
+### transferAssetsForRecovery
+
+```solidity
+function transferAssetsForRecovery(bytes32 ccy, address user, address receiver) external
+```
+
 ### updateMinDebtUnitPrice
 
 ```solidity
@@ -433,7 +481,7 @@ function updateMinDebtUnitPrice(bytes32 _ccy, uint256 _minDebtUnitPrice) externa
 ### withdrawZCToken
 
 ```solidity
-function withdrawZCToken(bytes32 _ccy, uint256 _maturity, uint256 _amount) external
+function withdrawZCToken(bytes32 _ccy, uint256 _maturity, uint256 _amount) external returns (uint256 withdrawnAmount)
 ```
 
 ### depositZCToken

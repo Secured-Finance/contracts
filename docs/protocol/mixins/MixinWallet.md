@@ -90,7 +90,7 @@ Internal function without access restriction._
 ### _withdraw
 
 ```solidity
-function _withdraw(contract ITokenVault _tokenVault, bytes32 _ccy, uint256 _amount) internal
+function _withdraw(contract ITokenVault _tokenVault, bytes32 _ccy, uint256 _amount) internal returns (uint256 withdrawnAmount)
 ```
 
 _Withdraws funds by the caller from the token vault.
@@ -101,4 +101,8 @@ Internal function without access restriction._
 | _tokenVault | contract ITokenVault | TokenVault contract instance |
 | _ccy | bytes32 | Currency name in bytes32 |
 | _amount | uint256 | Amount of funds to deposit |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| withdrawnAmount | uint256 | Actual amount withdrawn |
 

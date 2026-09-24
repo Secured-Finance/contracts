@@ -8,6 +8,12 @@
 uint256 BASE_MIN_DEBT_UNIT_PRICE
 ```
 
+### MAX_EXPOSURE_CURRENCIES
+
+```solidity
+uint256 MAX_EXPOSURE_CURRENCIES
+```
+
 ### NotRedemptionPeriod
 
 ```solidity
@@ -42,6 +48,18 @@ error AlreadyRedeemed()
 
 ```solidity
 error InsufficientCollateral()
+```
+
+### TooManyExposureCurrencies
+
+```solidity
+error TooManyExposureCurrencies()
+```
+
+### ProtocolIsInsolvent
+
+```solidity
+error ProtocolIsInsolvent()
 ```
 
 ### CalculatedTotalFundInBaseCurrencyVars
@@ -181,22 +199,34 @@ Converts the future value to the genesis value if there is balance in the past m
 | ---- | ---- | ----------- |
 | [0] | int256 | Current future value amount after update |
 
-### updateFunds
+### _updateFunds
 
 ```solidity
-function updateFunds(bytes32 _ccy, uint256 _maturity, address _user, enum ProtocolTypes.Side _side, uint256 _filledAmount, uint256 _filledAmountInFV, uint256 _feeInFV) external
+function _updateFunds(bytes32 _ccy, uint256 _maturity, address _user, enum ProtocolTypes.Side _side, uint256 _filledAmount, uint256 _filledAmountInFV, uint256 _feeInFV) private
+```
+
+### updateFundsForTaker
+
+```solidity
+function updateFundsForTaker(bytes32 _ccy, uint256 _maturity, address _user, enum ProtocolTypes.Side _side, uint256 _filledAmount, uint256 _filledAmountInFV, uint256 _feeInFV) public returns (bool updated)
+```
+
+### updateFundsForMaker
+
+```solidity
+function updateFundsForMaker(bytes32 _ccy, uint256 _maturity, enum ProtocolTypes.Side _side, struct PartiallyFilledOrder _partiallyFilledOrder) public
 ```
 
 ### registerCurrencyAndMaturity
 
 ```solidity
-function registerCurrencyAndMaturity(bytes32 _ccy, uint256 _maturity, address _user) public
+function registerCurrencyAndMaturity(bytes32 _ccy, uint256 _maturity, address _user) public returns (bool isNewCurrency)
 ```
 
 ### registerCurrency
 
 ```solidity
-function registerCurrency(bytes32 _ccy, address _user) public
+function registerCurrency(bytes32 _ccy, address _user) public returns (bool isNewCurrency)
 ```
 
 ### executeRedemption
@@ -227,6 +257,12 @@ function getActualFunds(bytes32 _ccy, uint256 _maturity, address _user, uint256 
 
 ```solidity
 function getCurrentMinDebtUnitPrice(uint256 _maturity, uint256 _minDebtUnitPrice) public view returns (uint256)
+```
+
+### getMinDebtUnitPriceAt
+
+```solidity
+function getMinDebtUnitPriceAt(uint256 _maturity, uint256 _minDebtUnitPrice, uint256 _referenceTimestamp) public pure returns (uint256)
 ```
 
 ### calculateFunds

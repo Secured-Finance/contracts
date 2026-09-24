@@ -535,15 +535,25 @@ Gets the market opening date.
 function getItayoseLog(uint256 _maturity) external view returns (struct ItayoseLog)
 ```
 
-Gets the market itayose logs.
+Gets the immutable price-discovery result once an Itayose process is initialized.
+
+_A non-zero log does not mean the process is finalized. Use isReady for completion._
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _maturity | uint256 | The market maturity |
 
+### getItayoseProcessStatus
+
+```solidity
+function getItayoseProcessStatus(uint8 _orderBookId) external view returns (struct ItayoseProcessStatus)
+```
+
+Gets the resumable Itayose process status.
+
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| [0] | struct ItayoseLog | ItayoseLog of the market |
+| _orderBookId | uint8 | The order book id |
 
 ### getOrder
 
@@ -679,6 +689,22 @@ Calculates the amount to be filled when executing an order in the order book fro
 | filledAmountInFV | uint256 | The amount in the future value that is filled on the order book |
 | orderFeeInFV | uint256 | The order fee amount in the future value |
 
+### migrateOrderChunks
+
+```solidity
+function migrateOrderChunks(uint8 _orderBookId, enum ProtocolTypes.Side _side, uint256 _unitPrice) external
+```
+
+Builds chunk metadata for a legacy price level after the chunk-index upgrade.
+
+_Permissionless and callable only while the price level has orders and no chunk metadata._
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _orderBookId | uint8 | The order book id |
+| _side | enum ProtocolTypes.Side | The order side to migrate |
+| _unitPrice | uint256 | The unit price to migrate |
+
 ### createOrderBook
 
 ```solidity
@@ -712,6 +738,16 @@ Cancels the order.
 | _orderBookId | uint8 | The order book id |
 | _user | address | User address |
 | _orderId | uint48 | Market order id |
+
+### cancelOrdersForRecovery
+
+```solidity
+function cancelOrdersForRecovery(uint8[] _orderBookIds, address _user) external
+```
+
+Cancels all active orders for a user during incident recovery.
+
+_This temporary recovery entry point must be removed after the incident recovery._
 
 ### cleanUpOrders
 
@@ -801,28 +837,29 @@ Unwinds lending or borrowing positions by a specified future value amount.
 | partiallyFilledOrder | struct PartiallyFilledOrder | Partially filled order |
 | feeInFV | uint256 |  |
 
-### executeItayoseCall
+### initializeItayose
 
 ```solidity
-function executeItayoseCall(uint8 _orderBookId) external returns (uint256 openingUnitPrice, uint256 totalOffsetAmount, uint256 openingDate, struct PartiallyFilledOrder partiallyFilledLendingOrder, struct PartiallyFilledOrder partiallyFilledBorrowingOrder)
+function initializeItayose(uint8 _orderBookId) external returns (struct ItayoseProcessStatus)
 ```
 
-Executes Itayose to aggregate pre-orders and determine the opening unit price.
-After this action, the market opens.
+Initializes an Itayose process and fixes its price-discovery result.
 
-_If the opening date had already passed when this contract was created, this Itayose need not be executed._
+### executeItayoseSettlement
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _orderBookId | uint8 | The order book id |
+```solidity
+function executeItayoseSettlement(uint8 _orderBookId) external returns (struct ItayoseSettlementResult)
+```
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| openingUnitPrice | uint256 | The opening price when Itayose is executed |
-| totalOffsetAmount | uint256 | The total filled amount when Itayose is executed |
-| openingDate | uint256 | The timestamp when the market opens |
-| partiallyFilledLendingOrder | struct PartiallyFilledOrder | Partially filled lending order on the order book |
-| partiallyFilledBorrowingOrder | struct PartiallyFilledOrder | Partially filled borrowing order on the order book |
+Settles one bounded Itayose batch.
+
+### finalizeItayose
+
+```solidity
+function finalizeItayose(uint8 _orderBookId) external returns (struct ItayoseFinalizeResult)
+```
+
+Finalizes a fully settled Itayose process and opens the market.
 
 ### updateOrderFeeRate
 
@@ -863,4 +900,15 @@ function unpause() external
 ```
 
 Unpauses the lending market.
+
+### emitOrderExecuted
+
+```solidity
+function emitOrderExecuted(address _user, enum ProtocolTypes.Side _side, bytes32 _ccy, uint256 _maturity, uint256 _inputAmount, uint256 _filledAmount, uint256 _filledUnitPrice, uint256 _filledAmountInFV) external
+```
+
+Emits the synthetic order execution used for incident recovery.
+
+_This temporary recovery entry point must be removed after the incident recovery.
+Only LendingMarketController can call this function._
 

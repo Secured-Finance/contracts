@@ -8,6 +8,12 @@
 error InvalidAmount()
 ```
 
+### InvalidPreOrderUnitPrice
+
+```solidity
+error InvalidPreOrderUnitPrice()
+```
+
 ### AmountIsZero
 
 ```solidity
@@ -24,6 +30,12 @@ error FutureValueIsZero()
 
 ```solidity
 error TooManyActiveOrders()
+```
+
+### TooManyDepositCurrencies
+
+```solidity
+error TooManyDepositCurrencies()
 ```
 
 ### NotEnoughCollateral
@@ -86,22 +98,10 @@ function executePreOrder(bytes32 _ccy, uint256 _maturity, address _user, enum Pr
 function unwindPosition(bytes32 _ccy, uint256 _maturity, address _user, uint256 _maxAmountInFV) external returns (uint256 filledAmount, uint256 filledAmountInFV, uint256 feeInFV)
 ```
 
-### updateFundsForTaker
-
-```solidity
-function updateFundsForTaker(bytes32 _ccy, uint256 _maturity, address _user, enum ProtocolTypes.Side _side, uint256 _filledAmount, uint256 _filledAmountInFV, uint256 _feeInFV) public
-```
-
-### updateFundsForMaker
-
-```solidity
-function updateFundsForMaker(bytes32 _ccy, uint256 _maturity, enum ProtocolTypes.Side _side, struct PartiallyFilledOrder partiallyFilledOrder) public
-```
-
 ### withdrawZCToken
 
 ```solidity
-function withdrawZCToken(bytes32 _ccy, uint256 _maturity, address _user, uint256 _amount) public
+function withdrawZCToken(bytes32 _ccy, uint256 _maturity, address _user, uint256 _amount) public returns (uint256 withdrawnAmount)
 ```
 
 ### depositZCToken
@@ -149,7 +149,7 @@ function _unwindPosition(bytes32 _ccy, uint256 _maturity, address _user, int256 
 ### _withdrawZCToken
 
 ```solidity
-function _withdrawZCToken(bytes32 _ccy, uint256 _maturity, address _user, uint256 _amount) internal
+function _withdrawZCToken(bytes32 _ccy, uint256 _maturity, address _user, uint256 _amount) internal returns (uint256 withdrawableAmount)
 ```
 
 ### _depositZCToken
@@ -161,7 +161,7 @@ function _depositZCToken(bytes32 _ccy, uint256 _maturity, address _user, uint256
 ### _withdrawZCPerpetualToken
 
 ```solidity
-function _withdrawZCPerpetualToken(bytes32 _ccy, address _user, uint256 _amount) internal
+function _withdrawZCPerpetualToken(bytes32 _ccy, address _user, uint256 _amount) internal returns (uint256 withdrawableAmount)
 ```
 
 ### _depositZCPerpetualToken
@@ -192,5 +192,17 @@ function _getWithdrawableAmount(bytes32 _ccy, address _user) internal view retur
 
 ```solidity
 function _isCovered(address _user, bytes32 _ccy) internal view
+```
+
+### recoverUserFunds
+
+```solidity
+function recoverUserFunds(bytes32 _ccy, uint256 _maturity, address _user, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice) external
+```
+
+### transferAssetsForRecovery
+
+```solidity
+function transferAssetsForRecovery(bytes32 _ccy, address _user, address _receiver) external
 ```
 

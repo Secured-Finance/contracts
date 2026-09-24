@@ -2,6 +2,12 @@
 
 ## DepositManagementLogic
 
+### MAX_DEPOSIT_CURRENCIES
+
+```solidity
+uint256 MAX_DEPOSIT_CURRENCIES
+```
+
 ### NotEnoughDeposit
 
 ```solidity
@@ -12,6 +18,12 @@ error NotEnoughDeposit(bytes32 ccy)
 
 ```solidity
 error ProtocolIsInsolvent(bytes32 ccy)
+```
+
+### TooManyDepositCurrencies
+
+```solidity
+error TooManyDepositCurrencies()
 ```
 
 ### CalculatedFundVars
@@ -105,6 +117,12 @@ function getWithdrawableCollateral(address _user) public view returns (uint256, 
 
 ```solidity
 function getWithdrawableCollateral(bytes32 _ccy, address _user) public view returns (uint256 withdrawableAmount)
+```
+
+### canDepositCurrency
+
+```solidity
+function canDepositCurrency(address _user, bytes32 _ccy) public view returns (bool)
 ```
 
 ### addDepositAmount

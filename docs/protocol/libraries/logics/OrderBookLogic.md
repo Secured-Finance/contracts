@@ -1,5 +1,43 @@
 # Solidity API
 
+## ItayoseSettlementResult
+
+```solidity
+struct ItayoseSettlementResult {
+  enum ProtocolTypes.Side makerSide;
+  uint256 batchFilledAmount;
+  uint256 remainingLendOffsetAmount;
+  uint256 remainingBorrowOffsetAmount;
+  struct PartiallyFilledOrder partiallyFilledOrder;
+}
+```
+
+## ItayoseFinalizeResult
+
+```solidity
+struct ItayoseFinalizeResult {
+  uint256 openingUnitPrice;
+  uint256 totalOffsetAmount;
+  uint256 openingDate;
+}
+```
+
+## ItayoseProcessStatus
+
+```solidity
+struct ItayoseProcessStatus {
+  uint256 openingUnitPrice;
+  uint256 lastLendUnitPrice;
+  uint256 lastBorrowUnitPrice;
+  uint256 totalOffsetAmount;
+  uint256 remainingLendOffsetAmount;
+  uint256 remainingBorrowOffsetAmount;
+  bool isInProgress;
+  bool isFinalizable;
+  bool isReady;
+}
+```
+
 ## OrderBookLogic
 
 ### InvalidOrderFeeRate
@@ -18,6 +56,48 @@ error InvalidCircuitBreakerLimitRange()
 
 ```solidity
 error OrderBookNotMatured()
+```
+
+### ItayoseProcessAlreadyInitialized
+
+```solidity
+error ItayoseProcessAlreadyInitialized()
+```
+
+### ItayoseProcessNotInitialized
+
+```solidity
+error ItayoseProcessNotInitialized()
+```
+
+### ItayoseSettlementAlreadyCompleted
+
+```solidity
+error ItayoseSettlementAlreadyCompleted()
+```
+
+### ItayoseProcessNotFinalizable
+
+```solidity
+error ItayoseProcessNotFinalizable()
+```
+
+### ItayoseSettlementDidNotProgress
+
+```solidity
+error ItayoseSettlementDidNotProgress()
+```
+
+### UnexpectedPartialFill
+
+```solidity
+error UnexpectedPartialFill()
+```
+
+### MAX_ITAYOSE_PRICE_LEVELS_PER_CALL
+
+```solidity
+uint256 MAX_ITAYOSE_PRICE_LEVELS_PER_CALL
 ```
 
 ### OrderFeeRateUpdated
@@ -42,6 +122,12 @@ event OrderBookCreated(uint8 orderBookId, uint256 maturity, uint256 openingDate)
 
 ```solidity
 event ItayoseExecuted(bytes32 ccy, uint256 maturity, uint256 openingUnitPrice, uint256 lastLendUnitPrice, uint256 lastBorrowUnitPrice, uint256 offsetAmount)
+```
+
+### migrateOrderChunks
+
+```solidity
+function migrateOrderChunks(uint8 _orderBookId, enum ProtocolTypes.Side _side, uint256 _unitPrice) external
 ```
 
 ### isReady
@@ -152,6 +238,12 @@ function getLendOrderBook(uint8 _orderBookId, uint256 _start, uint256 _limit) ex
 function getItayoseEstimation(uint8 _orderBookId) external view returns (uint256 openingUnitPrice, uint256 lastLendUnitPrice, uint256 lastBorrowUnitPrice, uint256 totalOffsetAmount)
 ```
 
+### getItayoseProcessStatus
+
+```solidity
+function getItayoseProcessStatus(uint8 _orderBookId) external view returns (struct ItayoseProcessStatus status)
+```
+
 ### getMaturities
 
 ```solidity
@@ -182,10 +274,34 @@ function createOrderBook(uint256 _maturity, uint256 _openingDate, uint256 _preOp
 function executeAutoRoll(uint8 _maturedOrderBookId, uint8 _destinationOrderBookId, uint256 _autoRollUnitPrice) external
 ```
 
-### executeItayoseCall
+### initializeItayose
 
 ```solidity
-function executeItayoseCall(uint8 _orderBookId) external returns (uint256 openingUnitPrice, uint256 totalOffsetAmount, uint256 openingDate, struct PartiallyFilledOrder partiallyFilledLendingOrder, struct PartiallyFilledOrder partiallyFilledBorrowingOrder)
+function initializeItayose(uint8 _orderBookId) external returns (struct ItayoseProcessStatus)
+```
+
+### executeItayoseSettlement
+
+```solidity
+function executeItayoseSettlement(uint8 _orderBookId) external returns (struct ItayoseSettlementResult result)
+```
+
+### finalizeItayose
+
+```solidity
+function finalizeItayose(uint8 _orderBookId) external returns (struct ItayoseFinalizeResult result)
+```
+
+### _settleItayoseSide
+
+```solidity
+function _settleItayoseSide(struct OrderBookLib.OrderBook orderBook, struct ItayoseProcess process, enum ProtocolTypes.Side takerSide) private returns (struct ItayoseSettlementResult result)
+```
+
+### _getItayoseProcessStatus
+
+```solidity
+function _getItayoseProcessStatus(struct OrderBookLib.OrderBook orderBook) private view returns (struct ItayoseProcessStatus status)
 ```
 
 ### _nextOrderBookId

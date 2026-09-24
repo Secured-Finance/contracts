@@ -133,6 +133,23 @@ Gets if the currency has been registered
 | ---- | ---- | ----------- |
 | [0] | bool | The boolean if the currency has been registered or not |
 
+### canDepositCurrency
+
+```solidity
+function canDepositCurrency(address _user, bytes32 _ccy) external view returns (bool)
+```
+
+Checks if a deposit currency can be added for the user.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _user | address | User's address |
+| _ccy | bytes32 | Currency name in bytes32 |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | bool | True if the currency can be added, false otherwise |
+
 ### getRevision
 
 ```solidity
@@ -529,7 +546,7 @@ _Deposits funds by the `from` into collateral with transfer approval of asset vi
 ### withdraw
 
 ```solidity
-function withdraw(bytes32 _ccy, uint256 _amount) external
+function withdraw(bytes32 _ccy, uint256 _amount) external returns (uint256 withdrawnAmount)
 ```
 
 Withdraws funds by the caller from unused collateral.
@@ -538,6 +555,10 @@ Withdraws funds by the caller from unused collateral.
 | ---- | ---- | ----------- |
 | _ccy | bytes32 | Currency name in bytes32 |
 | _amount | uint256 | Amount of funds to withdraw. |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| withdrawnAmount | uint256 | Actual amount withdrawn |
 
 ### addDepositAmount
 
@@ -620,6 +641,6 @@ function _deposit(address _caller, bytes32 _ccy, uint256 _amount, address _onBeh
 ### _withdraw
 
 ```solidity
-function _withdraw(address _user, bytes32 _ccy, uint256 _amount) internal
+function _withdraw(address _user, bytes32 _ccy, uint256 _amount) internal returns (uint256 withdrawableAmount)
 ```
 

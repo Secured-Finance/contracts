@@ -32,6 +32,12 @@ error InvalidAmount(bytes32 ccy, uint256 amount, uint256 msgValue)
 error AmountIsZero()
 ```
 
+### InvalidAddress
+
+```solidity
+error InvalidAddress()
+```
+
 ### CallerNotBaseCurrency
 
 ```solidity
@@ -102,6 +108,12 @@ function isCollateral(bytes32[] ccys) external view returns (bool[])
 
 ```solidity
 function isRegisteredCurrency(bytes32 ccy) external view returns (bool)
+```
+
+### canDepositCurrency
+
+```solidity
+function canDepositCurrency(address user, bytes32 ccy) external view returns (bool)
 ```
 
 ### getTokenAddress
@@ -245,7 +257,7 @@ function depositWithPermitFrom(address user, bytes32 ccy, uint256 amount, uint25
 ### withdraw
 
 ```solidity
-function withdraw(bytes32 ccy, uint256 amount) external
+function withdraw(bytes32 ccy, uint256 amount) external returns (uint256 withdrawnAmount)
 ```
 
 ### addDepositAmount

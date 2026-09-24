@@ -44,6 +44,12 @@ error InvalidPriceFeedInputs()
 error StalePriceFeed(address priceFeed, uint256 heartbeat, uint256 updatedAt, uint256 blockTimestamp)
 ```
 
+### PriceFeedNotRegistered
+
+```solidity
+error PriceFeedNotRegistered(bytes32 ccy)
+```
+
 ### CurrencyAdded
 
 ```solidity

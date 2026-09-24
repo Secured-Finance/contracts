@@ -10,6 +10,17 @@ struct ItayoseLog {
 }
 ```
 
+## ItayoseProcess
+
+```solidity
+struct ItayoseProcess {
+  bool isInProgress;
+  uint256 totalOffsetAmount;
+  uint256 remainingLendOffsetAmount;
+  uint256 remainingBorrowOffsetAmount;
+}
+```
+
 ## LendingMarketStorage
 
 ### STORAGE_SLOT
@@ -29,6 +40,7 @@ struct Storage {
   mapping(uint8 => struct OrderBookLib.OrderBook) orderBooks;
   mapping(uint256 => bool) isReady;
   mapping(uint256 => struct ItayoseLog) itayoseLogs;
+  mapping(uint256 => struct ItayoseProcess) itayoseProcesses;
 }
 ```
 

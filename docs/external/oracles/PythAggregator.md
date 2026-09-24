@@ -23,6 +23,12 @@ contract IPyth pyth
 string description
 ```
 
+### MAX_CONFIDENCE_RATIO
+
+```solidity
+uint256 MAX_CONFIDENCE_RATIO
+```
+
 ### constructor
 
 ```solidity
@@ -33,6 +39,12 @@ constructor(address _pyth, bytes32 _priceId, string _description) public
 
 ```solidity
 function updateFeeds(bytes[] priceUpdateData) public payable
+```
+
+### _validatePrice
+
+```solidity
+function _validatePrice(struct PythStructs.Price price) internal pure
 ```
 
 ### decimals

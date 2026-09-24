@@ -35,6 +35,18 @@ https://github.com/rob-Hitchens/OrderStatisticsTree
 uint256 EMPTY
 ```
 
+### ORDER_CHUNK_SIZE
+
+```solidity
+uint16 ORDER_CHUNK_SIZE
+```
+
+### MAX_ACTIVE_CHUNKS_PER_PRICE
+
+```solidity
+uint32 MAX_ACTIVE_CHUNKS_PER_PRICE
+```
+
 ### Node
 
 ```solidity
@@ -51,12 +63,39 @@ struct Node {
 }
 ```
 
+### OrderChunk
+
+```solidity
+struct OrderChunk {
+  uint256 totalAmount;
+  uint48 firstOrderId;
+  uint32 prevChunkId;
+  uint32 nextChunkId;
+  uint16 orderCount;
+}
+```
+
+### PriceChunkMetadata
+
+```solidity
+struct PriceChunkMetadata {
+  uint32 firstChunkId;
+  uint32 lastChunkId;
+  uint32 lastAllocatedChunkId;
+  uint48 explicitMappingStartOrderId;
+  uint32 activeChunkCount;
+  mapping(uint32 => struct OrderStatisticsTreeLib.OrderChunk) chunks;
+  mapping(uint48 => uint32) orderChunkIds;
+}
+```
+
 ### Tree
 
 ```solidity
 struct Tree {
   uint256 root;
   mapping(uint256 => struct OrderStatisticsTreeLib.Node) nodes;
+  mapping(uint256 => struct OrderStatisticsTreeLib.PriceChunkMetadata) chunkMetadata;
 }
 ```
 
@@ -100,6 +139,18 @@ function next(struct OrderStatisticsTreeLib.Tree self, uint256 value) internal v
 
 ```solidity
 function prev(struct OrderStatisticsTreeLib.Tree self, uint256 value) internal view returns (uint256 cursor)
+```
+
+### nextWithTotalAmount
+
+```solidity
+function nextWithTotalAmount(struct OrderStatisticsTreeLib.Tree self, uint256 value) internal view returns (uint256 cursor, uint256 totalAmount)
+```
+
+### prevWithTotalAmount
+
+```solidity
+function prevWithTotalAmount(struct OrderStatisticsTreeLib.Tree self, uint256 value) internal view returns (uint256 cursor, uint256 totalAmount)
 ```
 
 ### search
@@ -201,7 +252,37 @@ function replaceParent(struct OrderStatisticsTreeLib.Tree self, uint256 a, uint2
 ### removeFixup
 
 ```solidity
-function removeFixup(struct OrderStatisticsTreeLib.Tree self, uint256 value) private
+function removeFixup(struct OrderStatisticsTreeLib.Tree self, uint256 value, uint256 parent, bool valueIsLeftChild) private
+```
+
+### _leftOf
+
+```solidity
+function _leftOf(struct OrderStatisticsTreeLib.Tree self, uint256 value) private view returns (uint256)
+```
+
+### _rightOf
+
+```solidity
+function _rightOf(struct OrderStatisticsTreeLib.Tree self, uint256 value) private view returns (uint256)
+```
+
+### _isRed
+
+```solidity
+function _isRed(struct OrderStatisticsTreeLib.Tree self, uint256 value) private view returns (bool)
+```
+
+### _setRedIfNotEmpty
+
+```solidity
+function _setRedIfNotEmpty(struct OrderStatisticsTreeLib.Tree self, uint256 value) private
+```
+
+### _setBlackIfNotEmpty
+
+```solidity
+function _setBlackIfNotEmpty(struct OrderStatisticsTreeLib.Tree self, uint256 value) private
 ```
 
 ### calculateDroppedAmountFromLeft
@@ -216,6 +297,22 @@ function calculateDroppedAmountFromLeft(struct OrderStatisticsTreeLib.Tree self,
 function calculateDroppedAmountFromRight(struct OrderStatisticsTreeLib.Tree self, uint256 amount, uint256 amountInFV, uint256 limitValue) internal view returns (uint256 droppedValue, uint256 droppedAmount, uint256 droppedAmountInFV)
 ```
 
+### DropVars
+
+```solidity
+struct DropVars {
+  uint256 cursor;
+  uint256 cursorNodeAmount;
+  uint256 exceededAmount;
+  uint256 exceededAmountInFV;
+  uint256 totalNodeAmount;
+  uint256 fixupParent;
+  uint256 removedChild;
+  uint256 relinkFixupStart;
+  uint256 relinkFixupStopParent;
+}
+```
+
 ### dropLeft
 
 ```solidity
@@ -228,16 +325,58 @@ function dropLeft(struct OrderStatisticsTreeLib.Tree self, uint256 amount, uint2
 function dropRight(struct OrderStatisticsTreeLib.Tree self, uint256 amount, uint256 amountInFV, uint256 limitValue) internal returns (uint256 droppedValue, uint256 droppedAmount, uint256 droppedAmountInFV, uint256 remainingAmount, struct PartiallyRemovedOrder partiallyRemovedOrder)
 ```
 
-### rotateTreeToLeft
+### _hasBlackDeficitFromLeft
 
 ```solidity
-function rotateTreeToLeft(struct OrderStatisticsTreeLib.Tree self) internal
+function _hasBlackDeficitFromLeft(struct OrderStatisticsTreeLib.Tree self, uint256 target) private view returns (bool)
 ```
 
-### rotateTreeToRight
+### _hasBlackDeficitFromRight
 
 ```solidity
-function rotateTreeToRight(struct OrderStatisticsTreeLib.Tree self) internal
+function _hasBlackDeficitFromRight(struct OrderStatisticsTreeLib.Tree self, uint256 target) private view returns (bool)
+```
+
+### _rebalanceBlackHeights
+
+```solidity
+function _rebalanceBlackHeights(struct OrderStatisticsTreeLib.Tree self, uint256 target, uint256 stopParent) private returns (uint256 processedUntil)
+```
+
+### _fixBlackDeficit
+
+```solidity
+function _fixBlackDeficit(struct OrderStatisticsTreeLib.Tree self, uint256 target, uint256 leftBlackHeight, uint256 rightBlackHeight) private returns (uint256 nextTarget, uint256 newLeftBlackHeight, uint256 newRightBlackHeight, bool targetChangedByFix)
+```
+
+### _childBlackHeights
+
+```solidity
+function _childBlackHeights(struct OrderStatisticsTreeLib.Tree self, uint256 target) private view returns (uint256 leftBlackHeight, uint256 rightBlackHeight)
+```
+
+### _absDiff
+
+```solidity
+function _absDiff(uint256 a, uint256 b) private pure returns (uint256)
+```
+
+### _blackHeight
+
+```solidity
+function _blackHeight(struct OrderStatisticsTreeLib.Tree self, uint256 value) private view returns (uint256 height)
+```
+
+### _fixBlackDeficitFromLeft
+
+```solidity
+function _fixBlackDeficitFromLeft(struct OrderStatisticsTreeLib.Tree self, uint256 target) private returns (uint256 nextTarget)
+```
+
+### _fixBlackDeficitFromRight
+
+```solidity
+function _fixBlackDeficitFromRight(struct OrderStatisticsTreeLib.Tree self, uint256 target) private returns (uint256 nextTarget)
 ```
 
 ### getFutureValue
@@ -260,7 +399,9 @@ _Retrieves the Object denoted by `_id`._
 function orderIdExists(struct OrderStatisticsTreeLib.Tree self, uint256 value, uint48 orderId) internal view returns (bool)
 ```
 
-_Return boolean if value, amount and orderId exist in doubly linked list_
+_Return boolean if value, amount and orderId exist in doubly linked list
+Order IDs must increase monotonically because prefix removals leave old orders in storage
+and use the current head order ID to distinguish them from active orders._
 
 ### insertOrder
 
@@ -277,7 +418,13 @@ function removeOrder(struct OrderStatisticsTreeLib.Tree self, uint256 value, uin
 ### removeOrders
 
 ```solidity
-function removeOrders(struct OrderStatisticsTreeLib.Tree self, uint256 value, uint256 _amount) internal returns (struct PartiallyRemovedOrder partiallyRemovedOrder)
+function removeOrders(struct OrderStatisticsTreeLib.Tree self, uint256 value, uint256 amount) internal returns (struct PartiallyRemovedOrder partiallyRemovedOrder)
+```
+
+### migrateOrderChunks
+
+```solidity
+function migrateOrderChunks(struct OrderStatisticsTreeLib.Tree self, uint256 value) internal
 ```
 
 ### addHead
@@ -324,14 +471,6 @@ function _removeOrder(struct OrderStatisticsTreeLib.Tree self, uint256 value, ui
 
 _Remove the OrderItem denoted by `_id` from the list._
 
-### _removeOrders
-
-```solidity
-function _removeOrders(struct OrderStatisticsTreeLib.Tree self, uint256 value, uint48 orderId) internal
-```
-
-_Remove the OrderItems older than or equal `orderId` from the list_
-
 ### _setHead
 
 ```solidity
@@ -355,6 +494,57 @@ function _link(struct OrderStatisticsTreeLib.Tree self, uint256 value, uint48 pr
 ```
 
 _Internal function to link an Object to another._
+
+### _ensureChunkMetadata
+
+```solidity
+function _ensureChunkMetadata(struct OrderStatisticsTreeLib.Tree self, uint256 value) private
+```
+
+### _migrateChunkMetadata
+
+```solidity
+function _migrateChunkMetadata(struct OrderStatisticsTreeLib.Tree self, uint256 value) private
+```
+
+### _addOrderToChunk
+
+```solidity
+function _addOrderToChunk(struct OrderStatisticsTreeLib.PriceChunkMetadata metadata, uint48 orderId, uint256 amount) private
+```
+
+### _getActiveOrderChunkId
+
+```solidity
+function _getActiveOrderChunkId(struct OrderStatisticsTreeLib.PriceChunkMetadata metadata, uint48 orderId) private view returns (uint32 chunkId)
+```
+
+_Orders created before explicitMappingStartOrderId belong to the first chunk.
+This lookup relies on order IDs increasing monotonically._
+
+### _removeOrderFromChunk
+
+```solidity
+function _removeOrderFromChunk(struct OrderStatisticsTreeLib.PriceChunkMetadata metadata, uint48 orderId, uint256 amount, uint48 nextOrderId) private
+```
+
+### _removeOrdersFromBoundaryChunk
+
+```solidity
+function _removeOrdersFromBoundaryChunk(struct OrderStatisticsTreeLib.Node gn, struct OrderStatisticsTreeLib.OrderChunk chunk, uint256 amount) private returns (uint256 removedAmount, uint256 removedCount, uint48 partiallyRemovedOrderId, uint256 partiallyRemovedAmount, uint256 remainingAmount)
+```
+
+### _unlinkChunkPrefix
+
+```solidity
+function _unlinkChunkPrefix(struct OrderStatisticsTreeLib.PriceChunkMetadata metadata, uint32 firstRemainingChunkId, uint32 removedChunkCount) private
+```
+
+### _unlinkChunk
+
+```solidity
+function _unlinkChunk(struct OrderStatisticsTreeLib.PriceChunkMetadata metadata, uint32 chunkId) private
+```
 
 ### _calculateFutureValue
 

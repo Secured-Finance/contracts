@@ -41,6 +41,6 @@ function deposit(bytes32 ccy, uint256 amount) external payable
 ### withdraw
 
 ```solidity
-function withdraw(bytes32 ccy, uint256 amount) external
+function withdraw(bytes32 ccy, uint256 amount) external returns (uint256 withdrawnAmount)
 ```
 

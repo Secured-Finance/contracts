@@ -14,12 +14,6 @@ constructor(address _beacon, bytes _data) public payable
 modifier ifAdmin()
 ```
 
-### upgradeTo
-
-```solidity
-function upgradeTo(address newImplementation) external
-```
-
 ### changeAdmin
 
 ```solidity

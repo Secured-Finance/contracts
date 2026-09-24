@@ -82,7 +82,7 @@ _Deposits funds by the caller into the token vault as reserve fund._
 ### withdraw
 
 ```solidity
-function withdraw(bytes32 _ccy, uint256 _amount) external
+function withdraw(bytes32 _ccy, uint256 _amount) external returns (uint256 withdrawnAmount)
 ```
 
 _Withdraw funds by the caller from the token vault._
@@ -91,4 +91,8 @@ _Withdraw funds by the caller from the token vault._
 | ---- | ---- | ----------- |
 | _ccy | bytes32 | Currency name in bytes32 |
 | _amount | uint256 | Amount of funds to deposit |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| withdrawnAmount | uint256 | Actual amount withdrawn |
 
