@@ -523,8 +523,7 @@ describe('Performance Test: Used Currencies Limit', async () => {
               // Estimate gas for unwindPosition
               const estimateGas = await lendingMarketController
                 .connect(orderUser)
-                .estimateGas.unwindPosition(currencyKey, firstMaturity)
-                .catch(() => BigNumber.from(0)); // If estimation fails, use 0
+                .estimateGas.unwindPosition(currencyKey, firstMaturity);
 
               gasCosts[`GasCosts(${name})`] = estimateGas.toNumber();
               totalGasCost = totalGasCost.add(estimateGas);
@@ -675,8 +674,7 @@ describe('Performance Test: Used Currencies Limit', async () => {
                 Side.BORROW,
                 orderAmount,
                 '9500', // Price to place order
-              )
-              .catch(() => BigNumber.from(0)); // If estimation fails, use 0
+              );
 
             gasCosts[`GasCosts(${name})`] = estimateGas.toNumber();
           }
@@ -886,8 +884,7 @@ describe('Performance Test: Used Currencies Limit', async () => {
                 .estimateGas.executeTransaction(
                   lendingMarketController.address,
                   withdrawData,
-                )
-                .catch(() => BigNumber.from(0)); // If estimation fails, use 0
+                );
 
               gasCosts[`GasCosts(${name})`] = estimateGas.toNumber();
             } else {

@@ -360,7 +360,13 @@ library LendingMarketOperationLogic {
             Storage.slot().minDebtUnitPrices[_ccy],
             _openingDate
         );
-        if (referenceUnitPrice == 0) referenceUnitPrice = 1;
+
+        // When min debt price is disabled (0), return the full range
+        if (referenceUnitPrice == 0) {
+            minUnitPrice = 1;
+            maxUnitPrice = Constants.PRICE_DIGIT;
+            return (minUnitPrice, maxUnitPrice, referenceUnitPrice);
+        }
 
         minUnitPrice = referenceUnitPrice;
         maxUnitPrice = Math.min(Constants.PRICE_DIGIT, referenceUnitPrice + UNIT_PRICE_RANGE * 2);

@@ -905,12 +905,13 @@ describe('LendingMarketController - Operations', () => {
             targetCurrency,
             maturities[0],
           );
-        expect(zeroMinDebtRange.referenceUnitPrice).to.equal(1);
+        expect(zeroMinDebtRange.referenceUnitPrice).to.equal(0);
         expect(zeroMinDebtRange.minLendUnitPrice).to.equal(1);
-        expect(zeroMinDebtRange.maxLendUnitPrice).to.equal(2001);
+        expect(zeroMinDebtRange.maxLendUnitPrice).to.equal(10000);
         expect(zeroMinDebtRange.minBorrowUnitPrice).to.equal(1);
         expect(zeroMinDebtRange.maxBorrowUnitPrice).to.equal(10000);
 
+        // When min debt price is disabled, high unit price orders (e.g., 9600 for ~1% APR) should be accepted
         await lendingMarketControllerProxy
           .connect(alice)
           .executeOrder(
@@ -918,7 +919,7 @@ describe('LendingMarketController - Operations', () => {
             maturities[0],
             Side.LEND,
             '100000000000000000',
-            1,
+            9600,
           );
         await lendingMarketControllerProxy
           .connect(bob)
@@ -927,17 +928,17 @@ describe('LendingMarketController - Operations', () => {
             maturities[0],
             Side.BORROW,
             '100000000000000000',
-            1,
+            9600,
           );
 
-        const lowerBoundaryRange =
+        const afterTradeRange =
           await lendingMarketControllerProxy.getOrderUnitPriceRange(
             targetCurrency,
             maturities[0],
           );
-        expect(lowerBoundaryRange.referenceUnitPrice).to.equal(1);
-        expect(lowerBoundaryRange.minBorrowUnitPrice).to.equal(1);
-        expect(lowerBoundaryRange.maxLendUnitPrice).to.equal(1001);
+        expect(afterTradeRange.referenceUnitPrice).to.equal(9600);
+        expect(afterTradeRange.minBorrowUnitPrice).to.equal(8600);
+        expect(afterTradeRange.maxLendUnitPrice).to.equal(10000);
 
         await lendingMarketControllerProxy.updateMinDebtUnitPrice(
           targetCurrency,

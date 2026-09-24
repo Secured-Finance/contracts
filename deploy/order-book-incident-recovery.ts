@@ -1,7 +1,7 @@
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { getNativeTokenAddress } from '../utils/currencies';
+import { NATIVE_CURRENCY_SYMBOL } from '../utils/currencies';
 import { getWaitConfirmations } from '../utils/deployment';
 import { toBytes32 } from '../utils/strings';
 
@@ -23,17 +23,25 @@ const func: DeployFunction = async function ({
   const proxyController = await deployments
     .get('ProxyController')
     .then(({ address }) => ethers.getContractAt('ProxyController', address));
-  const [lendingMarketController, tokenVault, nativeToken] = await Promise.all([
+  const [lendingMarketController, tokenVaultAddress] = await Promise.all([
     proxyController.getAddress(toBytes32('LendingMarketController')),
     proxyController.getAddress(toBytes32('TokenVault')),
-    getNativeTokenAddress(deployments),
   ]);
+
+  // Derive nativeToken from TokenVault to ensure consistency across chains
+  const tokenVault = await ethers.getContractAt(
+    'ITokenVault',
+    tokenVaultAddress,
+  );
+  const nativeToken = await tokenVault.getTokenAddress(
+    toBytes32(NATIVE_CURRENCY_SYMBOL),
+  );
 
   await deployments.deploy('OrderBookIncidentRecovery', {
     from: deployer,
     args: [
       lendingMarketController,
-      tokenVault,
+      tokenVaultAddress,
       nativeToken,
       process.env.RECOVERY_OWNER_ADDRESS,
     ],
