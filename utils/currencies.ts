@@ -241,7 +241,6 @@ const getNativeTokenAddress = async (deployments: DeploymentsExtension) =>
   (await deployments.get('MockWETH9')).address;
 
 export {
-  NATIVE_CURRENCY_SYMBOL,
   currencyIterator,
   getAggregatedDecimals,
   getNativeTokenAddress,
