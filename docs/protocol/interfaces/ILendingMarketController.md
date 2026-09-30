@@ -220,6 +220,18 @@ function getOrderBookId(bytes32 _ccy, uint256 _maturity) external view returns (
 function getPendingOrderAmount(bytes32 _ccy, uint256 _maturity) external view returns (uint256)
 ```
 
+### getOrderEstimation
+
+```solidity
+function getOrderEstimation(struct ILendingMarketController.GetOrderEstimationParams params) external view returns (uint256 lastUnitPrice, uint256 filledAmount, uint256 filledAmountInFV, uint256 orderFeeInFV, uint256 placedAmount, uint256 coverage, bool isInsufficientDepositAmount)
+```
+
+### getOrderEstimationFromFV
+
+```solidity
+function getOrderEstimationFromFV(struct ILendingMarketController.GetOrderEstimationFromFVParams _params) external view returns (uint256 lastUnitPrice, uint256 filledAmount, uint256 filledAmountInFV, uint256 orderFeeInFV, uint256 coverage, bool isInsufficientDepositAmount)
+```
+
 ### getMaturities
 
 ```solidity
@@ -446,30 +458,6 @@ function cleanUpAllFunds(address user) external returns (bool)
 
 ```solidity
 function cleanUpFunds(bytes32 ccy, address user) external returns (uint256 activeOrderCount)
-```
-
-### addPendingOrderAmountForRecovery
-
-```solidity
-function addPendingOrderAmountForRecovery(bytes32 ccy, uint256 maturity, uint256 amount) external
-```
-
-### cancelOrdersForRecovery
-
-```solidity
-function cancelOrdersForRecovery(bytes32 ccy, address user) external
-```
-
-### recoverUserFunds
-
-```solidity
-function recoverUserFunds(bytes32 ccy, uint256 maturity, address user, enum ProtocolTypes.Side side, uint256 amount, uint256 unitPrice) external
-```
-
-### transferAssetsForRecovery
-
-```solidity
-function transferAssetsForRecovery(bytes32 ccy, address user, address receiver) external
 ```
 
 ### updateMinDebtUnitPrice

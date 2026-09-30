@@ -739,16 +739,6 @@ Cancels the order.
 | _user | address | User address |
 | _orderId | uint48 | Market order id |
 
-### cancelOrdersForRecovery
-
-```solidity
-function cancelOrdersForRecovery(uint8[] _orderBookIds, address _user) external
-```
-
-Cancels all active orders for a user during incident recovery.
-
-_This temporary recovery entry point must be removed after the incident recovery._
-
 ### cleanUpOrders
 
 ```solidity
@@ -900,15 +890,4 @@ function unpause() external
 ```
 
 Unpauses the lending market.
-
-### emitOrderExecuted
-
-```solidity
-function emitOrderExecuted(address _user, enum ProtocolTypes.Side _side, bytes32 _ccy, uint256 _maturity, uint256 _inputAmount, uint256 _filledAmount, uint256 _filledUnitPrice, uint256 _filledAmountInFV) external
-```
-
-Emits the synthetic order execution used for incident recovery.
-
-_This temporary recovery entry point must be removed after the incident recovery.
-Only LendingMarketController can call this function._
 

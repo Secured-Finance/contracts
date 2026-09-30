@@ -312,12 +312,6 @@ function finalizeItayose(uint8 orderBookId) external returns (struct ItayoseFina
 function cleanUpOrders(uint8 orderBookId, address user) external returns (uint256 activeLendOrderCount, uint256 activeBorrowOrderCount, uint256 removedLendOrderFutureValue, uint256 removedBorrowOrderFutureValue, uint256 removedLendOrderAmount, uint256 removedBorrowOrderAmount, uint256 maturity)
 ```
 
-### cancelOrdersForRecovery
-
-```solidity
-function cancelOrdersForRecovery(uint8[] orderBookIds, address user) external
-```
-
 ### updateOrderFeeRate
 
 ```solidity
@@ -340,11 +334,5 @@ function pause() external
 
 ```solidity
 function unpause() external
-```
-
-### emitOrderExecuted
-
-```solidity
-function emitOrderExecuted(address user, enum ProtocolTypes.Side side, bytes32 ccy, uint256 maturity, uint256 inputAmount, uint256 filledAmount, uint256 filledUnitPrice, uint256 filledAmountInFV) external
 ```
 

@@ -322,6 +322,50 @@ Gets the total amount of pending orders that is not cleaned up yet.
 | ---- | ---- | ----------- |
 | [0] | uint256 | The total amount |
 
+### getOrderEstimation
+
+```solidity
+function getOrderEstimation(struct ILendingMarketController.GetOrderEstimationParams _params) external view returns (uint256 lastUnitPrice, uint256 filledAmount, uint256 filledAmountInFV, uint256 orderFeeInFV, uint256 placedAmount, uint256 coverage, bool isInsufficientDepositAmount)
+```
+
+Gets the estimated order result by the calculation of the amount to be filled when executing an order in the order books.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _params | struct ILendingMarketController.GetOrderEstimationParams | The parameters to calculate the order estimation <br> - ccy: Currency name in bytes32 of the selected market <br> - maturity: The maturity of the market <br> - side: Order position type, Borrow or Lend <br> - amount: Amount of funds the maker wants to borrow/lend <br> - unitPrice: Amount of unit price taker wish to borrow/lend <br> - additionalDepositAmount: Additional amount to be deposited with the lending order <br> - ignoreBorrowedAmount: The boolean if the borrowed amount is ignored and not used as collateral or not |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| lastUnitPrice | uint256 | The last unit price that is filled on the order book |
+| filledAmount | uint256 | The amount that is filled on the order book |
+| filledAmountInFV | uint256 | The amount in the future value that is filled on the order book |
+| orderFeeInFV | uint256 | The order fee amount in the future value |
+| placedAmount | uint256 | The amount that is placed to the order book |
+| coverage | uint256 | The rate of collateral used |
+| isInsufficientDepositAmount | bool | The boolean if the order amount for lending in the selected currency is insufficient for the deposit amount or not |
+
+### getOrderEstimationFromFV
+
+```solidity
+function getOrderEstimationFromFV(struct ILendingMarketController.GetOrderEstimationFromFVParams _params) external view returns (uint256 lastUnitPrice, uint256 filledAmount, uint256 filledAmountInFV, uint256 orderFeeInFV, uint256 coverage, bool isInsufficientDepositAmount)
+```
+
+Gets the estimated order result by the calculation of the amount to be filled when executing an order in the order books.
+This function is used to estimate the order from future value.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _params | struct ILendingMarketController.GetOrderEstimationFromFVParams | The parameters to calculate the order estimation <br> - ccy: Currency name in bytes32 of the selected market <br> - maturity: The maturity of the market <br> - user: User's address <br> - side: Order position type, Borrow or Lend <br> - amountInFV: Amount of funds in future value the maker wants to borrow/lend <br> - additionalDepositAmount: Additional amount to be deposited with the lending order <br> - ignoreBorrowedAmount: The boolean if the borrowed amount is ignored and not used as collateral or not |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| lastUnitPrice | uint256 | The last unit price that is filled on the order book |
+| filledAmount | uint256 | The amount that is filled on the order book |
+| filledAmountInFV | uint256 | The amount in the future value that is filled on the order book |
+| orderFeeInFV | uint256 | The order fee amount in the future value |
+| coverage | uint256 | The rate of collateral used |
+| isInsufficientDepositAmount | bool | The boolean if the order amount for lending in the selected currency is insufficient for the deposit amount or not |
+
 ### getMaturities
 
 ```solidity
@@ -964,50 +1008,6 @@ Clean up user funds used for lazy evaluation by the following actions:
 | ---- | ---- | ----------- |
 | _ccy | bytes32 | Currency name in bytes32 |
 | _user | address | User's address |
-
-### addPendingOrderAmountForRecovery
-
-```solidity
-function addPendingOrderAmountForRecovery(bytes32 _ccy, uint256 _maturity, uint256 _amount) external
-```
-
-Restores pending order amounts omitted by the order-book incident.
-
-_This temporary recovery entry point must be removed after the incident recovery._
-
-### cancelOrdersForRecovery
-
-```solidity
-function cancelOrdersForRecovery(bytes32 _ccy, address _user) external
-```
-
-Cancels all active orders for a user during incident recovery.
-
-_This temporary recovery entry point must be removed after the incident recovery._
-
-### recoverUserFunds
-
-```solidity
-function recoverUserFunds(bytes32 _ccy, uint256 _maturity, address _user, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice) external
-```
-
-Applies a fee-free offsetting fill to repair funds affected by an erroneous fill.
-
-_This temporary recovery entry point must be removed after the incident recovery.
-The caller must pass the opposite side of the erroneous fill. The recovery orchestration
-contract is responsible for correction-id replay protection and pause management._
-
-### transferAssetsForRecovery
-
-```solidity
-function transferAssetsForRecovery(bytes32 _ccy, address _user, address _receiver) external
-```
-
-Transfers all of a user's current FV and GV positions and remaining Deposit to a
-recovery account.
-
-_This temporary recovery entry point must be removed after the incident recovery.
-TokenVault must be unpaused while transferring the Deposit._
 
 ### updateMinDebtUnitPrice
 
