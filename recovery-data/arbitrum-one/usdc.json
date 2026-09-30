@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "network": "arbitrum-one",
+  "chainId": "42161",
+  "currency": "USDC",
+  "corrections": [
+    {
+      "maturity": "0",
+      "correctionAmount": "110583693273395620185",
+      "sources": [
+        {
+          "transactionHash": "0x55afa60afbae30e3420c4055ef785524aa3912a90d27d63b62e959be22b64fae",
+          "blockNumber": "384606239",
+          "offsetAmount": "25128743962172238611"
+        },
+        {
+          "transactionHash": "0x5e33f794cdb63923b4a81e0733f0443c468dbe5647acb2424f8bd0c39943d3b4",
+          "blockNumber": "427460665",
+          "offsetAmount": "10914645592327609806"
+        },
+        {
+          "transactionHash": "0x3222a4c71f3ff6711ebe4c50116434c14a52654e0d93bcda1da4d44ef7d814fa",
+          "blockNumber": "478505033",
+          "offsetAmount": "74540303718895771768"
+        }
+      ]
+    },
+    {
+      "maturity": "1750982400",
+      "correctionAmount": "1329932",
+      "sources": [
+        {
+          "transactionHash": "0xc43551aecc9ef78dec97684340ce7379e9248a92af7a4abda4a59754146e157a",
+          "blockNumber": "336119550",
+          "offsetAmount": "522309"
+        },
+        {
+          "transactionHash": "0x42b748b14f3b4ad1cc349d29125c4d6201df1f849fc135b2dc7de0b4851a90a4",
+          "blockNumber": "344411978",
+          "offsetAmount": "538415"
+        },
+        {
+          "transactionHash": "0x145e969ea687ab0e7926380a3cb43a4f717d6b2bad619a09421e8351c47a6815",
+          "blockNumber": "350625570",
+          "offsetAmount": "269208"
+        }
+      ]
+    },
+    {
+      "maturity": "1766707200",
+      "correctionAmount": "762490",
+      "sources": [
+        {
+          "transactionHash": "0x384bdec276a514fb8286414daf92f5797f353990ad8693d064051434c1b1650c",
+          "blockNumber": "399984470",
+          "offsetAmount": "762490"
+        }
+      ]
+    }
+  ]
+}

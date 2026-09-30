@@ -1066,6 +1066,19 @@ contract LendingMarketController is
     }
 
     /**
+     * @notice Corrects vault total supplies inflated by the historical transfer accounting bug.
+     * @dev This temporary incident correction function must be removed after the correction.
+     * A zero maturity targets GenesisValueVault; any other maturity targets FutureValueVault.
+     */
+    function correctTotalSupply(
+        bytes32 _ccy,
+        uint256 _maturity,
+        uint256 _correctionAmount
+    ) external override onlyOwner {
+        LendingMarketOperationLogic.correctTotalSupply(_ccy, _maturity, _correctionAmount);
+    }
+
+    /**
      * @notice Updates the min debt unit price for the selected currency.
      * @param _ccy Currency name in bytes32
      * @param _minDebtUnitPrice The min debt unit price

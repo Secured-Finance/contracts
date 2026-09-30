@@ -1,10 +1,12 @@
 import './add-currency';
 import './add-order-books';
 import './change-owners';
+import './check-vault-total-supplies';
 import './create-fvm-proposal';
 import './fork';
 import './migrate-order-chunks';
 import './open-markets';
+import './recover-vault-total-supplies';
 import './register-orders';
 import './unfork';
 import './update-price-feed';

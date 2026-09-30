@@ -73,6 +73,28 @@ library LendingMarketOperationLogic {
     event OrderBooksRotated(bytes32 ccy, uint256 oldMaturity, uint256 newMaturity);
     event EmergencyTerminationExecuted(uint256 timestamp);
 
+    /**
+     * @dev Routes the temporary vault total supply correction from LendingMarketController.
+     * A zero maturity targets GenesisValueVault; any other maturity targets FutureValueVault.
+     */
+    function correctTotalSupply(
+        bytes32 _ccy,
+        uint256 _maturity,
+        uint256 _correctionAmount
+    ) external {
+        if (_maturity != 0 && Storage.slot().maturityOrderBookIds[_ccy][_maturity] == 0)
+            revert InvalidMaturity(_maturity);
+
+        if (_maturity == 0) {
+            AddressResolverLib.genesisValueVault().correctTotalSupply(_ccy, _correctionAmount);
+        } else {
+            IFutureValueVault(Storage.slot().futureValueVaults[_ccy]).correctTotalSupply(
+                _maturity,
+                _correctionAmount
+            );
+        }
+    }
+
     event ItayoseProcessInitialized(
         bytes32 indexed ccy,
         uint256 indexed maturity,
