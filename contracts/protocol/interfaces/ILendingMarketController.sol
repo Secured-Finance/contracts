@@ -335,6 +335,8 @@ interface ILendingMarketController {
 
     function cleanUpFunds(bytes32 ccy, address user) external returns (uint256 activeOrderCount);
 
+    function correctTotalSupply(bytes32 ccy, uint256 maturity, uint256 correctionAmount) external;
+
     function updateMinDebtUnitPrice(bytes32 _ccy, uint256 _minDebtUnitPrice) external;
 
     function withdrawZCToken(
