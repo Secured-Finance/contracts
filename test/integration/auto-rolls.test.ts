@@ -46,6 +46,7 @@ describe('Integration Test: Auto-rolls', async () => {
   let genesisDate: number;
   let maturities: BigNumber[];
   let orderBookIds: BigNumber[];
+  let snapshotId: string;
 
   let signers: Signers;
 
@@ -116,6 +117,11 @@ describe('Integration Test: Auto-rolls', async () => {
       .then((address) => ethers.getContractAt('FutureValueVault', address));
   };
 
+  const restoreSnapshot = async () => {
+    await ethers.provider.send('evm_revert', [snapshotId]);
+    snapshotId = await ethers.provider.send('evm_snapshot', []);
+  };
+
   before('Deploy Contracts', async () => {
     signers = new Signers(await ethers.getSigners());
     [owner] = await signers.get(1);
@@ -167,6 +173,8 @@ describe('Integration Test: Auto-rolls', async () => {
       maturities[0],
       preOpeningDate,
     );
+
+    snapshotId = await ethers.provider.send('evm_snapshot', []);
   });
 
   beforeEach('Reset contract instances', async () => {
@@ -177,6 +185,7 @@ describe('Integration Test: Auto-rolls', async () => {
     const orderAmount = BigNumber.from('100000000000000000');
 
     before(async () => {
+      await restoreSnapshot();
       [alice, bob, carol] = await getUsers(3);
     });
 
@@ -408,6 +417,7 @@ describe('Integration Test: Auto-rolls', async () => {
     const orderAmount = BigNumber.from('100000000000000000');
 
     before(async () => {
+      await restoreSnapshot();
       [alice, bob, carol] = await getUsers(3);
     });
 
@@ -640,6 +650,7 @@ describe('Integration Test: Auto-rolls', async () => {
     const orderAmount = BigNumber.from('1000000000000000000000');
 
     before(async () => {
+      await restoreSnapshot();
       [alice, bob] = await getUsers(2);
       await resetContractInstances();
       await executeAutoRoll('9600');
@@ -756,6 +767,7 @@ describe('Integration Test: Auto-rolls', async () => {
     const orderAmount = BigNumber.from('1000000000000000000000');
 
     before(async () => {
+      await restoreSnapshot();
       [alice, bob] = await getUsers(2);
       await resetContractInstances();
       const maxLendUnitPrice = (
@@ -875,6 +887,7 @@ describe('Integration Test: Auto-rolls', async () => {
     const orderAmount = BigNumber.from('100000000000000000');
 
     before(async () => {
+      await restoreSnapshot();
       [alice, bob, carol, dave] = await getUsers(4);
       await resetContractInstances();
       const maxLendUnitPrice = (
@@ -1017,6 +1030,7 @@ describe('Integration Test: Auto-rolls', async () => {
     const orderAmount = BigNumber.from('100000000000000000');
 
     before(async () => {
+      await restoreSnapshot();
       [alice, bob, carol] = await getUsers(3);
       await resetContractInstances();
       const maxLendUnitPrice = (
@@ -1030,6 +1044,7 @@ describe('Integration Test: Auto-rolls', async () => {
         value: orderAmount.mul(3),
       });
 
+      const referenceUnitPrice = await getReferenceUnitPrice(maturities[0]);
       await expect(
         lendingMarketController
           .connect(alice)
@@ -1038,7 +1053,7 @@ describe('Integration Test: Auto-rolls', async () => {
             maturities[0],
             Side.LEND,
             orderAmount.mul(2),
-            9600,
+            referenceUnitPrice,
             {
               value: orderAmount.mul(2),
             },
@@ -1071,7 +1086,7 @@ describe('Integration Test: Auto-rolls', async () => {
         );
 
       expect(aliceActualFV).to.equal(
-        calculateFutureValue(orderAmount.mul(2), 9600),
+        calculateFutureValue(orderAmount.mul(2), referenceUnitPrice),
       );
     });
 
@@ -1175,6 +1190,7 @@ describe('Integration Test: Auto-rolls', async () => {
     const orderAmount = BigNumber.from('100000000000000000');
 
     before(async () => {
+      await restoreSnapshot();
       [alice, bob, carol] = await getUsers(3);
       await resetContractInstances();
       const maxLendUnitPrice = (
@@ -1188,6 +1204,7 @@ describe('Integration Test: Auto-rolls', async () => {
         value: orderAmount.mul(3),
       });
 
+      const referenceUnitPrice = await getReferenceUnitPrice(maturities[0]);
       await expect(
         lendingMarketController
           .connect(alice)
@@ -1196,7 +1213,7 @@ describe('Integration Test: Auto-rolls', async () => {
             maturities[0],
             Side.LEND,
             orderAmount.mul(2),
-            9600,
+            referenceUnitPrice,
             {
               value: orderAmount.mul(2),
             },
@@ -1229,7 +1246,7 @@ describe('Integration Test: Auto-rolls', async () => {
         );
 
       expect(aliceActualFV).to.equal(
-        calculateFutureValue(orderAmount.mul(2), 9600),
+        calculateFutureValue(orderAmount.mul(2), referenceUnitPrice),
       );
     });
 
@@ -1376,6 +1393,7 @@ describe('Integration Test: Auto-rolls', async () => {
     const orderAmount = BigNumber.from('100000000000000000');
 
     before(async () => {
+      await restoreSnapshot();
       [alice, bob, carol] = await getUsers(3);
       await resetContractInstances();
       const maxLendUnitPrice = (
