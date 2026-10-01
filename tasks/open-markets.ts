@@ -24,18 +24,25 @@ task(
 
   const currencies: string[] = await currencyController.getCurrencies();
 
-  for (const currency of currencies) {
-    const lendingMarket = await lendingMarketController
-      .getLendingMarket(currency)
-      .then((address) => ethers.getContractAt('LendingMarket', address));
-    const orderBookIds = await lendingMarketController.getOrderBookIds(
-      currency,
-    );
+  const markets = await Promise.all(
+    currencies.map(async (currency) => {
+      const lendingMarket: Contract = await lendingMarketController
+        .getLendingMarket(currency)
+        .then((address) => ethers.getContractAt('LendingMarket', address));
+      const orderBookIds = await lendingMarketController.getOrderBookIds(
+        currency,
+      );
 
+      return { currency, lendingMarket, orderBookIds };
+    }),
+  );
+
+  // Complete every due Itayose before rotating any order book. A rotation also
+  // validates its destination order book, which may appear later in this list.
+  for (const { currency, lendingMarket, orderBookIds } of markets) {
     for (const orderBookId of orderBookIds) {
-      const [isItayosePeriod, isMatured, maturity] = await Promise.all([
+      const [isItayosePeriod, maturity] = await Promise.all([
         lendingMarket.isItayosePeriod(orderBookId),
-        lendingMarket.isMatured(orderBookId),
         lendingMarket.getMaturity(orderBookId),
       ]);
 
@@ -49,6 +56,15 @@ task(
           )} market Itayose call with maturity ${maturity}`,
         );
       }
+    }
+  }
+
+  for (const { currency, lendingMarket, orderBookIds } of markets) {
+    for (const orderBookId of orderBookIds) {
+      const [isMatured, maturity] = await Promise.all([
+        lendingMarket.isMatured(orderBookId),
+        lendingMarket.getMaturity(orderBookId),
+      ]);
 
       if (isMatured) {
         await lendingMarketController
