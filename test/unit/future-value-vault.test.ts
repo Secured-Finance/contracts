@@ -387,6 +387,77 @@ describe('FutureValueVault', () => {
     });
   });
 
+  describe('Correct total supply', async () => {
+    const amount = 1000;
+    const maturity = 20;
+
+    beforeEach(async () => {
+      await futureValueVaultCaller.increase(
+        currentOrderBookId,
+        alice.address,
+        amount,
+        maturity,
+      );
+      await futureValueVaultCaller.decrease(
+        currentOrderBookId,
+        bob.address,
+        amount,
+        maturity,
+      );
+    });
+
+    it('Corrects lending and borrowing supplies by the same amount', async () => {
+      await futureValueVaultCaller.correctTotalSupply(
+        currentOrderBookId,
+        maturity,
+        100,
+      );
+
+      expect(
+        await futureValueVaultProxy.getTotalLendingSupply(maturity),
+      ).to.equal(900);
+      expect(
+        await futureValueVaultProxy.getTotalBorrowingSupply(maturity),
+      ).to.equal(900);
+    });
+
+    it('Rejects a zero or excessive correction', async () => {
+      await expect(
+        futureValueVaultCaller.correctTotalSupply(
+          currentOrderBookId,
+          maturity,
+          0,
+        ),
+      ).to.be.revertedWith('InvalidTotalSupplyCorrection');
+
+      await expect(
+        futureValueVaultCaller.correctTotalSupply(
+          currentOrderBookId,
+          maturity,
+          amount + 1,
+        ),
+      ).to.be.revertedWith('InvalidTotalSupplyCorrection');
+    });
+
+    it('Rejects totals below supplies that were already removed', async () => {
+      await futureValueVaultCaller.reset(currentOrderBookId, alice.address);
+
+      await expect(
+        futureValueVaultCaller.correctTotalSupply(
+          currentOrderBookId,
+          maturity,
+          100,
+        ),
+      ).to.be.revertedWith('CorrectedTotalSupplyBelowRemovedSupply');
+    });
+
+    it('Rejects correction by a non-accepted contract', async () => {
+      await expect(
+        futureValueVaultProxy.correctTotalSupply(maturity, 100),
+      ).to.be.revertedWith('OnlyAcceptedContract("LendingMarketController")');
+    });
+  });
+
   describe('Transfer balance', async () => {
     const amount = 1000;
     const maturity = 20;
