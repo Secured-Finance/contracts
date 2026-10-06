@@ -1,12 +1,10 @@
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeploymentStorage, Proposal } from '../utils/deployment';
-import { FVMProposal, isFVM } from '../utils/deployment-fvm';
 
 const func: DeployFunction = async function ({
   getNamedAccounts,
   ethers,
-  getChainId,
   network,
 }: HardhatRuntimeEnvironment) {
   if (process.env.ENABLE_AUTO_UPDATE === 'true') {
@@ -23,11 +21,7 @@ const func: DeployFunction = async function ({
 
   const { deployer } = await getNamedAccounts();
 
-  const proposal = await getChainId().then(async (chainId) =>
-    isFVM(chainId)
-      ? FVMProposal.create(chainId)
-      : Proposal.create(network.provider, deployer),
-  );
+  const proposal = await Proposal.create(network.provider, deployer);
 
   for (const [contractAddress, deployment] of Object.entries(
     DeploymentStorage.instance.deployments,

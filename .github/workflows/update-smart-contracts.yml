@@ -190,10 +190,6 @@ jobs:
           echo "SAFE_API_URL=${{ vars.SAFE_API_URL }}" >> $GITHUB_ENV
           echo "SAFE_API_KEY=${{ secrets.SAFE_API_KEY }}" >> $GITHUB_ENV
           echo "WAIT_CONFIRMATIONS=${{ vars.WAIT_CONFIRMATIONS }}" >> $GITHUB_ENV
-          echo "FVM_SIGNER_PRIVATE_KEY=${{ secrets.FVM_SIGNER_PRIVATE_KEY }}" >> $GITHUB_ENV
-          echo "FVM_SIGNER_F1_ADDRESS=${{ vars.FVM_SIGNER_F1_ADDRESS }}" >> $GITHUB_ENV
-          echo "FVM_MULTISIG_WALLET_F2_ADDRESS=${{ vars.FVM_MULTISIG_WALLET_F2_ADDRESS }}" >> $GITHUB_ENV
-          echo "FVM_MULTISIG_WALLET_EVM_ADDRESS=${{ vars.FVM_MULTISIG_WALLET_EVM_ADDRESS }}" >> $GITHUB_ENV
       - name: Deploy smart contracts
         run: |
           npm run deploy ${{ github.event.inputs.network }}

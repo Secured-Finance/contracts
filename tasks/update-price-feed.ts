@@ -2,7 +2,6 @@ import { task, types } from 'hardhat/config';
 import { HardhatPluginError } from 'hardhat/internal/core/errors';
 import { getAggregatedDecimals } from '../utils/currencies';
 import { Proposal } from '../utils/deployment';
-import { FVMProposal, isFVM } from '../utils/deployment-fvm';
 import { toBytes32 } from '../utils/strings';
 
 task('update-price-feed', 'Update a price feed with new parameters')
@@ -22,7 +21,7 @@ task('update-price-feed', 'Update a price feed with new parameters')
   .setAction(
     async (
       { currency, priceFeeds, heartbeats },
-      { deployments, ethers, getChainId, network },
+      { deployments, ethers, network },
     ) => {
       if (priceFeeds.split(', ').length === 0) {
         throw new HardhatPluginError(
@@ -44,14 +43,7 @@ task('update-price-feed', 'Update a price feed with new parameters')
 
       const proposal =
         process.env.ENABLE_AUTO_UPDATE !== 'true'
-          ? await getChainId().then(async (chainId) =>
-              isFVM(chainId)
-                ? FVMProposal.create(chainId)
-                : Proposal.create(
-                    network.provider,
-                    await deployer.getAddress(),
-                  ),
-            )
+          ? await Proposal.create(network.provider, await deployer.getAddress())
           : undefined;
 
       const contractNames = ['CurrencyController', 'TokenVault'];
