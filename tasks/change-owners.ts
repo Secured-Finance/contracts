@@ -2,7 +2,6 @@ import { BigNumber, Contract, ContractTransaction, Signer } from 'ethers';
 import { task } from 'hardhat/config';
 import { HardhatPluginError } from 'hardhat/internal/core/errors';
 import { getWaitConfirmations, Proposal } from '../utils/deployment';
-import { FVMProposal, isFVM } from '../utils/deployment-fvm';
 import { toBytes32 } from '../utils/strings';
 import { ACCESS_CONTROL_CONTRACT_NAMES } from './helpers/access-control';
 
@@ -16,8 +15,6 @@ const CORE_CONTRACT_NAMES = [
 
 // Operational permissions are managed separately. In particular, this task must not
 // change Liquidator ownership, DefaultProxyAdmin ownership, or OPERATOR_ROLE assignments.
-type OwnershipProposal = Proposal | FVMProposal;
-
 interface OwnershipState {
   name: string;
   contract: Contract;
@@ -315,7 +312,7 @@ const printMigrationPlan = (
 
 const executeDefaultAdminChanges = async (
   plan: ChangePlan<DefaultAdminState>,
-  proposal: OwnershipProposal | undefined,
+  proposal: Proposal | undefined,
   deployer: Signer,
   newOwner: string,
   nonce: number,
@@ -357,7 +354,7 @@ const executeDefaultAdminChanges = async (
 
 const executeOwnershipChanges = async (
   plan: ChangePlan<OwnershipState>,
-  proposal: OwnershipProposal | undefined,
+  proposal: Proposal | undefined,
   deployer: Signer,
   newOwner: string,
   nonce: number,
@@ -441,9 +438,8 @@ task(
   .setAction(
     async (
       { newOwner: configuredNewOwner, verifyOnly },
-      { deployments, ethers, getChainId, network },
+      { deployments, ethers, network },
     ) => {
-      const currentChainId = await getChainId();
       const newOwner = normalizeAddress(
         configuredNewOwner,
         'New owner',
@@ -501,10 +497,8 @@ task(
         return;
       }
 
-      const proposal: OwnershipProposal | undefined = hasProposedChanges
-        ? isFVM(currentChainId)
-          ? await FVMProposal.create(currentChainId)
-          : await Proposal.create(network.provider, deployerAddress)
+      const proposal: Proposal | undefined = hasProposedChanges
+        ? await Proposal.create(network.provider, deployerAddress)
         : undefined;
       let nonce = await deployer.getTransactionCount('pending');
       const waitConfirmations = getWaitConfirmations();

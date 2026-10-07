@@ -2,11 +2,8 @@ import { BigNumber, Contract, ContractTransaction, Signer } from 'ethers';
 import { task } from 'hardhat/config';
 import { HardhatPluginError } from 'hardhat/internal/core/errors';
 import { getWaitConfirmations, Proposal } from '../utils/deployment';
-import { FVMProposal, isFVM } from '../utils/deployment-fvm';
 import { toBytes32 } from '../utils/strings';
 import { ACCESS_CONTROL_CONTRACT_NAMES } from './helpers/access-control';
-
-type RoleProposal = Proposal | FVMProposal;
 
 interface RoleState {
   name: string;
@@ -240,9 +237,8 @@ task(
   .setAction(
     async (
       { role: configuredRole, account: configuredAccount, verifyOnly },
-      { deployments, ethers, getChainId, network },
+      { deployments, ethers, network },
     ) => {
-      const currentChainId = await getChainId();
       const role = normalizeRole(configuredRole, ethers);
       const targetAccount = normalizeAddress(
         configuredAccount,
@@ -315,9 +311,10 @@ task(
       }
 
       if (hasProposedRevocations) {
-        const proposal: RoleProposal = isFVM(currentChainId)
-          ? await FVMProposal.create(currentChainId)
-          : await Proposal.create(network.provider, deployerAddress);
+        const proposal = await Proposal.create(
+          network.provider,
+          deployerAddress,
+        );
 
         for (const state of plan.proposed) {
           await proposal.add(

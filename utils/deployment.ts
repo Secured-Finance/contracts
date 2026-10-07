@@ -21,6 +21,9 @@ const executeIfNewlyDeployment = async (
 const getWaitConfirmations = (): number =>
   parseInt(process.env.WAIT_CONFIRMATIONS || '1');
 
+const isFVM = (chainId: bigint): boolean =>
+  chainId.toString().startsWith('314');
+
 interface DeploymentFunction {
   name: string;
   args: any[];
@@ -131,9 +134,8 @@ class Proposal {
       throw Error('SAFE_WALLET_ADDRESS is not set');
     }
 
-    if (!process.env.SAFE_API_KEY) {
-      throw Error('SAFE_API_KEY is not set');
-    }
+    const safeApiUrl = process.env.SAFE_API_URL;
+    const safeApiKey = process.env.SAFE_API_KEY;
 
     this.safeAddress = process.env.SAFE_WALLET_ADDRESS;
     this.signer = signer;
@@ -145,10 +147,21 @@ class Proposal {
     });
 
     const chainId = BigInt(await this.safeSdk.getChainId());
-    this.safeService = new SafeApiKit({
-      chainId,
-      apiKey: process.env.SAFE_API_KEY!,
-    });
+    const fvm = isFVM(chainId);
+
+    if (fvm && !safeApiUrl) {
+      throw Error('SAFE_API_URL is not set');
+    }
+
+    if (!fvm && !safeApiKey) {
+      throw Error('SAFE_API_KEY is not set');
+    }
+
+    this.safeService = new SafeApiKit(
+      fvm
+        ? { chainId, txServiceUrl: safeApiUrl! }
+        : { chainId, apiKey: safeApiKey! },
+    );
 
     this.safeTransactions = [];
   }

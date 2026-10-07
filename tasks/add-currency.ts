@@ -2,7 +2,6 @@ import { task, types } from 'hardhat/config';
 import { HardhatPluginError } from 'hardhat/internal/core/errors';
 import { getAggregatedDecimals } from '../utils/currencies';
 import { Proposal, getWaitConfirmations } from '../utils/deployment';
-import { FVMProposal, isFVM } from '../utils/deployment-fvm';
 import { toBytes32 } from '../utils/strings';
 
 task('add-currency', 'Add a new currency to the protocol')
@@ -55,7 +54,7 @@ task('add-currency', 'Add a new currency to the protocol')
         useStaticPrice,
         priceAggregatorDescription,
       },
-      { deployments, ethers, getChainId, network },
+      { deployments, ethers, network },
     ) => {
       const [deployer] = await ethers.getSigners();
 
@@ -109,14 +108,7 @@ task('add-currency', 'Add a new currency to the protocol')
 
       const proposal =
         process.env.ENABLE_AUTO_UPDATE !== 'true'
-          ? await getChainId().then(async (chainId) =>
-              isFVM(chainId)
-                ? FVMProposal.create(chainId)
-                : Proposal.create(
-                    network.provider,
-                    await deployer.getAddress(),
-                  ),
-            )
+          ? await Proposal.create(network.provider, await deployer.getAddress())
           : undefined;
 
       const contractNames = ['CurrencyController', 'TokenVault'];
