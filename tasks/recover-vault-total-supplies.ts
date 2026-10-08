@@ -16,11 +16,13 @@ interface CorrectionSourceInput {
 interface TotalSupplyCorrectionInput {
   maturity: string;
   correctionAmount: string;
+  expectedLendingSupply: string;
+  expectedBorrowingSupply: string;
   sources: CorrectionSourceInput[];
 }
 
 interface RecoveryData {
-  version: 1;
+  version: 2;
   network: string;
   chainId: string;
   currency: string;
@@ -51,7 +53,7 @@ const readRecoveryData = (
   if (!existsSync(path)) fail(`Recovery data does not exist: ${path}`);
 
   const data = JSON.parse(readFileSync(path, 'utf8')) as RecoveryData;
-  if (data.version !== 1) fail('Unsupported recovery data version');
+  if (data.version !== 2) fail('Unsupported recovery data version');
   if (data.network !== network) {
     fail(`Recovery data network ${data.network} does not match ${network}`);
   }
@@ -74,6 +76,12 @@ const validateCorrections = (
   for (const correction of corrections) {
     const maturity = BigNumber.from(correction.maturity);
     const correctionAmount = BigNumber.from(correction.correctionAmount);
+    const expectedLendingSupply = BigNumber.from(
+      correction.expectedLendingSupply,
+    );
+    const expectedBorrowingSupply = BigNumber.from(
+      correction.expectedBorrowingSupply,
+    );
     const maturityKey = maturity.toString();
 
     if (maturity.isNegative()) fail(`Invalid maturity: ${maturityKey}`);
@@ -84,6 +92,14 @@ const validateCorrections = (
 
     if (correctionAmount.lte(0)) {
       fail(`Invalid correction amount for maturity ${maturityKey}`);
+    }
+    if (
+      correctionAmount.gt(expectedLendingSupply) ||
+      correctionAmount.gt(expectedBorrowingSupply)
+    ) {
+      fail(
+        `Correction ${correctionAmount.toString()} exceeds an expected total for maturity ${maturityKey}`,
+      );
     }
     if (!Array.isArray(correction.sources) || correction.sources.length === 0) {
       fail(`Correction for maturity ${maturityKey} must contain sources`);
@@ -171,6 +187,12 @@ task(
       for (const correction of data.corrections) {
         const maturity = BigNumber.from(correction.maturity);
         const correctionAmount = BigNumber.from(correction.correctionAmount);
+        const expectedLendingSupply = BigNumber.from(
+          correction.expectedLendingSupply,
+        );
+        const expectedBorrowingSupply = BigNumber.from(
+          correction.expectedBorrowingSupply,
+        );
         let vault: Contract;
         let lendingSupply: BigNumber;
         let borrowingSupply: BigNumber;
@@ -193,11 +215,11 @@ task(
         }
 
         if (
-          correctionAmount.gt(lendingSupply) ||
-          correctionAmount.gt(borrowingSupply)
+          !lendingSupply.eq(expectedLendingSupply) ||
+          !borrowingSupply.eq(expectedBorrowingSupply)
         ) {
           fail(
-            `Correction ${correctionAmount.toString()} exceeds a stored total for maturity ${maturity.toString()}`,
+            `Stored total supply mismatch for maturity ${maturity.toString()}: expected lending ${expectedLendingSupply.toString()} and borrowing ${expectedBorrowingSupply.toString()}, found lending ${lendingSupply.toString()} and borrowing ${borrowingSupply.toString()}`,
           );
         }
 

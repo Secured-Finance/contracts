@@ -7,19 +7,24 @@ recovery-data/<network>/<currency>.json
 ```
 
 `network` must be the Hardhat network name and `currency` is lowercase in the
-file name. Each correction contains the over-counted amount and the historical
+file name. Each correction contains the expected lending and borrowing supply
+immediately before recovery, the over-counted amount, and the historical
 transfers that contributed to it. A maturity of `0` targets
 `GenesisValueVault`; any other maturity targets `FutureValueVault`.
 
 The task validates the network, chain ID, currency, unique maturities, source
 transaction hashes, and that the source offset amounts sum to the correction
-amount. It also checks the live vault totals and simulates the complete call
-before creating or executing one atomic Controller `multicall`.
+amount. It requires both live vault totals to exactly match the reviewed
+pre-correction values in the manifest, then simulates the complete call before
+creating or executing one atomic Controller `multicall`. Consequently, the
+same manifest is rejected after its correction has already been applied.
 
 Before recovery, pause the affected LendingMarket and independently verify the
-manifest against the output of `check-vault-total-supplies`. Keeping the market
-paused prevents `cleanUpOrders` from performing the last FV-to-GV conversion
-during the correction. The recovery task does not change the pause state.
+manifest, including its expected pre-correction supplies, against the output of
+`check-vault-total-supplies`. Keeping the market paused prevents
+`cleanUpOrders` from performing the last FV-to-GV conversion or another state
+change between review and recovery. The recovery task does not change the pause
+state.
 
 Without `ENABLE_AUTO_UPDATE=true`, the task creates the normal Safe or FVM
 proposal:

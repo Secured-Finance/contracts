@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "network": "arbitrum-one",
   "chainId": "42161",
   "currency": "USDC",
@@ -7,6 +7,8 @@
     {
       "maturity": "0",
       "correctionAmount": "110583693273395620185",
+      "expectedLendingSupply": "183853201026322679574558975732",
+      "expectedBorrowingSupply": "45877054752480259204088005351",
       "sources": [
         {
           "transactionHash": "0x55afa60afbae30e3420c4055ef785524aa3912a90d27d63b62e959be22b64fae",
@@ -28,6 +30,8 @@
     {
       "maturity": "1750982400",
       "correctionAmount": "1329932",
+      "expectedLendingSupply": "2151862028",
+      "expectedBorrowingSupply": "1556523553",
       "sources": [
         {
           "transactionHash": "0xc43551aecc9ef78dec97684340ce7379e9248a92af7a4abda4a59754146e157a",
@@ -49,6 +53,8 @@
     {
       "maturity": "1766707200",
       "correctionAmount": "762490",
+      "expectedLendingSupply": "349839294",
+      "expectedBorrowingSupply": "353922629",
       "sources": [
         {
           "transactionHash": "0x384bdec276a514fb8286414daf92f5797f353990ad8693d064051434c1b1650c",

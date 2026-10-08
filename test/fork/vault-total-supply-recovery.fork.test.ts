@@ -10,10 +10,12 @@ import { toBytes32 } from '../../utils/strings';
 interface TotalSupplyCorrectionInput {
   maturity: string;
   correctionAmount: string;
+  expectedLendingSupply: string;
+  expectedBorrowingSupply: string;
 }
 
 interface RecoveryData {
-  version: 1;
+  version: 2;
   network: string;
   chainId: string;
   currency: string;
@@ -224,6 +226,14 @@ describeFork('Fork Test: Vault Total Supply Recovery', function () {
           readSupply(correction, ccy, genesisValueVault, futureValueVault),
         ),
       );
+      for (const [index, before] of suppliesBefore.entries()) {
+        expect(before.lendingSupply).to.equal(
+          data.corrections[index].expectedLendingSupply,
+        );
+        expect(before.borrowingSupply).to.equal(
+          data.corrections[index].expectedBorrowingSupply,
+        );
+      }
       const executionStartBlock = await ethers.provider.getBlockNumber();
 
       await hre.run('recover-vault-total-supplies', { currency });
@@ -254,6 +264,21 @@ describeFork('Fork Test: Vault Total Supply Recovery', function () {
         );
       }
       expect(await lendingMarket.paused()).to.equal(true);
+
+      const blockAfterExecution = await ethers.provider.getBlockNumber();
+      let repeatedExecutionError: unknown;
+      try {
+        await hre.run('recover-vault-total-supplies', { currency });
+      } catch (error) {
+        repeatedExecutionError = error;
+      }
+      expect(repeatedExecutionError).to.be.instanceOf(Error);
+      expect((repeatedExecutionError as Error).message).to.contain(
+        'Stored total supply mismatch',
+      );
+      expect(await ethers.provider.getBlockNumber()).to.equal(
+        blockAfterExecution,
+      );
     } finally {
       for (const [key, value] of previousEnvironment) {
         if (value === undefined) {
