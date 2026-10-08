@@ -16,11 +16,13 @@ describe('Integration Test: Order Book Incident Recovery', () => {
   let debtor: SignerWithAddress;
   let recoveryAccount: SignerWithAddress;
   let other: SignerWithAddress;
+  let counterparty: SignerWithAddress;
   let tokenVault: Contract;
   let genesisValueVault: Contract;
   let lendingMarketController: Contract;
   let lendingMarket: Contract;
   let recovery: Contract;
+  let reserveFund: Contract;
   let usdcToken: Contract;
   let wETHToken: Contract;
   let usdcMaturity: BigNumber;
@@ -32,18 +34,24 @@ describe('Integration Test: Order Book Incident Recovery', () => {
   const id = (value: string) => ethers.utils.id(value);
 
   before(async () => {
-    [owner, attacker, debtor, recoveryAccount, other] =
+    [owner, attacker, debtor, recoveryAccount, other, counterparty] =
       await ethers.getSigners();
 
     const deployed = await deployContracts();
     tokenVault = deployed.tokenVault;
     genesisValueVault = deployed.genesisValueVault;
     lendingMarketController = deployed.lendingMarketController;
+    reserveFund = deployed.reserveFund;
     usdcToken = deployed.usdcToken;
     wETHToken = deployed.wETHToken;
 
     await tokenVault.updateCurrency(hexUSDC, true);
     await tokenVault.updateCurrency(hexETH, true);
+    await lendingMarketController.createOrderBook(
+      hexUSDC,
+      deployed.genesisDate,
+      deployed.genesisDate,
+    );
     await lendingMarketController.createOrderBook(
       hexUSDC,
       deployed.genesisDate,
@@ -233,6 +241,168 @@ describe('Integration Test: Order Book Incident Recovery', () => {
       recoveryBalanceBefore,
     );
     expect(await tokenVault.paused()).to.equal(true);
+  });
+
+  it('transfers an additional LEND position and only its matching ReserveFund fee FV', async () => {
+    const positionId = id('additional-position');
+    const additionalMaturity = usdcMaturities[2];
+    const futureValue = BigNumber.from(10000);
+    const feeInFV = BigNumber.from(123);
+    const exactUnitPrice = BigNumber.from(10000);
+
+    await tokenVault.unpause();
+    await usdcToken.transfer(counterparty.address, futureValue);
+    await usdcToken
+      .connect(counterparty)
+      .approve(tokenVault.address, futureValue);
+    await tokenVault.connect(counterparty).deposit(hexUSDC, futureValue);
+    await usdcToken.approve(reserveFund.address, feeInFV);
+    await reserveFund.deposit(hexUSDC, feeInFV);
+
+    await network.provider.send('hardhat_setBalance', [
+      recovery.address,
+      ethers.utils.hexValue(ethers.utils.parseEther('1')),
+    ]);
+    await network.provider.send('hardhat_impersonateAccount', [
+      recovery.address,
+    ]);
+    try {
+      const recoverySigner = await ethers.getSigner(recovery.address);
+      await lendingMarketController
+        .connect(recoverySigner)
+        .recoverUserFunds(
+          hexUSDC,
+          additionalMaturity,
+          counterparty.address,
+          Side.LEND,
+          futureValue,
+          exactUnitPrice,
+        );
+      await lendingMarketController
+        .connect(recoverySigner)
+        .recoverUserFunds(
+          hexUSDC,
+          additionalMaturity,
+          reserveFund.address,
+          Side.LEND,
+          feeInFV,
+          exactUnitPrice,
+        );
+    } finally {
+      await network.provider.send('hardhat_stopImpersonatingAccount', [
+        recovery.address,
+      ]);
+    }
+    await tokenVault.pause();
+
+    const futureValueVault = await lendingMarketController
+      .getFutureValueVault(hexUSDC)
+      .then((address: string) =>
+        ethers.getContractAt('FutureValueVault', address),
+      );
+    const receiverPositionBefore = await lendingMarketController.getPosition(
+      hexUSDC,
+      additionalMaturity,
+      recoveryAccount.address,
+    );
+    const reservePositionBefore = await lendingMarketController.getPosition(
+      hexUSDC,
+      additionalMaturity,
+      reserveFund.address,
+    );
+    const lendingSupplyBefore = await futureValueVault.getTotalLendingSupply(
+      additionalMaturity,
+    );
+
+    const mismatchedPositionId = id('mismatched-additional-position');
+    await expect(
+      recovery.executeAdditionalPosition(
+        mismatchedPositionId,
+        hexUSDC,
+        counterparty.address,
+        recoveryAccount.address,
+        additionalMaturity,
+        futureValue.add(1),
+        feeInFV,
+      ),
+    ).to.be.reverted;
+    expect(
+      await recovery.executedAdditionalPositions(mismatchedPositionId),
+    ).to.equal(false);
+
+    await expect(
+      recovery.executeAdditionalPosition(
+        positionId,
+        hexUSDC,
+        counterparty.address,
+        recoveryAccount.address,
+        additionalMaturity,
+        futureValue,
+        feeInFV,
+      ),
+    )
+      .to.emit(recovery, 'AdditionalPositionExecuted')
+      .withArgs(
+        positionId,
+        counterparty.address,
+        hexUSDC,
+        recoveryAccount.address,
+        additionalMaturity,
+        futureValue,
+        feeInFV,
+      );
+
+    expect(
+      (
+        await lendingMarketController.getPosition(
+          hexUSDC,
+          additionalMaturity,
+          counterparty.address,
+        )
+      ).futureValue,
+    ).to.equal(0);
+    expect(
+      (
+        await lendingMarketController.getPosition(
+          hexUSDC,
+          additionalMaturity,
+          reserveFund.address,
+        )
+      ).futureValue,
+    ).to.equal(reservePositionBefore.futureValue.sub(feeInFV));
+    expect(
+      (
+        await lendingMarketController.getPosition(
+          hexUSDC,
+          additionalMaturity,
+          recoveryAccount.address,
+        )
+      ).futureValue,
+    ).to.equal(
+      receiverPositionBefore.futureValue.add(futureValue).add(feeInFV),
+    );
+    expect(
+      await tokenVault.getDepositAmount(counterparty.address, hexUSDC),
+    ).to.equal(0);
+    expect(await recovery.executedAdditionalPositions(positionId)).to.equal(
+      true,
+    );
+    expect(
+      await futureValueVault.getTotalLendingSupply(additionalMaturity),
+    ).to.equal(lendingSupplyBefore);
+    expect(await tokenVault.paused()).to.equal(true);
+
+    await expect(
+      recovery.executeAdditionalPosition(
+        positionId,
+        hexUSDC,
+        counterparty.address,
+        recoveryAccount.address,
+        additionalMaturity,
+        futureValue,
+        feeInFV,
+      ),
+    ).to.be.reverted;
   });
 
   it('cancels active orders and transfers all positions and Deposit', async () => {
@@ -482,6 +652,16 @@ describe('Integration Test: Order Book Incident Recovery', () => {
           recoveryAccount.address,
         ),
     ).to.be.reverted;
+    await expect(
+      lendingMarketController
+        .connect(other)
+        .transferReserveFundPositionForRecovery(
+          hexUSDC,
+          usdcMaturity,
+          recoveryAccount.address,
+          1,
+        ),
+    ).to.be.reverted;
 
     await expect(
       recovery
@@ -492,6 +672,19 @@ describe('Integration Test: Order Book Incident Recovery', () => {
           hexUSDC,
           0,
           [correction],
+        ),
+    ).to.be.revertedWith('Ownable: caller is not the owner');
+    await expect(
+      recovery
+        .connect(other)
+        .executeAdditionalPosition(
+          id('unauthorized-position'),
+          hexUSDC,
+          other.address,
+          recoveryAccount.address,
+          usdcMaturity,
+          1,
+          0,
         ),
     ).to.be.revertedWith('Ownable: caller is not the owner');
 

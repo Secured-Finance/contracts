@@ -29,6 +29,9 @@ correctionId = keccak256(
 batchId = keccak256(
   utf8("order-book-incident-recovery:<network>:<currency>:batch:<lowercase-user>")
 )
+positionId = keccak256(
+  utf8("additional-position:<network>:<currency>:<transactionHash>:<lowercase-user>")
+)
 ```
 
 `fundingAmount` is the non-negative net TokenVault token balance decrease
@@ -67,14 +70,31 @@ executed LEND positions requiring additional funding. `fundingAmount` continues
 to equal the observed TokenVault net outflow; additional LEND funding must not
 be represented as a synthetic funding transaction.
 
+Each batch has an `additionalPositions` array for incident-controlled accounts
+that hold the opposite LEND position created by that batch but do not require a
+correction of their own. Each entry records a replay-protected `positionId`,
+the source transaction, user, maturity, exact LEND `futureValue`, and the
+matching `feeInFV` credited to ReserveFund. The source transaction must be one
+of the batch's `fundingTransactions`, and the maturity must also occur in the
+batch's corrections. An empty array explicitly records that the batch has no
+additional counterparty position.
+
+`OrderBookIncidentRecovery` independently verifies the user's current FV
+against `futureValue`, transfers all of that user's positions and remaining
+Deposit to the recovery Receiver, and transfers exactly `feeInFV` from
+ReserveFund's positive FV at the same maturity. The ReserveFund source is fixed
+by the Controller; its other currencies, maturities, fees, and Deposit are not
+transferred. `positionId` replay protection is maintained by
+`OrderBookIncidentRecovery`; execution does not depend on the related
+correction batch having already run.
+
 Set the destination recovery account at execution time with
 `RECOVERY_RECEIVER_ADDRESS`. After every correction batch has completed, the
-task derives the unique affected users from `batches[].user`. For each user, the
-Controller enumerates every used maturity and transfers the complete signed FV
-balance to the Receiver. Positive LEND and negative BORROW positions are both
-transferred, so no position list or expected FV is maintained in the execution
-JSON. The destination is a controlled recovery account and does not need to
-satisfy protocol collateral coverage.
+task transfers each `additionalPositions[].user` together with its matching
+ReserveFund fee, then transfers every `batches[].user`. For each affected user,
+the Controller enumerates every used maturity and transfers the complete signed
+FV balance to the Receiver. The destination is a controlled recovery account
+and does not need to satisfy protocol collateral coverage.
 
 Before execution:
 
@@ -158,7 +178,9 @@ The test checks:
 - continued LendingMarket and TokenVault pause state; and
 - for each asset transfer, exact full-position movement, zero remaining user
   Deposit, consistent supplies and total Deposit, receiver registration, and
-  recorded coverage state.
+  recorded coverage state; and
+- for each additional position, exact counterparty FV validation, position-ID
+  replay protection, and an exact ReserveFund fee-FV transfer.
 
 # Current storage gap
 

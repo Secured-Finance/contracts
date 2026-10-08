@@ -35,17 +35,27 @@ interface RetainedLendPositionInput {
   futureValue: string;
 }
 
+interface AdditionalPositionInput {
+  positionId: string;
+  transactionHash: string;
+  user: string;
+  maturity: string;
+  futureValue: string;
+  feeInFV: string;
+}
+
 interface CorrectionBatchInput {
   batchId: string;
   user: string;
   fundingAmount: string;
   fundingTransactions: FundingTransactionInput[];
   retainedLendPositions: RetainedLendPositionInput[];
+  additionalPositions: AdditionalPositionInput[];
   corrections: CorrectionInput[];
 }
 
 interface RecoveryData {
-  version: 1;
+  version: 2;
   network: string;
   chainId: string;
   currency: string;
@@ -97,7 +107,7 @@ const readRecoveryData = (
     `${currency.toLowerCase()}.json`,
   );
   const data = JSON.parse(readFileSync(path, 'utf8')) as RecoveryData;
-  if (data.version !== 1) fail('Unsupported recovery data version');
+  if (data.version !== 2) fail('Unsupported recovery data version');
   if (data.network !== network) {
     fail(`Recovery data network ${data.network} does not match ${network}`);
   }
@@ -204,6 +214,14 @@ task(
         fail('Recovery contract does not have the TokenVault Operator role');
       }
 
+      const correctionUsers = new Set(
+        data.batches.map((batch) =>
+          ethers.utils.getAddress(batch.user).toLowerCase(),
+        ),
+      );
+      const seenAdditionalPositionIds = new Set<string>();
+      const seenAdditionalPositionUsers = new Set<string>();
+
       for (const batch of data.batches) {
         requireId(ethers, 'batchId', batch.batchId);
         requireAddress(ethers, 'batch user', batch.user);
@@ -264,6 +282,75 @@ task(
             );
           }
         }
+        if (!Array.isArray(batch.additionalPositions)) {
+          fail(`Batch ${batch.batchId} must contain additionalPositions`);
+        }
+        const fundingTransactionHashes = new Set(
+          batch.fundingTransactions.map(({ transactionHash }) =>
+            transactionHash.toLowerCase(),
+          ),
+        );
+        const correctionMaturities = new Set(
+          batch.corrections.map(({ maturity }) => maturity),
+        );
+        for (const position of batch.additionalPositions) {
+          requireId(ethers, 'additional position ID', position.positionId);
+          requireId(
+            ethers,
+            'additional position transaction hash',
+            position.transactionHash,
+          );
+          requireAddress(ethers, 'additional position user', position.user);
+          const userKey = ethers.utils.getAddress(position.user).toLowerCase();
+          if (correctionUsers.has(userKey)) {
+            fail(
+              `Additional position user also has a correction batch: ${position.user}`,
+            );
+          }
+          if (seenAdditionalPositionUsers.has(userKey)) {
+            fail(`Duplicate additional position user: ${position.user}`);
+          }
+          if (
+            ethers.utils.getAddress(position.user) ===
+            ethers.utils.getAddress(recoveryReceiver)
+          ) {
+            fail(
+              `Additional position user cannot be the recovery receiver: ${position.user}`,
+            );
+          }
+          if (
+            seenAdditionalPositionIds.has(position.positionId.toLowerCase())
+          ) {
+            fail(`Duplicate additional position ID: ${position.positionId}`);
+          }
+          if (
+            !fundingTransactionHashes.has(
+              position.transactionHash.toLowerCase(),
+            )
+          ) {
+            fail(
+              `Additional position transaction is not part of ${batch.batchId}: ${position.transactionHash}`,
+            );
+          }
+          if (!correctionMaturities.has(position.maturity)) {
+            fail(
+              `Additional position maturity is not corrected in ${batch.batchId}: ${position.maturity}`,
+            );
+          }
+          const maturity = BigNumber.from(position.maturity);
+          const futureValue = BigNumber.from(position.futureValue);
+          const feeInFV = BigNumber.from(position.feeInFV);
+          if (
+            maturity.lte(0) ||
+            futureValue.lte(0) ||
+            futureValue.gt(BigNumber.from(2).pow(255).sub(1)) ||
+            feeInFV.gt(futureValue)
+          ) {
+            fail(`Invalid additional position values in ${batch.batchId}`);
+          }
+          seenAdditionalPositionIds.add(position.positionId.toLowerCase());
+          seenAdditionalPositionUsers.add(userKey);
+        }
 
         // The execution funding also covers retained executed LEND positions, while
         // BORROW corrections must precede LEND corrections to avoid an intermediate
@@ -298,7 +385,7 @@ task(
         }
       }
 
-      if (data.batches.length > 0 && !(await tokenVault.paused())) {
+      if (!(await tokenVault.paused())) {
         fail('TokenVault is not paused');
       }
 
@@ -356,6 +443,23 @@ task(
             token,
             'approve',
             [recoveryAddress, 0],
+          );
+        }
+        for (const position of batch.additionalPositions) {
+          planCall(
+            calls,
+            `transfer additional ${data.currency} position ${position.positionId} for ${position.user} and fee FV ${position.feeInFV}`,
+            recovery,
+            'executeAdditionalPosition',
+            [
+              position.positionId,
+              ccy,
+              position.user,
+              recoveryReceiver,
+              position.maturity,
+              position.futureValue,
+              position.feeInFV,
+            ],
           );
         }
       }

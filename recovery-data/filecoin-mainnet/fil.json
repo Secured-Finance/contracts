@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "network": "filecoin-mainnet",
   "chainId": "314",
   "currency": "FIL",
@@ -21,6 +21,16 @@
         }
       ],
       "retainedLendPositions": [],
+      "additionalPositions": [
+        {
+          "positionId": "0x9941178f54b1155abd22d00fa4bb1c08e5ff918a58c57c6775cce3d761b48763",
+          "transactionHash": "0xc0445ae7aaf2d742711a868df47d4b9474cad68bccd2fce9a8de341c35d3f6c0",
+          "user": "0xdf00bA955D27Ca157C9E078E6Ce59A10c4c6EE58",
+          "maturity": "1798156800",
+          "futureValue": "8110027851988696232939",
+          "feeInFV": "24390800754591612899"
+        }
+      ],
       "corrections": [
         {
           "correctionId": "0x2d2783ee598f1ae59fd3ced0cc0e8a48052ace50877a956f7e9a35b6d4357b6c",

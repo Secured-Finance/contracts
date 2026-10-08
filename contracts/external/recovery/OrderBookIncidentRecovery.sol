@@ -28,6 +28,7 @@ contract OrderBookIncidentRecovery is Ownable, ReentrancyGuard {
     mapping(bytes32 batchId => bool executed) public executedBatches;
     mapping(bytes32 correctionId => bool executed) public executedCorrections;
     mapping(bytes32 transferId => bool executed) public executedAssetTransfers;
+    mapping(bytes32 positionId => bool executed) public executedAdditionalPositions;
 
     struct Correction {
         bytes32 correctionId;
@@ -40,11 +41,13 @@ contract OrderBookIncidentRecovery is Ownable, ReentrancyGuard {
     error InvalidAddress();
     error InvalidRecoveryId();
     error InvalidCorrectionCount(uint256 count);
+    error InvalidFutureValue(uint256 futureValue);
     error RecoveryAlreadyExecuted(bytes32 recoveryId);
     error ProtocolNotPaused(address target);
     error InvalidMsgValue(uint256 expected, uint256 actual);
     error UnexpectedAssetBalance(uint256 expected, uint256 actual);
     error UnexpectedAllowance(uint256 actual);
+    error UnexpectedFutureValue(uint256 expected, int256 actual);
 
     event CorrectionExecuted(
         bytes32 indexed batchId,
@@ -64,6 +67,16 @@ contract OrderBookIncidentRecovery is Ownable, ReentrancyGuard {
         address fundingSource,
         uint256 fundingAmount,
         uint256 correctionCount
+    );
+
+    event AdditionalPositionExecuted(
+        bytes32 indexed positionId,
+        address indexed user,
+        bytes32 indexed ccy,
+        address receiver,
+        uint256 maturity,
+        uint256 futureValue,
+        uint256 feeInFV
     );
 
     constructor(
@@ -182,6 +195,61 @@ contract OrderBookIncidentRecovery is Ownable, ReentrancyGuard {
         address _user,
         address _receiver
     ) external onlyOwner nonReentrant {
+        _executeAssetTransfer(_ccy, _user, _receiver);
+    }
+
+    /**
+     * @notice Moves one incident counterparty's assets and the matching fee FV to recovery.
+     * @dev Position replay protection intentionally lives in this orchestration contract.
+     */
+    function executeAdditionalPosition(
+        bytes32 _positionId,
+        bytes32 _ccy,
+        address _user,
+        address _receiver,
+        uint256 _maturity,
+        uint256 _futureValue,
+        uint256 _feeInFV
+    ) external onlyOwner nonReentrant {
+        if (_positionId == bytes32(0)) revert InvalidRecoveryId();
+        if (executedAdditionalPositions[_positionId]) {
+            revert RecoveryAlreadyExecuted(_positionId);
+        }
+        if (_futureValue == 0 || _futureValue > uint256(type(int256).max)) {
+            revert InvalidFutureValue(_futureValue);
+        }
+        if (!IPausable(address(tokenVault)).paused()) {
+            revert ProtocolNotPaused(address(tokenVault));
+        }
+
+        (, int256 actualFutureValue) = lendingMarketController.getPosition(_ccy, _maturity, _user);
+        if (actualFutureValue != int256(_futureValue)) {
+            revert UnexpectedFutureValue(_futureValue, actualFutureValue);
+        }
+
+        executedAdditionalPositions[_positionId] = true;
+        _executeAssetTransfer(_ccy, _user, _receiver);
+        if (_feeInFV != 0) {
+            lendingMarketController.transferReserveFundPositionForRecovery(
+                _ccy,
+                _maturity,
+                _receiver,
+                _feeInFV
+            );
+        }
+
+        emit AdditionalPositionExecuted(
+            _positionId,
+            _user,
+            _ccy,
+            _receiver,
+            _maturity,
+            _futureValue,
+            _feeInFV
+        );
+    }
+
+    function _executeAssetTransfer(bytes32 _ccy, address _user, address _receiver) private {
         if (_user == address(0) || _receiver == address(0) || _user == _receiver) {
             revert InvalidAddress();
         }

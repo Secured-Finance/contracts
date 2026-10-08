@@ -891,4 +891,37 @@ library LendingMarketUserLogic {
             AddressResolverLib.tokenVault().transferFrom(_ccy, _user, _receiver, depositAmount);
         }
     }
+
+    function transferReserveFundPositionForRecovery(
+        bytes32 _ccy,
+        uint256 _maturity,
+        address _receiver,
+        uint256 _futureValue
+    ) external {
+        if (_futureValue == 0) revert AmountIsZero();
+
+        address reserveFundAddr = address(AddressResolverLib.reserveFund());
+        FundManagementLogic.cleanUpFunds(_ccy, reserveFundAddr);
+
+        IFutureValueVault futureValueVault = IFutureValueVault(
+            Storage.slot().futureValueVaults[_ccy]
+        );
+        uint8 orderBookId = Storage.slot().maturityOrderBookIds[_ccy][_maturity];
+
+        (int256 balance, uint256 balanceMaturity) = futureValueVault.getBalance(
+            orderBookId,
+            reserveFundAddr
+        );
+        int256 futureValue = _futureValue.toInt256();
+        if (balanceMaturity != _maturity || balance < futureValue) revert InvalidAmount();
+
+        FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, _receiver);
+        futureValueVault.transferFrom(
+            orderBookId,
+            reserveFundAddr,
+            _receiver,
+            futureValue,
+            _maturity
+        );
+    }
 }

@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "network": "filecoin-mainnet",
   "chainId": "314",
   "currency": "USDFC",
@@ -16,6 +16,7 @@
         }
       ],
       "retainedLendPositions": [],
+      "additionalPositions": [],
       "corrections": [
         {
           "correctionId": "0x307ae1051ec08f0b420d1267f163e20e461ec553634f5473c369fb528204c21d",
@@ -52,6 +53,16 @@
         }
       ],
       "retainedLendPositions": [],
+      "additionalPositions": [
+        {
+          "positionId": "0xdae1ce9890778c7e6834994fd25c3696a6340e52e1e751075fa5a19982d0da4c",
+          "transactionHash": "0x8a49c8096329637e4ddeb8ccda41c96093d519b64e7b61d5bd5c53fdf707dbb3",
+          "user": "0x19E81a48832Fc7f034bEF5A21526594e9C84FDD4",
+          "maturity": "1798156800",
+          "futureValue": "28391179578346855450263",
+          "feeInFV": "85416073735624237167"
+        }
+      ],
       "corrections": [
         {
           "correctionId": "0xe76a9da68ccc5cd405304f197e9c3faf186e9f372737e2492c3c0217323ad3ac",
@@ -99,6 +110,7 @@
         }
       ],
       "retainedLendPositions": [],
+      "additionalPositions": [],
       "corrections": [
         {
           "correctionId": "0x2952b17b6dcbc89524c70b6dfbc552a4901415484777c4582dab02130e38e5d1",

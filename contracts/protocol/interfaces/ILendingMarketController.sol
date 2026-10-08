@@ -355,6 +355,13 @@ interface ILendingMarketController {
 
     function transferAssetsForRecovery(bytes32 ccy, address user, address receiver) external;
 
+    function transferReserveFundPositionForRecovery(
+        bytes32 ccy,
+        uint256 maturity,
+        address receiver,
+        uint256 futureValue
+    ) external;
+
     function updateMinDebtUnitPrice(bytes32 _ccy, uint256 _minDebtUnitPrice) external;
 
     function withdrawZCToken(

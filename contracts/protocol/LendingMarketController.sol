@@ -1122,6 +1122,25 @@ contract LendingMarketController is
     }
 
     /**
+     * @notice Transfers an exact fee position from ReserveFund to a recovery account.
+     * @dev This temporary recovery entry point must be removed after the incident recovery.
+     * The transfer source is resolved internally so an operator cannot select another account.
+     */
+    function transferReserveFundPositionForRecovery(
+        bytes32 _ccy,
+        uint256 _maturity,
+        address _receiver,
+        uint256 _futureValue
+    ) external override onlyOperator {
+        LendingMarketUserLogic.transferReserveFundPositionForRecovery(
+            _ccy,
+            _maturity,
+            _receiver,
+            _futureValue
+        );
+    }
+
+    /**
      * @notice Updates the min debt unit price for the selected currency.
      * @param _ccy Currency name in bytes32
      * @param _minDebtUnitPrice The min debt unit price

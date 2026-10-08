@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "network": "mainnet",
   "chainId": "1",
   "currency": "USDC",
@@ -16,6 +16,16 @@
         }
       ],
       "retainedLendPositions": [],
+      "additionalPositions": [
+        {
+          "positionId": "0xffddf901a1620a78deec399b4794ab6537b9be26f5fb5bff80d084f73fbb4d1b",
+          "transactionHash": "0x6fdb1869659197947facc536823dbb58260d8db0e79949675ae87df2a9b82b9a",
+          "user": "0x0e1B9808F5fDC33A9B78bbA566c1F38367E08d74",
+          "maturity": "1806019200",
+          "futureValue": "3000000000",
+          "feeInFV": "16526748"
+        }
+      ],
       "corrections": [
         {
           "correctionId": "0xbf056f0136271b8eee82194cc9e2b6a711a6905a20396f71a04272ca1c6437e0",
@@ -71,6 +81,16 @@
         }
       ],
       "retainedLendPositions": [],
+      "additionalPositions": [
+        {
+          "positionId": "0x38099ea0315278fbed6e52e994aec0237c46d48488174dbaf4a6ade8be9a6ff5",
+          "transactionHash": "0xf3627506a6d7d70ac993722539706e86aa442f69e8200149ba36f11e9eeafcb5",
+          "user": "0x474Dfe798AbAc1EcC92e07A02F6e573b1EE1B210",
+          "maturity": "1845936000",
+          "futureValue": "16000000000",
+          "feeInFV": "290640431"
+        }
+      ],
       "corrections": [
         {
           "correctionId": "0xcd02a61cb5e815ea0c810510b34b03169a4ef3feeba4d73bf28e0ee7698c5ed2",
