@@ -189,6 +189,30 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
     }
 
     /**
+     * @notice Corrects total supplies inflated by the historical transfer accounting bug.
+     * @dev This temporary incident correction function must be removed after the correction.
+     */
+    function correctTotalSupply(
+        bytes32 _ccy,
+        uint256 _correctionAmount
+    ) external override onlyLendingMarketController {
+        Storage.Storage storage store = Storage.slot();
+        uint256 lendingSupply = store.totalLendingSupplies[_ccy];
+        uint256 borrowingSupply = store.totalBorrowingSupplies[_ccy];
+
+        if (
+            _correctionAmount == 0 ||
+            _correctionAmount > lendingSupply ||
+            _correctionAmount > borrowingSupply
+        ) revert InvalidTotalSupplyCorrection(_correctionAmount);
+
+        uint256 correctedLendingSupply = lendingSupply - _correctionAmount;
+        uint256 correctedBorrowingSupply = borrowingSupply - _correctionAmount;
+        store.totalLendingSupplies[_ccy] = correctedLendingSupply;
+        store.totalBorrowingSupplies[_ccy] = correctedBorrowingSupply;
+    }
+
+    /**
      * @notice Calculates the future value from the basis maturity to the destination maturity using the compound factor.
      * @param _ccy Currency name in bytes32
      * @return The future value at the destination maturity

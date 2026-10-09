@@ -90,6 +90,45 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
     }
 
     /**
+     * @notice Corrects total supplies inflated by the historical transfer accounting bug.
+     * @dev This temporary incident correction function must be removed after the correction.
+     */
+    function correctTotalSupply(
+        uint256 _maturity,
+        uint256 _correctionAmount
+    ) external override onlyLendingMarketController {
+        Storage.Storage storage store = Storage.slot();
+        uint256 lendingSupply = store.totalLendingSupplies[_maturity];
+        uint256 borrowingSupply = store.totalBorrowingSupplies[_maturity];
+
+        if (
+            _correctionAmount == 0 ||
+            _correctionAmount > lendingSupply ||
+            _correctionAmount > borrowingSupply
+        ) revert InvalidTotalSupplyCorrection(_correctionAmount);
+
+        uint256 correctedLendingSupply = lendingSupply - _correctionAmount;
+        uint256 correctedBorrowingSupply = borrowingSupply - _correctionAmount;
+        uint256 removedLendingSupply = store.removedLendingSupply[_maturity];
+        uint256 removedBorrowingSupply = store.removedBorrowingSupply[_maturity];
+
+        if (
+            correctedLendingSupply < removedLendingSupply ||
+            correctedBorrowingSupply < removedBorrowingSupply
+        ) {
+            revert CorrectedTotalSupplyBelowRemovedSupply(
+                correctedLendingSupply,
+                removedLendingSupply,
+                correctedBorrowingSupply,
+                removedBorrowingSupply
+            );
+        }
+
+        store.totalLendingSupplies[_maturity] = correctedLendingSupply;
+        store.totalBorrowingSupplies[_maturity] = correctedBorrowingSupply;
+    }
+
+    /**
      * @notice Gets if the account has past maturity balance at the selected maturity.
      * @param _user User's address
      * @param _maturity The maturity of the market
