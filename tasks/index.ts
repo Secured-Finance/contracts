@@ -1,11 +1,9 @@
 import './add-currency';
 import './add-order-books';
 import './change-owners';
-import './check-vault-total-supplies';
 import './fork';
 import './migrate-order-chunks';
 import './open-markets';
-import './recover-vault-total-supplies';
 import './register-orders';
 import './revoke-role';
 import './unfork';

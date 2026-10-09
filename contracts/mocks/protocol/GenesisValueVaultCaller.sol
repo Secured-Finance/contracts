@@ -58,10 +58,6 @@ contract GenesisValueVaultCaller {
         genesisValueVault.transferFrom(_ccy, _sender, _receiver, _amount);
     }
 
-    function correctTotalSupply(bytes32 _ccy, uint256 _correctionAmount) external {
-        genesisValueVault.correctTotalSupply(_ccy, _correctionAmount);
-    }
-
     function cleanUpBalance(bytes32 _ccy, address _user, uint256 _maturity) external {
         genesisValueVault.cleanUpBalance(_ccy, _user, _maturity);
     }

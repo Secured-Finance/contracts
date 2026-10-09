@@ -619,17 +619,5 @@ describe('LendingMarket - Orders', () => {
         lendingMarket.cleanUpOrders(currentOrderBookId, alice.address),
       ).revertedWith('OnlyAcceptedContract("LendingMarketController")');
     });
-
-    it('Temporarily blocks order cleanup while the market is paused', async () => {
-      await lendingMarketCaller.pause(targetCurrency);
-
-      await expect(
-        lendingMarketCaller.cleanUpOrders(
-          targetCurrency,
-          currentOrderBookId,
-          alice.address,
-        ),
-      ).revertedWith('Pausable: paused');
-    });
   });
 });

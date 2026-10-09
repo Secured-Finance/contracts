@@ -598,65 +598,6 @@ describe('GenesisValueVault', () => {
       });
     });
 
-    describe('Correct total supply', async () => {
-      beforeEach(async () => {
-        await genesisValueVaultCaller.updateGenesisValueWithFutureValue(
-          targetCurrency,
-          alice.address,
-          maturity,
-          fvAmount,
-        );
-        await genesisValueVaultCaller.updateGenesisValueWithFutureValue(
-          targetCurrency,
-          bob.address,
-          maturity,
-          -fvAmount,
-        );
-      });
-
-      it('Corrects lending and borrowing supplies by the same amount', async () => {
-        const lendingSupply =
-          await genesisValueVaultProxy.getTotalLendingSupply(targetCurrency);
-        const borrowingSupply =
-          await genesisValueVaultProxy.getTotalBorrowingSupply(targetCurrency);
-        const correctionAmount = lendingSupply.div(10);
-
-        await genesisValueVaultCaller.correctTotalSupply(
-          targetCurrency,
-          correctionAmount,
-        );
-
-        expect(
-          await genesisValueVaultProxy.getTotalLendingSupply(targetCurrency),
-        ).to.equal(lendingSupply.sub(correctionAmount));
-        expect(
-          await genesisValueVaultProxy.getTotalBorrowingSupply(targetCurrency),
-        ).to.equal(borrowingSupply.sub(correctionAmount));
-      });
-
-      it('Rejects a zero or excessive correction', async () => {
-        const lendingSupply =
-          await genesisValueVaultProxy.getTotalLendingSupply(targetCurrency);
-
-        await expect(
-          genesisValueVaultCaller.correctTotalSupply(targetCurrency, 0),
-        ).to.be.revertedWith('InvalidTotalSupplyCorrection');
-
-        await expect(
-          genesisValueVaultCaller.correctTotalSupply(
-            targetCurrency,
-            lendingSupply.add(1),
-          ),
-        ).to.be.revertedWith('InvalidTotalSupplyCorrection');
-      });
-
-      it('Rejects correction by a non-accepted contract', async () => {
-        await expect(
-          genesisValueVaultProxy.correctTotalSupply(targetCurrency, 1),
-        ).to.be.revertedWith('OnlyAcceptedContract("LendingMarketController")');
-      });
-    });
-
     describe('Lock and unlock balance', async () => {
       it('Lock user balance', async () => {
         const lockedBalanceBefore =
