@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "network": "arbitrum-one",
   "chainId": "42161",
   "currency": "ETH",
@@ -16,6 +16,16 @@
         }
       ],
       "retainedLendPositions": [],
+      "additionalPositions": [
+        {
+          "positionId": "0xcfe0f94f4fa3f3d207929be389ffc218870fda7e3d35924c6ebf29db31fcdfc9",
+          "transactionHash": "0xa55dc996ca45047ace5a44bb72938b2fc06cabf945f8e343e1e3fd5caa9d852b",
+          "user": "0x6B2fC22320F9928eA5C4c6b10a62C14CD6B21DF5",
+          "maturity": "1845936000",
+          "futureValue": "446282836308048091",
+          "feeInFV": "8106189821655935"
+        }
+      ],
       "corrections": [
         {
           "correctionId": "0x2f40b9764c7cbf3749dae8e433ca324a6b825efdb1251684e737066a6da117af",

@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "network": "arbitrum-one",
   "chainId": "42161",
   "currency": "WBTC",
@@ -16,6 +16,24 @@
         }
       ],
       "retainedLendPositions": [],
+      "additionalPositions": [
+        {
+          "positionId": "0x2c7f1b67b46ef595163326d8a49d2f94e87c8502633199f383159fc7faeb605b",
+          "transactionHash": "0xe53c7a02bf63521e80074e6143e470ef22ba97e033a267ebe499a92c489e79ff",
+          "user": "0xEe81f9Ac3a7b2aFC75b761A035029dF1EaF2C865",
+          "maturity": "1845936000",
+          "futureValue": "1053",
+          "feeInFV": "19"
+        },
+        {
+          "positionId": "0x9ff4a46efb880be3e8149a805aa0b528c8db1d57b1d0a81f2b68d2d14a63ece7",
+          "transactionHash": "0xe53c7a02bf63521e80074e6143e470ef22ba97e033a267ebe499a92c489e79ff",
+          "user": "0x9CB0Ff6d3d8A5BeD6072CD56C74aBbEc4A223455",
+          "maturity": "1845936000",
+          "futureValue": "881464",
+          "feeInFV": "16011"
+        }
+      ],
       "corrections": [
         {
           "correctionId": "0x9de3797594ebab0d9bc9710f46893b506706cf6a4393404ce7076ad8a1a10ba9",

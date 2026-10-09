@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "network": "arbitrum-one",
   "chainId": "42161",
   "currency": "USDC",
@@ -16,6 +16,24 @@
         }
       ],
       "retainedLendPositions": [],
+      "additionalPositions": [
+        {
+          "positionId": "0x1fa8adc987d3c5a0d8c6699e4fa1e61685f202363b418bb6a3817cc950a3823b",
+          "transactionHash": "0x9c5485c735e5568b559069a106480abdd1feee27f9bb6f8b23dccebafbb751d1",
+          "user": "0x06017CF31D2fA973b0ec3C77e2270e39F651895a",
+          "maturity": "1845936000",
+          "futureValue": "10526316",
+          "feeInFV": "191198"
+        },
+        {
+          "positionId": "0x913fe95ae47598f46d50a2c78ac092fc6f53520668bfa4efe7ed3f87290f1c3f",
+          "transactionHash": "0x9c5485c735e5568b559069a106480abdd1feee27f9bb6f8b23dccebafbb751d1",
+          "user": "0xD04Aa4145e5f5428caa8463d762eeC08726a7a92",
+          "maturity": "1845936000",
+          "futureValue": "7145308926",
+          "feeInFV": "129786063"
+        }
+      ],
       "corrections": [
         {
           "correctionId": "0xd905e5f947de3d46010047c45329b715edb550187dde8b7ee9bf28ad109e2452",

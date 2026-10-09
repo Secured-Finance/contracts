@@ -26,16 +26,26 @@ interface RetainedLendPositionInput {
   futureValue: string;
 }
 
+interface AdditionalPositionInput {
+  positionId: string;
+  transactionHash: string;
+  user: string;
+  maturity: string;
+  futureValue: string;
+  feeInFV: string;
+}
+
 interface CorrectionBatchInput {
   batchId: string;
   user: string;
   fundingAmount: string;
   retainedLendPositions: RetainedLendPositionInput[];
+  additionalPositions: AdditionalPositionInput[];
   corrections: CorrectionInput[];
 }
 
 interface RecoveryData {
-  version: 1;
+  version: 2;
   network: string;
   chainId: string;
   currency: string;
@@ -286,7 +296,7 @@ describeFork('Fork Test: Order Book Incident Recovery', function () {
     ) as RecoveryData;
     const chainId = (await ethers.provider.getNetwork()).chainId.toString();
 
-    expect(data.version).to.equal(1);
+    expect(data.version).to.equal(2);
     expect(data.network).to.equal(network.name);
     expect(data.chainId).to.equal(chainId);
     expect(data.currency).to.equal(currency);
@@ -305,10 +315,12 @@ describeFork('Fork Test: Order Book Incident Recovery', function () {
     const proxyController = await deployments
       .get('ProxyController')
       .then(({ address }) => ethers.getContractAt('ProxyController', address));
-    const [controllerAddress, tokenVaultAddress] = await Promise.all([
-      proxyController.getAddress(toBytes32('LendingMarketController')),
-      proxyController.getAddress(toBytes32('TokenVault')),
-    ]);
+    const [controllerAddress, tokenVaultAddress, reserveFundAddress] =
+      await Promise.all([
+        proxyController.getAddress(toBytes32('LendingMarketController')),
+        proxyController.getAddress(toBytes32('TokenVault')),
+        proxyController.getAddress(toBytes32('ReserveFund')),
+      ]);
     const lendingMarketController = await ethers.getContractAt(
       'LendingMarketController',
       controllerAddress,
@@ -408,6 +420,7 @@ describeFork('Fork Test: Order Book Incident Recovery', function () {
     }
     const depositDeltaByUser = new Map<string, BigNumber>();
     const correctionDeltaByPosition = new Map<string, BigNumber>();
+    const additionalFeeByMaturity = new Map<string, BigNumber>();
     const pendingDeltaByMaturity = new Map<string, BigNumber>();
     const affectedUsers = new Set<string>();
     const recoveryUsers = new Set<string>();
@@ -420,6 +433,18 @@ describeFork('Fork Test: Order Book Incident Recovery', function () {
       affectedUsers.add(userKey);
       recoveryUsers.add(userKey);
       addToMap(depositDeltaByUser, userKey, getExecutionFundingAmount(batch));
+      for (const position of batch.additionalPositions) {
+        const positionUser = ethers.utils.getAddress(position.user);
+        const positionUserKey = positionUser.toLowerCase();
+        affectedUsers.add(positionUserKey);
+        recoveryUsers.add(positionUserKey);
+        targetMaturities.add(position.maturity);
+        addToMap(
+          additionalFeeByMaturity,
+          position.maturity,
+          BigNumber.from(position.feeInFV),
+        );
+      }
       for (const correction of batch.corrections) {
         targetMaturities.add(correction.maturity);
         const pv = BigNumber.from(correction.erroneousDroppedPV);
@@ -470,6 +495,25 @@ describeFork('Fork Test: Order Book Incident Recovery', function () {
         );
         positionsBefore.set(positionKey(user, maturity), futureValue);
       }
+    }
+    for (const batch of data.batches) {
+      for (const position of batch.additionalPositions) {
+        expect(
+          positionsBefore.get(positionKey(position.user, position.maturity)),
+        ).to.equal(BigNumber.from(position.futureValue));
+      }
+    }
+    const reservePositionsBefore = new Map<string, BigNumber>();
+    for (const maturity of targetMaturities) {
+      const { futureValue } = await lendingMarketController.getPosition(
+        ccy,
+        maturity,
+        reserveFundAddress,
+      );
+      reservePositionsBefore.set(maturity, futureValue);
+      expect(futureValue).to.be.gte(
+        additionalFeeByMaturity.get(maturity) ?? ZERO,
+      );
     }
     const pendingBefore = new Map<string, BigNumber>();
     for (const maturity of targetMaturities) {
@@ -579,8 +623,10 @@ describeFork('Fork Test: Order Book Incident Recovery', function () {
           .add(delta)
           .add(canceledLendAmountByUser.get(user) ?? ZERO),
       );
-      // The final asset-transfer call moves the remaining Deposit after moving
-      // every FV and GV position to the Receiver.
+    }
+    // The final asset-transfer calls move the remaining Deposit after moving
+    // every FV and GV position to the Receiver.
+    for (const user of recoveryUsers) {
       expect(await tokenVault.getDepositAmount(user, ccy)).to.equal(0);
     }
     for (const user of recoveryUsers) {
@@ -611,6 +657,9 @@ describeFork('Fork Test: Order Book Incident Recovery', function () {
         );
         expect(futureValue).to.equal(0);
       }
+      expectedReceiverFV = expectedReceiverFV.add(
+        additionalFeeByMaturity.get(maturity) ?? ZERO,
+      );
       const { futureValue: receiverFV } =
         await lendingMarketController.getPosition(
           ccy,
@@ -618,14 +667,26 @@ describeFork('Fork Test: Order Book Incident Recovery', function () {
           receiverAddress,
         );
       expect(receiverFV).to.equal(expectedReceiverFV);
+
+      const { futureValue: reserveFutureValue } =
+        await lendingMarketController.getPosition(
+          ccy,
+          maturity,
+          reserveFundAddress,
+        );
+      expect(reserveFutureValue).to.equal(
+        reservePositionsBefore
+          .get(maturity)!
+          .sub(additionalFeeByMaturity.get(maturity) ?? ZERO),
+      );
     }
-    for (const [maturity, delta] of pendingDeltaByMaturity) {
+    for (const maturity of targetMaturities) {
       expect(
         await lendingMarketController.getPendingOrderAmount(ccy, maturity),
       ).to.equal(
         pendingBefore
           .get(maturity)!
-          .add(delta)
+          .add(pendingDeltaByMaturity.get(maturity) ?? ZERO)
           .sub(cleanedAmountByMaturity.get(maturity) ?? ZERO),
       );
     }
@@ -679,7 +740,22 @@ describeFork('Fork Test: Order Book Incident Recovery', function () {
           await recovery.executedCorrections(correction.correctionId),
         ).to.equal(true);
       }
+      for (const position of batch.additionalPositions) {
+        expect(
+          await recovery.executedAdditionalPositions(position.positionId),
+        ).to.equal(true);
+      }
     }
+    const additionalPositionEvents = await recovery.queryFilter(
+      recovery.filters.AdditionalPositionExecuted(),
+      executionStartBlock + 1,
+      executionEndBlock,
+    );
+    const additionalPositionCount = data.batches.reduce(
+      (count, batch) => count + batch.additionalPositions.length,
+      0,
+    );
+    expect(additionalPositionEvents).to.have.length(additionalPositionCount);
 
     const depositRows: Record<string, string>[] = [];
     const coverageRows: Record<string, string | boolean>[] = [];
