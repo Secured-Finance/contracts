@@ -708,15 +708,12 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @return removedBorrowOrderAmount The total PV amount of the removed borrow order amount from the order book
      * @return maturity The maturity of the removed orders
      */
-    // TODO: Temporary pause check for incident correction.
-    // Remove `whenNotPaused` after the incident correction is completed and verified.
     function cleanUpOrders(
         uint8 _orderBookId,
         address _user
     )
         external
         override
-        whenNotPaused
         onlyLendingMarketController
         returns (
             uint256 activeLendOrderCount,

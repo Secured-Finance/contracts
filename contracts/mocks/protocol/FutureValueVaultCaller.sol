@@ -89,21 +89,6 @@ contract FutureValueVaultCaller {
         );
     }
 
-    function correctTotalSupply(
-        uint8 _orderBookId,
-        uint256 _maturity,
-        uint256 _correctionAmount
-    ) external {
-        IFutureValueVault(futureValueVaults[_orderBookId]).correctTotalSupply(
-            _maturity,
-            _correctionAmount
-        );
-    }
-
-    function reset(uint8 _orderBookId, address _user) external {
-        IFutureValueVault(futureValueVaults[_orderBookId]).reset(_orderBookId, _user);
-    }
-
     function executeForcedReset(uint8 _orderBookId, address _user, int256 _amount) external {
         IFutureValueVault(futureValueVaults[_orderBookId]).executeForcedReset(
             _orderBookId,

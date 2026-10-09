@@ -16,7 +16,6 @@ interface IGenesisValueVault {
     error AutoRollLogAlreadyUpdated(uint256 currentMaturity, uint256 nextMaturity);
     error InsufficientBalance();
     error InsufficientLockedBalance();
-    error InvalidTotalSupplyCorrection(uint256 correctionAmount);
 
     event Transfer(bytes32 indexed ccy, address indexed from, address indexed to, int256 value);
     event AutoRollExecuted(
@@ -58,8 +57,6 @@ interface IGenesisValueVault {
     function getLatestAutoRollLog(bytes32 ccy) external view returns (AutoRollLog memory);
 
     function getTotalLockedBalance(bytes32 ccy) external view returns (uint256);
-
-    function correctTotalSupply(bytes32 ccy, uint256 correctionAmount) external;
 
     function calculateFVFromFV(
         bytes32 ccy,

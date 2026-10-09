@@ -35,11 +35,7 @@ const func: DeployFunction = async function ({
   const deployment =
     DeploymentStorage.instance.deployments[proxyController.address];
 
-  if (
-    process.env.ENABLE_AUTO_UPDATE === 'true' &&
-    !process.env.FORK_RPC_ENDPOINT &&
-    deployment
-  ) {
+  if (process.env.ENABLE_AUTO_UPDATE === 'true' && deployment) {
     const tx = await proxyController.multicall(
       deployment.functions.map(({ name, args }) =>
         proxyController.interface.encodeFunctionData(name, args),

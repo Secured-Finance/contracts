@@ -376,58 +376,6 @@ describe('LendingMarketController - Operations', () => {
       });
     });
 
-    describe('Correct vault total supply', async () => {
-      it('Corrects FV supplies while the lending market is active', async () => {
-        const amount = BigNumber.from('100000000000000000');
-
-        await lendingMarketControllerProxy
-          .connect(alice)
-          .executeOrder(targetCurrency, maturities[0], Side.LEND, amount, 9500);
-        await lendingMarketControllerProxy
-          .connect(bob)
-          .executeOrder(
-            targetCurrency,
-            maturities[0],
-            Side.BORROW,
-            amount,
-            9500,
-          );
-
-        const lendingSupply = await futureValueVaultProxy.getTotalLendingSupply(
-          maturities[0],
-        );
-        const borrowingSupply =
-          await futureValueVaultProxy.getTotalBorrowingSupply(maturities[0]);
-
-        await lendingMarketControllerProxy.correctTotalSupply(
-          targetCurrency,
-          maturities[0],
-          1,
-        );
-
-        expect(
-          await futureValueVaultProxy.getTotalLendingSupply(maturities[0]),
-        ).to.equal(lendingSupply.sub(1));
-        expect(
-          await futureValueVaultProxy.getTotalBorrowingSupply(maturities[0]),
-        ).to.equal(borrowingSupply.sub(1));
-      });
-
-      it('Rejects correction by a non-owner', async () => {
-        await expect(
-          lendingMarketControllerProxy
-            .connect(alice)
-            .correctTotalSupply(targetCurrency, 0, 1),
-        ).to.be.revertedWith('Ownable: caller is not the owner');
-      });
-
-      it('Routes maturity zero to GenesisValueVault', async () => {
-        await expect(
-          lendingMarketControllerProxy.correctTotalSupply(targetCurrency, 0, 1),
-        ).to.be.revertedWith('InvalidTotalSupplyCorrection');
-      });
-    });
-
     describe('Protocol updates', async () => {
       it('Get the min debt unit price', async () => {
         const minDebtUnitPrice =
