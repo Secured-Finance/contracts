@@ -6,6 +6,7 @@ import './migrate-order-chunks';
 import './open-markets';
 import './register-orders';
 import './revoke-role';
+import './toggle-protocol-pause';
 import './unfork';
 import './update-price-feed';
 import './update-pyth';
