@@ -1,0 +1,72 @@
+{
+  "version": 1,
+  "network": "arbitrum-one",
+  "chainId": "42161",
+  "referenceBlock": "514317995",
+  "residualTrees": [
+    {
+      "currency": "ETH",
+      "orderBookId": "18",
+      "maturity": "1845936000",
+      "side": "LEND",
+      "expectedRoot": "9000",
+      "orders": [
+        {
+          "orderId": "11",
+          "unitPrice": "9000",
+          "maker": "0x17318678fD8F0A14110A5cC9c146F8c1351f0a40",
+          "amount": "1"
+        },
+        {
+          "orderId": "4",
+          "unitPrice": "3",
+          "maker": "0x17318678fD8F0A14110A5cC9c146F8c1351f0a40",
+          "amount": "499999999999998"
+        }
+      ]
+    },
+    {
+      "currency": "USDC",
+      "orderBookId": "18",
+      "maturity": "1845936000",
+      "side": "LEND",
+      "expectedRoot": "9000",
+      "orders": [
+        {
+          "orderId": "11",
+          "unitPrice": "9000",
+          "maker": "0xa841c5500EE765FaEF5050212779f21cd3fAe803",
+          "amount": "1"
+        },
+        {
+          "orderId": "4",
+          "unitPrice": "3",
+          "maker": "0xa841c5500EE765FaEF5050212779f21cd3fAe803",
+          "amount": "9999998"
+        }
+      ]
+    },
+    {
+      "currency": "WBTC",
+      "orderBookId": "18",
+      "maturity": "1845936000",
+      "side": "LEND",
+      "expectedRoot": "9000",
+      "orders": [
+        {
+          "orderId": "11",
+          "unitPrice": "9000",
+          "maker": "0x90F984b2A583DA0Ec23d0b43C216F077d5E4dfB7",
+          "amount": "1"
+        },
+        {
+          "orderId": "4",
+          "unitPrice": "3",
+          "maker": "0x90F984b2A583DA0Ec23d0b43C216F077d5E4dfB7",
+          "amount": "998"
+        }
+      ]
+    }
+  ],
+  "incidentFillReversal": null
+}

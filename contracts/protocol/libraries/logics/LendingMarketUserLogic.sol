@@ -36,6 +36,19 @@ library LendingMarketUserLogic {
     error TooManyDepositCurrencies();
     error NotEnoughCollateral();
     error NotEnoughDeposit(bytes32 ccy);
+    error InvalidOrderId();
+    error InvalidUser();
+
+    event IncidentOrderFillReversed(
+        uint48 indexed orderId,
+        bytes32 indexed ccy,
+        uint256 maturity,
+        address taker,
+        address maker,
+        ProtocolTypes.Side originalTakerSide,
+        uint256 amount,
+        uint256 amountInFV
+    );
 
     struct EstimateCollateralCoverageParams {
         bytes32 ccy;
@@ -805,5 +818,57 @@ library LendingMarketUserLogic {
 
         if (!isEnoughDepositInOrderCcy) revert NotEnoughDeposit(_ccy);
         if (!isEnoughCollateral) revert NotEnoughCollateral();
+    }
+
+    /**
+     * @notice Reverses the accounting effects of one fill caused by the order-book incident.
+     * @dev This temporary recovery function intentionally does not update orders, order logs,
+     * pendingOrderAmounts, or ReserveFund. Replay protection is the responsibility of
+     * OrderBookIncidentFillRecovery.
+     */
+    function reverseIncidentOrderFill(
+        ILendingMarketController.IncidentOrderFill memory _fill
+    ) external {
+        if (Storage.slot().maturityOrderBookIds[_fill.ccy][_fill.maturity] == 0) {
+            revert ILendingMarketController.InvalidMaturity();
+        }
+        if (_fill.orderId == 0) revert InvalidOrderId();
+        if (_fill.taker == address(0) || _fill.maker == address(0) || _fill.taker == _fill.maker)
+            revert InvalidUser();
+        if (_fill.amount == 0 || _fill.amountInFV == 0) revert InvalidAmount();
+
+        FundManagementLogic.registerCurrencyAndMaturity(_fill.ccy, _fill.maturity, _fill.taker);
+        FundManagementLogic.registerCurrencyAndMaturity(_fill.ccy, _fill.maturity, _fill.maker);
+
+        ProtocolTypes.Side reversedTakerSide = _fill.originalTakerSide == ProtocolTypes.Side.LEND
+            ? ProtocolTypes.Side.BORROW
+            : ProtocolTypes.Side.LEND;
+
+        FundManagementLogic.updateFundsForTaker(
+            _fill.ccy,
+            _fill.maturity,
+            _fill.taker,
+            reversedTakerSide,
+            _fill.amount,
+            _fill.amountInFV,
+            0
+        );
+        FundManagementLogic.updateFundsForMaker(
+            _fill.ccy,
+            _fill.maturity,
+            _fill.originalTakerSide,
+            PartiallyFilledOrder(_fill.orderId, _fill.maker, _fill.amount, _fill.amountInFV)
+        );
+
+        emit IncidentOrderFillReversed(
+            _fill.orderId,
+            _fill.ccy,
+            _fill.maturity,
+            _fill.taker,
+            _fill.maker,
+            _fill.originalTakerSide,
+            _fill.amount,
+            _fill.amountInFV
+        );
     }
 }
