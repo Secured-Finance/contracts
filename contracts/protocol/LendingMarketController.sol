@@ -10,7 +10,7 @@ import {ILendingMarketController} from "./interfaces/ILendingMarketController.so
 import {ILendingMarket} from "./interfaces/ILendingMarket.sol";
 // libraries
 import {Contracts} from "./libraries/Contracts.sol";
-import {FilledOrder, PartiallyFilledOrder} from "./libraries/OrderBookLib.sol";
+import {FilledOrder, PartiallyFilledOrder, IncidentResidualOrder} from "./libraries/OrderBookLib.sol";
 import {FundManagementLogic} from "./libraries/logics/FundManagementLogic.sol";
 import {LendingMarketOperationLogic} from "./libraries/logics/LendingMarketOperationLogic.sol";
 import {LendingMarketUserLogic} from "./libraries/logics/LendingMarketUserLogic.sol";
@@ -331,24 +331,25 @@ contract LendingMarketController is
      * @return isInsufficientDepositAmount The boolean if the order amount for lending in the selected currency is insufficient
      * for the deposit amount or not
      */
-    function getOrderEstimation(
-        GetOrderEstimationParams calldata _params
-    )
-        external
-        view
-        override
-        returns (
-            uint256 lastUnitPrice,
-            uint256 filledAmount,
-            uint256 filledAmountInFV,
-            uint256 orderFeeInFV,
-            uint256 placedAmount,
-            uint256 coverage,
-            bool isInsufficientDepositAmount
-        )
-    {
-        return LendingMarketUserLogic.getOrderEstimation(_params);
-    }
+    // Temporarily disabled during incident recovery to make room for the recovery entry point.
+    // function getOrderEstimation(
+    //     GetOrderEstimationParams calldata _params
+    // )
+    //     external
+    //     view
+    //     override
+    //     returns (
+    //         uint256 lastUnitPrice,
+    //         uint256 filledAmount,
+    //         uint256 filledAmountInFV,
+    //         uint256 orderFeeInFV,
+    //         uint256 placedAmount,
+    //         uint256 coverage,
+    //         bool isInsufficientDepositAmount
+    //     )
+    // {
+    //     return LendingMarketUserLogic.getOrderEstimation(_params);
+    // }
 
     /**
      * @notice Gets the estimated order result by the calculation of the amount to be filled when executing an order in the order books.
@@ -369,23 +370,24 @@ contract LendingMarketController is
      * @return isInsufficientDepositAmount The boolean if the order amount for lending in the selected currency is insufficient
      * for the deposit amount or not
      */
-    function getOrderEstimationFromFV(
-        GetOrderEstimationFromFVParams calldata _params
-    )
-        external
-        view
-        override
-        returns (
-            uint256 lastUnitPrice,
-            uint256 filledAmount,
-            uint256 filledAmountInFV,
-            uint256 orderFeeInFV,
-            uint256 coverage,
-            bool isInsufficientDepositAmount
-        )
-    {
-        return LendingMarketUserLogic.getOrderEstimationFromFV(_params);
-    }
+    // Temporarily disabled during incident recovery to make room for the recovery entry point.
+    // function getOrderEstimationFromFV(
+    //     GetOrderEstimationFromFVParams calldata _params
+    // )
+    //     external
+    //     view
+    //     override
+    //     returns (
+    //         uint256 lastUnitPrice,
+    //         uint256 filledAmount,
+    //         uint256 filledAmountInFV,
+    //         uint256 orderFeeInFV,
+    //         uint256 coverage,
+    //         bool isInsufficientDepositAmount
+    //     )
+    // {
+    //     return LendingMarketUserLogic.getOrderEstimationFromFV(_params);
+    // }
 
     /**
      * @notice Gets maturities for the selected currency.
@@ -1063,6 +1065,41 @@ contract LendingMarketController is
         address _user
     ) external override nonReentrant returns (uint256 totalActiveOrderCount) {
         return FundManagementLogic.cleanUpFunds(_ccy, _user);
+    }
+
+    /**
+     * @notice Reverses the accounting effects of one fill caused by the order-book incident.
+     * @dev This temporary recovery entry point must be removed after the incident recovery.
+     * OrderBookIncidentFillRecovery is responsible for recovery-id replay protection and for
+     * temporarily unpausing TokenVault while this function executes.
+     */
+    function reverseIncidentOrderFill(
+        IncidentOrderFill calldata _fill
+    ) external override onlyOperator {
+        LendingMarketUserLogic.reverseIncidentOrderFill(_fill);
+    }
+
+    /**
+     * @notice Removes residual orders restored by the order-book incident.
+     * @dev This temporary recovery entry point must be removed after the incident recovery.
+     * Restricted to the owner Safe because it directly changes incident-related order-book state.
+     * Repeated execution is rejected by the expected-root validation in OrderBookLib.
+     */
+    function recoverIncidentResidualOrders(
+        bytes32 _ccy,
+        uint8 _orderBookId,
+        uint256 _maturity,
+        ProtocolTypes.Side _side,
+        uint256 _expectedRoot,
+        IncidentResidualOrder[] calldata _orders
+    ) external override onlyOwner {
+        ILendingMarket(Storage.slot().lendingMarkets[_ccy]).recoverIncidentResidualOrders(
+            _orderBookId,
+            _maturity,
+            _side,
+            _expectedRoot,
+            _orders
+        );
     }
 
     /**

@@ -10,7 +10,7 @@ import {OrderActionLogic} from "./libraries/logics/OrderActionLogic.sol";
 import {OrderBookLogic, ItayoseFinalizeResult, ItayoseProcessStatus, ItayoseSettlementResult} from "./libraries/logics/OrderBookLogic.sol";
 import {OrderReaderLogic} from "./libraries/logics/OrderReaderLogic.sol";
 import {RoundingUint256} from "./libraries/math/RoundingUint256.sol";
-import {FilledOrder, PartiallyFilledOrder} from "./libraries/OrderBookLib.sol";
+import {FilledOrder, PartiallyFilledOrder, IncidentResidualOrder} from "./libraries/OrderBookLib.sol";
 // mixins
 import {MixinAddressResolver} from "./mixins/MixinAddressResolver.sol";
 // types
@@ -726,6 +726,44 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         )
     {
         return OrderActionLogic.cleanUpOrders(_orderBookId, _user);
+    }
+
+    /**
+     * @notice Removes residual orders restored by the order-book incident.
+     * @dev This temporary recovery entry point is callable only by LendingMarketController while
+     * the market is paused. Repeated execution is rejected by the expected-root validation.
+     */
+    function recoverIncidentResidualOrders(
+        uint8 _orderBookId,
+        uint256 _maturity,
+        ProtocolTypes.Side _side,
+        uint256 _expectedRoot,
+        IncidentResidualOrder[] calldata _orders
+    ) external override whenPaused onlyLendingMarketController {
+        OrderBookLogic.recoverIncidentResidualOrders(
+            _orderBookId,
+            _maturity,
+            _side,
+            _expectedRoot,
+            _orders
+        );
+
+        uint256 orderCount = _orders.length;
+        uint48[] memory orderIds = new uint48[](orderCount);
+        uint256[] memory unitPrices = new uint256[](orderCount);
+        for (uint256 i; i < orderCount; ++i) {
+            orderIds[i] = _orders[i].orderId;
+            unitPrices[i] = _orders[i].unitPrice;
+        }
+
+        emit IncidentResidualOrdersRecovered(
+            _orderBookId,
+            _side,
+            Storage.slot().ccy,
+            _maturity,
+            orderIds,
+            unitPrices
+        );
     }
 
     /**

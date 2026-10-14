@@ -2,6 +2,7 @@
 pragma solidity 0.8.19;
 
 import {ProtocolTypes} from "../types/ProtocolTypes.sol";
+import {IncidentResidualOrder} from "../libraries/OrderBookLib.sol";
 import {ItayoseProcessStatus} from "../libraries/logics/OrderBookLogic.sol";
 import {ZCTokenInfo, TerminationCurrencyCache} from "../storages/LendingMarketControllerStorage.sol";
 
@@ -30,6 +31,28 @@ interface ILendingMarketController {
     );
 
     event ItayoseProcessFinalized(bytes32 indexed ccy, uint256 indexed maturity);
+
+    event IncidentOrderFillReversed(
+        uint48 indexed orderId,
+        bytes32 indexed ccy,
+        uint256 maturity,
+        address taker,
+        address maker,
+        ProtocolTypes.Side originalTakerSide,
+        uint256 amount,
+        uint256 amountInFV
+    );
+
+    struct IncidentOrderFill {
+        bytes32 ccy;
+        uint256 maturity;
+        uint48 orderId;
+        address taker;
+        address maker;
+        ProtocolTypes.Side originalTakerSide;
+        uint256 amount;
+        uint256 amountInFV;
+    }
 
     struct AdditionalFunds {
         bytes32 ccy;
@@ -144,34 +167,35 @@ interface ILendingMarketController {
 
     function getPendingOrderAmount(bytes32 _ccy, uint256 _maturity) external view returns (uint256);
 
-    function getOrderEstimation(
-        GetOrderEstimationParams calldata params
-    )
-        external
-        view
-        returns (
-            uint256 lastUnitPrice,
-            uint256 filledAmount,
-            uint256 filledAmountInFV,
-            uint256 orderFeeInFV,
-            uint256 placedAmount,
-            uint256 coverage,
-            bool isInsufficientDepositAmount
-        );
+    // Temporarily disabled during incident recovery to make room for the recovery entry point.
+    // function getOrderEstimation(
+    //     GetOrderEstimationParams calldata params
+    // )
+    //     external
+    //     view
+    //     returns (
+    //         uint256 lastUnitPrice,
+    //         uint256 filledAmount,
+    //         uint256 filledAmountInFV,
+    //         uint256 orderFeeInFV,
+    //         uint256 placedAmount,
+    //         uint256 coverage,
+    //         bool isInsufficientDepositAmount
+    //     );
 
-    function getOrderEstimationFromFV(
-        GetOrderEstimationFromFVParams calldata _params
-    )
-        external
-        view
-        returns (
-            uint256 lastUnitPrice,
-            uint256 filledAmount,
-            uint256 filledAmountInFV,
-            uint256 orderFeeInFV,
-            uint256 coverage,
-            bool isInsufficientDepositAmount
-        );
+    // function getOrderEstimationFromFV(
+    //     GetOrderEstimationFromFVParams calldata _params
+    // )
+    //     external
+    //     view
+    //     returns (
+    //         uint256 lastUnitPrice,
+    //         uint256 filledAmount,
+    //         uint256 filledAmountInFV,
+    //         uint256 orderFeeInFV,
+    //         uint256 coverage,
+    //         bool isInsufficientDepositAmount
+    //     );
 
     function getMaturities(bytes32 ccy) external view returns (uint256[] memory);
 
@@ -334,6 +358,17 @@ interface ILendingMarketController {
     function cleanUpAllFunds(address user) external returns (bool);
 
     function cleanUpFunds(bytes32 ccy, address user) external returns (uint256 activeOrderCount);
+
+    function reverseIncidentOrderFill(IncidentOrderFill calldata fill) external;
+
+    function recoverIncidentResidualOrders(
+        bytes32 ccy,
+        uint8 orderBookId,
+        uint256 maturity,
+        ProtocolTypes.Side side,
+        uint256 expectedRoot,
+        IncidentResidualOrder[] calldata orders
+    ) external;
 
     function updateMinDebtUnitPrice(bytes32 _ccy, uint256 _minDebtUnitPrice) external;
 

@@ -485,6 +485,112 @@ describe('LendingMarketController - Orders', () => {
       await initializeCurrency(targetCurrency);
     });
 
+    describe('Incident order fill reversal', () => {
+      const orderId = 28;
+      const amount = 1;
+      const amountInFV = 1;
+
+      const getFill = () => ({
+        ccy: targetCurrency,
+        maturity: maturities[0],
+        orderId,
+        taker: alice.address,
+        maker: bob.address,
+        originalTakerSide: Side.LEND,
+        amount,
+        amountInFV,
+      });
+
+      it('Reverses the taker and maker accounting with opposite-side events', async () => {
+        const fill = getFill();
+        const pendingOrderAmountBefore =
+          await lendingMarketControllerProxy.getPendingOrderAmount(
+            targetCurrency,
+            maturities[0],
+          );
+
+        const tx = lendingMarketControllerProxy.reverseIncidentOrderFill(fill);
+
+        await expect(tx)
+          .to.emit(fundManagementLogic, 'OrderFilled')
+          .withArgs(
+            alice.address,
+            targetCurrency,
+            Side.BORROW,
+            maturities[0],
+            amount,
+            amountInFV,
+            0,
+          );
+        await expect(tx)
+          .to.emit(fundManagementLogic, 'OrderPartiallyFilled')
+          .withArgs(
+            orderId,
+            bob.address,
+            targetCurrency,
+            Side.LEND,
+            maturities[0],
+            amount,
+            amountInFV,
+          );
+        await expect(tx)
+          .to.emit(lendingMarketControllerProxy, 'IncidentOrderFillReversed')
+          .withArgs(
+            orderId,
+            targetCurrency,
+            maturities[0],
+            alice.address,
+            bob.address,
+            Side.LEND,
+            amount,
+            amountInFV,
+          );
+
+        const [takerFutureValue] = await futureValueVault.getBalance(
+          orderBookIds[0],
+          alice.address,
+        );
+        const [makerFutureValue] = await futureValueVault.getBalance(
+          orderBookIds[0],
+          bob.address,
+        );
+        expect(takerFutureValue).to.equal(-amountInFV);
+        expect(makerFutureValue).to.equal(amountInFV);
+        expect(
+          await lendingMarketControllerProxy.getPendingOrderAmount(
+            targetCurrency,
+            maturities[0],
+          ),
+        ).to.equal(pendingOrderAmountBefore);
+      });
+
+      it('Rejects execution by a non-operator', async () => {
+        await expect(
+          lendingMarketControllerProxy
+            .connect(alice)
+            .reverseIncidentOrderFill(getFill()),
+        ).to.be.revertedWith('CallerNotOperator');
+      });
+
+      it('Rejects an invalid maturity', async () => {
+        await expect(
+          lendingMarketControllerProxy.reverseIncidentOrderFill({
+            ...getFill(),
+            maturity: 1,
+          }),
+        ).to.be.revertedWith('InvalidMaturity');
+      });
+
+      it('Rejects an invalid recovery input', async () => {
+        await expect(
+          lendingMarketControllerProxy.reverseIncidentOrderFill({
+            ...getFill(),
+            amount: 0,
+          }),
+        ).to.be.revertedWith('InvalidAmount');
+      });
+    });
+
     it('Get a market currency data', async () => {
       expect(await lendingMarket.getCurrency()).to.equal(targetCurrency);
     });

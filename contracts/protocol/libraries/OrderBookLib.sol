@@ -27,6 +27,13 @@ struct PartiallyFilledOrder {
     uint256 futureValue;
 }
 
+struct IncidentResidualOrder {
+    uint48 orderId;
+    uint256 unitPrice;
+    address maker;
+    uint256 amount;
+}
+
 library OrderBookLib {
     using OrderStatisticsTreeLib for OrderStatisticsTreeLib.Tree;
     using RoundingUint256 for uint256;
@@ -38,6 +45,8 @@ library OrderBookLib {
 
     error EmptyOrderBook();
     error PastMaturityOrderExists();
+    error InvalidRecoveryInput();
+    error UnexpectedResidualTreeState();
 
     struct OrderBook {
         uint256 maturity;
@@ -633,6 +642,138 @@ library OrderBookLib {
         delete self.orders[_orderId];
 
         return (side, removedAmount, unitPrice);
+    }
+
+    /**
+     * @notice Removes the incident orders that became reachable again through the corrupted tree.
+     * @dev This temporary recovery function is intentionally limited to the observed layout where
+     * every residual price level contains exactly one order. It does not update user order arrays,
+     * positions, order logs, or pending order amounts.
+     */
+    function recoverIncidentResidualOrders(
+        OrderBook storage self,
+        uint256 _maturity,
+        ProtocolTypes.Side _side,
+        uint256 _expectedRoot,
+        IncidentResidualOrder[] calldata _orders
+    ) internal {
+        uint256 orderCount = _orders.length;
+        if (_maturity == 0 || _expectedRoot == 0 || orderCount == 0 || self.maturity != _maturity)
+            revert InvalidRecoveryInput();
+
+        OrderStatisticsTreeLib.Tree storage tree = _side == ProtocolTypes.Side.LEND
+            ? self.lendOrders[_maturity]
+            : self.borrowOrders[_maturity];
+
+        if (tree.root != _expectedRoot) revert UnexpectedResidualTreeState();
+        _validateIncidentResidualOrderInputs(_orders);
+        _validateIncidentTreeCoverage(tree, _expectedRoot, _orders);
+
+        for (uint256 i; i < orderCount; ++i) {
+            _validateIncidentResidualOrder(self, tree, _maturity, _side, _orders[i]);
+        }
+
+        tree.root = 0;
+        for (uint256 i; i < orderCount; ++i) {
+            IncidentResidualOrder calldata order = _orders[i];
+            delete tree.nodes[order.unitPrice].orders[order.orderId];
+            delete tree.chunkMetadata[order.unitPrice].orderChunkIds[order.orderId];
+            delete tree.nodes[order.unitPrice];
+            delete tree.chunkMetadata[order.unitPrice];
+            delete self.orders[order.orderId];
+            delete self.isPreOrder[order.orderId];
+        }
+
+        delete tree.nodes[0];
+        delete tree.chunkMetadata[0];
+    }
+
+    function _validateIncidentResidualOrder(
+        OrderBook storage self,
+        OrderStatisticsTreeLib.Tree storage tree,
+        uint256 _maturity,
+        ProtocolTypes.Side _side,
+        IncidentResidualOrder calldata _order
+    ) private view {
+        OrderStatisticsTreeLib.Node storage node = tree.nodes[_order.unitPrice];
+        if (
+            node.head != _order.orderId ||
+            node.tail != _order.orderId ||
+            node.orderCounter != 1 ||
+            node.orderTotalAmount != _order.amount
+        ) revert UnexpectedResidualTreeState();
+
+        OrderStatisticsTreeLib.OrderItem storage treeOrder = node.orders[_order.orderId];
+        if (
+            treeOrder.orderId != _order.orderId ||
+            treeOrder.next != 0 ||
+            treeOrder.prev != 0 ||
+            treeOrder.maker != _order.maker ||
+            treeOrder.amount != _order.amount
+        ) revert UnexpectedResidualTreeState();
+
+        PlacedOrder memory placedOrder = getOrder(self, _order.orderId);
+        if (
+            placedOrder.side != _side ||
+            placedOrder.unitPrice != _order.unitPrice ||
+            placedOrder.maturity != _maturity
+        ) revert UnexpectedResidualTreeState();
+
+        if (
+            _side == ProtocolTypes.Side.LEND
+                ? self.activeLendOrderIds[_order.maker].length != 0
+                : self.activeBorrowOrderIds[_order.maker].length != 0
+        ) revert UnexpectedResidualTreeState();
+    }
+
+    function _validateIncidentResidualOrderInputs(
+        IncidentResidualOrder[] calldata _orders
+    ) private pure {
+        for (uint256 i; i < _orders.length; ++i) {
+            IncidentResidualOrder calldata order = _orders[i];
+            if (order.orderId == 0 || order.unitPrice == 0 || order.maker == address(0)) {
+                revert InvalidRecoveryInput();
+            }
+
+            for (uint256 j; j < i; ++j) {
+                IncidentResidualOrder calldata previous = _orders[j];
+                if (previous.orderId == order.orderId || previous.unitPrice == order.unitPrice) {
+                    revert InvalidRecoveryInput();
+                }
+            }
+        }
+    }
+
+    function _validateIncidentTreeCoverage(
+        OrderStatisticsTreeLib.Tree storage tree,
+        uint256 _expectedRoot,
+        IncidentResidualOrder[] calldata _orders
+    ) private view {
+        if (!_containsIncidentUnitPrice(_orders, _expectedRoot)) {
+            revert UnexpectedResidualTreeState();
+        }
+
+        for (uint256 i; i < _orders.length; ++i) {
+            OrderStatisticsTreeLib.Node storage node = tree.nodes[_orders[i].unitPrice];
+            uint256[2] memory children = [node.left, node.right];
+
+            for (uint256 j; j < children.length; ++j) {
+                if (children[j] == 0) continue;
+                if (!_containsIncidentUnitPrice(_orders, children[j])) {
+                    revert UnexpectedResidualTreeState();
+                }
+            }
+        }
+    }
+
+    function _containsIncidentUnitPrice(
+        IncidentResidualOrder[] calldata _orders,
+        uint256 _unitPrice
+    ) private pure returns (bool) {
+        for (uint256 i; i < _orders.length; ++i) {
+            if (_orders[i].unitPrice == _unitPrice) return true;
+        }
+        return false;
     }
 
     function calculateItayoseResult(
