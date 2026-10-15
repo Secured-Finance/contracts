@@ -3,7 +3,7 @@ pragma solidity 0.8.19;
 
 import "../types/ProtocolTypes.sol";
 import {ItayoseLog} from "../storages/LendingMarketStorage.sol";
-import {FilledOrder, PartiallyFilledOrder, IncidentResidualOrder} from "../libraries/OrderBookLib.sol";
+import {OrderBookLib, FilledOrder, PartiallyFilledOrder} from "../libraries/OrderBookLib.sol";
 import {ItayoseFinalizeResult, ItayoseProcessStatus, ItayoseSettlementResult} from "../libraries/logics/OrderBookLogic.sol";
 
 interface ILendingMarket {
@@ -21,15 +21,6 @@ interface ILendingMarket {
         uint256 lastLendUnitPrice,
         uint256 lastBorrowUnitPrice,
         uint256 offsetAmount
-    );
-
-    event IncidentResidualOrdersRecovered(
-        uint8 indexed orderBookId,
-        ProtocolTypes.Side indexed side,
-        bytes32 indexed ccy,
-        uint256 maturity,
-        uint48[] orderIds,
-        uint256[] unitPrices
     );
 
     function minimumReliableAmountInBaseCurrency() external view returns (uint256);
@@ -301,14 +292,6 @@ interface ILendingMarket {
             uint256 removedBorrowOrderAmount,
             uint256 maturity
         );
-
-    function recoverIncidentResidualOrders(
-        uint8 orderBookId,
-        uint256 maturity,
-        ProtocolTypes.Side side,
-        uint256 expectedRoot,
-        IncidentResidualOrder[] calldata orders
-    ) external;
 
     function updateOrderFeeRate(uint256 orderFeeRate) external;
 

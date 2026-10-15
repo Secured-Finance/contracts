@@ -282,8 +282,7 @@ describe('LendingMarketController - Calculations', () => {
     });
   });
 
-  // Temporarily disabled during incident recovery for the temporary contract upgrade
-  describe.skip('Order Estimations', async () => {
+  describe('Order Estimations', async () => {
     const conditions = [
       {
         title:
