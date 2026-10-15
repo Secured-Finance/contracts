@@ -2,7 +2,7 @@
 pragma solidity 0.8.19;
 
 import {Constants} from "../Constants.sol";
-import {OrderBookLib, FilledOrder, PartiallyFilledOrder, IncidentResidualOrder} from "../OrderBookLib.sol";
+import {OrderBookLib, FilledOrder, PartiallyFilledOrder} from "../OrderBookLib.sol";
 import {ProtocolTypes} from "../../types/ProtocolTypes.sol";
 import {LendingMarketStorage as Storage, ItayoseLog, ItayoseProcess} from "../../storages/LendingMarketStorage.sol";
 import {RoundingUint256} from "../math/RoundingUint256.sol";
@@ -278,25 +278,6 @@ library OrderBookLogic {
 
             emit CircuitBreakerLimitRangeUpdated(Storage.slot().ccy, previousRange, _cbLimitRange);
         }
-    }
-
-    /**
-     * @notice Removes residual orders restored by the order-book incident.
-     * @dev This temporary recovery function must be removed after the incident recovery.
-     */
-    function recoverIncidentResidualOrders(
-        uint8 _orderBookId,
-        uint256 _maturity,
-        ProtocolTypes.Side _side,
-        uint256 _expectedRoot,
-        IncidentResidualOrder[] calldata _orders
-    ) external {
-        _getOrderBook(_orderBookId).recoverIncidentResidualOrders(
-            _maturity,
-            _side,
-            _expectedRoot,
-            _orders
-        );
     }
 
     function createOrderBook(
