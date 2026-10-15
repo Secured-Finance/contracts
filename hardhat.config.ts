@@ -30,6 +30,7 @@ const networkConfig = (chainId: number): HttpNetworkUserConfig => ({
   saveDeployments: true,
   gasPrice: 'auto',
   gasMultiplier: 3,
+  timeout: 300000,
   httpHeaders: process.env.GLIF_API_KEY
     ? {
         Authorization: `Bearer ${process.env.GLIF_API_KEY}`,
