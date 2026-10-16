@@ -32,6 +32,15 @@ contract MixinLendingMarketConfiguration is Ownable {
     }
 
     /**
+     * @notice Gets the minimum amount required to place a pre-order
+     * @param _ccy Currency name in bytes32
+     * @return The minimum pre-order amount in the currency's smallest unit. Zero disables the limit
+     */
+    function getMinimumPreOrderAmount(bytes32 _ccy) external view returns (uint256) {
+        return ILendingMarket(Storage.slot().lendingMarkets[_ccy]).getMinimumPreOrderAmount();
+    }
+
+    /**
      * @notice Updates the order fee rate
      * @param _ccy Currency name in bytes32
      * @param _orderFeeRate The order fee rate received by protocol
@@ -48,6 +57,20 @@ contract MixinLendingMarketConfiguration is Ownable {
     function updateCircuitBreakerLimitRange(bytes32 _ccy, uint256 _cbLimitRange) public onlyOwner {
         ILendingMarket(Storage.slot().lendingMarkets[_ccy]).updateCircuitBreakerLimitRange(
             _cbLimitRange
+        );
+    }
+
+    /**
+     * @notice Updates the minimum amount required to place a pre-order
+     * @param _ccy Currency name in bytes32
+     * @param _minimumPreOrderAmount The minimum pre-order amount in the currency's smallest unit. Zero disables the limit
+     */
+    function updateMinimumPreOrderAmount(
+        bytes32 _ccy,
+        uint256 _minimumPreOrderAmount
+    ) external onlyOwner {
+        ILendingMarket(Storage.slot().lendingMarkets[_ccy]).updateMinimumPreOrderAmount(
+            _minimumPreOrderAmount
         );
     }
 }

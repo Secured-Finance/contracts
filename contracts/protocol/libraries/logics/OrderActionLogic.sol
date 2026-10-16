@@ -19,6 +19,7 @@ library OrderActionLogic {
     error InvalidFutureValue();
     error EmptyOrderBook();
     error OppositeSideOrderExists();
+    error PreOrderAmountTooSmall(uint256 amount, uint256 minimumAmount);
 
     struct OrderExecutionConditions {
         bool isFilled;
@@ -300,6 +301,9 @@ library OrderActionLogic {
     ) external {
         if (_unitPrice == 0) revert InvalidPreOrderUnitPrice();
         if (_amount == 0) revert InvalidAmount();
+
+        uint256 minimumAmount = Storage.slot().minimumPreOrderAmount;
+        if (_amount < minimumAmount) revert PreOrderAmountTooSmall(_amount, minimumAmount);
 
         OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
         orderBook.updateUserMaturity(_user);

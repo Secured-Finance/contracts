@@ -158,6 +158,12 @@ function getOrderFeeRate() external view returns (uint256)
 function getCircuitBreakerLimitRange() external view returns (uint256)
 ```
 
+### getMinimumPreOrderAmount
+
+```solidity
+function getMinimumPreOrderAmount() external view returns (uint256)
+```
+
 ### getOpeningDate
 
 ```solidity
@@ -324,6 +330,12 @@ function updateOrderFeeRate(uint256 orderFeeRate) external
 function updateCircuitBreakerLimitRange(uint256 limitRange) external
 ```
 
+### updateMinimumPreOrderAmount
+
+```solidity
+function updateMinimumPreOrderAmount(uint256 minimumPreOrderAmount) external
+```
+
 ### pause
 
 ```solidity
@@ -335,4 +347,3 @@ function pause() external
 ```solidity
 function unpause() external
 ```
-

@@ -41,6 +41,7 @@ struct Storage {
   mapping(uint256 => bool) isReady;
   mapping(uint256 => struct ItayoseLog) itayoseLogs;
   mapping(uint256 => struct ItayoseProcess) itayoseProcesses;
+  uint256 minimumPreOrderAmount;
 }
 ```
 
@@ -49,4 +50,3 @@ struct Storage {
 ```solidity
 function slot() internal pure returns (struct LendingMarketStorage.Storage r)
 ```
-

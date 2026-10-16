@@ -539,6 +539,59 @@ describe('LendingMarketController - Operations', () => {
         ).to.equal(CIRCUIT_BREAKER_LIMIT_RANGE);
       });
 
+      it('Update the minimum pre-order amount', async () => {
+        const lendingMarketAddress =
+          await lendingMarketControllerProxy.getLendingMarket(targetCurrency);
+        const orderBookLogic = await ethers.getContractAt(
+          'OrderBookLogic',
+          lendingMarketAddress,
+        );
+
+        expect(
+          await lendingMarketControllerProxy.getMinimumPreOrderAmount(
+            targetCurrency,
+          ),
+        ).to.equal(0);
+
+        await expect(
+          lendingMarketControllerProxy.updateMinimumPreOrderAmount(
+            targetCurrency,
+            100,
+          ),
+        )
+          .to.emit(orderBookLogic, 'MinimumPreOrderAmountUpdated')
+          .withArgs(targetCurrency, 0, 100);
+
+        expect(
+          await lendingMarketControllerProxy.getMinimumPreOrderAmount(
+            targetCurrency,
+          ),
+        ).to.equal(100);
+
+        await expect(
+          lendingMarketControllerProxy.updateMinimumPreOrderAmount(
+            targetCurrency,
+            0,
+          ),
+        )
+          .to.emit(orderBookLogic, 'MinimumPreOrderAmountUpdated')
+          .withArgs(targetCurrency, 100, 0);
+
+        expect(
+          await lendingMarketControllerProxy.getMinimumPreOrderAmount(
+            targetCurrency,
+          ),
+        ).to.equal(0);
+      });
+
+      it('Rejects a minimum pre-order amount update from a non-owner', async () => {
+        await expect(
+          lendingMarketControllerProxy
+            .connect(alice)
+            .updateMinimumPreOrderAmount(targetCurrency, 100),
+        ).to.be.revertedWith('Ownable: caller is not the owner');
+      });
+
       it('Update beacon proxy implementations and calculate Genesis value', async () => {
         await lendingMarketControllerProxy
           .connect(alice)

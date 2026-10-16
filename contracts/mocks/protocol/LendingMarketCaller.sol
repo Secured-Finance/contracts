@@ -48,6 +48,10 @@ contract LendingMarketCaller {
         );
     }
 
+    function updateMinimumPreOrderAmount(bytes32 _ccy, uint256 _minimumPreOrderAmount) external {
+        ILendingMarket(lendingMarkets[_ccy]).updateMinimumPreOrderAmount(_minimumPreOrderAmount);
+    }
+
     function executeAutoRoll(
         bytes32 _ccy,
         uint8 _maturedOrderBookId,

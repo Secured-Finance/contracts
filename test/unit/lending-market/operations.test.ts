@@ -79,4 +79,22 @@ describe('LendingMarket - Operations', () => {
       'LendingMarketController',
     );
   });
+
+  it('Updates the minimum pre-order amount through the controller', async () => {
+    expect(await lendingMarket.getMinimumPreOrderAmount()).to.equal(0);
+
+    await expect(
+      lendingMarketCaller.updateMinimumPreOrderAmount(targetCurrency, 100),
+    )
+      .to.emit(orderBookLogic, 'MinimumPreOrderAmountUpdated')
+      .withArgs(targetCurrency, 0, 100);
+
+    expect(await lendingMarket.getMinimumPreOrderAmount()).to.equal(100);
+  });
+
+  it('Fail to update the minimum pre-order amount due to invalid caller', async () => {
+    await expect(lendingMarket.updateMinimumPreOrderAmount(1)).revertedWith(
+      'LendingMarketController',
+    );
+  });
 });
