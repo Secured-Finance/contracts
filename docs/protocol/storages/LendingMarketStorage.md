@@ -50,3 +50,4 @@ struct Storage {
 ```solidity
 function slot() internal pure returns (struct LendingMarketStorage.Storage r)
 ```
+

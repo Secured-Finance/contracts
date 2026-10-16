@@ -94,3 +94,4 @@ Updates the minimum amount required to place a pre-order
 | ---- | ---- | ----------- |
 | _ccy | bytes32 | Currency name in bytes32 |
 | _minimumPreOrderAmount | uint256 | The minimum pre-order amount in the currency's smallest unit. Zero disables the limit |
+
