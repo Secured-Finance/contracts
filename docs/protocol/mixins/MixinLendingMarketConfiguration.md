@@ -40,6 +40,22 @@ Gets the limit range in unit price for the circuit breaker
 | ---- | ---- | ----------- |
 | [0] | uint256 | The auto-roll fee rate received by protocol |
 
+### getMinimumPreOrderAmount
+
+```solidity
+function getMinimumPreOrderAmount(bytes32 _ccy) external view returns (uint256)
+```
+
+Gets the minimum amount required to place a pre-order
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | uint256 | The minimum pre-order amount in the currency's smallest unit. Zero disables the limit |
+
 ### updateOrderFeeRate
 
 ```solidity
@@ -66,3 +82,15 @@ Updates the auto-roll fee rate
 | _ccy | bytes32 | Currency name in bytes32 |
 | _cbLimitRange | uint256 | The circuit breaker limit range |
 
+### updateMinimumPreOrderAmount
+
+```solidity
+function updateMinimumPreOrderAmount(bytes32 _ccy, uint256 _minimumPreOrderAmount) external
+```
+
+Updates the minimum amount required to place a pre-order
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 |
+| _minimumPreOrderAmount | uint256 | The minimum pre-order amount in the currency's smallest unit. Zero disables the limit |

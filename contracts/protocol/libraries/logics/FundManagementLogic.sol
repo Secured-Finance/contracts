@@ -808,14 +808,6 @@ library FundManagementLogic {
         futureValue = funds.futureValue;
     }
 
-    function cleanUpAllFunds(address _user) external {
-        bytes32[] memory currencies = Storage.slot().usedCurrencies[_user].values();
-        uint256 length = currencies.length;
-        for (uint256 i; i < length; i++) {
-            cleanUpFunds(currencies[i], _user);
-        }
-    }
-
     function cleanUpFunds(
         bytes32 _ccy,
         address _user

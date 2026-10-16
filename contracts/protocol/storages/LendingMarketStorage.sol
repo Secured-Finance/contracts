@@ -32,6 +32,8 @@ library LendingMarketStorage {
         mapping(uint256 maturity => bool isReady) isReady;
         mapping(uint256 maturity => ItayoseLog log) itayoseLogs;
         mapping(uint256 maturity => ItayoseProcess process) itayoseProcesses;
+        // Minimum amount required to place a pre-order. Zero disables the limit.
+        uint256 minimumPreOrderAmount;
     }
 
     function slot() internal pure returns (Storage storage r) {

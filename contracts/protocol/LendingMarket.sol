@@ -425,6 +425,14 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     }
 
     /**
+     * @notice Gets the minimum amount required to place a pre-order
+     * @return The minimum pre-order amount in the currency's smallest unit. Zero disables the limit
+     */
+    function getMinimumPreOrderAmount() external view override returns (uint256) {
+        return Storage.slot().minimumPreOrderAmount;
+    }
+
+    /**
      * @notice Gets the market opening date.
      * @param _orderBookId The order book id
      * @return openingDate The market opening date
@@ -895,6 +903,16 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         uint256 _cbLimitRange
     ) external override onlyLendingMarketController {
         OrderBookLogic.updateCircuitBreakerLimitRange(_cbLimitRange);
+    }
+
+    /**
+     * @notice Updates the minimum amount required to place a pre-order
+     * @param _minimumPreOrderAmount The minimum pre-order amount in the currency's smallest unit. Zero disables the limit
+     */
+    function updateMinimumPreOrderAmount(
+        uint256 _minimumPreOrderAmount
+    ) external override onlyLendingMarketController {
+        OrderBookLogic.updateMinimumPreOrderAmount(_minimumPreOrderAmount);
     }
 
     /**

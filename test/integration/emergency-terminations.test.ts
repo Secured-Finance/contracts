@@ -443,8 +443,8 @@ describe('Integration Test: Emergency terminations', async () => {
         await time.increaseTo(maturities[0].toString());
         await lendingMarketController.connect(owner).rotateOrderBooks(hexETH);
 
-        await lendingMarketController.cleanUpAllFunds(alice.address);
-        await lendingMarketController.cleanUpAllFunds(bob.address);
+        await lendingMarketController.cleanUpFunds(hexETH, alice.address);
+        await lendingMarketController.cleanUpFunds(hexETH, bob.address);
       });
 
       it('Execute emergency termination', async () => {

@@ -355,7 +355,10 @@ describe('Integration Test: Order Book Stress Test', async () => {
   describe('Order Book Performance Analysis', async () => {
     it('Should call cleanUp on LendingMarketController', async () => {
       console.log('\n=== Clean Up Lending User Funds ===');
-      const tx = await lendingMarketController.cleanUpAllFunds(userA.address);
+      const tx = await lendingMarketController.cleanUpFunds(
+        hexWFIL,
+        userA.address,
+      );
       const receipt = await tx.wait();
       console.log(`Gas used for clean up: ${receipt.gasUsed.toString()}`);
       expect(receipt.status).to.equal(1, 'Clean up transaction failed');

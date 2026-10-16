@@ -539,6 +539,59 @@ describe('LendingMarketController - Operations', () => {
         ).to.equal(CIRCUIT_BREAKER_LIMIT_RANGE);
       });
 
+      it('Update the minimum pre-order amount', async () => {
+        const lendingMarketAddress =
+          await lendingMarketControllerProxy.getLendingMarket(targetCurrency);
+        const orderBookLogic = await ethers.getContractAt(
+          'OrderBookLogic',
+          lendingMarketAddress,
+        );
+
+        expect(
+          await lendingMarketControllerProxy.getMinimumPreOrderAmount(
+            targetCurrency,
+          ),
+        ).to.equal(0);
+
+        await expect(
+          lendingMarketControllerProxy.updateMinimumPreOrderAmount(
+            targetCurrency,
+            100,
+          ),
+        )
+          .to.emit(orderBookLogic, 'MinimumPreOrderAmountUpdated')
+          .withArgs(targetCurrency, 0, 100);
+
+        expect(
+          await lendingMarketControllerProxy.getMinimumPreOrderAmount(
+            targetCurrency,
+          ),
+        ).to.equal(100);
+
+        await expect(
+          lendingMarketControllerProxy.updateMinimumPreOrderAmount(
+            targetCurrency,
+            0,
+          ),
+        )
+          .to.emit(orderBookLogic, 'MinimumPreOrderAmountUpdated')
+          .withArgs(targetCurrency, 100, 0);
+
+        expect(
+          await lendingMarketControllerProxy.getMinimumPreOrderAmount(
+            targetCurrency,
+          ),
+        ).to.equal(0);
+      });
+
+      it('Rejects a minimum pre-order amount update from a non-owner', async () => {
+        await expect(
+          lendingMarketControllerProxy
+            .connect(alice)
+            .updateMinimumPreOrderAmount(targetCurrency, 100),
+        ).to.be.revertedWith('Ownable: caller is not the owner');
+      });
+
       it('Update beacon proxy implementations and calculate Genesis value', async () => {
         await lendingMarketControllerProxy
           .connect(alice)
@@ -997,11 +1050,21 @@ describe('LendingMarketController - Operations', () => {
           );
         };
 
-        const cleanUpAllFunds = async () => {
-          await lendingMarketControllerProxy.cleanUpAllFunds(alice.address);
-          await lendingMarketControllerProxy.cleanUpAllFunds(bob.address);
-          await lendingMarketControllerProxy.cleanUpAllFunds(carol.address);
-          await lendingMarketControllerProxy.cleanUpAllFunds(
+        const cleanUpFunds = async () => {
+          await lendingMarketControllerProxy.cleanUpFunds(
+            targetCurrency,
+            alice.address,
+          );
+          await lendingMarketControllerProxy.cleanUpFunds(
+            targetCurrency,
+            bob.address,
+          );
+          await lendingMarketControllerProxy.cleanUpFunds(
+            targetCurrency,
+            carol.address,
+          );
+          await lendingMarketControllerProxy.cleanUpFunds(
+            targetCurrency,
             mockReserveFund.address,
           );
         };
@@ -1054,7 +1117,7 @@ describe('LendingMarketController - Operations', () => {
         };
 
         await checkGenesisValue();
-        await cleanUpAllFunds();
+        await cleanUpFunds();
 
         await lendingMarketControllerProxy
           .connect(alice)
@@ -1079,9 +1142,9 @@ describe('LendingMarketController - Operations', () => {
 
         await rotateOrderBooks();
         await checkGenesisValue();
-        await cleanUpAllFunds();
+        await cleanUpFunds();
         await checkGenesisValue();
-        await cleanUpAllFunds();
+        await cleanUpFunds();
         await checkGenesisValue();
 
         await lendingMarketControllerProxy
@@ -1104,7 +1167,7 @@ describe('LendingMarketController - Operations', () => {
           );
 
         await rotateOrderBooks();
-        await cleanUpAllFunds();
+        await cleanUpFunds();
         await checkGenesisValue();
 
         await lendingMarketControllerProxy
@@ -1127,10 +1190,10 @@ describe('LendingMarketController - Operations', () => {
           );
 
         await rotateOrderBooks();
-        await cleanUpAllFunds();
+        await cleanUpFunds();
         await checkGenesisValue();
 
-        await cleanUpAllFunds();
+        await cleanUpFunds();
         await checkGenesisValue(true);
       });
 

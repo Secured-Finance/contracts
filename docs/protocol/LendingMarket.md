@@ -513,6 +513,18 @@ Gets the limit range in unit price for the circuit breaker
 | ---- | ---- | ----------- |
 | [0] | uint256 | The limit range in unit price for the circuit breaker |
 
+### getMinimumPreOrderAmount
+
+```solidity
+function getMinimumPreOrderAmount() external view returns (uint256)
+```
+
+Gets the minimum amount required to place a pre-order
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | uint256 | The minimum pre-order amount in the currency's smallest unit. Zero disables the limit |
+
 ### getOpeningDate
 
 ```solidity
@@ -875,6 +887,18 @@ Updates the auto-roll fee rate
 | ---- | ---- | ----------- |
 | _cbLimitRange | uint256 | The circuit breaker limit range |
 
+### updateMinimumPreOrderAmount
+
+```solidity
+function updateMinimumPreOrderAmount(uint256 _minimumPreOrderAmount) external
+```
+
+Updates the minimum amount required to place a pre-order
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _minimumPreOrderAmount | uint256 | The minimum pre-order amount in the currency's smallest unit. Zero disables the limit |
+
 ### pause
 
 ```solidity
@@ -890,4 +914,3 @@ function unpause() external
 ```
 
 Unpauses the lending market.
-

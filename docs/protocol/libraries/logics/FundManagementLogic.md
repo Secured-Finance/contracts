@@ -295,12 +295,6 @@ function getGenesisValue(bytes32 _ccy, address _user) public view returns (int25
 function getPosition(bytes32 _ccy, uint256 _maturity, address _user) public view returns (int256 presentValue, int256 futureValue)
 ```
 
-### cleanUpAllFunds
-
-```solidity
-function cleanUpAllFunds(address _user) external
-```
-
 ### cleanUpFunds
 
 ```solidity

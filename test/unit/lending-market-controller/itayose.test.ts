@@ -257,6 +257,173 @@ describe('LendingMarketController - Itayose', () => {
     ).to.be.revertedWith('InvalidPreOrderUnitPrice');
   });
 
+  it('Applies the latest currency minimum to new pre-orders across maturities', async () => {
+    const { timestamp } = await ethers.provider.getBlock('latest');
+    const openingDate = moment(timestamp * 1000)
+      .add(2, 'h')
+      .unix();
+
+    await initializeCurrency(targetCurrency, openingDate);
+
+    const firstRange =
+      await lendingMarketControllerProxy.getOrderUnitPriceRange(
+        targetCurrency,
+        maturities[0],
+      );
+    const secondRange =
+      await lendingMarketControllerProxy.getOrderUnitPriceRange(
+        targetCurrency,
+        maturities[1],
+      );
+    const thirdRange =
+      await lendingMarketControllerProxy.getOrderUnitPriceRange(
+        targetCurrency,
+        maturities[2],
+      );
+
+    await lendingMarketControllerProxy.updateMinimumPreOrderAmount(
+      targetCurrency,
+      100,
+    );
+
+    await expect(
+      lendingMarketControllerProxy
+        .connect(alice)
+        .executePreOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          99,
+          firstRange.referenceUnitPrice,
+        ),
+    ).to.be.revertedWith('PreOrderAmountTooSmall');
+
+    await lendingMarketControllerProxy
+      .connect(alice)
+      .executePreOrder(
+        targetCurrency,
+        maturities[0],
+        Side.LEND,
+        100,
+        firstRange.referenceUnitPrice,
+      );
+
+    await lendingMarketControllerProxy.updateMinimumPreOrderAmount(
+      targetCurrency,
+      200,
+    );
+
+    const aliceOrders = await lendingMarketReader[
+      'getOrders(bytes32[],address)'
+    ]([targetCurrency], alice.address);
+    expect(aliceOrders.activeOrders.length).to.equal(1);
+    expect(aliceOrders.activeOrders[0].amount).to.equal(100);
+
+    await expect(
+      lendingMarketControllerProxy
+        .connect(bob)
+        .executePreOrder(
+          targetCurrency,
+          maturities[1],
+          Side.BORROW,
+          199,
+          secondRange.referenceUnitPrice,
+        ),
+    ).to.be.revertedWith('PreOrderAmountTooSmall');
+
+    await lendingMarketControllerProxy
+      .connect(bob)
+      .executePreOrder(
+        targetCurrency,
+        maturities[1],
+        Side.BORROW,
+        200,
+        secondRange.referenceUnitPrice,
+      );
+
+    await lendingMarketControllerProxy.updateMinimumPreOrderAmount(
+      targetCurrency,
+      0,
+    );
+
+    await lendingMarketControllerProxy
+      .connect(carol)
+      .executePreOrder(
+        targetCurrency,
+        maturities[2],
+        Side.LEND,
+        1,
+        thirdRange.referenceUnitPrice,
+      );
+  });
+
+  it('Rejects below-minimum pre-orders through every controller entry point', async () => {
+    const { timestamp } = await ethers.provider.getBlock('latest');
+    const openingDate = moment(timestamp * 1000)
+      .add(2, 'h')
+      .unix();
+
+    await initializeCurrency(targetCurrency, openingDate);
+    await lendingMarketControllerProxy.updateMinimumPreOrderAmount(
+      targetCurrency,
+      100,
+    );
+
+    const range = await lendingMarketControllerProxy.getOrderUnitPriceRange(
+      targetCurrency,
+      maturities[0],
+    );
+
+    await expect(
+      lendingMarketControllerProxy
+        .connect(alice)
+        .executePreOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          0,
+          range.referenceUnitPrice,
+        ),
+    ).to.be.revertedWith('InvalidAmount');
+    await expect(
+      lendingMarketControllerProxy
+        .connect(alice)
+        .executePreOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          99,
+          range.referenceUnitPrice,
+        ),
+    ).to.be.revertedWith('PreOrderAmountTooSmall');
+    await expect(
+      lendingMarketControllerProxy
+        .connect(alice)
+        .depositAndExecutesPreOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          99,
+          range.referenceUnitPrice,
+        ),
+    ).to.be.revertedWith('PreOrderAmountTooSmall');
+    await expect(
+      lendingMarketControllerProxy
+        .connect(alice)
+        .depositWithPermitAndExecutePreOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          99,
+          range.referenceUnitPrice,
+          ethers.constants.MaxUint256,
+          1,
+          ethers.utils.formatBytes32String('dummy'),
+          ethers.utils.formatBytes32String('dummy'),
+        ),
+    ).to.be.revertedWith('PreOrderAmountTooSmall');
+  });
+
   it('Executes a resumable Itayose process one phase per transaction', async () => {
     const { timestamp } = await ethers.provider.getBlock('latest');
     const openingDate = moment(timestamp * 1000)
