@@ -1043,15 +1043,6 @@ contract LendingMarketController is
     }
 
     /**
-     * @notice Clean up all funds of the user
-     * @param _user User's address
-     */
-    function cleanUpAllFunds(address _user) external override nonReentrant returns (bool) {
-        FundManagementLogic.cleanUpAllFunds(_user);
-        return true;
-    }
-
-    /**
      * @notice Clean up user funds used for lazy evaluation by the following actions:
      * - Removes order IDs that is already filled on the order book.
      * - Convert Future values that have already been auto-rolled to Genesis values.

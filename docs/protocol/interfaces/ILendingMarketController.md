@@ -448,12 +448,6 @@ function pauseLendingMarket(bytes32 ccy) external returns (bool)
 function unpauseLendingMarket(bytes32 ccy) external returns (bool)
 ```
 
-### cleanUpAllFunds
-
-```solidity
-function cleanUpAllFunds(address user) external returns (bool)
-```
-
 ### cleanUpFunds
 
 ```solidity

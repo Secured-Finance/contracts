@@ -1050,11 +1050,21 @@ describe('LendingMarketController - Operations', () => {
           );
         };
 
-        const cleanUpAllFunds = async () => {
-          await lendingMarketControllerProxy.cleanUpAllFunds(alice.address);
-          await lendingMarketControllerProxy.cleanUpAllFunds(bob.address);
-          await lendingMarketControllerProxy.cleanUpAllFunds(carol.address);
-          await lendingMarketControllerProxy.cleanUpAllFunds(
+        const cleanUpFunds = async () => {
+          await lendingMarketControllerProxy.cleanUpFunds(
+            targetCurrency,
+            alice.address,
+          );
+          await lendingMarketControllerProxy.cleanUpFunds(
+            targetCurrency,
+            bob.address,
+          );
+          await lendingMarketControllerProxy.cleanUpFunds(
+            targetCurrency,
+            carol.address,
+          );
+          await lendingMarketControllerProxy.cleanUpFunds(
+            targetCurrency,
             mockReserveFund.address,
           );
         };
@@ -1107,7 +1117,7 @@ describe('LendingMarketController - Operations', () => {
         };
 
         await checkGenesisValue();
-        await cleanUpAllFunds();
+        await cleanUpFunds();
 
         await lendingMarketControllerProxy
           .connect(alice)
@@ -1132,9 +1142,9 @@ describe('LendingMarketController - Operations', () => {
 
         await rotateOrderBooks();
         await checkGenesisValue();
-        await cleanUpAllFunds();
+        await cleanUpFunds();
         await checkGenesisValue();
-        await cleanUpAllFunds();
+        await cleanUpFunds();
         await checkGenesisValue();
 
         await lendingMarketControllerProxy
@@ -1157,7 +1167,7 @@ describe('LendingMarketController - Operations', () => {
           );
 
         await rotateOrderBooks();
-        await cleanUpAllFunds();
+        await cleanUpFunds();
         await checkGenesisValue();
 
         await lendingMarketControllerProxy
@@ -1180,10 +1190,10 @@ describe('LendingMarketController - Operations', () => {
           );
 
         await rotateOrderBooks();
-        await cleanUpAllFunds();
+        await cleanUpFunds();
         await checkGenesisValue();
 
-        await cleanUpAllFunds();
+        await cleanUpFunds();
         await checkGenesisValue(true);
       });
 

@@ -982,18 +982,6 @@ Unpauses the lending market by currency
 | ---- | ---- | ----------- |
 | [0] | bool | True if the execution of the operation succeeds |
 
-### cleanUpAllFunds
-
-```solidity
-function cleanUpAllFunds(address _user) external returns (bool)
-```
-
-Clean up all funds of the user
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _user | address | User's address |
-
 ### cleanUpFunds
 
 ```solidity

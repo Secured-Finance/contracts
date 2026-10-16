@@ -331,8 +331,6 @@ interface ILendingMarketController {
 
     function unpauseLendingMarket(bytes32 ccy) external returns (bool);
 
-    function cleanUpAllFunds(address user) external returns (bool);
-
     function cleanUpFunds(bytes32 ccy, address user) external returns (uint256 activeOrderCount);
 
     function updateMinDebtUnitPrice(bytes32 _ccy, uint256 _minDebtUnitPrice) external;
