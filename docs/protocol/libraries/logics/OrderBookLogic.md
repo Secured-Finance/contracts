@@ -112,10 +112,10 @@ event OrderFeeRateUpdated(bytes32 ccy, uint256 previousRate, uint256 rate)
 event CircuitBreakerLimitRangeUpdated(bytes32 ccy, uint256 previousRate, uint256 rate)
 ```
 
-### MinimumPreOrderAmountUpdated
+### MinPreOrderAmountUpdated
 
 ```solidity
-event MinimumPreOrderAmountUpdated(bytes32 ccy, uint256 previousAmount, uint256 newAmount)
+event MinPreOrderAmountUpdated(bytes32 ccy, uint256 previousAmount, uint256 newAmount)
 ```
 
 ### OrderBookCreated
@@ -268,10 +268,10 @@ function updateOrderFeeRate(uint256 _orderFeeRate) external
 function updateCircuitBreakerLimitRange(uint256 _cbLimitRange) external
 ```
 
-### updateMinimumPreOrderAmount
+### updateMinPreOrderAmount
 
 ```solidity
-function updateMinimumPreOrderAmount(uint256 _minimumPreOrderAmount) external
+function updateMinPreOrderAmount(uint256 _minPreOrderAmount) external
 ```
 
 ### createOrderBook
@@ -327,4 +327,3 @@ function _nextOrderBookId() internal returns (uint8)
 ```solidity
 function _getOrderBook(uint8 _orderBookId) private view returns (struct OrderBookLib.OrderBook)
 ```
-

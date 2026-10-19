@@ -428,8 +428,8 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @notice Gets the minimum amount required to place a pre-order
      * @return The minimum pre-order amount in the currency's smallest unit. Zero disables the limit
      */
-    function getMinimumPreOrderAmount() external view override returns (uint256) {
-        return Storage.slot().minimumPreOrderAmount;
+    function getMinPreOrderAmount() external view override returns (uint256) {
+        return Storage.slot().minPreOrderAmount;
     }
 
     /**
@@ -907,12 +907,12 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
 
     /**
      * @notice Updates the minimum amount required to place a pre-order
-     * @param _minimumPreOrderAmount The minimum pre-order amount in the currency's smallest unit. Zero disables the limit
+     * @param _minPreOrderAmount The minimum pre-order amount in the currency's smallest unit. Zero disables the limit
      */
-    function updateMinimumPreOrderAmount(
-        uint256 _minimumPreOrderAmount
+    function updateMinPreOrderAmount(
+        uint256 _minPreOrderAmount
     ) external override onlyLendingMarketController {
-        OrderBookLogic.updateMinimumPreOrderAmount(_minimumPreOrderAmount);
+        OrderBookLogic.updateMinPreOrderAmount(_minPreOrderAmount);
     }
 
     /**

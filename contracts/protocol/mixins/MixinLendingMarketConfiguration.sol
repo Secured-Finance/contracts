@@ -36,8 +36,8 @@ contract MixinLendingMarketConfiguration is Ownable {
      * @param _ccy Currency name in bytes32
      * @return The minimum pre-order amount in the currency's smallest unit. Zero disables the limit
      */
-    function getMinimumPreOrderAmount(bytes32 _ccy) external view returns (uint256) {
-        return ILendingMarket(Storage.slot().lendingMarkets[_ccy]).getMinimumPreOrderAmount();
+    function getMinPreOrderAmount(bytes32 _ccy) external view returns (uint256) {
+        return ILendingMarket(Storage.slot().lendingMarkets[_ccy]).getMinPreOrderAmount();
     }
 
     /**
@@ -63,14 +63,11 @@ contract MixinLendingMarketConfiguration is Ownable {
     /**
      * @notice Updates the minimum amount required to place a pre-order
      * @param _ccy Currency name in bytes32
-     * @param _minimumPreOrderAmount The minimum pre-order amount in the currency's smallest unit. Zero disables the limit
+     * @param _minPreOrderAmount The minimum pre-order amount in the currency's smallest unit. Zero disables the limit
      */
-    function updateMinimumPreOrderAmount(
-        bytes32 _ccy,
-        uint256 _minimumPreOrderAmount
-    ) external onlyOwner {
-        ILendingMarket(Storage.slot().lendingMarkets[_ccy]).updateMinimumPreOrderAmount(
-            _minimumPreOrderAmount
+    function updateMinPreOrderAmount(bytes32 _ccy, uint256 _minPreOrderAmount) external onlyOwner {
+        ILendingMarket(Storage.slot().lendingMarkets[_ccy]).updateMinPreOrderAmount(
+            _minPreOrderAmount
         );
     }
 }

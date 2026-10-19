@@ -53,11 +53,7 @@ library OrderBookLogic {
 
     event OrderFeeRateUpdated(bytes32 ccy, uint256 previousRate, uint256 rate);
     event CircuitBreakerLimitRangeUpdated(bytes32 ccy, uint256 previousRate, uint256 rate);
-    event MinimumPreOrderAmountUpdated(
-        bytes32 indexed ccy,
-        uint256 previousAmount,
-        uint256 newAmount
-    );
+    event MinPreOrderAmountUpdated(bytes32 indexed ccy, uint256 previousAmount, uint256 newAmount);
     event OrderBookCreated(uint8 orderBookId, uint256 maturity, uint256 openingDate);
 
     event ItayoseExecuted(
@@ -285,15 +281,11 @@ library OrderBookLogic {
         }
     }
 
-    function updateMinimumPreOrderAmount(uint256 _minimumPreOrderAmount) external {
-        uint256 previousAmount = Storage.slot().minimumPreOrderAmount;
-        Storage.slot().minimumPreOrderAmount = _minimumPreOrderAmount;
+    function updateMinPreOrderAmount(uint256 _minPreOrderAmount) external {
+        uint256 previousAmount = Storage.slot().minPreOrderAmount;
+        Storage.slot().minPreOrderAmount = _minPreOrderAmount;
 
-        emit MinimumPreOrderAmountUpdated(
-            Storage.slot().ccy,
-            previousAmount,
-            _minimumPreOrderAmount
-        );
+        emit MinPreOrderAmountUpdated(Storage.slot().ccy, previousAmount, _minPreOrderAmount);
     }
 
     function createOrderBook(

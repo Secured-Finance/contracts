@@ -116,7 +116,7 @@ interface ILendingMarket {
 
     function getCircuitBreakerLimitRange() external view returns (uint256);
 
-    function getMinimumPreOrderAmount() external view returns (uint256);
+    function getMinPreOrderAmount() external view returns (uint256);
 
     function getOpeningDate(uint8 orderBookId) external view returns (uint256);
 
@@ -299,7 +299,7 @@ interface ILendingMarket {
 
     function updateCircuitBreakerLimitRange(uint256 limitRange) external;
 
-    function updateMinimumPreOrderAmount(uint256 minimumPreOrderAmount) external;
+    function updateMinPreOrderAmount(uint256 minPreOrderAmount) external;
 
     function pause() external;
 

@@ -281,7 +281,7 @@ describe('LendingMarketController - Itayose', () => {
         maturities[2],
       );
 
-    await lendingMarketControllerProxy.updateMinimumPreOrderAmount(
+    await lendingMarketControllerProxy.updateMinPreOrderAmount(
       targetCurrency,
       100,
     );
@@ -308,7 +308,7 @@ describe('LendingMarketController - Itayose', () => {
         firstRange.referenceUnitPrice,
       );
 
-    await lendingMarketControllerProxy.updateMinimumPreOrderAmount(
+    await lendingMarketControllerProxy.updateMinPreOrderAmount(
       targetCurrency,
       200,
     );
@@ -341,7 +341,7 @@ describe('LendingMarketController - Itayose', () => {
         secondRange.referenceUnitPrice,
       );
 
-    await lendingMarketControllerProxy.updateMinimumPreOrderAmount(
+    await lendingMarketControllerProxy.updateMinPreOrderAmount(
       targetCurrency,
       0,
     );
@@ -364,7 +364,7 @@ describe('LendingMarketController - Itayose', () => {
       .unix();
 
     await initializeCurrency(targetCurrency, openingDate);
-    await lendingMarketControllerProxy.updateMinimumPreOrderAmount(
+    await lendingMarketControllerProxy.updateMinPreOrderAmount(
       targetCurrency,
       100,
     );

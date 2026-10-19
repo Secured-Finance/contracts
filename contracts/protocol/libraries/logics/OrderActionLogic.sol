@@ -302,7 +302,7 @@ library OrderActionLogic {
         if (_unitPrice == 0) revert InvalidPreOrderUnitPrice();
         if (_amount == 0) revert InvalidAmount();
 
-        uint256 minimumAmount = Storage.slot().minimumPreOrderAmount;
+        uint256 minimumAmount = Storage.slot().minPreOrderAmount;
         if (_amount < minimumAmount) revert PreOrderAmountTooSmall(_amount, minimumAmount);
 
         OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
