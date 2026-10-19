@@ -327,3 +327,4 @@ function _nextOrderBookId() internal returns (uint8)
 ```solidity
 function _getOrderBook(uint8 _orderBookId) private view returns (struct OrderBookLib.OrderBook)
 ```
+
