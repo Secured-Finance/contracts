@@ -548,37 +548,37 @@ describe('LendingMarketController - Operations', () => {
         );
 
         expect(
-          await lendingMarketControllerProxy.getMinimumPreOrderAmount(
+          await lendingMarketControllerProxy.getMinPreOrderAmount(
             targetCurrency,
           ),
         ).to.equal(0);
 
         await expect(
-          lendingMarketControllerProxy.updateMinimumPreOrderAmount(
+          lendingMarketControllerProxy.updateMinPreOrderAmount(
             targetCurrency,
             100,
           ),
         )
-          .to.emit(orderBookLogic, 'MinimumPreOrderAmountUpdated')
+          .to.emit(orderBookLogic, 'MinPreOrderAmountUpdated')
           .withArgs(targetCurrency, 0, 100);
 
         expect(
-          await lendingMarketControllerProxy.getMinimumPreOrderAmount(
+          await lendingMarketControllerProxy.getMinPreOrderAmount(
             targetCurrency,
           ),
         ).to.equal(100);
 
         await expect(
-          lendingMarketControllerProxy.updateMinimumPreOrderAmount(
+          lendingMarketControllerProxy.updateMinPreOrderAmount(
             targetCurrency,
             0,
           ),
         )
-          .to.emit(orderBookLogic, 'MinimumPreOrderAmountUpdated')
+          .to.emit(orderBookLogic, 'MinPreOrderAmountUpdated')
           .withArgs(targetCurrency, 100, 0);
 
         expect(
-          await lendingMarketControllerProxy.getMinimumPreOrderAmount(
+          await lendingMarketControllerProxy.getMinPreOrderAmount(
             targetCurrency,
           ),
         ).to.equal(0);
@@ -588,7 +588,7 @@ describe('LendingMarketController - Operations', () => {
         await expect(
           lendingMarketControllerProxy
             .connect(alice)
-            .updateMinimumPreOrderAmount(targetCurrency, 100),
+            .updateMinPreOrderAmount(targetCurrency, 100),
         ).to.be.revertedWith('Ownable: caller is not the owner');
       });
 
