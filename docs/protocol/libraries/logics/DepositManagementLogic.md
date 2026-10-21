@@ -110,13 +110,31 @@ function _calculateCollateral(address _user, struct ILendingMarketController.Add
 ### getWithdrawableCollateral
 
 ```solidity
-function getWithdrawableCollateral(address _user) public view returns (uint256, bool usedCollateralExists)
+function getWithdrawableCollateral(address _user) public view returns (uint256)
 ```
 
 ### getWithdrawableCollateral
 
 ```solidity
 function getWithdrawableCollateral(bytes32 _ccy, address _user) public view returns (uint256 withdrawableAmount)
+```
+
+### _calculateWithdrawableCollateral
+
+```solidity
+function _calculateWithdrawableCollateral(uint256 _totalCollateral, uint256 _totalUsedCollateral, uint256 _totalDeposit) private view returns (uint256)
+```
+
+### _isCoveredAfterWithdrawal
+
+```solidity
+function _isCoveredAfterWithdrawal(address _user, bytes32 _ccy, uint256 _withdrawalAmount, uint256 _totalCollateral, uint256 _totalUsedCollateral) private view returns (bool)
+```
+
+### _isEnoughCollateral
+
+```solidity
+function _isEnoughCollateral(uint256 _totalCollateral, uint256 _totalUsedCollateral) private view returns (bool)
 ```
 
 ### canDepositCurrency

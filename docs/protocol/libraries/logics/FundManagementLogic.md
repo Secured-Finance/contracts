@@ -277,6 +277,12 @@ function calculateFunds(bytes32 _ccy, address _user, struct ILendingMarketContro
 function calculateTotalFundsInBaseCurrency(address _user, struct ILendingMarketController.AdditionalFunds _additionalFunds, uint256 _liquidationThresholdRate) external view returns (struct ILendingMarketController.CalculatedTotalFunds totalFunds)
 ```
 
+### _ensureNonZeroLiability
+
+```solidity
+function _ensureNonZeroLiability(uint256 _amount, uint256 _amountInBaseCurrency) private pure returns (uint256)
+```
+
 ### getUsedMaturities
 
 ```solidity
