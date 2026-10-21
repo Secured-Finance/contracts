@@ -50,7 +50,7 @@ describe('Integration Test: Itayose (ERC20)', async () => {
     maturity: BigNumber,
     unitPrice: string,
   ) => {
-    const amountInFIL = BigNumber.from('3000000');
+    const amountInFIL = BigNumber.from('3000000000');
     const amountInETH = amountInFIL
       .mul(wFilToETHRate)
       .div(BigNumber.from(10).pow(18));
