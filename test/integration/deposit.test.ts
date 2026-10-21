@@ -1860,4 +1860,105 @@ describe('Integration Test: Deposit', async () => {
       expect(alicePV.abs()).to.equal(orderAmountInWBTC);
     });
   });
+
+  describe('Withdraw collateral with amounts below base currency precision', async () => {
+    it('Prevents withdrawing all collateral while a BORROW position rounds to zero', async () => {
+      [alice, bob] = await getUsers(2);
+      const maturities = await lendingMarketController.getMaturities(hexETH);
+      const maturity = maturities[maturities.length - 1];
+      const collateralAmount = ethers.utils.parseEther('1');
+      const borrowAmount = BigNumber.from(1);
+
+      expect(
+        await currencyController['convertToBaseCurrency(bytes32,uint256)'](
+          hexETH,
+          borrowAmount,
+        ),
+      ).to.equal(0);
+
+      await tokenVault.connect(alice).deposit(hexETH, collateralAmount, {
+        value: collateralAmount,
+      });
+      await tokenVault.connect(bob).deposit(hexETH, borrowAmount, {
+        value: borrowAmount,
+      });
+
+      await lendingMarketController
+        .connect(alice)
+        .executeOrder(hexETH, maturity, Side.BORROW, borrowAmount, '9000');
+      await lendingMarketController
+        .connect(bob)
+        .executeOrder(hexETH, maturity, Side.LEND, borrowAmount, '0');
+
+      const { presentValue } = await lendingMarketController.getPosition(
+        hexETH,
+        maturity,
+        alice.address,
+      );
+      expect(presentValue).to.equal(-1);
+
+      const depositAmount = await tokenVault.getDepositAmount(
+        alice.address,
+        hexETH,
+      );
+      const withdrawableAmount = await tokenVault[
+        'getWithdrawableCollateral(bytes32,address)'
+      ](hexETH, alice.address);
+
+      expect(withdrawableAmount).to.lt(depositAmount);
+
+      await expect(tokenVault.connect(alice).withdraw(hexETH, depositAmount))
+        .to.emit(tokenVault, 'Withdraw')
+        .withArgs(alice.address, hexETH, withdrawableAmount);
+
+      expect(await tokenVault.getDepositAmount(alice.address, hexETH)).to.be.gt(
+        0,
+      );
+    });
+
+    it('Withdraws the full deposit when a base currency round trip loses its remainder', async () => {
+      [alice] = await getUsers(1);
+      const maturities = await lendingMarketController.getMaturities(hexWBTC);
+      const maturity = maturities[maturities.length - 2];
+      const wbtcCollateralAmount = BigNumber.from(10);
+      const borrowAmount = BigNumber.from(8);
+      const ethDepositAmount = BigNumber.from('123454000001');
+
+      const ethDepositInBaseCurrency = await currencyController[
+        'convertToBaseCurrency(bytes32,uint256)'
+      ](hexETH, ethDepositAmount);
+      const roundTrippedDepositAmount = await currencyController[
+        'convertFromBaseCurrency(bytes32,uint256)'
+      ](hexETH, ethDepositInBaseCurrency);
+
+      expect(roundTrippedDepositAmount).to.lt(ethDepositAmount);
+
+      await wBTCToken
+        .connect(alice)
+        .approve(tokenVault.address, wbtcCollateralAmount);
+      await tokenVault.connect(alice).deposit(hexWBTC, wbtcCollateralAmount);
+      await tokenVault.connect(alice).deposit(hexETH, ethDepositAmount, {
+        value: ethDepositAmount,
+      });
+
+      await lendingMarketController
+        .connect(alice)
+        .executeOrder(hexWBTC, maturity, Side.BORROW, borrowAmount, '9500');
+
+      expect(
+        await tokenVault['getWithdrawableCollateral(bytes32,address)'](
+          hexETH,
+          alice.address,
+        ),
+      ).to.equal(ethDepositAmount);
+
+      await expect(tokenVault.connect(alice).withdraw(hexETH, ethDepositAmount))
+        .to.emit(tokenVault, 'Withdraw')
+        .withArgs(alice.address, hexETH, ethDepositAmount);
+
+      expect(await tokenVault.getDepositAmount(alice.address, hexETH)).to.equal(
+        0,
+      );
+    });
+  });
 });

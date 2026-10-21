@@ -764,8 +764,14 @@ library FundManagementLogic {
 
             totalFunds.claimableAmount += amountsInBaseCurrency[1];
             totalFunds.collateralAmount += amountsInBaseCurrency[2];
-            totalFunds.workingBorrowOrdersAmount += amountsInBaseCurrency[4];
-            totalFunds.debtAmount += amountsInBaseCurrency[5];
+
+            // A non-zero liability must not disappear when it is converted to the base currency.
+            // Keep the existing rounding behavior for every other converted amount.
+            totalFunds.workingBorrowOrdersAmount += _ensureNonZeroLiability(
+                amounts[4],
+                amountsInBaseCurrency[4]
+            );
+            totalFunds.debtAmount += _ensureNonZeroLiability(amounts[5], amountsInBaseCurrency[5]);
 
             // NOTE: Lent amount and working lend orders amount are excluded here as they are not used
             // for the collateral calculation.
@@ -776,6 +782,13 @@ library FundManagementLogic {
                 totalFunds.borrowedAmount += amountsInBaseCurrency[6];
             }
         }
+    }
+
+    function _ensureNonZeroLiability(
+        uint256 _amount,
+        uint256 _amountInBaseCurrency
+    ) private pure returns (uint256) {
+        return _amount > 0 && _amountInBaseCurrency == 0 ? 1 : _amountInBaseCurrency;
     }
 
     function getUsedMaturities(

@@ -50,10 +50,7 @@ library DepositManagementLogic {
         ) = _calculateCollateral(_user, _funds);
 
         isEnoughDepositInOrderCcy = !isInsufficientDepositAmount;
-        isEnoughCollateral =
-            totalUsedCollateral == 0 ||
-            (totalCollateral * Constants.PCT_DIGIT >=
-                totalUsedCollateral * Storage.slot().liquidationThresholdRate);
+        isEnoughCollateral = _isEnoughCollateral(totalCollateral, totalUsedCollateral);
     }
 
     function getUsedCurrencies(address _user) public view returns (bytes32[] memory) {
@@ -283,32 +280,21 @@ library DepositManagementLogic {
         totalDeposit = plusDeposit >= minusDeposit ? plusDeposit - minusDeposit : 0;
     }
 
-    function getWithdrawableCollateral(
-        address _user
-    ) public view returns (uint256, bool usedCollateralExists) {
+    function getWithdrawableCollateral(address _user) public view returns (uint256) {
         (
             uint256 totalCollateral,
             uint256 totalUsedCollateral,
             uint256 totalDeposit
         ) = getTotalCollateralAmount(_user);
 
-        if (totalUsedCollateral == 0) {
-            return (totalDeposit, false);
-        } else if (
-            totalCollateral * Constants.PCT_DIGIT >
-            totalUsedCollateral * Storage.slot().liquidationThresholdRate
-        ) {
-            // NOTE: The formula is:
-            // maxWithdraw = totalCollateral - (totalUsedCollateral * liquidationThresholdRate)
-            uint256 maxWithdraw = (totalCollateral *
-                Constants.PCT_DIGIT -
-                totalUsedCollateral *
-                Storage.slot().liquidationThresholdRate).div(Constants.PCT_DIGIT);
-
-            return (maxWithdraw >= totalDeposit ? totalDeposit : maxWithdraw, true);
-        } else {
-            return (0, true);
-        }
+        return
+            totalUsedCollateral == 0
+                ? totalDeposit
+                : _calculateWithdrawableCollateral(
+                    totalCollateral,
+                    totalUsedCollateral,
+                    totalDeposit
+                );
     }
 
     function getWithdrawableCollateral(
@@ -318,13 +304,29 @@ library DepositManagementLogic {
         uint256 depositAmount = getDepositAmount(_user, _ccy);
         if (Storage.slot().collateralCurrencies.contains(_ccy)) {
             (
-                uint256 maxWithdrawInBaseCurrency,
-                bool usedCollateralExists
-            ) = getWithdrawableCollateral(_user);
+                uint256 totalCollateral,
+                uint256 totalUsedCollateral,
+                uint256 totalDeposit
+            ) = getTotalCollateralAmount(_user);
 
-            if (!usedCollateralExists) {
+            if (
+                totalUsedCollateral == 0 ||
+                _isCoveredAfterWithdrawal(
+                    _user,
+                    _ccy,
+                    depositAmount,
+                    totalCollateral,
+                    totalUsedCollateral
+                )
+            ) {
                 return depositAmount;
             }
+
+            uint256 maxWithdrawInBaseCurrency = _calculateWithdrawableCollateral(
+                totalCollateral,
+                totalUsedCollateral,
+                totalDeposit
+            );
 
             uint256 maxWithdraw = AddressResolverLib.currencyController().convertFromBaseCurrency(
                 _ccy,
@@ -335,6 +337,73 @@ library DepositManagementLogic {
         } else {
             withdrawableAmount = depositAmount;
         }
+    }
+
+    function _calculateWithdrawableCollateral(
+        uint256 _totalCollateral,
+        uint256 _totalUsedCollateral,
+        uint256 _totalDeposit
+    ) private view returns (uint256) {
+        if (
+            _totalCollateral * Constants.PCT_DIGIT <=
+            _totalUsedCollateral * Storage.slot().liquidationThresholdRate
+        ) {
+            return 0;
+        }
+
+        // NOTE: The formula is:
+        // maxWithdraw = totalCollateral - (totalUsedCollateral * liquidationThresholdRate)
+        uint256 maxWithdraw = (_totalCollateral *
+            Constants.PCT_DIGIT -
+            _totalUsedCollateral *
+            Storage.slot().liquidationThresholdRate).div(Constants.PCT_DIGIT);
+
+        return maxWithdraw >= _totalDeposit ? _totalDeposit : maxWithdraw;
+    }
+
+    function _isCoveredAfterWithdrawal(
+        address _user,
+        bytes32 _ccy,
+        uint256 _withdrawalAmount,
+        uint256 _totalCollateral,
+        uint256 _totalUsedCollateral
+    ) private view returns (bool) {
+        uint256 depositAmount = Storage.slot().depositAmounts[_user][_ccy];
+        if (_withdrawalAmount > depositAmount) {
+            return false;
+        }
+
+        // Compare the collateral value of the deposit before and after the withdrawal to get the
+        // exact reduction in base currency. Converting the withdrawal amount itself is not
+        // equivalent because each conversion is rounded independently.
+        uint256[] memory collateralAmounts = new uint256[](2);
+        collateralAmounts[0] = depositAmount;
+        collateralAmounts[1] = depositAmount - _withdrawalAmount;
+        collateralAmounts = AddressResolverLib.currencyController().convertToBaseCurrency(
+            _ccy,
+            collateralAmounts
+        );
+
+        uint256 collateralAmountBefore = collateralAmounts[0];
+        uint256 collateralAmountAfter = collateralAmounts[1];
+        uint256 collateralReduction = collateralAmountBefore > collateralAmountAfter
+            ? collateralAmountBefore - collateralAmountAfter
+            : 0;
+        uint256 remainingCollateral = _totalCollateral > collateralReduction
+            ? _totalCollateral - collateralReduction
+            : 0;
+
+        return _isEnoughCollateral(remainingCollateral, _totalUsedCollateral);
+    }
+
+    function _isEnoughCollateral(
+        uint256 _totalCollateral,
+        uint256 _totalUsedCollateral
+    ) private view returns (bool) {
+        return
+            _totalUsedCollateral == 0 ||
+            _totalCollateral * Constants.PCT_DIGIT >=
+            _totalUsedCollateral * Storage.slot().liquidationThresholdRate;
     }
 
     function canDepositCurrency(address _user, bytes32 _ccy) public view returns (bool) {
