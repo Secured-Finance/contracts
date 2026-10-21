@@ -787,6 +787,9 @@ describe('TokenVault - Deposits', () => {
       await mockCurrencyController.mock[
         'convertFromBaseCurrency(bytes32,uint256)'
       ].returns(value);
+      await mockCurrencyController.mock[
+        'convertToBaseCurrency(bytes32,uint256[])'
+      ].returns([valueInETH, 0]);
 
       await updateReturnValuesOfCalculateTotalFundsInBaseCurrencyMock({
         workingBorrowOrdersAmount: usedValue,
@@ -818,6 +821,81 @@ describe('TokenVault - Deposits', () => {
           signer.address,
         ),
       ).to.equal(valueInETH);
+    });
+
+    it('Allow withdrawing the full deposit when its exact removal remains covered', async () => {
+      const signer = getUser();
+      const depositAmount = ethers.BigNumber.from('123456789012');
+      const roundedDepositAmount = ethers.BigNumber.from('12');
+      const convertedWithdrawableAmount = ethers.BigNumber.from('120000000000');
+
+      await mockCurrencyController.mock[
+        'convertToBaseCurrency(bytes32,uint256)'
+      ].returns(roundedDepositAmount);
+      await mockCurrencyController.mock[
+        'convertFromBaseCurrency(bytes32,uint256)'
+      ].returns(convertedWithdrawableAmount);
+      await mockCurrencyController.mock[
+        'convertToBaseCurrency(bytes32,uint256[])'
+      ].returns([roundedDepositAmount, 0]);
+      await updateReturnValuesOfCalculateTotalFundsInBaseCurrencyMock({
+        collateralAmount: 100,
+        debtAmount: 10,
+      });
+
+      await tokenVaultProxy
+        .connect(signer)
+        .deposit(targetCurrency, depositAmount);
+
+      expect(
+        await tokenVaultProxy['getWithdrawableCollateral(bytes32,address)'](
+          targetCurrency,
+          signer.address,
+        ),
+      ).to.equal(depositAmount);
+
+      expect(
+        await tokenVaultProxy
+          .connect(signer)
+          .callStatic.withdraw(targetCurrency, depositAmount),
+      ).to.equal(depositAmount);
+
+      await tokenVaultProxy
+        .connect(signer)
+        .withdraw(targetCurrency, depositAmount);
+
+      expect(
+        await tokenVaultProxy.getDepositAmount(signer.address, targetCurrency),
+      ).to.equal(0);
+    });
+
+    it('Prevent withdrawing a zero-valued deposit while a liability remains', async () => {
+      const signer = getUser();
+      const depositAmount = ethers.BigNumber.from('4999999999');
+
+      await mockCurrencyController.mock[
+        'convertToBaseCurrency(bytes32,uint256)'
+      ].returns(0);
+      await mockCurrencyController.mock[
+        'convertFromBaseCurrency(bytes32,uint256)'
+      ].returns(0);
+      await mockCurrencyController.mock[
+        'convertToBaseCurrency(bytes32,uint256[])'
+      ].returns([0, 0]);
+      await updateReturnValuesOfCalculateTotalFundsInBaseCurrencyMock({
+        debtAmount: 1,
+      });
+
+      await tokenVaultProxy
+        .connect(signer)
+        .deposit(targetCurrency, depositAmount);
+
+      expect(
+        await tokenVaultProxy['getWithdrawableCollateral(bytes32,address)'](
+          targetCurrency,
+          signer.address,
+        ),
+      ).to.equal(0);
     });
 
     it('Get the withdrawable amount per currency with the lending working orders', async () => {

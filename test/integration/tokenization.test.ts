@@ -58,17 +58,17 @@ describe('Integration Test: Tokenization', async () => {
     maturity: BigNumber,
     unitPrice: string,
   ) => {
-    await tokenVault.connect(user).deposit(hexETH, '3000000', {
-      value: '3000000',
+    await tokenVault.connect(user).deposit(hexETH, '30000000', {
+      value: '30000000',
     });
 
     await lendingMarketController
       .connect(user)
-      .executeOrder(hexETH, maturity, Side.BORROW, '1000000', unitPrice);
+      .executeOrder(hexETH, maturity, Side.BORROW, '10000000', unitPrice);
 
     await lendingMarketController
       .connect(user)
-      .executeOrder(hexETH, maturity, Side.LEND, '1000000', unitPrice);
+      .executeOrder(hexETH, maturity, Side.LEND, '10000000', unitPrice);
   };
 
   const executeAutoRoll = async (unitPrice: string, currency = hexETH) => {

@@ -196,8 +196,7 @@ contract TokenVault is
      * @return Maximum amount of the base currency that can be withdrawn
      */
     function getWithdrawableCollateral(address _user) external view override returns (uint256) {
-        (uint256 withdrawableAmount, ) = DepositManagementLogic.getWithdrawableCollateral(_user);
-        return withdrawableAmount;
+        return DepositManagementLogic.getWithdrawableCollateral(_user);
     }
 
     /**

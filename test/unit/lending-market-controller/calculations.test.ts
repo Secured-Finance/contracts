@@ -280,6 +280,53 @@ describe('LendingMarketController - Calculations', () => {
         '3000000000',
       );
     });
+
+    it('Preserve non-zero liabilities converted to zero', async () => {
+      await updateReturnValuesOfConvertToBaseCurrencyMock();
+
+      const totalFunds =
+        await lendingMarketControllerProxy.calculateTotalFundsInBaseCurrency(
+          alice.address,
+          {
+            ccy: targetCurrency,
+            workingLendOrdersAmount: 0,
+            claimableAmount: 0,
+            workingBorrowOrdersAmount: 1,
+            debtAmount: 1,
+            lentAmount: 0,
+            borrowedAmount: 0,
+          },
+          LIQUIDATION_THRESHOLD_RATE,
+        );
+
+      expect(totalFunds.workingBorrowOrdersAmount).to.equal(1);
+      expect(totalFunds.debtAmount).to.equal(1);
+    });
+
+    it('Keep the existing rounded liability amounts', async () => {
+      await updateReturnValuesOfConvertToBaseCurrencyMock({
+        workingBorrowOrdersAmount: 2,
+        debtAmount: 3,
+      });
+
+      const totalFunds =
+        await lendingMarketControllerProxy.calculateTotalFundsInBaseCurrency(
+          alice.address,
+          {
+            ccy: targetCurrency,
+            workingLendOrdersAmount: 0,
+            claimableAmount: 0,
+            workingBorrowOrdersAmount: 1,
+            debtAmount: 1,
+            lentAmount: 0,
+            borrowedAmount: 0,
+          },
+          LIQUIDATION_THRESHOLD_RATE,
+        );
+
+      expect(totalFunds.workingBorrowOrdersAmount).to.equal(2);
+      expect(totalFunds.debtAmount).to.equal(3);
+    });
   });
 
   describe('Order Estimations', async () => {

@@ -40,8 +40,8 @@ describe('Integration Test: Itayose', async () => {
     maturity: BigNumber,
     unitPrice: string,
   ) => {
-    await tokenVault.connect(user).deposit(hexETH, '3000000', {
-      value: '3000000',
+    await tokenVault.connect(user).deposit(hexETH, '30000000', {
+      value: '30000000',
     });
 
     await lendingMarketController
@@ -50,7 +50,7 @@ describe('Integration Test: Itayose', async () => {
         hexETH,
         maturity,
         Side.BORROW,
-        '1000000',
+        '10000000',
         BigNumber.from(unitPrice).add('1000'),
       );
 
@@ -60,7 +60,7 @@ describe('Integration Test: Itayose', async () => {
         hexETH,
         maturity,
         Side.LEND,
-        '1000000',
+        '10000000',
         BigNumber.from(unitPrice).sub('1000'),
       );
   };

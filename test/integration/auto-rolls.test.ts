@@ -64,17 +64,17 @@ describe('Integration Test: Auto-rolls', async () => {
     maturity: BigNumber,
     unitPrice: string,
   ) => {
-    await tokenVault.connect(user).deposit(hexETH, '3000000', {
-      value: '3000000',
+    await tokenVault.connect(user).deposit(hexETH, '30000000', {
+      value: '30000000',
     });
 
     await lendingMarketController
       .connect(user)
-      .executeOrder(hexETH, maturity, Side.BORROW, '1000000', unitPrice);
+      .executeOrder(hexETH, maturity, Side.BORROW, '10000000', unitPrice);
 
     await lendingMarketController
       .connect(user)
-      .executeOrder(hexETH, maturity, Side.LEND, '1000000', unitPrice);
+      .executeOrder(hexETH, maturity, Side.LEND, '10000000', unitPrice);
   };
 
   const executeAutoRoll = async (unitPrice?: string) => {
@@ -293,7 +293,7 @@ describe('Integration Test: Auto-rolls', async () => {
 
       // Check if the orders in previous market is canceled
       const carolCoverageAfter = await tokenVault.getCoverage(carol.address);
-      expect(carolCoverageAfter).to.equal('2000');
+      expect(carolCoverageAfter).to.equal('1999');
 
       // Check future value
       const { futureValue: aliceActualFV } =
