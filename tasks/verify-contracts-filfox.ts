@@ -1,6 +1,7 @@
 import axios from 'axios';
 import fs from 'fs';
 import { task } from 'hardhat/config';
+import { Artifacts } from 'hardhat/types';
 
 const API_URL = 'https://filfox.info/api/v1/tools/verifyContract';
 
@@ -12,6 +13,52 @@ const externalContracts = [
   'Liquidator',
   'LendingMarketReader',
 ];
+
+const getLibrarySettings = async (
+  contractName: string,
+  deploymentLibraries: Record<string, string>,
+  artifacts: Artifacts,
+) => {
+  if (Object.keys(deploymentLibraries).length === 0) {
+    return {};
+  }
+
+  const artifact = await artifacts.readArtifact(contractName);
+  const unresolvedLibraries = new Set(Object.keys(deploymentLibraries));
+
+  const libraries = Object.entries(artifact.linkReferences).reduce<
+    Record<string, Record<string, string>>
+  >((result, [sourceName, references]) => {
+    const sourceLibraries = Object.keys(references).reduce<
+      Record<string, string>
+    >((linkedLibraries, libraryName) => {
+      const address = deploymentLibraries[libraryName];
+
+      if (address) {
+        linkedLibraries[libraryName] = address;
+        unresolvedLibraries.delete(libraryName);
+      }
+
+      return linkedLibraries;
+    }, {});
+
+    if (Object.keys(sourceLibraries).length > 0) {
+      result[sourceName] = sourceLibraries;
+    }
+
+    return result;
+  }, {});
+
+  if (unresolvedLibraries.size > 0) {
+    throw new Error(
+      `Library link references not found for ${contractName}: ${Array.from(
+        unresolvedLibraries,
+      ).join(', ')}`,
+    );
+  }
+
+  return libraries;
+};
 
 interface VerifyContractParams {
   address: string;
@@ -69,7 +116,7 @@ const verifyContract = async (
 task(
   'verify-contracts-filfox',
   'Verify and register contracts on Filfox',
-).setAction(async (_, { deployments, network }) => {
+).setAction(async (_, { artifacts, deployments, network }) => {
   const fileNames = fs
     .readdirSync(`deployments/${network.name}`, {
       withFileTypes: true,
@@ -83,7 +130,13 @@ task(
     }
 
     const deployment = await deployments.get(fileName);
-    const { address, implementation, metadata, solcInputHash } = deployment;
+    const {
+      address,
+      implementation,
+      metadata,
+      solcInputHash,
+      libraries: deploymentLibraries = {},
+    } = deployment;
 
     const parsedMetadata = metadata ? JSON.parse(metadata) : {};
 
@@ -124,18 +177,34 @@ task(
       solcInput.settings.evmVersion ??
       'default';
 
+    const libraries = await getLibrarySettings(
+      fileName,
+      deploymentLibraries,
+      artifacts,
+    );
+    const metadataSettings =
+      parsedMetadata.settings?.metadata ?? solcInput.settings?.metadata ?? {};
+    const optimizerDetails = solcInput.settings.optimizer.details;
+
     const verifyParams = {
       language: parsedMetadata.language,
       compiler: `v${parsedMetadata.compiler.version}`,
       optimize: solcInput.settings.optimizer.enabled,
       optimizeRuns: solcInput.settings.optimizer.runs,
-      optimizerDetails: '',
+      optimizerDetails: optimizerDetails
+        ? JSON.stringify(optimizerDetails)
+        : '',
       sourceFiles,
       license: 'Business Source License (BSL 1.1)',
       evmVersion,
-      viaIR: false,
-      libraries: '',
-      metadata: '',
+      viaIR:
+        parsedMetadata.settings?.viaIR ?? solcInput.settings?.viaIR ?? false,
+      libraries:
+        Object.keys(libraries).length > 0 ? JSON.stringify(libraries) : '',
+      metadata:
+        Object.keys(metadataSettings).length > 0
+          ? JSON.stringify(metadataSettings)
+          : '',
     };
 
     // If implementation exists, verify both proxy and implementation
