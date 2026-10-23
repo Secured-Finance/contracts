@@ -10,6 +10,7 @@ import './toggle-protocol-pause';
 import './unfork';
 import './update-price-feed';
 import './update-pyth';
+import './verify-beacon-proxies';
 import './verify-contracts';
 import './verify-contracts-filfox';
 import './verify-contracts-starboard';
