@@ -70,6 +70,11 @@ jobs:
           echo "TOKEN_ADDRESS_USDC=${{ vars.TOKEN_ADDRESS_USDC }}" >> $GITHUB_ENV
           echo "TOKEN_ADDRESS_WBTC=${{ vars.TOKEN_ADDRESS_WBTC }}" >> $GITHUB_ENV
           echo "TOKEN_ADDRESS_WETH=${{ vars.TOKEN_ADDRESS_WETH }}" >> $GITHUB_ENV
+          echo "GLIF_POOL_ADDRESS=${{ vars.GLIF_POOL_ADDRESS }}" >> $GITHUB_ENV
+          echo "IFIL_ADDRESS=${{ vars.IFIL_ADDRESS }}" >> $GITHUB_ENV
+          echo "PARASAIL_POOL_ADDRESS=${{ vars.PARASAIL_POOL_ADDRESS }}" >> $GITHUB_ENV
+          echo "WPFIL_ADDRESS=${{ vars.WPFIL_ADDRESS }}" >> $GITHUB_ENV
+          echo "PFIL_ADDRESS=${{ vars.PFIL_ADDRESS }}" >> $GITHUB_ENV
           echo "PRICE_FEED_ADDRESSES_WFIL=${{ vars.PRICE_FEED_ADDRESSES_WFIL }}" >> $GITHUB_ENV
           echo "PRICE_FEED_ADDRESSES_USDC=${{ vars.PRICE_FEED_ADDRESSES_USDC }}" >> $GITHUB_ENV
           echo "PRICE_FEED_ADDRESSES_WBTC=${{ vars.PRICE_FEED_ADDRESSES_WBTC }}" >> $GITHUB_ENV
