@@ -28,6 +28,10 @@ on:
         description: 'True to bypass testing on the fork'
         required: false
         type: boolean
+      tags:
+        description: 'Optional hardhat-deploy tags (comma-separated)'
+        required: false
+        type: string
 
 jobs:
   test:
@@ -67,6 +71,11 @@ jobs:
           echo "TOKEN_ADDRESS_USDC=${{ vars.TOKEN_ADDRESS_USDC }}" >> $GITHUB_ENV
           echo "TOKEN_ADDRESS_WBTC=${{ vars.TOKEN_ADDRESS_WBTC }}" >> $GITHUB_ENV
           echo "TOKEN_ADDRESS_WETH=${{ vars.TOKEN_ADDRESS_WETH }}" >> $GITHUB_ENV
+          echo "GLIF_POOL_ADDRESS=${{ vars.GLIF_POOL_ADDRESS }}" >> $GITHUB_ENV
+          echo "IFIL_ADDRESS=${{ vars.IFIL_ADDRESS }}" >> $GITHUB_ENV
+          echo "PARASAIL_POOL_ADDRESS=${{ vars.PARASAIL_POOL_ADDRESS }}" >> $GITHUB_ENV
+          echo "WPFIL_ADDRESS=${{ vars.WPFIL_ADDRESS }}" >> $GITHUB_ENV
+          echo "PFIL_ADDRESS=${{ vars.PFIL_ADDRESS }}" >> $GITHUB_ENV
           echo "PRICE_FEED_ADDRESSES_WFIL=${{ vars.PRICE_FEED_ADDRESSES_WFIL }}" >> $GITHUB_ENV
           echo "PRICE_FEED_ADDRESSES_USDC=${{ vars.PRICE_FEED_ADDRESSES_USDC }}" >> $GITHUB_ENV
           echo "PRICE_FEED_ADDRESSES_WBTC=${{ vars.PRICE_FEED_ADDRESSES_WBTC }}" >> $GITHUB_ENV
@@ -100,9 +109,15 @@ jobs:
           echo "fork id is $FORK_ID"
           echo "FORK_ID=$FORK_ID" >> $GITHUB_ENV
       - name: Deploy for fork environment
-        run: npm run deploy ${{ github.event.inputs.network }}
+        run: |
+          if [ -n "$DEPLOY_TAGS" ]; then
+            npm run deploy ${{ github.event.inputs.network }} -- --tags "$DEPLOY_TAGS"
+          else
+            npm run deploy ${{ github.event.inputs.network }}
+          fi
         env:
           FORK_RPC_ENDPOINT: https://rpc.tenderly.co/fork/${{ env.FORK_ID }}
+          DEPLOY_TAGS: ${{ github.event.inputs.tags }}
       - name: Check diff
         shell: bash
         id: diff
@@ -167,6 +182,11 @@ jobs:
           echo "TOKEN_ADDRESS_USDC=${{ vars.TOKEN_ADDRESS_USDC }}" >> $GITHUB_ENV
           echo "TOKEN_ADDRESS_WBTC=${{ vars.TOKEN_ADDRESS_WBTC }}" >> $GITHUB_ENV
           echo "TOKEN_ADDRESS_WETH=${{ vars.TOKEN_ADDRESS_WETH }}" >> $GITHUB_ENV
+          echo "GLIF_POOL_ADDRESS=${{ vars.GLIF_POOL_ADDRESS }}" >> $GITHUB_ENV
+          echo "IFIL_ADDRESS=${{ vars.IFIL_ADDRESS }}" >> $GITHUB_ENV
+          echo "PARASAIL_POOL_ADDRESS=${{ vars.PARASAIL_POOL_ADDRESS }}" >> $GITHUB_ENV
+          echo "WPFIL_ADDRESS=${{ vars.WPFIL_ADDRESS }}" >> $GITHUB_ENV
+          echo "PFIL_ADDRESS=${{ vars.PFIL_ADDRESS }}" >> $GITHUB_ENV
           echo "PRICE_FEED_ADDRESSES_WFIL=${{ vars.PRICE_FEED_ADDRESSES_WFIL }}" >> $GITHUB_ENV
           echo "PRICE_FEED_ADDRESSES_USDC=${{ vars.PRICE_FEED_ADDRESSES_USDC }}" >> $GITHUB_ENV
           echo "PRICE_FEED_ADDRESSES_WBTC=${{ vars.PRICE_FEED_ADDRESSES_WBTC }}" >> $GITHUB_ENV
@@ -191,8 +211,14 @@ jobs:
           echo "SAFE_API_KEY=${{ secrets.SAFE_API_KEY }}" >> $GITHUB_ENV
           echo "WAIT_CONFIRMATIONS=${{ vars.WAIT_CONFIRMATIONS }}" >> $GITHUB_ENV
       - name: Deploy smart contracts
+        env:
+          DEPLOY_TAGS: ${{ github.event.inputs.tags }}
         run: |
-          npm run deploy ${{ github.event.inputs.network }}
+          if [ -n "$DEPLOY_TAGS" ]; then
+            npm run deploy ${{ github.event.inputs.network }} -- --tags "$DEPLOY_TAGS"
+          else
+            npm run deploy ${{ github.event.inputs.network }}
+          fi
           git add .
       - name: Check diff
         shell: bash

@@ -12,11 +12,29 @@ import {TransferHelper} from "../../protocol/libraries/TransferHelper.sol";
 import {ILendingMarketController} from "../../protocol/interfaces/ILendingMarketController.sol";
 import {ITokenVault} from "../../protocol/interfaces/ITokenVault.sol";
 import {ILiquidationReceiver} from "../../protocol/interfaces/ILiquidationReceiver.sol";
+import {IConversionAdapter} from "./interfaces/IConversionAdapter.sol";
 // mixins
 import {MixinAccessControl} from "../../protocol/mixins/MixinAccessControl.sol";
 import {MixinWallet} from "../../protocol/mixins/MixinWallet.sol";
 
 contract Liquidator is ILiquidationReceiver, MixinAccessControl, MixinWallet, Initializable {
+    error InvalidConversionAdapter(address adapter);
+    error InvalidConversionPair(address tokenIn, address tokenOut);
+    error InsufficientOutputAmount(uint256 minimumAmountOut, uint256 actualAmountOut);
+
+    event ConversionAdapterUpdated(
+        address indexed tokenIn,
+        address previousAdapter,
+        address newAdapter
+    );
+    event TokenConverted(
+        address indexed adapter,
+        address indexed tokenIn,
+        address indexed tokenOut,
+        uint256 amountIn,
+        uint256 amountOut
+    );
+
     address public immutable nativeToken;
     ILendingMarketController public immutable lendingMarketController;
     ITokenVault public immutable tokenVault;
@@ -24,6 +42,8 @@ contract Liquidator is ILiquidationReceiver, MixinAccessControl, MixinWallet, In
     address public uniswapRouter;
     uint24 public poolFee;
     uint256[] public collateralMaturities;
+    uint256 public minimumAmountOut;
+    mapping(address => address) public conversionAdapters;
 
     modifier onlyLendingMarketController() {
         require(_msgSender() == address(lendingMarketController), "Invalid caller");
@@ -56,6 +76,7 @@ contract Liquidator is ILiquidationReceiver, MixinAccessControl, MixinWallet, In
      * @param _user Address of the user
      * @param _uniswapRouter Address of the Uniswap router
      * @param _poolFee Pool fee
+     * @param _minimumAmountOut Minimum debt currency amount to receive from the conversion route, or zero if unset
      */
     function executeLiquidationCall(
         bytes32 _collateralCcy,
@@ -64,11 +85,13 @@ contract Liquidator is ILiquidationReceiver, MixinAccessControl, MixinWallet, In
         uint256 _debtMaturity,
         address _user,
         address _uniswapRouter,
-        uint24 _poolFee
+        uint24 _poolFee,
+        uint256 _minimumAmountOut
     ) external onlyOperator {
         collateralMaturities = _collateralMaturities;
         uniswapRouter = _uniswapRouter;
         poolFee = _poolFee;
+        minimumAmountOut = _minimumAmountOut;
         lendingMarketController.executeLiquidationCall(
             _collateralCcy,
             _debtCcy,
@@ -89,6 +112,7 @@ contract Liquidator is ILiquidationReceiver, MixinAccessControl, MixinWallet, In
      * @param _user Address of the user
      * @param _uniswapRouter Address of the Uniswap router
      * @param _poolFee Pool fee
+     * @param _minimumAmountOut Minimum debt currency amount to receive from the conversion route, or zero if unset
      */
     function executeForcedRepayment(
         bytes32 _collateralCcy,
@@ -97,11 +121,13 @@ contract Liquidator is ILiquidationReceiver, MixinAccessControl, MixinWallet, In
         uint256 _debtMaturity,
         address _user,
         address _uniswapRouter,
-        uint24 _poolFee
+        uint24 _poolFee,
+        uint256 _minimumAmountOut
     ) external onlyOperator {
         collateralMaturities = _collateralMaturities;
         uniswapRouter = _uniswapRouter;
         poolFee = _poolFee;
+        minimumAmountOut = _minimumAmountOut;
         lendingMarketController.executeForcedRepayment(
             _collateralCcy,
             _debtCcy,
@@ -178,33 +204,52 @@ contract Liquidator is ILiquidationReceiver, MixinAccessControl, MixinWallet, In
         uint amountIn = _receivedCollateralAmount > collateralTokenBalance
             ? collateralTokenBalance
             : _receivedCollateralAmount;
-        bool isV2Router = poolFee == 0;
+        bool isDebtReceivedInNativeCurrency;
 
-        if (collateralCcyAddr != debtCcyAddr && _receivedDebtAmount != 0 && amountIn != 0) {
-            if (isV2Router) {
-                _executeSwapWithV2(
-                    collateralCcyAddr,
-                    debtCcyAddr,
-                    amountIn,
-                    collateralCcyAddr == nativeToken,
-                    debtCcyAddr == nativeToken
-                );
-            } else {
-                _executeSwapWithV3(
-                    collateralCcyAddr,
-                    debtCcyAddr,
-                    amountIn,
-                    poolFee,
-                    collateralCcyAddr == nativeToken
-                );
+        if (amountIn != 0 && _receivedDebtAmount != 0) {
+            bool isV2Router = poolFee == 0;
+            address swapToken = collateralCcyAddr;
+            bool isSwapTokenNative = collateralCcyAddr == nativeToken;
+
+            if (swapToken != debtCcyAddr) {
+                address adapter = conversionAdapters[swapToken];
+
+                if (adapter != address(0)) {
+                    (swapToken, amountIn) = _executeConversion(adapter, swapToken, amountIn);
+                }
+            }
+
+            if (swapToken != debtCcyAddr) {
+                if (isV2Router) {
+                    _executeSwapWithV2(
+                        swapToken,
+                        debtCcyAddr,
+                        amountIn,
+                        isSwapTokenNative,
+                        debtCcyAddr == nativeToken
+                    );
+                    isDebtReceivedInNativeCurrency = debtCcyAddr == nativeToken;
+                } else {
+                    _executeSwapWithV3(
+                        swapToken,
+                        debtCcyAddr,
+                        amountIn,
+                        poolFee,
+                        isSwapTokenNative
+                    );
+                }
+            } else if (swapToken == debtCcyAddr) {
+                isDebtReceivedInNativeCurrency = isSwapTokenNative;
+
+                if (minimumAmountOut != 0 && amountIn < minimumAmountOut) {
+                    revert InsufficientOutputAmount(minimumAmountOut, amountIn);
+                }
             }
         }
 
         uint256 debtTokenBalance;
 
-        // If the debt token is the native token and the router is V2 at the previous step, the collateral token is swapped to the debt token
-        // in the native currency at the previous step.
-        if (debtCcyAddr == nativeToken && isV2Router) {
+        if (debtCcyAddr == nativeToken && isDebtReceivedInNativeCurrency) {
             debtTokenBalance = address(this).balance;
         } else {
             debtTokenBalance = IERC20(debtCcyAddr).balanceOf(address(this));
@@ -212,7 +257,7 @@ contract Liquidator is ILiquidationReceiver, MixinAccessControl, MixinWallet, In
 
         if (debtTokenBalance != 0) {
             if (debtCcyAddr == nativeToken) {
-                if (!isV2Router) {
+                if (!isDebtReceivedInNativeCurrency) {
                     TransferHelper.convertFromWrappedToken(address(this), debtTokenBalance);
                 }
                 tokenVault.deposit{value: debtTokenBalance}(_debtCcy, debtTokenBalance);
@@ -259,6 +304,52 @@ contract Liquidator is ILiquidationReceiver, MixinAccessControl, MixinWallet, In
         _withdraw(tokenVault, _ccy, _amount);
     }
 
+    /**
+     * @notice Sets the conversion adapter used for an input token.
+     * @dev Setting the adapter to the zero address removes the current adapter.
+     * @param _tokenIn Address of the token to register the adapter for
+     * @param _adapter Address of the conversion adapter, or zero to remove it
+     */
+    function setConversionAdapter(address _tokenIn, address _adapter) external onlyOwner {
+        address previousAdapter = conversionAdapters[_tokenIn];
+
+        if (_adapter != address(0)) {
+            if (_adapter.code.length == 0) revert InvalidConversionAdapter(_adapter);
+
+            address adapterTokenIn = IConversionAdapter(_adapter).tokenIn();
+            address adapterTokenOut = IConversionAdapter(_adapter).tokenOut();
+
+            if (
+                _tokenIn == address(0) ||
+                _tokenIn == nativeToken ||
+                adapterTokenIn != _tokenIn ||
+                adapterTokenOut == address(0) ||
+                adapterTokenOut == _tokenIn
+            ) {
+                revert InvalidConversionPair(adapterTokenIn, adapterTokenOut);
+            }
+        }
+
+        conversionAdapters[_tokenIn] = _adapter;
+        emit ConversionAdapterUpdated(_tokenIn, previousAdapter, _adapter);
+    }
+
+    function _executeConversion(
+        address _adapter,
+        address _tokenIn,
+        uint256 _amountIn
+    ) internal returns (address tokenOut, uint256 amountOut) {
+        tokenOut = IConversionAdapter(_adapter).tokenOut();
+        uint256 outputBalanceBefore = IERC20(tokenOut).balanceOf(address(this));
+
+        TransferHelper.safeApprove(_tokenIn, _adapter, _amountIn);
+        IConversionAdapter(_adapter).convert(_amountIn);
+        TransferHelper.safeApprove(_tokenIn, _adapter, 0);
+
+        amountOut = IERC20(tokenOut).balanceOf(address(this)) - outputBalanceBefore;
+        emit TokenConverted(_adapter, _tokenIn, tokenOut, _amountIn, amountOut);
+    }
+
     function _executeSwapWithV3(
         address _collateralCcy,
         address _debtCcy,
@@ -280,7 +371,7 @@ contract Liquidator is ILiquidationReceiver, MixinAccessControl, MixinWallet, In
             recipient: address(this),
             deadline: block.timestamp,
             amountIn: _amountIn,
-            amountOutMinimum: 0,
+            amountOutMinimum: minimumAmountOut,
             sqrtPriceLimitX96: 0
         });
 
@@ -294,7 +385,7 @@ contract Liquidator is ILiquidationReceiver, MixinAccessControl, MixinWallet, In
         bool _isCollateralInNativeCurrency,
         bool _isDebtInNativeCurrency
     ) internal {
-        uint256 amountOutMinimum = 0;
+        uint256 amountOutMinimum = minimumAmountOut;
         address[] memory path = new address[](2);
         path[0] = _collateralCcy;
         path[1] = _debtCcy;

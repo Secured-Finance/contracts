@@ -43,6 +43,53 @@ For example, the command will be `npm run deploy hardhat` to deploy the protocol
 
 To reset and redeploy the smart contracts again, the command `npm run deploy:force <NETWORK>` can be used.
 
+### Deploying Liquidator independently
+
+`Liquidator` can be deployed without running the other contracts tagged as
+`ExternalContracts`. The target network must already have `ProxyController`,
+`TokenVault`, and `LendingMarketController` deployments, and `TokenVault` and
+`LendingMarketController` must be registered in `ProxyController`.
+
+Set the network-specific variables in `.env`, including `PRIVATE_KEY`, the RPC
+endpoint, and `NATIVE_CURRENCY_SYMBOL`. Then compile and run only the
+`Liquidator` deployment tag:
+
+```sh
+npm run compile
+ENABLE_AUTO_UPDATE=true npm run deploy <NETWORK> -- --tags Liquidator
+```
+
+For example, to deploy on Filecoin mainnet:
+
+```sh
+ENABLE_AUTO_UPDATE=true npm run deploy filecoin-mainnet -- --tags Liquidator
+```
+
+The same command is used for both initial deployment and upgrades. On initial
+deployment, it deploys and initializes a transparent proxy. If a proxy
+deployment already exists and the implementation has changed, it upgrades the
+existing proxy after validating its immutable configuration. Do not use
+`deploy:force` or `--reset` for an upgrade because they remove the existing
+deployment record and may result in a new proxy deployment.
+
+#### Deploying Filecoin liquidation adapters
+
+To deploy and register the iFIL and/or wpFIL conversion adapters, set the
+applicable variables in `.env`:
+
+- iFIL: `GLIF_POOL_ADDRESS` and `IFIL_ADDRESS`
+- wpFIL: `PARASAIL_POOL_ADDRESS`, `WPFIL_ADDRESS`, and `PFIL_ADDRESS`
+
+Then run:
+
+```sh
+ENABLE_AUTO_UPDATE=true npm run deploy filecoin-mainnet -- --tags LiquidationAdaptersFVM
+```
+
+This tag depends on `Liquidator`, deploys each adapter whose complete set of
+environment variables is present, and registers it with `Liquidator`. The
+configured deployer must be the owner of `Liquidator` to register the adapters.
+
 ## Testing
 
 ### Hardhat EVM testing

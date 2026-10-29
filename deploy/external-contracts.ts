@@ -5,7 +5,6 @@ import {
   executeIfNewlyDeployment,
   getWaitConfirmations,
 } from '../utils/deployment';
-import { toBytes32 } from '../utils/strings';
 
 const func: DeployFunction = async function ({
   getNamedAccounts,
@@ -24,16 +23,6 @@ const func: DeployFunction = async function ({
     .getAddressResolverAddress()
     .then((address) => ethers.getContractAt('AddressResolver', address));
 
-  const tokenVault: Contract = await proxyController
-    .getAddress(toBytes32('TokenVault'))
-    .then((address) => ethers.getContractAt('TokenVault', address));
-
-  const lendingMarketController: Contract = await proxyController
-    .getAddress(toBytes32('LendingMarketController'))
-    .then((address) =>
-      ethers.getContractAt('LendingMarketController', address),
-    );
-
   for (const contractName of [
     'LendingMarketReader',
     'ItayoseCallResolver',
@@ -45,32 +34,6 @@ const func: DeployFunction = async function ({
       waitConfirmations,
     }).then((result) => executeIfNewlyDeployment(contractName, result));
   }
-
-  const nativeCurrencySymbol = toBytes32(
-    process.env.NATIVE_CURRENCY_SYMBOL || 'ETH',
-  );
-
-  const deployResult = await deploy('Liquidator', {
-    from: deployer,
-    proxy: {
-      owner: deployer,
-      execute: {
-        init: {
-          methodName: 'initialize',
-          args: [],
-        },
-      },
-      proxyContract: 'OpenZeppelinTransparentProxy',
-    },
-    args: [
-      nativeCurrencySymbol,
-      lendingMarketController.address,
-      tokenVault.address,
-    ],
-    waitConfirmations,
-  });
-
-  executeIfNewlyDeployment('Liquidator', deployResult);
 };
 
 func.tags = ['ExternalContracts'];

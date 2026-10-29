@@ -176,6 +176,7 @@ describe('LendingMarketController - Liquidations', () => {
             alice.address,
             ethers.constants.AddressZero,
             10,
+            0,
           ),
       ).revertedWith('CallerNotOperator');
     });
@@ -190,6 +191,7 @@ describe('LendingMarketController - Liquidations', () => {
           alice.address,
           ethers.constants.AddressZero,
           10,
+          0,
         ),
       ).revertedWith('InvalidMaturity');
     });
@@ -206,6 +208,7 @@ describe('LendingMarketController - Liquidations', () => {
           ethers.constants.AddressZero,
           alice.address,
           10,
+          0,
         ),
       ).revertedWith(`InvalidCurrency("${targetCurrency}")`);
     });
@@ -222,6 +225,7 @@ describe('LendingMarketController - Liquidations', () => {
             alice.address,
             ethers.constants.AddressZero,
             10,
+            0,
           ),
       ).revertedWith('CallerNotOperator');
     });
@@ -236,6 +240,7 @@ describe('LendingMarketController - Liquidations', () => {
           alice.address,
           ethers.constants.AddressZero,
           10,
+          0,
         ),
       ).revertedWith('InvalidMaturity');
     });
@@ -255,6 +260,7 @@ describe('LendingMarketController - Liquidations', () => {
           alice.address,
           ethers.constants.AddressZero,
           10,
+          0,
         ),
       ).revertedWith(`InvalidCurrency("${targetCurrency}")`);
     });
