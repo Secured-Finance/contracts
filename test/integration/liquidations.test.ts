@@ -456,6 +456,7 @@ describe('Integration Test: Liquidations', async () => {
             alice.address,
             mockUniswapRouter.address,
             10,
+            0,
           )
           .then(async (tx) => {
             await expect(tx).to.emit(liquidationLogic, 'LiquidationExecuted');
@@ -496,6 +497,7 @@ describe('Integration Test: Liquidations', async () => {
               alice.address,
               mockUniswapRouter.address,
               10,
+              0,
             ),
         ).to.be.revertedWith(
           `NoLiquidationAmount("${alice.address}", "${hexETH}")`,
@@ -682,6 +684,7 @@ describe('Integration Test: Liquidations', async () => {
             alice.address,
             mockUniswapRouter.address,
             10,
+            0,
           ),
         ).to.emit(liquidationLogic, 'LiquidationExecuted');
 
@@ -719,6 +722,7 @@ describe('Integration Test: Liquidations', async () => {
             alice.address,
             mockUniswapRouter.address,
             10,
+            0,
           ),
         ).to.be.revertedWith(
           `NoDebt("${alice.address}", "${hexWFIL}", ${filMaturities[0]})`,
@@ -832,6 +836,7 @@ describe('Integration Test: Liquidations', async () => {
             alice.address,
             mockUniswapRouter.address,
             10,
+            0,
           ),
         ).to.emit(liquidationLogic, 'LiquidationExecuted');
 
@@ -939,6 +944,7 @@ describe('Integration Test: Liquidations', async () => {
             alice.address,
             mockUniswapRouter.address,
             10,
+            0,
           )
           .then((tx) => tx.wait());
 
@@ -1095,6 +1101,7 @@ describe('Integration Test: Liquidations', async () => {
             alice.address,
             mockUniswapRouter.address,
             10,
+            0,
           )
           .then((tx) => tx.wait());
 
@@ -1283,6 +1290,7 @@ describe('Integration Test: Liquidations', async () => {
             bob.address,
             mockUniswapRouter.address,
             10,
+            0,
           )
           .then((tx) => tx.wait());
 
@@ -1702,6 +1710,7 @@ describe('Integration Test: Liquidations', async () => {
             bob.address,
             mockUniswapRouter.address,
             0,
+            0,
           )
           .then((tx) => tx.wait());
 
@@ -1837,6 +1846,7 @@ describe('Integration Test: Liquidations', async () => {
             alice.address,
             mockUniswapRouter.address,
             10,
+            0,
           )
           .then((tx) => tx.wait());
 
@@ -2039,6 +2049,7 @@ describe('Integration Test: Liquidations', async () => {
           alice.address,
           mockUniswapRouter.address,
           10,
+          0,
         ),
       ).to.emit(liquidationLogic, 'LiquidationExecuted');
 
@@ -2082,6 +2093,7 @@ describe('Integration Test: Liquidations', async () => {
           alice.address,
           mockUniswapRouter.address,
           10,
+          0,
         ),
       ).to.emit(liquidationLogic, 'LiquidationExecuted');
 
@@ -2305,6 +2317,7 @@ describe('Integration Test: Liquidations', async () => {
               alice.address,
               mockUniswapRouter.address,
               0,
+              0,
             ),
         ).to.be.revertedWith('NotRepaymentPeriod');
 
@@ -2322,6 +2335,7 @@ describe('Integration Test: Liquidations', async () => {
             filMaturities[0],
             alice.address,
             mockUniswapRouter.address,
+            0,
             0,
           )
           .then((tx) => tx.wait());
@@ -2452,6 +2466,7 @@ describe('Integration Test: Liquidations', async () => {
               alice.address,
               mockUniswapRouter.address,
               10,
+              0,
             ),
         ).to.be.revertedWith('NotRepaymentPeriod');
 
@@ -2470,6 +2485,7 @@ describe('Integration Test: Liquidations', async () => {
             alice.address,
             mockUniswapRouter.address,
             10,
+            0,
           )
           .then((tx) => tx.wait());
 
@@ -2627,6 +2643,7 @@ describe('Integration Test: Liquidations', async () => {
             alice.address,
             mockUniswapRouter.address,
             10,
+            0,
           ),
         ).to.emit(liquidationLogic, 'ForcedRepaymentExecuted');
 
@@ -2731,6 +2748,7 @@ describe('Integration Test: Liquidations', async () => {
               alice.address,
               mockUniswapRouter.address,
               10,
+              0,
             ),
         ).to.be.revertedWith('NotRepaymentPeriod');
 
@@ -2749,6 +2767,7 @@ describe('Integration Test: Liquidations', async () => {
             alice.address,
             mockUniswapRouter.address,
             10,
+            0,
           )
           .then((tx) => tx.wait());
 

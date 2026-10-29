@@ -76,10 +76,12 @@ task(
 
     console.log('Verifying', fileName, 'contract...');
 
-    const { address, implementation } = await deployments.get(fileName);
+    const deployment = await deployments.get(fileName);
+    const { address, implementation } = deployment;
     await run('verify:verify', {
       address: implementation || address,
-      constructorArguments: constructorArguments[fileName],
+      constructorArguments:
+        constructorArguments[fileName] || deployment.args || [],
     });
 
     if (implementation) {
