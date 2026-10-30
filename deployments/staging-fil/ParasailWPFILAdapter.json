@@ -1,0 +1,232 @@
+{
+  "address": "0x5f001c1a9c1c19a216532E87b8759c8bf66B3Edb",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_pool",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_wpFIL",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_pFIL",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_wFIL",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidAddress",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "expected",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "actual",
+          "type": "uint256"
+        }
+      ],
+      "name": "InvalidInputAmount",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_amountIn",
+          "type": "uint256"
+        }
+      ],
+      "name": "convert",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "amountOut",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "pFIL",
+      "outputs": [
+        {
+          "internalType": "contract IERC20",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "pool",
+      "outputs": [
+        {
+          "internalType": "contract IParasailPool",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_amountIn",
+          "type": "uint256"
+        }
+      ],
+      "name": "previewConvert",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "tokenIn",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "tokenOut",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "stateMutability": "payable",
+      "type": "receive"
+    }
+  ],
+  "transactionHash": "0x1faccc3ca3624110da942255fc3415b19e39aa1fd8a3227a977a542fac458433",
+  "receipt": {
+    "to": null,
+    "from": "0xDBA767F3DFF3835BEf5dE1eDEe91A9901402AB21",
+    "contractAddress": "0x5f001c1a9c1c19a216532E87b8759c8bf66B3Edb",
+    "transactionIndex": 15,
+    "gasUsed": "54554800",
+    "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "blockHash": "0x64288392a3a76cd3ba8fb14981308f6d65c98308cfcb3fc7d0ce7fd2d26de1c8",
+    "transactionHash": "0x1faccc3ca3624110da942255fc3415b19e39aa1fd8a3227a977a542fac458433",
+    "logs": [],
+    "blockNumber": 4200728,
+    "cumulativeGasUsed": "0",
+    "status": 1,
+    "byzantium": true
+  },
+  "args": [
+    "0x5c9d3502db845764240A38BD4a1AEDD2056DbCeA",
+    "0x07961742e79Cecf1171d2D5050ca489572C61384",
+    "0xADD77Cb736Db6F4223776A3E4b173657D0d7F8c8",
+    "0xaC26a4Ab9cF2A8c5DBaB6fb4351ec0F4b07356c4"
+  ],
+  "numDeployments": 1,
+  "solcInputHash": "f4375dfd28acec0bb1294de625737260",
+  "metadata": "{\"compiler\":{\"version\":\"0.8.19+commit.7dd6d404\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_pool\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_wpFIL\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_pFIL\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_wFIL\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"InvalidAddress\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"expected\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"actual\",\"type\":\"uint256\"}],\"name\":\"InvalidInputAmount\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_amountIn\",\"type\":\"uint256\"}],\"name\":\"convert\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"amountOut\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"pFIL\",\"outputs\":[{\"internalType\":\"contract IERC20\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"pool\",\"outputs\":[{\"internalType\":\"contract IParasailPool\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_amountIn\",\"type\":\"uint256\"}],\"name\":\"previewConvert\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"tokenIn\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"tokenOut\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"stateMutability\":\"payable\",\"type\":\"receive\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{\"convert(uint256)\":{\"details\":\"wpFIL is first unwrapped into pFIL. The pFIL is then redeemed for native FIL through the Parasail pool and normalized into wrapped FIL.\",\"params\":{\"_amountIn\":\"The amount of wpFIL to convert\"},\"returns\":{\"amountOut\":\"The amount of wrapped FIL sent to the caller\"}},\"previewConvert(uint256)\":{\"params\":{\"_amountIn\":\"The amount of wpFIL to convert\"},\"returns\":{\"_0\":\"The estimated amount of wrapped FIL\"}}},\"stateVariables\":{\"tokenIn\":{\"return\":\"The address of the input token\",\"returns\":{\"_0\":\"The address of the input token\"}},\"tokenOut\":{\"return\":\"The address of the output token\",\"returns\":{\"_0\":\"The address of the output token\"}}},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{\"convert(uint256)\":{\"notice\":\"Converts wpFIL into wrapped FIL and sends it to the caller.\"},\"previewConvert(uint256)\":{\"notice\":\"Estimates the amount of wrapped FIL received for a wpFIL conversion.\"},\"tokenIn()\":{\"notice\":\"Gets the token accepted by this adapter.\"},\"tokenOut()\":{\"notice\":\"Gets the normalized ERC-20 token returned by this adapter.\"}},\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/external/liquidation/adapters/ParasailWPFILAdapter.sol\":\"ParasailWPFILAdapter\"},\"evmVersion\":\"paris\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[]},\"sources\":{\"contracts/dependencies/openzeppelin/token/ERC20/IERC20.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n// OpenZeppelin Contracts (last updated v4.9.0) (token/ERC20/IERC20.sol)\\n\\npragma solidity ^0.8.0;\\n\\n/**\\n * @dev Interface of the ERC20 standard as defined in the EIP.\\n */\\ninterface IERC20 {\\n    /**\\n     * @dev Emitted when `value` tokens are moved from one account (`from`) to\\n     * another (`to`).\\n     *\\n     * Note that `value` may be zero.\\n     */\\n    event Transfer(address indexed from, address indexed to, uint256 value);\\n\\n    /**\\n     * @dev Emitted when the allowance of a `spender` for an `owner` is set by\\n     * a call to {approve}. `value` is the new allowance.\\n     */\\n    event Approval(address indexed owner, address indexed spender, uint256 value);\\n\\n    /**\\n     * @dev Returns the amount of tokens in existence.\\n     */\\n    function totalSupply() external view returns (uint256);\\n\\n    /**\\n     * @dev Returns the amount of tokens owned by `account`.\\n     */\\n    function balanceOf(address account) external view returns (uint256);\\n\\n    /**\\n     * @dev Moves `amount` tokens from the caller's account to `to`.\\n     *\\n     * Returns a boolean value indicating whether the operation succeeded.\\n     *\\n     * Emits a {Transfer} event.\\n     */\\n    function transfer(address to, uint256 amount) external returns (bool);\\n\\n    /**\\n     * @dev Returns the remaining number of tokens that `spender` will be\\n     * allowed to spend on behalf of `owner` through {transferFrom}. This is\\n     * zero by default.\\n     *\\n     * This value changes when {approve} or {transferFrom} are called.\\n     */\\n    function allowance(address owner, address spender) external view returns (uint256);\\n\\n    /**\\n     * @dev Sets `amount` as the allowance of `spender` over the caller's tokens.\\n     *\\n     * Returns a boolean value indicating whether the operation succeeded.\\n     *\\n     * IMPORTANT: Beware that changing an allowance with this method brings the risk\\n     * that someone may use both the old and the new allowance by unfortunate\\n     * transaction ordering. One possible solution to mitigate this race\\n     * condition is to first reduce the spender's allowance to 0 and set the\\n     * desired value afterwards:\\n     * https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729\\n     *\\n     * Emits an {Approval} event.\\n     */\\n    function approve(address spender, uint256 amount) external returns (bool);\\n\\n    /**\\n     * @dev Moves `amount` tokens from `from` to `to` using the\\n     * allowance mechanism. `amount` is then deducted from the caller's\\n     * allowance.\\n     *\\n     * Returns a boolean value indicating whether the operation succeeded.\\n     *\\n     * Emits a {Transfer} event.\\n     */\\n    function transferFrom(address from, address to, uint256 amount) external returns (bool);\\n}\\n\",\"keccak256\":\"0x287b55befed2961a7eabd7d7b1b2839cbca8a5b80ef8dcbb25ed3d4c2002c305\",\"license\":\"MIT\"},\"contracts/external/liquidation/adapters/ParasailWPFILAdapter.sol\":{\"content\":\"// SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.19;\\n\\nimport {IERC20} from \\\"../../../dependencies/openzeppelin/token/ERC20/IERC20.sol\\\";\\nimport {INativeToken} from \\\"../../../protocol/interfaces/INativeToken.sol\\\";\\nimport {TransferHelper} from \\\"../../../protocol/libraries/TransferHelper.sol\\\";\\nimport {IWPFIL} from \\\"../../oracles/interfaces/IWPFIL.sol\\\";\\nimport {IConversionAdapter} from \\\"../interfaces/IConversionAdapter.sol\\\";\\nimport {IParasailPool} from \\\"../interfaces/IParasailPool.sol\\\";\\n\\ncontract ParasailWPFILAdapter is IConversionAdapter {\\n    error InvalidAddress();\\n    error InvalidInputAmount(uint256 expected, uint256 actual);\\n\\n    IParasailPool public immutable pool;\\n    IERC20 public immutable pFIL;\\n    address public immutable override tokenIn;\\n    address public immutable override tokenOut;\\n\\n    constructor(address _pool, address _wpFIL, address _pFIL, address _wFIL) {\\n        if (\\n            _pool == address(0) ||\\n            _wpFIL == address(0) ||\\n            _pFIL == address(0) ||\\n            _wFIL == address(0)\\n        ) {\\n            revert InvalidAddress();\\n        }\\n\\n        pool = IParasailPool(_pool);\\n        pFIL = IERC20(_pFIL);\\n        tokenIn = _wpFIL;\\n        tokenOut = _wFIL;\\n    }\\n\\n    /**\\n     * @notice Receives native FIL withdrawn from the Parasail pool.\\n     */\\n    receive() external payable {}\\n\\n    /**\\n     * @notice Estimates the amount of wrapped FIL received for a wpFIL conversion.\\n     * @param _amountIn The amount of wpFIL to convert\\n     * @return The estimated amount of wrapped FIL\\n     */\\n    function previewConvert(uint256 _amountIn) external view override returns (uint256) {\\n        return IWPFIL(tokenIn).getPFILByWPFIL(_amountIn);\\n    }\\n\\n    /**\\n     * @notice Converts wpFIL into wrapped FIL and sends it to the caller.\\n     * @dev wpFIL is first unwrapped into pFIL. The pFIL is then redeemed for native FIL\\n     * through the Parasail pool and normalized into wrapped FIL.\\n     * @param _amountIn The amount of wpFIL to convert\\n     * @return amountOut The amount of wrapped FIL sent to the caller\\n     */\\n    function convert(uint256 _amountIn) external override returns (uint256 amountOut) {\\n        uint256 inputBalanceBefore = IERC20(tokenIn).balanceOf(address(this));\\n        TransferHelper.safeTransferFrom(tokenIn, msg.sender, address(this), _amountIn);\\n        uint256 receivedInputAmount = IERC20(tokenIn).balanceOf(address(this)) - inputBalanceBefore;\\n\\n        if (receivedInputAmount != _amountIn) {\\n            revert InvalidInputAmount(_amountIn, receivedInputAmount);\\n        }\\n\\n        uint256 pFILBalanceBefore = pFIL.balanceOf(address(this));\\n        IWPFIL(tokenIn).unwrap(_amountIn);\\n        uint256 receivedPFILAmount = pFIL.balanceOf(address(this)) - pFILBalanceBefore;\\n\\n        uint256 nativeBalanceBefore = address(this).balance;\\n        pool.withdrawFIL(receivedPFILAmount);\\n        uint256 receivedNativeAmount = address(this).balance - nativeBalanceBefore;\\n\\n        if (receivedNativeAmount != 0) {\\n            INativeToken(tokenOut).deposit{value: receivedNativeAmount}();\\n        }\\n\\n        amountOut = receivedNativeAmount;\\n        TransferHelper.safeTransfer(tokenOut, msg.sender, amountOut);\\n    }\\n}\\n\",\"keccak256\":\"0x6187366e4ce2d2800f51b65d96d42521b330cfe569f90e4c414f63b6d10a3e12\",\"license\":\"BUSL-1.1\"},\"contracts/external/liquidation/interfaces/IConversionAdapter.sol\":{\"content\":\"// SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.19;\\n\\ninterface IConversionAdapter {\\n    /**\\n     * @notice Gets the token accepted by this adapter.\\n     * @return The address of the input token\\n     */\\n    function tokenIn() external view returns (address);\\n\\n    /**\\n     * @notice Gets the normalized ERC-20 token returned by this adapter.\\n     * @return The address of the output token\\n     */\\n    function tokenOut() external view returns (address);\\n\\n    /**\\n     * @notice Estimates the output amount for a conversion.\\n     * @param amountIn The amount of the input token to convert\\n     * @return amountOut The estimated amount of the output token\\n     */\\n    function previewConvert(uint256 amountIn) external view returns (uint256 amountOut);\\n\\n    /**\\n     * @notice Converts an input token into the normalized ERC-20 output token.\\n     * @dev The adapter pulls the input token from and sends the output token to the caller.\\n     * @param amountIn The amount of the input token to convert\\n     * @return amountOut The amount of the output token sent to the caller\\n     */\\n    function convert(uint256 amountIn) external returns (uint256 amountOut);\\n}\\n\",\"keccak256\":\"0x51a148e89a46de422951f4faee533dad840e4d1d0675920a0f705cc9d5c36a6b\",\"license\":\"BUSL-1.1\"},\"contracts/external/liquidation/interfaces/IParasailPool.sol\":{\"content\":\"// SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.19;\\n\\ninterface IParasailPool {\\n    /**\\n     * @notice Withdraws native FIL by redeeming pFIL from the caller.\\n     * @param amount The amount of pFIL to redeem\\n     */\\n    function withdrawFIL(uint256 amount) external;\\n}\\n\",\"keccak256\":\"0x07eda80624aed76ede5ea4af0354734f3617cfc6448955a17c00e2ea08494fe9\",\"license\":\"BUSL-1.1\"},\"contracts/external/oracles/interfaces/IWPFIL.sol\":{\"content\":\"// SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.19;\\n\\ninterface IWPFIL {\\n    /**\\n     * @notice Gets the amount of pFIL represented by an amount of wpFIL.\\n     * @param _wpFILAmount The amount of wpFIL\\n     * @return The corresponding amount of pFIL\\n     */\\n    function getPFILByWPFIL(uint256 _wpFILAmount) external view returns (uint256);\\n\\n    /**\\n     * @notice Unwraps wpFIL into pFIL and sends it to the caller.\\n     * @param _wpFILAmount The amount of wpFIL to unwrap\\n     * @return pFILAmount The amount of pFIL sent to the caller\\n     */\\n    function unwrap(uint256 _wpFILAmount) external returns (uint256 pFILAmount);\\n}\\n\",\"keccak256\":\"0xecbab70e676a8a0fbb2c74a25809fc4651ba7738d1108c6ed792068422fc24ac\",\"license\":\"BUSL-1.1\"},\"contracts/protocol/interfaces/INativeToken.sol\":{\"content\":\"// SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.19;\\n\\nimport \\\"../../dependencies/openzeppelin/token/ERC20/IERC20.sol\\\";\\n\\ninterface INativeToken is IERC20 {\\n    event Deposit(address user, uint256 amount);\\n    event Withdrawal(address user, uint256 amount);\\n\\n    function deposit() external payable;\\n\\n    function withdraw(uint256 amount) external;\\n}\\n\",\"keccak256\":\"0x421a18a404723799ac6878c4f710de9e71b2f90877d027a18c8bc42950796b70\",\"license\":\"BUSL-1.1\"},\"contracts/protocol/libraries/TransferHelper.sol\":{\"content\":\"// SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.19;\\n\\nimport {INativeToken} from \\\"../interfaces/INativeToken.sol\\\";\\nimport {TransferHelperStorage as Storage} from \\\"../storages/libraries/TransferHelperStorage.sol\\\";\\n\\nlibrary TransferHelper {\\n    function initialize(address _nativeToken) internal {\\n        require(Storage.slot().nativeToken == address(0), \\\"TransferHelper: Already initialized\\\");\\n        Storage.slot().nativeToken = _nativeToken;\\n    }\\n\\n    function nativeToken() internal view returns (address) {\\n        return Storage.slot().nativeToken;\\n    }\\n\\n    function isNative(address _token) internal view returns (bool) {\\n        return _token == Storage.slot().nativeToken;\\n    }\\n\\n    function depositAssets(\\n        address _token,\\n        address _payer,\\n        address _receiver,\\n        uint256 _amount\\n    ) internal {\\n        if (address(_token) == Storage.slot().nativeToken) {\\n            convertToWrappedToken(_receiver, _amount);\\n        } else {\\n            safeTransferFrom(_token, _payer, _receiver, _amount);\\n        }\\n    }\\n\\n    function withdrawAssets(address _token, address _receiver, uint256 _amount) internal {\\n        if (address(_token) == Storage.slot().nativeToken) {\\n            convertFromWrappedToken(_receiver, _amount);\\n        } else {\\n            safeTransfer(_token, _receiver, _amount);\\n        }\\n    }\\n\\n    function convertToWrappedToken(address _receiver, uint256 _amount) internal {\\n        require(address(this).balance >= _amount, \\\"TransferHelper: Insufficient balance\\\");\\n\\n        INativeToken(Storage.slot().nativeToken).deposit{value: _amount}();\\n        safeTransfer(Storage.slot().nativeToken, _receiver, _amount);\\n    }\\n\\n    function convertFromWrappedToken(address _receiver, uint256 _amount) internal {\\n        uint256 balance = INativeToken(Storage.slot().nativeToken).balanceOf(address(this));\\n        require(balance >= _amount, \\\"TransferHelper: Insufficient balance\\\");\\n\\n        if (balance > 0) {\\n            INativeToken(Storage.slot().nativeToken).withdraw(_amount);\\n            safeTransferETH(_receiver, _amount);\\n        }\\n    }\\n\\n    /// @dev Transfer helper from UniswapV2 Router\\n    function safeApprove(address token, address to, uint256 value) internal {\\n        // bytes4(keccak256(bytes('approve(address,uint256)')));\\n        (bool success, bytes memory data) = token.call(\\n            abi.encodeWithSelector(0x095ea7b3, to, value)\\n        );\\n        require(\\n            success && (data.length == 0 || abi.decode(data, (bool))),\\n            \\\"TransferHelper: APPROVE_FAILED\\\"\\n        );\\n    }\\n\\n    /**\\n     * There are many non-compliant ERC20 tokens... this can handle most, adapted from UniSwap V2\\n     * Im trying to make it a habit to put external calls last (reentrancy)\\n     * You can put this in an internal function if you like.\\n     */\\n    function safeTransfer(address token, address to, uint256 amount) internal {\\n        // solium-disable-next-line security/no-low-level-calls\\n        (bool success, bytes memory data) = token.call(\\n            // 0xa9059cbb = bytes4(keccak256(\\\"transfer(address,uint256)\\\"))\\n            abi.encodeWithSelector(0xa9059cbb, to, amount)\\n        );\\n        require(\\n            success && (data.length == 0 || abi.decode(data, (bool))),\\n            \\\"TransferHelper: TRANSFER_FAILED\\\"\\n        ); // ERC20 Transfer failed\\n    }\\n\\n    function safeTransferFrom(address token, address from, address to, uint256 value) internal {\\n        (bool success, bytes memory data) = token.call(\\n            abi.encodeWithSelector(0x23b872dd, from, to, value)\\n        );\\n        require(\\n            success && (data.length == 0 || abi.decode(data, (bool))),\\n            \\\"TransferHelper: TRANSFER_FROM_FAILED\\\"\\n        );\\n    }\\n\\n    function safeTransferETH(address to, uint256 value) internal {\\n        (bool success, ) = to.call{value: value}(new bytes(0));\\n        require(success, \\\"TransferHelper: ETH_TRANSFER_FAILED\\\");\\n    }\\n}\\n\",\"keccak256\":\"0x97dfaed51a29cfeea6deb451a2f7d66adfa16ac2574c7fdafc79a3f002812cdd\",\"license\":\"BUSL-1.1\"},\"contracts/protocol/storages/libraries/TransferHelperStorage.sol\":{\"content\":\"// SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.19;\\n\\nlibrary TransferHelperStorage {\\n    bytes32 internal constant STORAGE_SLOT =\\n        bytes32(uint256(keccak256(\\\"sf.storage.transferHelper\\\")) - 1);\\n\\n    struct Storage {\\n        address nativeToken;\\n    }\\n\\n    function slot() internal pure returns (Storage storage r) {\\n        bytes32 _slot = STORAGE_SLOT;\\n        /// @solidity memory-safe-assembly\\n        assembly {\\n            r.slot := _slot\\n        }\\n    }\\n}\\n\",\"keccak256\":\"0xd8b1860e468280ebdccca0a4276fd31b58e0a84addb320f5d62372d644173f72\",\"license\":\"BUSL-1.1\"}},\"version\":1}",
+  "bytecode": "0x61010060405234801561001157600080fd5b50604051610b73380380610b73833981016040819052610030916100ce565b6001600160a01b038416158061004d57506001600160a01b038316155b8061005f57506001600160a01b038216155b8061007157506001600160a01b038116155b1561008f5760405163e6c4247b60e01b815260040160405180910390fd5b6001600160a01b0393841660805290831660a05290821660c0521660e052610122565b80516001600160a01b03811681146100c957600080fd5b919050565b600080600080608085870312156100e457600080fd5b6100ed856100b2565b93506100fb602086016100b2565b9250610109604086016100b2565b9150610117606086016100b2565b905092959194509250565b60805160a05160c05160e0516109d561019e6000396000818161017e015281816105fd015261067801526000818160fc015281816101b901528181610254015281816102c60152818161030f015261045901526000818160c8015281816103cd01526104f10152600081816077015261058101526109d56000f3fe6080604052600436106100595760003560e01c806316f0115b1461006557806369e127f1146100b65780636daf390b146100ea578063963fd6e41461011e578063a3908e1b1461014c578063d0202d3b1461016c57600080fd5b3661006057005b600080fd5b34801561007157600080fd5b506100997f000000000000000000000000000000000000000000000000000000000000000081565b6040516001600160a01b0390911681526020015b60405180910390f35b3480156100c257600080fd5b506100997f000000000000000000000000000000000000000000000000000000000000000081565b3480156100f657600080fd5b506100997f000000000000000000000000000000000000000000000000000000000000000081565b34801561012a57600080fd5b5061013e6101393660046108f4565b6101a0565b6040519081526020016100ad565b34801561015857600080fd5b5061013e6101673660046108f4565b610232565b34801561017857600080fd5b506100997f000000000000000000000000000000000000000000000000000000000000000081565b60405163a268362960e01b8152600481018290526000907f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03169063a268362990602401602060405180830381865afa158015610208573d6000803e3d6000fd5b505050506040513d601f19601f8201168201806040525081019061022c919061090d565b92915050565b6040516370a0823160e01b815230600482015260009081906001600160a01b037f000000000000000000000000000000000000000000000000000000000000000016906370a0823190602401602060405180830381865afa15801561029b573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906102bf919061090d565b90506102ed7f00000000000000000000000000000000000000000000000000000000000000003330866106a9565b6040516370a0823160e01b815230600482015260009082906001600160a01b037f000000000000000000000000000000000000000000000000000000000000000016906370a0823190602401602060405180830381865afa158015610356573d6000803e3d6000fd5b505050506040513d601f19601f8201168201806040525081019061037a919061090d565b6103849190610926565b90508381146103b5576040516349d2bbc560e01b815260048101859052602481018290526044015b60405180910390fd5b6040516370a0823160e01b81523060048201526000907f00000000000000000000000000000000000000000000000000000000000000006001600160a01b0316906370a0823190602401602060405180830381865afa15801561041c573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190610440919061090d565b604051636f074d1f60e11b8152600481018790529091507f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03169063de0e9a3e906024016020604051808303816000875af11580156104aa573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906104ce919061090d565b506040516370a0823160e01b815230600482015260009082906001600160a01b037f000000000000000000000000000000000000000000000000000000000000000016906370a0823190602401602060405180830381865afa158015610538573d6000803e3d6000fd5b505050506040513d601f19601f8201168201806040525081019061055c919061090d565b6105669190610926565b6040516363c4cf2f60e01b81526004810182905290915047907f00000000000000000000000000000000000000000000000000000000000000006001600160a01b0316906363c4cf2f90602401600060405180830381600087803b1580156105cd57600080fd5b505af11580156105e1573d6000803e3d6000fd5b50505050600081476105f39190610926565b90508015610670577f00000000000000000000000000000000000000000000000000000000000000006001600160a01b031663d0e30db0826040518263ffffffff1660e01b81526004016000604051808303818588803b15801561065657600080fd5b505af115801561066a573d6000803e3d6000fd5b50505050505b80965061069e7f000000000000000000000000000000000000000000000000000000000000000033896107d9565b505050505050919050565b604080516001600160a01b0385811660248301528481166044830152606480830185905283518084039091018152608490920183526020820180516001600160e01b03166323b872dd60e01b179052915160009283929088169161070d9190610947565b6000604051808303816000865af19150503d806000811461074a576040519150601f19603f3d011682016040523d82523d6000602084013e61074f565b606091505b50915091508180156107795750805115806107795750808060200190518101906107799190610976565b6107d15760405162461bcd60e51b8152602060048201526024808201527f5472616e7366657248656c7065723a205452414e534645525f46524f4d5f46416044820152631253115160e21b60648201526084016103ac565b505050505050565b604080516001600160a01b038481166024830152604480830185905283518084039091018152606490920183526020820180516001600160e01b031663a9059cbb60e01b17905291516000928392908716916108359190610947565b6000604051808303816000865af19150503d8060008114610872576040519150601f19603f3d011682016040523d82523d6000602084013e610877565b606091505b50915091508180156108a15750805115806108a15750808060200190518101906108a19190610976565b6108ed5760405162461bcd60e51b815260206004820152601f60248201527f5472616e7366657248656c7065723a205452414e534645525f4641494c45440060448201526064016103ac565b5050505050565b60006020828403121561090657600080fd5b5035919050565b60006020828403121561091f57600080fd5b5051919050565b8181038181111561022c57634e487b7160e01b600052601160045260246000fd5b6000825160005b81811015610968576020818601810151858301520161094e565b506000920191825250919050565b60006020828403121561098857600080fd5b8151801515811461099857600080fd5b939250505056fea264697066735822122044b409184f93c7c02120ce16b7f711d52ce21fa1473fc2c61911b73f237010a664736f6c63430008130033",
+  "deployedBytecode": "0x6080604052600436106100595760003560e01c806316f0115b1461006557806369e127f1146100b65780636daf390b146100ea578063963fd6e41461011e578063a3908e1b1461014c578063d0202d3b1461016c57600080fd5b3661006057005b600080fd5b34801561007157600080fd5b506100997f000000000000000000000000000000000000000000000000000000000000000081565b6040516001600160a01b0390911681526020015b60405180910390f35b3480156100c257600080fd5b506100997f000000000000000000000000000000000000000000000000000000000000000081565b3480156100f657600080fd5b506100997f000000000000000000000000000000000000000000000000000000000000000081565b34801561012a57600080fd5b5061013e6101393660046108f4565b6101a0565b6040519081526020016100ad565b34801561015857600080fd5b5061013e6101673660046108f4565b610232565b34801561017857600080fd5b506100997f000000000000000000000000000000000000000000000000000000000000000081565b60405163a268362960e01b8152600481018290526000907f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03169063a268362990602401602060405180830381865afa158015610208573d6000803e3d6000fd5b505050506040513d601f19601f8201168201806040525081019061022c919061090d565b92915050565b6040516370a0823160e01b815230600482015260009081906001600160a01b037f000000000000000000000000000000000000000000000000000000000000000016906370a0823190602401602060405180830381865afa15801561029b573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906102bf919061090d565b90506102ed7f00000000000000000000000000000000000000000000000000000000000000003330866106a9565b6040516370a0823160e01b815230600482015260009082906001600160a01b037f000000000000000000000000000000000000000000000000000000000000000016906370a0823190602401602060405180830381865afa158015610356573d6000803e3d6000fd5b505050506040513d601f19601f8201168201806040525081019061037a919061090d565b6103849190610926565b90508381146103b5576040516349d2bbc560e01b815260048101859052602481018290526044015b60405180910390fd5b6040516370a0823160e01b81523060048201526000907f00000000000000000000000000000000000000000000000000000000000000006001600160a01b0316906370a0823190602401602060405180830381865afa15801561041c573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190610440919061090d565b604051636f074d1f60e11b8152600481018790529091507f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03169063de0e9a3e906024016020604051808303816000875af11580156104aa573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906104ce919061090d565b506040516370a0823160e01b815230600482015260009082906001600160a01b037f000000000000000000000000000000000000000000000000000000000000000016906370a0823190602401602060405180830381865afa158015610538573d6000803e3d6000fd5b505050506040513d601f19601f8201168201806040525081019061055c919061090d565b6105669190610926565b6040516363c4cf2f60e01b81526004810182905290915047907f00000000000000000000000000000000000000000000000000000000000000006001600160a01b0316906363c4cf2f90602401600060405180830381600087803b1580156105cd57600080fd5b505af11580156105e1573d6000803e3d6000fd5b50505050600081476105f39190610926565b90508015610670577f00000000000000000000000000000000000000000000000000000000000000006001600160a01b031663d0e30db0826040518263ffffffff1660e01b81526004016000604051808303818588803b15801561065657600080fd5b505af115801561066a573d6000803e3d6000fd5b50505050505b80965061069e7f000000000000000000000000000000000000000000000000000000000000000033896107d9565b505050505050919050565b604080516001600160a01b0385811660248301528481166044830152606480830185905283518084039091018152608490920183526020820180516001600160e01b03166323b872dd60e01b179052915160009283929088169161070d9190610947565b6000604051808303816000865af19150503d806000811461074a576040519150601f19603f3d011682016040523d82523d6000602084013e61074f565b606091505b50915091508180156107795750805115806107795750808060200190518101906107799190610976565b6107d15760405162461bcd60e51b8152602060048201526024808201527f5472616e7366657248656c7065723a205452414e534645525f46524f4d5f46416044820152631253115160e21b60648201526084016103ac565b505050505050565b604080516001600160a01b038481166024830152604480830185905283518084039091018152606490920183526020820180516001600160e01b031663a9059cbb60e01b17905291516000928392908716916108359190610947565b6000604051808303816000865af19150503d8060008114610872576040519150601f19603f3d011682016040523d82523d6000602084013e610877565b606091505b50915091508180156108a15750805115806108a15750808060200190518101906108a19190610976565b6108ed5760405162461bcd60e51b815260206004820152601f60248201527f5472616e7366657248656c7065723a205452414e534645525f4641494c45440060448201526064016103ac565b5050505050565b60006020828403121561090657600080fd5b5035919050565b60006020828403121561091f57600080fd5b5051919050565b8181038181111561022c57634e487b7160e01b600052601160045260246000fd5b6000825160005b81811015610968576020818601810151858301520161094e565b506000920191825250919050565b60006020828403121561098857600080fd5b8151801515811461099857600080fd5b939250505056fea264697066735822122044b409184f93c7c02120ce16b7f711d52ce21fa1473fc2c61911b73f237010a664736f6c63430008130033",
+  "devdoc": {
+    "kind": "dev",
+    "methods": {
+      "convert(uint256)": {
+        "details": "wpFIL is first unwrapped into pFIL. The pFIL is then redeemed for native FIL through the Parasail pool and normalized into wrapped FIL.",
+        "params": {
+          "_amountIn": "The amount of wpFIL to convert"
+        },
+        "returns": {
+          "amountOut": "The amount of wrapped FIL sent to the caller"
+        }
+      },
+      "previewConvert(uint256)": {
+        "params": {
+          "_amountIn": "The amount of wpFIL to convert"
+        },
+        "returns": {
+          "_0": "The estimated amount of wrapped FIL"
+        }
+      }
+    },
+    "stateVariables": {
+      "tokenIn": {
+        "return": "The address of the input token",
+        "returns": {
+          "_0": "The address of the input token"
+        }
+      },
+      "tokenOut": {
+        "return": "The address of the output token",
+        "returns": {
+          "_0": "The address of the output token"
+        }
+      }
+    },
+    "version": 1
+  },
+  "userdoc": {
+    "kind": "user",
+    "methods": {
+      "convert(uint256)": {
+        "notice": "Converts wpFIL into wrapped FIL and sends it to the caller."
+      },
+      "previewConvert(uint256)": {
+        "notice": "Estimates the amount of wrapped FIL received for a wpFIL conversion."
+      },
+      "tokenIn()": {
+        "notice": "Gets the token accepted by this adapter."
+      },
+      "tokenOut()": {
+        "notice": "Gets the normalized ERC-20 token returned by this adapter."
+      }
+    },
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [],
+    "types": null
+  }
+}
