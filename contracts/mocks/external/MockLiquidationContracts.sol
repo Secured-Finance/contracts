@@ -238,12 +238,14 @@ contract MockUniversalRouter {
             address recipient;
             bytes memory path;
             bool payerIsUser;
-            (recipient, amountIn, minimumAmountOut, path, payerIsUser) = abi.decode(
+            uint256[] memory minHopPriceX36;
+            (recipient, amountIn, minimumAmountOut, path, payerIsUser, minHopPriceX36) = abi.decode(
                 _inputs[0],
-                (address, uint256, uint256, bytes, bool)
+                (address, uint256, uint256, bytes, bool, uint256[])
             );
             require(recipient == msg.sender && payerIsUser, "Invalid V3 parameters");
             require(path.length == 43, "Invalid V3 path");
+            require(minHopPriceX36.length == 0, "Invalid V3 hop limits");
             assembly {
                 tokenIn := shr(96, mload(add(path, 32)))
                 tokenOut := shr(96, mload(add(path, 55)))

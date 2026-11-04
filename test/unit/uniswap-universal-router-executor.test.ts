@@ -115,7 +115,7 @@ describe('UniswapUniversalRouterExecutor', () => {
     expect(permit2Allowance.amount).to.equal(0);
   });
 
-  it('executes a mixed V3 and V4 route', async () => {
+  it('executes a mixed V3 and V4 route with Universal Router v2.1.1+ encoding', async () => {
     await universalRouter.setExchangeRate(
       tokenA.address,
       tokenB.address,
