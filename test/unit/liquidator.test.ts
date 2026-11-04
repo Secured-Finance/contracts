@@ -6,6 +6,7 @@ import { ethers } from 'hardhat';
 const FIL = ethers.utils.formatBytes32String('FIL');
 const IFIL = ethers.utils.formatBytes32String('iFIL');
 const USDC = ethers.utils.formatBytes32String('USDC');
+const JPYC = ethers.utils.formatBytes32String('JPYC');
 const RATE_PRECISION = ethers.constants.WeiPerEther;
 
 describe('Liquidator', () => {
@@ -14,6 +15,7 @@ describe('Liquidator', () => {
   let iFIL: Contract;
   let wFIL: Contract;
   let usdc: Contract;
+  let jpyc: Contract;
   let pool: Contract;
   let adapter: Contract;
   let tokenVault: Contract;
@@ -40,6 +42,11 @@ describe('Liquidator', () => {
       .getContractFactory('MockERC20')
       .then((factory) =>
         factory.deploy('USD Coin', 'USDC', ethers.utils.parseEther('1000')),
+      );
+    jpyc = await ethers
+      .getContractFactory('MockERC20')
+      .then((factory) =>
+        factory.deploy('JPY Coin', 'JPYC', ethers.utils.parseEther('1000')),
       );
     pool = await ethers
       .getContractFactory('MockInfinityPool')
@@ -75,6 +82,7 @@ describe('Liquidator', () => {
     await tokenVault.setTokenAddress(FIL, wFIL.address);
     await tokenVault.setTokenAddress(IFIL, iFIL.address);
     await tokenVault.setTokenAddress(USDC, usdc.address);
+    await tokenVault.setTokenAddress(JPYC, jpyc.address);
     liquidator = await ethers
       .getContractFactory('Liquidator')
       .then((factory) =>
@@ -303,6 +311,113 @@ describe('Liquidator', () => {
       expect(await liquidator.conversionAdapters(iFIL.address)).to.equal(
         ethers.constants.AddressZero,
       );
+    });
+  });
+
+  describe('pair-aware swap executor', () => {
+    let swapExecutor: Contract;
+
+    beforeEach(async () => {
+      swapExecutor = await ethers
+        .getContractFactory('MockLiquidationSwapExecutor')
+        .then((factory) => factory.deploy());
+      await swapExecutor.setExchangeRate(
+        usdc.address,
+        jpyc.address,
+        RATE_PRECISION.mul(2),
+      );
+      await jpyc.transfer(swapExecutor.address, ethers.utils.parseEther('100'));
+      await usdc.transfer(tokenVault.address, collateralAmount);
+    });
+
+    it('uses an executor registered for the collateral and debt pair', async () => {
+      const maturity = BigNumber.from(
+        (await ethers.provider.getBlock('latest')).timestamp + 3600,
+      );
+      const executorOutput = collateralAmount.mul(2);
+      await liquidator.setSwapExecutor(
+        usdc.address,
+        jpyc.address,
+        swapExecutor.address,
+      );
+
+      await expect(
+        liquidator.executeLiquidationCall(
+          USDC,
+          [],
+          JPYC,
+          maturity,
+          alice.address,
+          ethers.constants.AddressZero,
+          0,
+          executorOutput,
+        ),
+      )
+        .to.emit(liquidator, 'TokenSwapped')
+        .withArgs(
+          swapExecutor.address,
+          usdc.address,
+          jpyc.address,
+          collateralAmount,
+          executorOutput,
+        );
+
+      expect(
+        await tokenVault.depositAmounts(liquidator.address, JPYC),
+      ).to.equal(executorOutput);
+      expect(
+        await usdc.allowance(liquidator.address, swapExecutor.address),
+      ).to.equal(0);
+    });
+
+    it('only allows the owner to register an executor', async () => {
+      await expect(
+        liquidator
+          .connect(alice)
+          .setSwapExecutor(usdc.address, jpyc.address, swapExecutor.address),
+      ).to.be.revertedWith('Ownable: caller is not the owner');
+    });
+
+    it('rejects an executor that does not support the pair', async () => {
+      await expect(
+        liquidator.setSwapExecutor(
+          jpyc.address,
+          usdc.address,
+          swapExecutor.address,
+        ),
+      ).to.be.reverted;
+    });
+
+    it('registers and removes an executor', async () => {
+      await expect(
+        liquidator.setSwapExecutor(
+          usdc.address,
+          jpyc.address,
+          swapExecutor.address,
+        ),
+      )
+        .to.emit(liquidator, 'SwapExecutorUpdated')
+        .withArgs(
+          usdc.address,
+          jpyc.address,
+          ethers.constants.AddressZero,
+          swapExecutor.address,
+        );
+
+      await expect(
+        liquidator.setSwapExecutor(
+          usdc.address,
+          jpyc.address,
+          ethers.constants.AddressZero,
+        ),
+      )
+        .to.emit(liquidator, 'SwapExecutorUpdated')
+        .withArgs(
+          usdc.address,
+          jpyc.address,
+          swapExecutor.address,
+          ethers.constants.AddressZero,
+        );
     });
   });
 });

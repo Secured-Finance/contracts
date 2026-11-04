@@ -4,6 +4,7 @@ pragma solidity 0.8.19;
 import {ISwapRouter} from "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 import {ILiquidationReceiver} from "../../protocol/interfaces/ILiquidationReceiver.sol";
 import {TransferHelper} from "../../protocol/libraries/TransferHelper.sol";
+import {ISwapExecutor} from "../../external/liquidation/interfaces/ISwapExecutor.sol";
 
 contract MockLiquidationTokenVault {
     address public immutable nativeToken;
@@ -129,5 +130,156 @@ contract MockLiquidationV3Router {
             _params.amountIn
         );
         TransferHelper.safeTransfer(_params.tokenOut, _params.recipient, amountOut);
+    }
+}
+
+contract MockLiquidationSwapExecutor is ISwapExecutor {
+    uint256 private constant RATE_PRECISION = 1e18;
+
+    mapping(bytes32 => uint256) public exchangeRates;
+
+    function setExchangeRate(address _tokenIn, address _tokenOut, uint256 _rate) external {
+        exchangeRates[keccak256(abi.encode(_tokenIn, _tokenOut))] = _rate;
+    }
+
+    function supportsPair(address _tokenIn, address _tokenOut) external view returns (bool) {
+        return exchangeRates[keccak256(abi.encode(_tokenIn, _tokenOut))] != 0;
+    }
+
+    function swap(
+        address _tokenIn,
+        address _tokenOut,
+        uint256 _amountIn,
+        uint256 _minimumAmountOut,
+        address _recipient
+    ) external payable returns (uint256 amountOut) {
+        require(msg.value == 0, "Native input unsupported");
+        uint256 rate = exchangeRates[keccak256(abi.encode(_tokenIn, _tokenOut))];
+        require(rate != 0, "Unsupported pair");
+
+        amountOut = (_amountIn * rate) / RATE_PRECISION;
+        require(amountOut >= _minimumAmountOut, "Too little received");
+        TransferHelper.safeTransferFrom(_tokenIn, msg.sender, address(this), _amountIn);
+        TransferHelper.safeTransfer(_tokenOut, _recipient, amountOut);
+    }
+}
+
+contract MockPermit2 {
+    struct Allowance {
+        uint160 amount;
+        uint48 expiration;
+    }
+
+    mapping(address => mapping(address => mapping(address => Allowance))) public allowance;
+
+    function approve(
+        address _token,
+        address _spender,
+        uint160 _amount,
+        uint48 _expiration
+    ) external {
+        allowance[msg.sender][_token][_spender] = Allowance(_amount, _expiration);
+    }
+
+    function transferFrom(address _from, address _to, uint160 _amount, address _token) external {
+        Allowance storage permitted = allowance[_from][_token][msg.sender];
+        require(permitted.expiration >= block.timestamp, "Allowance expired");
+        require(permitted.amount >= _amount, "Insufficient allowance");
+        permitted.amount -= _amount;
+        TransferHelper.safeTransferFrom(_token, _from, _to, _amount);
+    }
+}
+
+contract MockUniversalRouter {
+    struct PoolKey {
+        address currency0;
+        address currency1;
+        uint24 fee;
+        int24 tickSpacing;
+        address hooks;
+    }
+
+    struct ExactInputSingleParams {
+        PoolKey poolKey;
+        bool zeroForOne;
+        uint128 amountIn;
+        uint128 amountOutMinimum;
+        bytes hookData;
+    }
+
+    uint256 private constant RATE_PRECISION = 1e18;
+
+    MockPermit2 public immutable permit2;
+    mapping(bytes32 => uint256) public exchangeRates;
+
+    constructor(address _permit2) {
+        permit2 = MockPermit2(_permit2);
+    }
+
+    function setExchangeRate(address _tokenIn, address _tokenOut, uint256 _rate) external {
+        exchangeRates[keccak256(abi.encode(_tokenIn, _tokenOut))] = _rate;
+    }
+
+    function execute(
+        bytes calldata _commands,
+        bytes[] calldata _inputs,
+        uint256 _deadline
+    ) external {
+        require(_deadline >= block.timestamp, "Transaction too old");
+        require(_commands.length == 1 && _inputs.length == 1, "Invalid command count");
+
+        uint8 command = uint8(_commands[0]);
+        address tokenIn;
+        address tokenOut;
+        uint256 amountIn;
+        uint256 minimumAmountOut;
+
+        if (command == 0x00) {
+            address recipient;
+            bytes memory path;
+            bool payerIsUser;
+            (recipient, amountIn, minimumAmountOut, path, payerIsUser) = abi.decode(
+                _inputs[0],
+                (address, uint256, uint256, bytes, bool)
+            );
+            require(recipient == msg.sender && payerIsUser, "Invalid V3 parameters");
+            require(path.length == 43, "Invalid V3 path");
+            assembly {
+                tokenIn := shr(96, mload(add(path, 32)))
+                tokenOut := shr(96, mload(add(path, 55)))
+            }
+        } else if (command == 0x10) {
+            bytes memory actions;
+            bytes[] memory params;
+            (actions, params) = abi.decode(_inputs[0], (bytes, bytes[]));
+            require(actions.length == 3 && params.length == 3, "Invalid V4 actions");
+            require(
+                uint8(actions[0]) == 0x06 && uint8(actions[1]) == 0x0c && uint8(actions[2]) == 0x0f,
+                "Invalid V4 action sequence"
+            );
+
+            ExactInputSingleParams memory swapParams = abi.decode(
+                params[0],
+                (ExactInputSingleParams)
+            );
+            tokenIn = swapParams.zeroForOne
+                ? swapParams.poolKey.currency0
+                : swapParams.poolKey.currency1;
+            tokenOut = swapParams.zeroForOne
+                ? swapParams.poolKey.currency1
+                : swapParams.poolKey.currency0;
+            amountIn = swapParams.amountIn;
+            minimumAmountOut = swapParams.amountOutMinimum;
+        } else {
+            revert("Unsupported command");
+        }
+
+        uint256 rate = exchangeRates[keccak256(abi.encode(tokenIn, tokenOut))];
+        require(rate != 0, "Unsupported pair");
+        uint256 amountOut = (amountIn * rate) / RATE_PRECISION;
+        require(amountOut >= minimumAmountOut, "Too little received");
+
+        permit2.transferFrom(msg.sender, address(this), uint160(amountIn), tokenIn);
+        TransferHelper.safeTransfer(tokenOut, msg.sender, amountOut);
     }
 }

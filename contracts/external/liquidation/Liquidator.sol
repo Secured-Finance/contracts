@@ -13,6 +13,7 @@ import {ILendingMarketController} from "../../protocol/interfaces/ILendingMarket
 import {ITokenVault} from "../../protocol/interfaces/ITokenVault.sol";
 import {ILiquidationReceiver} from "../../protocol/interfaces/ILiquidationReceiver.sol";
 import {IConversionAdapter} from "./interfaces/IConversionAdapter.sol";
+import {ISwapExecutor} from "./interfaces/ISwapExecutor.sol";
 // mixins
 import {MixinAccessControl} from "../../protocol/mixins/MixinAccessControl.sol";
 import {MixinWallet} from "../../protocol/mixins/MixinWallet.sol";
@@ -20,6 +21,8 @@ import {MixinWallet} from "../../protocol/mixins/MixinWallet.sol";
 contract Liquidator is ILiquidationReceiver, MixinAccessControl, MixinWallet, Initializable {
     error InvalidConversionAdapter(address adapter);
     error InvalidConversionPair(address tokenIn, address tokenOut);
+    error InvalidSwapExecutor(address executor);
+    error InvalidSwapPair(address tokenIn, address tokenOut);
     error InsufficientOutputAmount(uint256 minimumAmountOut, uint256 actualAmountOut);
 
     event ConversionAdapterUpdated(
@@ -29,6 +32,19 @@ contract Liquidator is ILiquidationReceiver, MixinAccessControl, MixinWallet, In
     );
     event TokenConverted(
         address indexed adapter,
+        address indexed tokenIn,
+        address indexed tokenOut,
+        uint256 amountIn,
+        uint256 amountOut
+    );
+    event SwapExecutorUpdated(
+        address indexed tokenIn,
+        address indexed tokenOut,
+        address previousExecutor,
+        address newExecutor
+    );
+    event TokenSwapped(
+        address indexed executor,
         address indexed tokenIn,
         address indexed tokenOut,
         uint256 amountIn,
@@ -44,6 +60,7 @@ contract Liquidator is ILiquidationReceiver, MixinAccessControl, MixinWallet, In
     uint256[] public collateralMaturities;
     uint256 public minimumAmountOut;
     mapping(address => address) public conversionAdapters;
+    mapping(address => mapping(address => address)) public swapExecutors;
 
     modifier onlyLendingMarketController() {
         require(_msgSender() == address(lendingMarketController), "Invalid caller");
@@ -66,8 +83,8 @@ contract Liquidator is ILiquidationReceiver, MixinAccessControl, MixinWallet, In
 
     /**
      * @notice Executes the liquidation call.
-     * @dev In this liquidation call, Uniswap V2 is used for swapping when poolFee is 0.
-     * Otherwise, Uniswap V3 is used.
+     * @dev A registered pair-aware swap executor is preferred. If none is registered,
+     *      Uniswap V2 is used when poolFee is 0 and Uniswap V3 otherwise.
      *
      * @param _collateralCcy Currency name of the collateral in bytes32
      * @param _collateralMaturities Maturities of the collateral
@@ -102,8 +119,8 @@ contract Liquidator is ILiquidationReceiver, MixinAccessControl, MixinWallet, In
 
     /**
      * @notice Executes the forced repayment.
-     * @dev In this liquidation call, Uniswap V2 is used for swapping when poolFee is 0.
-     * Otherwise, Uniswap V3 is used.
+     * @dev A registered pair-aware swap executor is preferred. If none is registered,
+     *      Uniswap V2 is used when poolFee is 0 and Uniswap V3 otherwise.
      *
      * @param _collateralCcy Currency name of the collateral in bytes32
      * @param _collateralMaturities Maturities of the collateral
@@ -220,7 +237,20 @@ contract Liquidator is ILiquidationReceiver, MixinAccessControl, MixinWallet, In
             }
 
             if (swapToken != debtCcyAddr) {
-                if (isV2Router) {
+                address executor = swapExecutors[swapToken][debtCcyAddr];
+
+                if (executor != address(0)) {
+                    uint256 amountOut = _executeSwapWithExecutor(
+                        executor,
+                        swapToken,
+                        debtCcyAddr,
+                        amountIn,
+                        isSwapTokenNative,
+                        debtCcyAddr == nativeToken
+                    );
+                    emit TokenSwapped(executor, swapToken, debtCcyAddr, amountIn, amountOut);
+                    isDebtReceivedInNativeCurrency = debtCcyAddr == nativeToken;
+                } else if (isV2Router) {
                     _executeSwapWithV2(
                         swapToken,
                         debtCcyAddr,
@@ -334,6 +364,33 @@ contract Liquidator is ILiquidationReceiver, MixinAccessControl, MixinWallet, In
         emit ConversionAdapterUpdated(_tokenIn, previousAdapter, _adapter);
     }
 
+    /**
+     * @notice Sets the swap executor used for a token pair.
+     * @dev Setting the executor to the zero address removes the current executor.
+     */
+    function setSwapExecutor(
+        address _tokenIn,
+        address _tokenOut,
+        address _executor
+    ) external onlyOwner {
+        if (_tokenIn == address(0) || _tokenOut == address(0) || _tokenIn == _tokenOut) {
+            revert InvalidSwapPair(_tokenIn, _tokenOut);
+        }
+
+        address previousExecutor = swapExecutors[_tokenIn][_tokenOut];
+        if (_executor != address(0)) {
+            if (
+                _executor.code.length == 0 ||
+                !ISwapExecutor(_executor).supportsPair(_tokenIn, _tokenOut)
+            ) {
+                revert InvalidSwapExecutor(_executor);
+            }
+        }
+
+        swapExecutors[_tokenIn][_tokenOut] = _executor;
+        emit SwapExecutorUpdated(_tokenIn, _tokenOut, previousExecutor, _executor);
+    }
+
     function _executeConversion(
         address _adapter,
         address _tokenIn,
@@ -348,6 +405,43 @@ contract Liquidator is ILiquidationReceiver, MixinAccessControl, MixinWallet, In
 
         amountOut = IERC20(tokenOut).balanceOf(address(this)) - outputBalanceBefore;
         emit TokenConverted(_adapter, _tokenIn, tokenOut, _amountIn, amountOut);
+    }
+
+    function _executeSwapWithExecutor(
+        address _executor,
+        address _tokenIn,
+        address _tokenOut,
+        uint256 _amountIn,
+        bool _isInputNative,
+        bool _isOutputNative
+    ) internal returns (uint256 amountOut) {
+        uint256 outputBalanceBefore = _isOutputNative
+            ? address(this).balance
+            : IERC20(_tokenOut).balanceOf(address(this));
+
+        if (!_isInputNative) {
+            TransferHelper.safeApprove(_tokenIn, _executor, _amountIn);
+        }
+
+        ISwapExecutor(_executor).swap{value: _isInputNative ? _amountIn : 0}(
+            _tokenIn,
+            _tokenOut,
+            _amountIn,
+            minimumAmountOut,
+            address(this)
+        );
+
+        if (!_isInputNative) {
+            TransferHelper.safeApprove(_tokenIn, _executor, 0);
+        }
+
+        amountOut =
+            (_isOutputNative ? address(this).balance : IERC20(_tokenOut).balanceOf(address(this))) -
+            outputBalanceBefore;
+
+        if (amountOut < minimumAmountOut) {
+            revert InsufficientOutputAmount(minimumAmountOut, amountOut);
+        }
     }
 
     function _executeSwapWithV3(
