@@ -2,6 +2,60 @@
 
 ## Liquidator
 
+### InvalidConversionAdapter
+
+```solidity
+error InvalidConversionAdapter(address adapter)
+```
+
+### InvalidConversionPair
+
+```solidity
+error InvalidConversionPair(address tokenIn, address tokenOut)
+```
+
+### InvalidSwapExecutor
+
+```solidity
+error InvalidSwapExecutor(address executor)
+```
+
+### InvalidSwapPair
+
+```solidity
+error InvalidSwapPair(address tokenIn, address tokenOut)
+```
+
+### InsufficientOutputAmount
+
+```solidity
+error InsufficientOutputAmount(uint256 minimumAmountOut, uint256 actualAmountOut)
+```
+
+### ConversionAdapterUpdated
+
+```solidity
+event ConversionAdapterUpdated(address tokenIn, address previousAdapter, address newAdapter)
+```
+
+### TokenConverted
+
+```solidity
+event TokenConverted(address adapter, address tokenIn, address tokenOut, uint256 amountIn, uint256 amountOut)
+```
+
+### SwapExecutorUpdated
+
+```solidity
+event SwapExecutorUpdated(address tokenIn, address tokenOut, address previousExecutor, address newExecutor)
+```
+
+### TokenSwapped
+
+```solidity
+event TokenSwapped(address executor, address tokenIn, address tokenOut, uint256 amountIn, uint256 amountOut)
+```
+
 ### nativeToken
 
 ```solidity
@@ -38,6 +92,24 @@ uint24 poolFee
 uint256[] collateralMaturities
 ```
 
+### minimumAmountOut
+
+```solidity
+uint256 minimumAmountOut
+```
+
+### conversionAdapters
+
+```solidity
+mapping(address => address) conversionAdapters
+```
+
+### swapExecutors
+
+```solidity
+mapping(address => mapping(address => address)) swapExecutors
+```
+
 ### onlyLendingMarketController
 
 ```solidity
@@ -65,13 +137,13 @@ receive() external payable
 ### executeLiquidationCall
 
 ```solidity
-function executeLiquidationCall(bytes32 _collateralCcy, uint256[] _collateralMaturities, bytes32 _debtCcy, uint256 _debtMaturity, address _user, address _uniswapRouter, uint24 _poolFee) external
+function executeLiquidationCall(bytes32 _collateralCcy, uint256[] _collateralMaturities, bytes32 _debtCcy, uint256 _debtMaturity, address _user, address _uniswapRouter, uint24 _poolFee, uint256 _minimumAmountOut) external
 ```
 
 Executes the liquidation call.
 
-_In this liquidation call, Uniswap V2 is used for swapping when poolFee is 0.
-Otherwise, Uniswap V3 is used._
+_A registered pair-aware swap executor is preferred. If none is registered,
+     Uniswap V2 is used when poolFee is 0 and Uniswap V3 otherwise._
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -82,17 +154,18 @@ Otherwise, Uniswap V3 is used._
 | _user | address | Address of the user |
 | _uniswapRouter | address | Address of the Uniswap router |
 | _poolFee | uint24 | Pool fee |
+| _minimumAmountOut | uint256 | Minimum debt currency amount to receive from the conversion route, or zero if unset |
 
 ### executeForcedRepayment
 
 ```solidity
-function executeForcedRepayment(bytes32 _collateralCcy, uint256[] _collateralMaturities, bytes32 _debtCcy, uint256 _debtMaturity, address _user, address _uniswapRouter, uint24 _poolFee) external
+function executeForcedRepayment(bytes32 _collateralCcy, uint256[] _collateralMaturities, bytes32 _debtCcy, uint256 _debtMaturity, address _user, address _uniswapRouter, uint24 _poolFee, uint256 _minimumAmountOut) external
 ```
 
 Executes the forced repayment.
 
-_In this liquidation call, Uniswap V2 is used for swapping when poolFee is 0.
-Otherwise, Uniswap V3 is used._
+_A registered pair-aware swap executor is preferred. If none is registered,
+     Uniswap V2 is used when poolFee is 0 and Uniswap V3 otherwise._
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -103,6 +176,7 @@ Otherwise, Uniswap V3 is used._
 | _user | address | Address of the user |
 | _uniswapRouter | address | Address of the Uniswap router |
 | _poolFee | uint24 | Pool fee |
+| _minimumAmountOut | uint256 | Minimum debt currency amount to receive from the conversion route, or zero if unset |
 
 ### executeOperationForCollateral
 
@@ -162,6 +236,43 @@ Withdraws funds by the caller from the token vault.
 | ---- | ---- | ----------- |
 | _ccy | bytes32 | Currency name in bytes32 |
 | _amount | uint256 | Amount of funds to deposit |
+
+### setConversionAdapter
+
+```solidity
+function setConversionAdapter(address _tokenIn, address _adapter) external
+```
+
+Sets the conversion adapter used for an input token.
+
+_Setting the adapter to the zero address removes the current adapter._
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _tokenIn | address | Address of the token to register the adapter for |
+| _adapter | address | Address of the conversion adapter, or zero to remove it |
+
+### setSwapExecutor
+
+```solidity
+function setSwapExecutor(address _tokenIn, address _tokenOut, address _executor) external
+```
+
+Sets the swap executor used for a token pair.
+
+_Setting the executor to the zero address removes the current executor._
+
+### _executeConversion
+
+```solidity
+function _executeConversion(address _adapter, address _tokenIn, uint256 _amountIn) internal returns (address tokenOut, uint256 amountOut)
+```
+
+### _executeSwapWithExecutor
+
+```solidity
+function _executeSwapWithExecutor(address _executor, address _tokenIn, address _tokenOut, uint256 _amountIn, bool _isInputNative, bool _isOutputNative) internal returns (uint256 amountOut)
+```
 
 ### _executeSwapWithV3
 
