@@ -228,7 +228,21 @@ describe('UniswapUniversalRouterExecutor', () => {
 
   it('rejects route updates from non-owners', async () => {
     await expect(
-      executor.connect(alice).setRoute(tokenA.address, tokenB.address, []),
+      executor.connect(alice).setRoute(tokenA.address, tokenB.address, [
+        {
+          protocol: 1,
+          tokenOut: tokenB.address,
+          fee: 3000,
+          tickSpacing: 60,
+          hooks: ethers.constants.AddressZero,
+          hookData: '0x',
+        },
+      ]),
     ).to.be.revertedWith('Ownable: caller is not the owner');
+  });
+
+  it('rejects empty routes', async () => {
+    await expect(executor.setRoute(tokenA.address, tokenB.address, [])).to.be
+      .reverted;
   });
 });

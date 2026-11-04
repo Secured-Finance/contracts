@@ -110,14 +110,19 @@ contract UniswapUniversalRouterExecutor is ISwapExecutor, Ownable {
     }
 
     /**
-     * @notice Replaces the route for a pair. Passing an empty route removes it.
+     * @notice Adds or replaces the route for a token pair.
      */
     function setRoute(
         address _tokenIn,
         address _tokenOut,
         RouteStep[] calldata _steps
     ) external onlyOwner {
-        if (_tokenIn == address(0) || _tokenOut == address(0) || _tokenIn == _tokenOut) {
+        if (
+            _tokenIn == address(0) ||
+            _tokenOut == address(0) ||
+            _tokenIn == _tokenOut ||
+            _steps.length == 0
+        ) {
             revert InvalidRoute(_tokenIn, _tokenOut);
         }
 
@@ -144,7 +149,7 @@ contract UniswapUniversalRouterExecutor is ISwapExecutor, Ownable {
             currentToken = step.tokenOut;
         }
 
-        if (_steps.length != 0 && currentToken != _tokenOut) {
+        if (currentToken != _tokenOut) {
             revert InvalidRoute(_tokenIn, _tokenOut);
         }
 
