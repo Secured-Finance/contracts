@@ -230,12 +230,15 @@ contract UniswapUniversalRouterExecutor is ISwapExecutor, Ownable {
         uint256 balanceBefore = IERC20(_tokenOut).balanceOf(address(this));
         bytes memory commands = abi.encodePacked(UNIVERSAL_ROUTER_V3_SWAP_EXACT_IN);
         bytes[] memory inputs = new bytes[](1);
+        // Universal Router v2.1.1+ requires this field; an empty array disables per-hop limits.
+        uint256[] memory minHopPriceX36 = new uint256[](0);
         inputs[0] = abi.encode(
             address(this),
             _amountIn,
             _minimumAmountOut,
             abi.encodePacked(_tokenIn, _fee, _tokenOut),
-            true
+            true,
+            minHopPriceX36
         );
 
         universalRouter.execute(commands, inputs, block.timestamp + ROUTER_DEADLINE_BUFFER);
