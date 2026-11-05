@@ -1731,6 +1731,15 @@ describe('Integration Test: Deposit', async () => {
         .approve(tokenVault.address, initialWBTCBalance);
       await tokenVault.connect(dave).deposit(hexWBTC, orderAmountInWBTC);
 
+      const { minBorrowUnitPrice } =
+        await lendingMarketController.getOrderUnitPriceRange(
+          hexWBTC,
+          wBTCMaturities[0],
+        );
+      const unitPrice = minBorrowUnitPrice.gt(9000)
+        ? minBorrowUnitPrice
+        : BigNumber.from(9000);
+
       await lendingMarketController
         .connect(carol)
         .executeOrder(
@@ -1738,7 +1747,7 @@ describe('Integration Test: Deposit', async () => {
           wBTCMaturities[0],
           Side.BORROW,
           orderAmountInWBTC,
-          '9000',
+          unitPrice,
         );
       await lendingMarketController
         .connect(dave)
@@ -1757,15 +1766,13 @@ describe('Integration Test: Deposit', async () => {
         wBTCMaturities[0],
       );
 
-      expect(marketUnitPrice).to.equal('9000');
+      expect(marketUnitPrice).to.equal(unitPrice);
     });
 
     it('Fill an order with amount with under the min debt unit price', async () => {
-      await tokenVault
-        .connect(alice)
-        .deposit(hexETH, orderAmountInETH.mul(4).div(3), {
-          value: orderAmountInETH.mul(4).div(3),
-        });
+      await tokenVault.connect(alice).deposit(hexETH, orderAmountInETH, {
+        value: orderAmountInETH,
+      });
       await wBTCToken
         .connect(bob)
         .approve(tokenVault.address, initialWBTCBalance);
@@ -1787,6 +1794,10 @@ describe('Integration Test: Deposit', async () => {
             minBorrowUnitPrice,
           ),
       ).to.revertedWith('NotEnoughCollateral');
+
+      await tokenVault.connect(alice).deposit(hexETH, orderAmountInETH.div(3), {
+        value: orderAmountInETH.div(3),
+      });
 
       await lendingMarketController
         .connect(alice)

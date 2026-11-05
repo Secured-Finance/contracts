@@ -141,6 +141,21 @@ describe('LendingMarket - Circuit Breakers', () => {
       expect(maxLendUnitPrice).to.equal('8800');
       expect(minBorrowUnitPrice).to.equal('7600');
     });
+
+    it('Use the same three-price average for both circuit breaker thresholds', async () => {
+      for (const unitPrice of [8000, 8200, 8400, 8600, 8800]) {
+        await fillOrder(unitPrice);
+      }
+
+      await ethers.provider.send('evm_mine', []);
+
+      const { maxLendUnitPrice, minBorrowUnitPrice, referenceUnitPrice } =
+        await lendingMarket.getCircuitBreakerThresholds(currentOrderBookId);
+
+      expect(referenceUnitPrice).to.equal(8600);
+      expect(maxLendUnitPrice).to.equal(9460);
+      expect(minBorrowUnitPrice).to.equal(8170);
+    });
   });
 
   for (const side of [Side.BORROW, Side.LEND]) {
@@ -593,7 +608,7 @@ describe('LendingMarket - Circuit Breakers', () => {
 
       it(`Fill an order within the circuit breaker minimum rage`, async () => {
         const unitPrice = 500;
-        const unitPrice2 = isBorrow ? 300 : 1200;
+        const unitPrice2 = isBorrow ? 300 : 1000;
 
         await fillOrder(unitPrice);
 
@@ -649,7 +664,7 @@ describe('LendingMarket - Circuit Breakers', () => {
 
       it(`Fill an order outside the circuit breaker minimum rage`, async () => {
         const unitPrice = 500;
-        const unitPrice2 = isBorrow ? 299 : 1201;
+        const unitPrice2 = isBorrow ? 299 : 1001;
 
         await fillOrder(unitPrice);
 

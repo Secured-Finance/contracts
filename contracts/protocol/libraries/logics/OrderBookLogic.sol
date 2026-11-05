@@ -140,14 +140,19 @@ library OrderBookLogic {
 
     function getCircuitBreakerThresholds(
         uint8 _orderBookId
-    ) external view returns (uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice) {
-        maxLendUnitPrice = _getOrderBook(_orderBookId).getLendCircuitBreakerThreshold(
-            Storage.slot().circuitBreakerLimitRange,
-            true
+    )
+        external
+        view
+        returns (uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice, uint256 referenceUnitPrice)
+    {
+        referenceUnitPrice = _getOrderBook(_orderBookId).getBlockUnitPriceAverage(3, false);
+        maxLendUnitPrice = OrderBookLib.calculateLendCircuitBreakerThreshold(
+            referenceUnitPrice,
+            Storage.slot().circuitBreakerLimitRange
         );
-        minBorrowUnitPrice = _getOrderBook(_orderBookId).getBorrowCircuitBreakerThreshold(
-            Storage.slot().circuitBreakerLimitRange,
-            true
+        minBorrowUnitPrice = OrderBookLib.calculateBorrowCircuitBreakerThreshold(
+            referenceUnitPrice,
+            Storage.slot().circuitBreakerLimitRange
         );
     }
 

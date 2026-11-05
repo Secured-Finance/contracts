@@ -33,7 +33,7 @@ library OrderBookLib {
 
     uint256 public constant PRE_ORDER_BASE_PERIOD = 7 days;
     uint256 public constant ITAYOSE_PERIOD = 1 hours;
-    uint256 public constant CIRCUIT_BREAKER_MINIMUM_LEND_RANGE = 700;
+    uint256 public constant CIRCUIT_BREAKER_MINIMUM_LEND_RANGE = 500;
     uint256 public constant CIRCUIT_BREAKER_MINIMUM_BORROW_RANGE = 200;
 
     error EmptyOrderBook();
@@ -702,20 +702,19 @@ library OrderBookLib {
         bool isLend = _side == ProtocolTypes.Side.LEND;
         uint256 cbThresholdUnitPrice;
         uint256 bestUnitPrice;
+        uint256 blockUnitPriceAverage = getBlockUnitPriceAverage(self, 3, _isReadOnly);
 
         if (isLend) {
             bestUnitPrice = self.borrowOrders[self.maturity].first();
-            cbThresholdUnitPrice = getLendCircuitBreakerThreshold(
-                self,
-                _circuitBreakerLimitRange,
-                _isReadOnly
+            cbThresholdUnitPrice = calculateLendCircuitBreakerThreshold(
+                blockUnitPriceAverage,
+                _circuitBreakerLimitRange
             );
         } else {
             bestUnitPrice = self.lendOrders[self.maturity].last();
-            cbThresholdUnitPrice = getBorrowCircuitBreakerThreshold(
-                self,
-                _circuitBreakerLimitRange,
-                _isReadOnly
+            cbThresholdUnitPrice = calculateBorrowCircuitBreakerThreshold(
+                blockUnitPriceAverage,
+                _circuitBreakerLimitRange
             );
         }
 
@@ -742,43 +741,39 @@ library OrderBookLib {
         }
     }
 
-    function getLendCircuitBreakerThreshold(
-        OrderBook storage self,
-        uint256 _circuitBreakerLimitRange,
-        bool _isReadOnly
-    ) internal view returns (uint256 cbThresholdUnitPrice) {
-        uint256 blockUnitPriceAverage = getBlockUnitPriceAverage(self, 3, _isReadOnly);
-        cbThresholdUnitPrice = (blockUnitPriceAverage *
+    function calculateLendCircuitBreakerThreshold(
+        uint256 _blockUnitPriceAverage,
+        uint256 _circuitBreakerLimitRange
+    ) internal pure returns (uint256 cbThresholdUnitPrice) {
+        cbThresholdUnitPrice = (_blockUnitPriceAverage *
             (Constants.PCT_DIGIT + _circuitBreakerLimitRange * 2)).div(Constants.PCT_DIGIT);
 
-        if (cbThresholdUnitPrice > Constants.PRICE_DIGIT || blockUnitPriceAverage == 0) {
+        if (cbThresholdUnitPrice > Constants.PRICE_DIGIT || _blockUnitPriceAverage == 0) {
             cbThresholdUnitPrice = Constants.PRICE_DIGIT;
         } else if (
-            cbThresholdUnitPrice < blockUnitPriceAverage + CIRCUIT_BREAKER_MINIMUM_LEND_RANGE
+            cbThresholdUnitPrice < _blockUnitPriceAverage + CIRCUIT_BREAKER_MINIMUM_LEND_RANGE
         ) {
-            cbThresholdUnitPrice = blockUnitPriceAverage + CIRCUIT_BREAKER_MINIMUM_LEND_RANGE;
+            cbThresholdUnitPrice = _blockUnitPriceAverage + CIRCUIT_BREAKER_MINIMUM_LEND_RANGE;
         }
     }
 
-    function getBorrowCircuitBreakerThreshold(
-        OrderBook storage self,
-        uint256 _circuitBreakerLimitRange,
-        bool _isReadOnly
-    ) internal view returns (uint256 cbThresholdUnitPrice) {
-        uint256 blockUnitPriceAverage = getBlockUnitPriceAverage(self, 5, _isReadOnly);
-        cbThresholdUnitPrice = (blockUnitPriceAverage *
+    function calculateBorrowCircuitBreakerThreshold(
+        uint256 _blockUnitPriceAverage,
+        uint256 _circuitBreakerLimitRange
+    ) internal pure returns (uint256 cbThresholdUnitPrice) {
+        cbThresholdUnitPrice = (_blockUnitPriceAverage *
             (Constants.PCT_DIGIT - _circuitBreakerLimitRange)).div(Constants.PCT_DIGIT);
 
         if (
             cbThresholdUnitPrice == 0 ||
-            blockUnitPriceAverage == 0 ||
-            blockUnitPriceAverage <= CIRCUIT_BREAKER_MINIMUM_BORROW_RANGE
+            _blockUnitPriceAverage == 0 ||
+            _blockUnitPriceAverage <= CIRCUIT_BREAKER_MINIMUM_BORROW_RANGE
         ) {
             cbThresholdUnitPrice = 1;
         } else if (
-            blockUnitPriceAverage < cbThresholdUnitPrice + CIRCUIT_BREAKER_MINIMUM_BORROW_RANGE
+            _blockUnitPriceAverage < cbThresholdUnitPrice + CIRCUIT_BREAKER_MINIMUM_BORROW_RANGE
         ) {
-            cbThresholdUnitPrice = blockUnitPriceAverage - CIRCUIT_BREAKER_MINIMUM_BORROW_RANGE;
+            cbThresholdUnitPrice = _blockUnitPriceAverage - CIRCUIT_BREAKER_MINIMUM_BORROW_RANGE;
         }
     }
 

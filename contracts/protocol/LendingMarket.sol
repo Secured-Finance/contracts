@@ -206,10 +206,16 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @param _orderBookId The order book id
      * @return maxLendUnitPrice The maximum unit price for lending
      * @return minBorrowUnitPrice The minimum unit price for borrowing
+     * @return referenceUnitPrice The unit price used as the circuit breaker reference
      */
     function getCircuitBreakerThresholds(
         uint8 _orderBookId
-    ) external view override returns (uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice) {
+    )
+        external
+        view
+        override
+        returns (uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice, uint256 referenceUnitPrice)
+    {
         return OrderBookLogic.getCircuitBreakerThresholds(_orderBookId);
     }
 

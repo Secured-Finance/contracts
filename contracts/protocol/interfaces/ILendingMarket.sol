@@ -37,7 +37,11 @@ interface ILendingMarket {
     )
         external
         view
-        returns (uint256 lendCircuitBreakerThreshold, uint256 borrowCircuitBreakerThreshold);
+        returns (
+            uint256 lendCircuitBreakerThreshold,
+            uint256 borrowCircuitBreakerThreshold,
+            uint256 referenceUnitPrice
+        );
 
     function getBestLendUnitPrice(uint8 orderBookId) external view returns (uint256 unitPrice);
 
