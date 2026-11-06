@@ -207,8 +207,8 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
             // NOTE: These calculation steps "FV -> GV -> FV" are needed to match the actual conversion step.
             // Otherwise, Solidity's truncation specification creates a difference in the calculated values.
             // The formula is:
-            // genesisValue = featureValueInMaturity / compoundFactorInMaturity.
-            // currentFeatureValue = genesisValue * currentCompoundFactor
+            // genesisValue = futureValueInMaturity / compoundFactorInMaturity.
+            // currentFutureValue = genesisValue * currentCompoundFactor
             int256 genesisValue = calculateGVFromFV(_ccy, _basisMaturity, _futureValue);
             return calculateFVFromGV(_ccy, _destinationMaturity, genesisValue);
         }
@@ -231,7 +231,7 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
 
         if (compoundFactor == 0) revert NoCompoundFactorExists({maturity: _basisMaturity});
 
-        // NOTE: The formula is: genesisValue = featureValue / compoundFactor.
+        // NOTE: The formula is: genesisValue = futureValue / compoundFactor.
         bool isPlus = _futureValue > 0;
         uint256 absFv = (isPlus ? _futureValue : -_futureValue).toUint256();
         uint256 absGv = Math.mulDiv(
@@ -261,7 +261,7 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
 
         if (compoundFactor == 0) revert NoCompoundFactorExists({maturity: _basisMaturity});
 
-        // NOTE: The formula is: featureValue = genesisValue * compoundFactor.
+        // NOTE: The formula is: futureValue = genesisValue * compoundFactor.
         bool isPlus = _genesisValue > 0;
         uint256 absGv = (isPlus ? _genesisValue : -_genesisValue).toUint256();
         uint256 absFv = Math.mulDiv(absGv, compoundFactor, 10 ** decimals(_ccy), Math.Rounding.Up);
