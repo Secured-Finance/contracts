@@ -887,8 +887,15 @@ describe('LendingMarketController - Operations', () => {
         ).to.be.reverted;
       });
 
-      it('Switches to the market-price range after a reliable fill', async () => {
+      it('Keeps the circuit breaker reference fixed until the block after a reliable fill', async () => {
         const marketUnitPrice = BigNumber.from(8500);
+        const reliableAmount = MINIMUM_RELIABLE_AMOUNT;
+        await mockCurrencyController.mock[
+          'convertFromBaseCurrency(bytes32,uint256)'
+        ].returns(reliableAmount);
+        const lendingMarket = await lendingMarketControllerProxy
+          .getLendingMarket(targetCurrency)
+          .then((address) => ethers.getContractAt('LendingMarket', address));
 
         await lendingMarketControllerProxy.updateMinDebtUnitPrice(
           targetCurrency,
@@ -900,7 +907,7 @@ describe('LendingMarketController - Operations', () => {
             targetCurrency,
             maturities[0],
             Side.LEND,
-            '100000000000000000',
+            reliableAmount,
             marketUnitPrice,
           );
         await lendingMarketControllerProxy
@@ -909,7 +916,7 @@ describe('LendingMarketController - Operations', () => {
             targetCurrency,
             maturities[0],
             Side.BORROW,
-            '100000000000000000',
+            reliableAmount,
             marketUnitPrice,
           );
 
@@ -925,6 +932,9 @@ describe('LendingMarketController - Operations', () => {
         expect(range.maxBorrowUnitPrice).to.equal(10000);
         expect(range.referenceUnitPrice).to.equal(marketUnitPrice);
         expect(range.isMinDebtUnitPriceReference).to.equal(false);
+        expect(
+          await lendingMarket.getMarketUnitPrice(orderBookIds[0]),
+        ).to.equal(marketUnitPrice);
 
         await expect(
           lendingMarketControllerProxy
@@ -933,7 +943,7 @@ describe('LendingMarketController - Operations', () => {
               targetCurrency,
               maturities[0],
               Side.LEND,
-              '100000000000000000',
+              reliableAmount,
               9351,
             ),
         ).to.be.reverted;
@@ -944,7 +954,7 @@ describe('LendingMarketController - Operations', () => {
               targetCurrency,
               maturities[0],
               Side.BORROW,
-              '100000000000000000',
+              reliableAmount,
               8074,
             ),
         ).to.be.reverted;
@@ -955,7 +965,7 @@ describe('LendingMarketController - Operations', () => {
             targetCurrency,
             maturities[0],
             Side.LEND,
-            '100000000000000000',
+            reliableAmount,
             9000,
           );
         await lendingMarketControllerProxy
@@ -964,29 +974,27 @@ describe('LendingMarketController - Operations', () => {
             targetCurrency,
             maturities[0],
             Side.BORROW,
-            '100000000000000000',
+            reliableAmount,
             9000,
           );
 
-        const sameBlockRange =
-          await lendingMarketControllerProxy.getOrderUnitPriceRange(
-            targetCurrency,
-            maturities[0],
-          );
-        expect(sameBlockRange.referenceUnitPrice).to.equal(8500);
-        expect(sameBlockRange.maxLendUnitPrice).to.equal(9350);
-        expect(sameBlockRange.minBorrowUnitPrice).to.equal(8075);
+        expect(
+          await lendingMarket.getMarketUnitPrice(orderBookIds[0]),
+        ).to.equal(9000);
+
+        const sameBlockThresholds =
+          await lendingMarket.getCircuitBreakerThresholds(orderBookIds[0]);
+        expect(sameBlockThresholds.referenceUnitPrice).to.equal(8500);
+        expect(sameBlockThresholds.maxLendUnitPrice).to.equal(9350);
+        expect(sameBlockThresholds.minBorrowUnitPrice).to.equal(8075);
 
         await ethers.provider.send('evm_mine', []);
 
-        const nextBlockRange =
-          await lendingMarketControllerProxy.getOrderUnitPriceRange(
-            targetCurrency,
-            maturities[0],
-          );
-        expect(nextBlockRange.referenceUnitPrice).to.equal(8750);
-        expect(nextBlockRange.maxLendUnitPrice).to.equal(9625);
-        expect(nextBlockRange.minBorrowUnitPrice).to.equal(8313);
+        const nextBlockThresholds =
+          await lendingMarket.getCircuitBreakerThresholds(orderBookIds[0]);
+        expect(nextBlockThresholds.referenceUnitPrice).to.equal(8750);
+        expect(nextBlockThresholds.maxLendUnitPrice).to.equal(9625);
+        expect(nextBlockThresholds.minBorrowUnitPrice).to.equal(8313);
       });
 
       it('Keeps the unit price range when the circuit breaker range is wider', async () => {
