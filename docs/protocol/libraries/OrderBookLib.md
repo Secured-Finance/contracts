@@ -251,16 +251,16 @@ function calculateItayoseResult(struct OrderBookLib.OrderBook self) internal vie
 function getOrderExecutionConditions(struct OrderBookLib.OrderBook self, enum ProtocolTypes.Side _side, uint256 _unitPrice, uint256 _circuitBreakerLimitRange, bool _isReadOnly) internal view returns (bool isFilled, uint256 executedUnitPrice, bool ignoreRemainingAmount, bool orderExists)
 ```
 
-### getLendCircuitBreakerThreshold
+### calculateLendCircuitBreakerThreshold
 
 ```solidity
-function getLendCircuitBreakerThreshold(struct OrderBookLib.OrderBook self, uint256 _circuitBreakerLimitRange, bool _isReadOnly) internal view returns (uint256 cbThresholdUnitPrice)
+function calculateLendCircuitBreakerThreshold(uint256 _blockUnitPriceAverage, uint256 _circuitBreakerLimitRange) internal pure returns (uint256 cbThresholdUnitPrice)
 ```
 
-### getBorrowCircuitBreakerThreshold
+### calculateBorrowCircuitBreakerThreshold
 
 ```solidity
-function getBorrowCircuitBreakerThreshold(struct OrderBookLib.OrderBook self, uint256 _circuitBreakerLimitRange, bool _isReadOnly) internal view returns (uint256 cbThresholdUnitPrice)
+function calculateBorrowCircuitBreakerThreshold(uint256 _blockUnitPriceAverage, uint256 _circuitBreakerLimitRange) internal pure returns (uint256 cbThresholdUnitPrice)
 ```
 
 ### _nextOrderId

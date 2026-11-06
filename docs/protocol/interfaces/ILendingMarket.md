@@ -59,7 +59,7 @@ function getOrderBookDetail(uint8 orderBookId) external view returns (bytes32 cc
 ### getCircuitBreakerThresholds
 
 ```solidity
-function getCircuitBreakerThresholds(uint8 orderBookId) external view returns (uint256 lendCircuitBreakerThreshold, uint256 borrowCircuitBreakerThreshold)
+function getCircuitBreakerThresholds(uint8 orderBookId) external view returns (uint256 lendCircuitBreakerThreshold, uint256 borrowCircuitBreakerThreshold, uint256 referenceUnitPrice)
 ```
 
 ### getBestLendUnitPrice

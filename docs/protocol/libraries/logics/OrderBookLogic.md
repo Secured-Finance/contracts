@@ -199,7 +199,7 @@ function getBlockUnitPriceAverage(uint8 _orderBookId, uint256 _count) external v
 ### getCircuitBreakerThresholds
 
 ```solidity
-function getCircuitBreakerThresholds(uint8 _orderBookId) external view returns (uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice)
+function getCircuitBreakerThresholds(uint8 _orderBookId) external view returns (uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice, uint256 referenceUnitPrice)
 ```
 
 ### getBestLendUnitPrice

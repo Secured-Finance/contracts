@@ -244,7 +244,7 @@ Gets the order book detail.
 ### getCircuitBreakerThresholds
 
 ```solidity
-function getCircuitBreakerThresholds(uint8 _orderBookId) external view returns (uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice)
+function getCircuitBreakerThresholds(uint8 _orderBookId) external view returns (uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice, uint256 referenceUnitPrice)
 ```
 
 Gets unit price Thresholds by CircuitBreaker.
@@ -257,6 +257,7 @@ Gets unit price Thresholds by CircuitBreaker.
 | ---- | ---- | ----------- |
 | maxLendUnitPrice | uint256 | The maximum unit price for lending |
 | minBorrowUnitPrice | uint256 | The minimum unit price for borrowing |
+| referenceUnitPrice | uint256 | The unit price used as the circuit breaker reference |
 
 ### getBestLendUnitPrice
 
