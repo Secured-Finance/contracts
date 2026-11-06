@@ -245,13 +245,20 @@ library LendingMarketOperationLogic {
                 return (minUnitPrice, maxUnitPrice, referenceUnitPrice, isPreOrderPeriod, false);
             }
         } else {
-            uint256 marketUnitPrice = market.getMarketUnitPrice(orderBookId);
-            if (marketUnitPrice != 0) {
-                referenceUnitPrice = marketUnitPrice;
-                minUnitPrice = marketUnitPrice > UNIT_PRICE_RANGE
-                    ? marketUnitPrice - UNIT_PRICE_RANGE
-                    : 1;
-                maxUnitPrice = Math.min(Constants.PRICE_DIGIT, marketUnitPrice + UNIT_PRICE_RANGE);
+            (maxUnitPrice, minUnitPrice, referenceUnitPrice) = market.getCircuitBreakerThresholds(
+                orderBookId
+            );
+            if (referenceUnitPrice != 0) {
+                minUnitPrice = Math.max(
+                    minUnitPrice,
+                    referenceUnitPrice > UNIT_PRICE_RANGE
+                        ? referenceUnitPrice - UNIT_PRICE_RANGE
+                        : 1
+                );
+                maxUnitPrice = Math.min(
+                    maxUnitPrice,
+                    Math.min(Constants.PRICE_DIGIT, referenceUnitPrice + UNIT_PRICE_RANGE)
+                );
                 return (minUnitPrice, maxUnitPrice, referenceUnitPrice, isPreOrderPeriod, false);
             }
         }

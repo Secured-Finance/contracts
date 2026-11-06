@@ -252,7 +252,7 @@ contract LendingMarketReader is MixinAddressResolver {
 
         (, , orderBookDetail.openingDate, orderBookDetail.preOpeningDate) = market
             .getOrderBookDetail(orderBookId);
-        (orderBookDetail.maxLendUnitPrice, orderBookDetail.minBorrowUnitPrice) = market
+        (orderBookDetail.maxLendUnitPrice, orderBookDetail.minBorrowUnitPrice, ) = market
             .getCircuitBreakerThresholds(orderBookId);
 
         if (orderBookDetail.isReady) {
