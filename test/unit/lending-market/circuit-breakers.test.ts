@@ -6,6 +6,7 @@ import { ethers } from 'hardhat';
 import moment from 'moment';
 
 import { Side } from '../../../utils/constants';
+import { CIRCUIT_BREAKER_LIMIT_RANGE } from '../../common/constants';
 import { calculateFutureValue, calculateOrderFee } from '../../common/orders';
 
 import { deployContracts } from './utils';
@@ -140,6 +141,40 @@ describe('LendingMarket - Circuit Breakers', () => {
 
       expect(maxLendUnitPrice).to.equal('8800');
       expect(minBorrowUnitPrice).to.equal('7600');
+    });
+
+    it('Use the minimum ranges for a low reference unit price', async () => {
+      await fillOrder(500);
+
+      await ethers.provider.send('evm_mine', []);
+
+      const { maxLendUnitPrice, minBorrowUnitPrice, referenceUnitPrice } =
+        await lendingMarket.getCircuitBreakerThresholds(currentOrderBookId);
+
+      expect(referenceUnitPrice).to.equal(500);
+      expect(maxLendUnitPrice).to.equal(1000);
+      expect(minBorrowUnitPrice).to.equal(300);
+    });
+
+    it('Clamp the LEND threshold after applying the minimum range', async () => {
+      await lendingMarketCaller.updateCircuitBreakerLimitRange(
+        targetCurrency,
+        0,
+      );
+      await fillOrder(9800);
+
+      await ethers.provider.send('evm_mine', []);
+
+      const { maxLendUnitPrice, referenceUnitPrice } =
+        await lendingMarket.getCircuitBreakerThresholds(currentOrderBookId);
+
+      await lendingMarketCaller.updateCircuitBreakerLimitRange(
+        targetCurrency,
+        CIRCUIT_BREAKER_LIMIT_RANGE,
+      );
+
+      expect(referenceUnitPrice).to.equal(9800);
+      expect(maxLendUnitPrice).to.equal(10000);
     });
 
     it('Use the same three-price average for both circuit breaker thresholds', async () => {

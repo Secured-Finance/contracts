@@ -52,6 +52,10 @@ contract LendingMarketCaller {
         ILendingMarket(lendingMarkets[_ccy]).updateMinPreOrderAmount(_minPreOrderAmount);
     }
 
+    function updateCircuitBreakerLimitRange(bytes32 _ccy, uint256 _limitRange) external {
+        ILendingMarket(lendingMarkets[_ccy]).updateCircuitBreakerLimitRange(_limitRange);
+    }
+
     function executeAutoRoll(
         bytes32 _ccy,
         uint8 _maturedOrderBookId,

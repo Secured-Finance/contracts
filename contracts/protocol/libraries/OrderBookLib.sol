@@ -745,15 +745,17 @@ library OrderBookLib {
         uint256 _blockUnitPriceAverage,
         uint256 _circuitBreakerLimitRange
     ) internal pure returns (uint256 cbThresholdUnitPrice) {
+        if (_blockUnitPriceAverage == 0) return Constants.PRICE_DIGIT;
+
         cbThresholdUnitPrice = (_blockUnitPriceAverage *
             (Constants.PCT_DIGIT + _circuitBreakerLimitRange * 2)).div(Constants.PCT_DIGIT);
 
-        if (cbThresholdUnitPrice > Constants.PRICE_DIGIT || _blockUnitPriceAverage == 0) {
-            cbThresholdUnitPrice = Constants.PRICE_DIGIT;
-        } else if (
-            cbThresholdUnitPrice < _blockUnitPriceAverage + CIRCUIT_BREAKER_MINIMUM_LEND_RANGE
-        ) {
+        if (cbThresholdUnitPrice < _blockUnitPriceAverage + CIRCUIT_BREAKER_MINIMUM_LEND_RANGE) {
             cbThresholdUnitPrice = _blockUnitPriceAverage + CIRCUIT_BREAKER_MINIMUM_LEND_RANGE;
+        }
+
+        if (cbThresholdUnitPrice > Constants.PRICE_DIGIT) {
+            cbThresholdUnitPrice = Constants.PRICE_DIGIT;
         }
     }
 
