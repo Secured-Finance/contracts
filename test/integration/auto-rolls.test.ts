@@ -423,7 +423,7 @@ describe('Integration Test: Auto-rolls', async () => {
       [alice, bob, carol] = await getUsers(3);
     });
 
-    it('applies the destination maturity debt floor after rotation', async () => {
+    it('applies the destination maturity debt floor only to debt after rotation', async () => {
       // Keep the floor below both order prices while establishing the source debt and the
       // destination market price.
       await lendingMarketController.updateMinDebtUnitPrice(hexETH, 3000);
@@ -526,6 +526,22 @@ describe('Integration Test: Auto-rolls', async () => {
       expect(genesisValue).to.lt(0);
       expect(convertedFutureValue).to.lt(0);
       expect(bobFunds.debtAmount.sub(expectedDebtAmount).abs()).to.lte(1);
+
+      const { amount: aliceGenesisValue } =
+        await lendingMarketController.getGenesisValue(hexETH, alice.address);
+      const aliceFunds = await lendingMarketController.calculateFunds(
+        hexETH,
+        alice.address,
+        LIQUIDATION_THRESHOLD_RATE,
+      );
+      const alicePresentValue =
+        await lendingMarketController.getTotalPresentValue(
+          hexETH,
+          alice.address,
+        );
+
+      expect(aliceGenesisValue).to.gt(0);
+      expect(aliceFunds.claimableAmount).to.equal(alicePresentValue);
     });
   });
 

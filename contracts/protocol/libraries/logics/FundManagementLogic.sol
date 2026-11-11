@@ -572,12 +572,12 @@ library FundManagementLogic {
             );
 
             uint256 unitPrice = _getDefaultOrderBookMarketUnitPrice(vars);
-            uint256 defaultOrderBookMinDebtUnitPrice = vars.minDebtUnitPrice == 0
-                ? 0
-                : getCurrentMinDebtUnitPrice(
+            uint256 defaultOrderBookMinDebtUnitPrice = futureValue < 0 && vars.minDebtUnitPrice != 0
+                ? getCurrentMinDebtUnitPrice(
                     vars.market.getMaturity(vars.defaultOrderBookId),
                     vars.minDebtUnitPrice
-                );
+                )
+                : 0;
 
             int256 presentValue = _calculatePVFromFV(
                 futureValue,
