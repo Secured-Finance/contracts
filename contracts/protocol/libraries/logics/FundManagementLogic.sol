@@ -579,11 +579,10 @@ library FundManagementLogic {
                 )
                 : 0;
 
-            int256 presentValue = _calculatePVFromFV(
+            int256 presentValue = _calculatePVFromFVWithMinDebtUnitPrice(
                 futureValue,
-                unitPrice >= defaultOrderBookMinDebtUnitPrice
-                    ? unitPrice
-                    : defaultOrderBookMinDebtUnitPrice
+                unitPrice,
+                defaultOrderBookMinDebtUnitPrice
             );
 
             actualFunds.presentValue += presentValue;
@@ -985,11 +984,10 @@ library FundManagementLogic {
                             vars.minDebtUnitPrice
                         );
 
-                        funds.presentValue = _calculatePVFromFV(
+                        funds.presentValue = _calculatePVFromFVWithMinDebtUnitPrice(
                             futureValueInMaturity,
-                            unitPrice < currentMinDebtUnitPrice
-                                ? currentMinDebtUnitPrice
-                                : unitPrice
+                            unitPrice,
+                            currentMinDebtUnitPrice
                         );
                     } else {
                         funds.presentValue = _calculatePVFromFV(futureValueInMaturity, unitPrice);
@@ -1047,9 +1045,10 @@ library FundManagementLogic {
                     uint256 unitPrice = vars.market.getMarketUnitPrice(vars.orderBookId);
 
                     funds.futureValue = filledFutureValue.toInt256();
-                    funds.presentValue = _calculatePVFromFV(
+                    funds.presentValue = _calculatePVFromFVWithMinDebtUnitPrice(
                         funds.futureValue,
-                        unitPrice < currentMinDebtUnitPrice ? currentMinDebtUnitPrice : unitPrice
+                        unitPrice,
+                        currentMinDebtUnitPrice
                     );
                 }
             }
@@ -1122,13 +1121,10 @@ library FundManagementLogic {
                 : getCurrentMinDebtUnitPrice(_fromMaturity, _minDebtUnitPrice);
 
             // The position still belongs to the source maturity, so its own debt floor applies.
-            // A zero market unit price means that no price has been established and is valued at
-            // par by `_calculatePVFromFV`, so only a non-zero price is subject to the floor.
-            presentValue = _calculatePVFromFV(
+            presentValue = _calculatePVFromFVWithMinDebtUnitPrice(
                 _fromFutureValue,
-                fromUnitPrice != 0 && fromUnitPrice < currentMinDebtUnitPrice
-                    ? currentMinDebtUnitPrice
-                    : fromUnitPrice
+                fromUnitPrice,
+                currentMinDebtUnitPrice
             );
         } else {
             int256 convertedFutureValue = genesisValueVault.calculateFVFromFV(
@@ -1146,13 +1142,11 @@ library FundManagementLogic {
                 );
 
             // Lazy evaluation has converted the position to the destination maturity, so the
-            // destination debt floor applies to the converted future value. Preserve the same
-            // par valuation when the destination market has no established price.
-            presentValue = _calculatePVFromFV(
+            // destination debt floor applies to the converted future value.
+            presentValue = _calculatePVFromFVWithMinDebtUnitPrice(
                 convertedFutureValue,
-                destinationUnitPrice != 0 && destinationUnitPrice < currentMinDebtUnitPrice
-                    ? currentMinDebtUnitPrice
-                    : destinationUnitPrice
+                destinationUnitPrice,
+                currentMinDebtUnitPrice
             );
         }
     }
@@ -1289,6 +1283,22 @@ library FundManagementLogic {
         uint256 unitPrice = _unitPrice == 0 ? Constants.PRICE_DIGIT : _unitPrice;
         // NOTE: The formula is: presentValue = futureValue * unitPrice.
         return (_futureValue * unitPrice.toInt256()).div(Constants.PRICE_DIGIT.toInt256());
+    }
+
+    /**
+     * @dev Calculates PV using the debt floor while preserving the zero-price convention.
+     * A zero market unit price means that no price has been established and is valued at par.
+     * The minimum debt unit price therefore applies only to a non-zero market unit price.
+     */
+    function _calculatePVFromFVWithMinDebtUnitPrice(
+        int256 _futureValue,
+        uint256 _unitPrice,
+        uint256 _minDebtUnitPrice
+    ) internal pure returns (int256) {
+        uint256 unitPrice = _unitPrice != 0 && _unitPrice < _minDebtUnitPrice
+            ? _minDebtUnitPrice
+            : _unitPrice;
+        return _calculatePVFromFV(_futureValue, unitPrice);
     }
 
     function _calculateFVFromPV(

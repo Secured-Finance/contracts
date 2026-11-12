@@ -1705,6 +1705,37 @@ describe('LendingMarketController - Operations', () => {
         expect(bobFunds.debtAmount).to.equal(debtFutureValue);
       });
 
+      it('Value default-maturity debt at par when no market price is established', async () => {
+        const debtFutureValue = BigNumber.from('100000000000000000');
+
+        // Register the default maturity for Bob without filling an order, leaving its market
+        // unit price at zero.
+        await lendingMarketControllerProxy
+          .connect(bob)
+          .executeOrder(targetCurrency, maturities[0], Side.LEND, 1, 10000);
+
+        await seedFutureValueVaultDebt(
+          orderBookIds[0],
+          bob,
+          debtFutureValue,
+          maturities[0],
+        );
+
+        expect(
+          await lendingMarketReader
+            .getOrderBookDetail(targetCurrency, maturities[0])
+            .then((detail) => detail.marketUnitPrice),
+        ).to.equal(0);
+
+        const bobFunds = await lendingMarketControllerProxy.calculateFunds(
+          targetCurrency,
+          bob.address,
+          LIQUIDATION_THRESHOLD_RATE,
+        );
+
+        expect(bobFunds.debtAmount).to.equal(debtFutureValue);
+      });
+
       it('Apply the destination maturity debt floor after lazy evaluation', async () => {
         const amount = BigNumber.from('100000000000000000');
         const debtFutureValue = BigNumber.from('100000000000000000');
