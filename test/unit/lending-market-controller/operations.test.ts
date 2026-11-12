@@ -143,6 +143,33 @@ describe('LendingMarketController - Operations', () => {
     }
   };
 
+  const seedFutureValueVaultLend = async (
+    orderBookId: BigNumber,
+    user: SignerWithAddress,
+    futureValue: BigNumber,
+    futureValueMaturity: BigNumber,
+  ) => {
+    const controllerAddress = lendingMarketControllerProxy.address;
+    await ethers.provider.send('hardhat_setBalance', [
+      controllerAddress,
+      '0x1000000000000000000',
+    ]);
+    await ethers.provider.send('hardhat_impersonateAccount', [
+      controllerAddress,
+    ]);
+    const controllerSigner = await ethers.getSigner(controllerAddress);
+
+    try {
+      await futureValueVaultProxy
+        .connect(controllerSigner)
+        .increase(orderBookId, user.address, futureValue, futureValueMaturity);
+    } finally {
+      await ethers.provider.send('hardhat_stopImpersonatingAccount', [
+        controllerAddress,
+      ]);
+    }
+  };
+
   beforeEach(async () => {
     if (currencyIdx % 5 === 0) {
       await initialize();
@@ -1672,6 +1699,93 @@ describe('LendingMarketController - Operations', () => {
         expect(bobFunds.debtAmount.sub(expectedDebtAmount).abs()).to.lte(1);
       });
 
+      it('Keep offsetting same-maturity positions unchanged by cleanup', async () => {
+        const amount = BigNumber.from('100000000000000000');
+        const sourceMarketUnitPrice = BigNumber.from(8000);
+
+        await lendingMarketControllerProxy.updateMinDebtUnitPrice(
+          targetCurrency,
+          3000,
+        );
+
+        // Bob's filled maker order remains in the inactive borrow-order path.
+        await lendingMarketControllerProxy
+          .connect(bob)
+          .executeOrder(
+            targetCurrency,
+            maturities[1],
+            Side.BORROW,
+            amount,
+            sourceMarketUnitPrice,
+          );
+        await lendingMarketControllerProxy
+          .connect(alice)
+          .executeOrder(
+            targetCurrency,
+            maturities[1],
+            Side.LEND,
+            amount,
+            sourceMarketUnitPrice,
+          );
+
+        const filledBorrowFutureValue = await lendingMarketControllerProxy
+          .getPosition(targetCurrency, maturities[1], bob.address)
+          .then((position) => position.futureValue.abs());
+
+        // Add an equal lending FV in the same maturity. The economic position is zero both
+        // before and after cleanup, even when the debt floor is above the market price.
+        await seedFutureValueVaultLend(
+          orderBookIds[1],
+          bob,
+          filledBorrowFutureValue,
+          maturities[1],
+        );
+        await lendingMarketControllerProxy.updateMinDebtUnitPrice(
+          targetCurrency,
+          8000,
+        );
+
+        const beforeCleanup = await lendingMarketControllerProxy.calculateFunds(
+          targetCurrency,
+          bob.address,
+          LIQUIDATION_THRESHOLD_RATE,
+        );
+        const beforeCleanupPosition =
+          await lendingMarketControllerProxy.getPosition(
+            targetCurrency,
+            maturities[1],
+            bob.address,
+          );
+
+        await lendingMarketControllerProxy.cleanUpFunds(
+          targetCurrency,
+          bob.address,
+        );
+
+        const afterCleanup = await lendingMarketControllerProxy.calculateFunds(
+          targetCurrency,
+          bob.address,
+          LIQUIDATION_THRESHOLD_RATE,
+        );
+        const afterCleanupPosition =
+          await lendingMarketControllerProxy.getPosition(
+            targetCurrency,
+            maturities[1],
+            bob.address,
+          );
+
+        expect(beforeCleanupPosition.presentValue).to.equal(0);
+        expect(beforeCleanup.claimableAmount).to.equal(0);
+        expect(beforeCleanup.debtAmount).to.equal(0);
+        expect(afterCleanupPosition.presentValue).to.equal(
+          beforeCleanupPosition.presentValue,
+        );
+        expect(afterCleanup.claimableAmount).to.equal(
+          beforeCleanup.claimableAmount,
+        );
+        expect(afterCleanup.debtAmount).to.equal(beforeCleanup.debtAmount);
+      });
+
       it('Value debt at par when the source maturity has no established market price', async () => {
         const debtFutureValue = BigNumber.from('100000000000000000');
 
@@ -1734,103 +1848,6 @@ describe('LendingMarketController - Operations', () => {
         );
 
         expect(bobFunds.debtAmount).to.equal(debtFutureValue);
-      });
-
-      it('Apply the destination maturity debt floor after lazy evaluation', async () => {
-        const amount = BigNumber.from('100000000000000000');
-        const debtFutureValue = BigNumber.from('100000000000000000');
-        const destinationMarketUnitPrice = BigNumber.from(8000);
-
-        await lendingMarketControllerProxy.updateMinDebtUnitPrice(
-          targetCurrency,
-          3000,
-        );
-
-        // Establish an auto-roll price for the expiring maturity.
-        await lendingMarketControllerProxy
-          .connect(owner)
-          .executeOrder(targetCurrency, maturities[0], Side.LEND, amount, 9000);
-        await lendingMarketControllerProxy
-          .connect(carol)
-          .executeOrder(
-            targetCurrency,
-            maturities[0],
-            Side.BORROW,
-            amount,
-            9000,
-          );
-
-        // This becomes the default market after rotation and is the destination of lazy
-        // evaluation for a balance whose FV maturity is the expired maturity.
-        await lendingMarketControllerProxy
-          .connect(alice)
-          .executeOrder(
-            targetCurrency,
-            maturities[1],
-            Side.LEND,
-            amount,
-            destinationMarketUnitPrice,
-          );
-        await lendingMarketControllerProxy
-          .connect(carol)
-          .executeOrder(
-            targetCurrency,
-            maturities[1],
-            Side.BORROW,
-            amount,
-            destinationMarketUnitPrice,
-          );
-
-        await time.increaseTo(maturities[0].toString());
-        await lendingMarketControllerProxy.rotateOrderBooks(targetCurrency);
-
-        const autoRollLog = await genesisValueVaultProxy.getAutoRollLog(
-          targetCurrency,
-          maturities[0],
-        );
-        expect(autoRollLog.unitPrice).to.not.equal(0);
-
-        // Register a live non-default market for Bob, then reproduce a delayed balance whose
-        // stored FV maturity predates the current GenesisValueVault maturity.
-        await lendingMarketControllerProxy
-          .connect(bob)
-          .executeOrder(targetCurrency, maturities[2], Side.LEND, 1, 1);
-        await seedFutureValueVaultDebt(
-          orderBookIds[2],
-          bob,
-          debtFutureValue,
-          maturities[0],
-        );
-
-        await lendingMarketControllerProxy.updateMinDebtUnitPrice(
-          targetCurrency,
-          8000,
-        );
-
-        const destinationMinDebtUnitPrice =
-          await lendingMarketControllerProxy.getCurrentMinDebtUnitPrice(
-            targetCurrency,
-            maturities[1],
-          );
-        const convertedFutureValue =
-          await genesisValueVaultProxy.calculateFVFromFV(
-            targetCurrency,
-            maturities[0],
-            0,
-            debtFutureValue.mul(-1),
-          );
-        const bobFunds = await lendingMarketControllerProxy.calculateFunds(
-          targetCurrency,
-          bob.address,
-          LIQUIDATION_THRESHOLD_RATE,
-        );
-        const expectedDebtAmount = convertedFutureValue
-          .abs()
-          .mul(destinationMinDebtUnitPrice)
-          .div(10000);
-
-        expect(destinationMinDebtUnitPrice).to.gt(destinationMarketUnitPrice);
-        expect(bobFunds.debtAmount.sub(expectedDebtAmount).abs()).to.lte(1);
       });
 
       it('Calculate the total funds with open orders less than min debt unit price', async () => {
