@@ -1872,6 +1872,155 @@ describe('Integration Test: Deposit', async () => {
     });
   });
 
+  describe('Withdraw collateral against non-nearest maturity debt', async () => {
+    const collateralAmount = ethers.utils.parseEther('2');
+    const orderAmount = ethers.utils.parseEther('1');
+    const sourceMarketUnitPrice = BigNumber.from(8000);
+    let originalMinDebtUnitPrice: BigNumber;
+
+    before(async () => {
+      [alice, bob, carol, dave] = await getUsers(4);
+      ethMaturities = await lendingMarketController.getMaturities(hexETH);
+      originalMinDebtUnitPrice =
+        await lendingMarketController.getMinDebtUnitPrice(hexETH);
+
+      // Keep the default-maturity price above its floor so this scenario isolates valuation
+      // of debt owned by the next maturity.
+      await tokenVault.connect(carol).deposit(hexETH, orderAmount, {
+        value: orderAmount,
+      });
+      await tokenVault.connect(dave).deposit(hexETH, collateralAmount, {
+        value: collateralAmount,
+      });
+      await lendingMarketController
+        .connect(carol)
+        .executeOrder(hexETH, ethMaturities[0], Side.LEND, orderAmount, 9600);
+      await lendingMarketController
+        .connect(dave)
+        .executeOrder(hexETH, ethMaturities[0], Side.BORROW, orderAmount, 9600);
+
+      await lendingMarketController.updateMinDebtUnitPrice(hexETH, 3000);
+
+      await tokenVault.connect(alice).deposit(hexETH, collateralAmount, {
+        value: collateralAmount,
+      });
+      await tokenVault.connect(bob).deposit(hexETH, orderAmount, {
+        value: orderAmount,
+      });
+      await lendingMarketController
+        .connect(bob)
+        .executeOrder(
+          hexETH,
+          ethMaturities[1],
+          Side.LEND,
+          orderAmount,
+          sourceMarketUnitPrice,
+        );
+      await lendingMarketController
+        .connect(alice)
+        .executeOrder(
+          hexETH,
+          ethMaturities[1],
+          Side.BORROW,
+          orderAmount,
+          sourceMarketUnitPrice,
+        );
+
+      await lendingMarketController.updateMinDebtUnitPrice(
+        hexETH,
+        originalMinDebtUnitPrice,
+      );
+    });
+
+    after(async () => {
+      await lendingMarketController.updateMinDebtUnitPrice(
+        hexETH,
+        originalMinDebtUnitPrice,
+      );
+    });
+
+    it('uses the source maturity floor for the withdrawal limit and actual withdrawal', async () => {
+      const defaultOrderBook = await lendingMarketReader.getOrderBookDetail(
+        hexETH,
+        ethMaturities[0],
+      );
+      const sourceOrderBook = await lendingMarketReader.getOrderBookDetail(
+        hexETH,
+        ethMaturities[1],
+      );
+
+      expect(defaultOrderBook.marketUnitPrice).to.not.equal(0);
+      expect(defaultOrderBook.marketUnitPrice).to.gte(
+        defaultOrderBook.currentMinDebtUnitPrice,
+      );
+      expect(sourceOrderBook.marketUnitPrice).to.equal(sourceMarketUnitPrice);
+      expect(sourceOrderBook.currentMinDebtUnitPrice).to.gt(
+        sourceMarketUnitPrice,
+      );
+
+      const { futureValue } = await lendingMarketController.getPosition(
+        hexETH,
+        ethMaturities[1],
+        alice.address,
+      );
+      const funds = await lendingMarketController.calculateFunds(
+        hexETH,
+        alice.address,
+        LIQUIDATION_THRESHOLD_RATE,
+      );
+      const expectedDebtAmount = futureValue
+        .abs()
+        .mul(sourceOrderBook.currentMinDebtUnitPrice)
+        .div(PRICE_DIGIT);
+
+      expect(futureValue).to.lt(0);
+      expect(funds.debtAmount.sub(expectedDebtAmount).abs()).to.lte(1);
+
+      const [totalCollateral, totalUsedCollateral] =
+        await tokenVault.getCollateralDetail(alice.address);
+      const expectedUsedCollateral = await currencyController[
+        'convertToBaseCurrency(bytes32,uint256)'
+      ](hexETH, expectedDebtAmount);
+
+      expect(totalUsedCollateral).to.equal(expectedUsedCollateral);
+
+      const expectedWithdrawableInBaseCurrency = totalCollateral
+        .mul(PCT_DIGIT)
+        .sub(expectedUsedCollateral.mul(LIQUIDATION_THRESHOLD_RATE))
+        .div(PCT_DIGIT);
+      const calculatedWithdrawable = await currencyController[
+        'convertFromBaseCurrency(bytes32,uint256)'
+      ](hexETH, expectedWithdrawableInBaseCurrency);
+      const depositAmount = await tokenVault.getDepositAmount(
+        alice.address,
+        hexETH,
+      );
+      const expectedWithdrawable = calculatedWithdrawable.gt(depositAmount)
+        ? depositAmount
+        : calculatedWithdrawable;
+      const withdrawableAmount = await tokenVault[
+        'getWithdrawableCollateral(bytes32,address)'
+      ](hexETH, alice.address);
+      const oneBaseCurrencyUnitInETH = await currencyController[
+        'convertFromBaseCurrency(bytes32,uint256)'
+      ](hexETH, 1);
+
+      // Each independently converted intermediate is rounded to base-currency precision.
+      expect(withdrawableAmount.sub(expectedWithdrawable).abs()).to.lte(
+        oneBaseCurrencyUnitInETH,
+      );
+      expect(withdrawableAmount).to.lt(depositAmount);
+
+      await expect(tokenVault.connect(alice).withdraw(hexETH, depositAmount))
+        .to.emit(tokenVault, 'Withdraw')
+        .withArgs(alice.address, hexETH, withdrawableAmount);
+
+      expect(await tokenVault.getDepositAmount(alice.address, hexETH)).to.equal(
+        depositAmount.sub(withdrawableAmount),
+      );
+    });
+  });
+
   describe('Withdraw collateral with amounts below base currency precision', async () => {
     it('Prevents withdrawing all collateral while a BORROW position rounds to zero', async () => {
       [alice, bob] = await getUsers(2);

@@ -413,6 +413,138 @@ describe('Integration Test: Auto-rolls', async () => {
     });
   });
 
+  describe('Value an ordinary auto-rolled debt position', async () => {
+    const orderAmount = BigNumber.from('100000000000000000');
+    const sourceMarketUnitPrice = BigNumber.from(9000);
+    const destinationMarketUnitPrice = BigNumber.from(8000);
+
+    before(async () => {
+      await restoreSnapshot();
+      [alice, bob, carol] = await getUsers(3);
+    });
+
+    it('applies the destination maturity debt floor only to debt after rotation', async () => {
+      // Keep the floor below both order prices while establishing the source debt and the
+      // destination market price.
+      await lendingMarketController.updateMinDebtUnitPrice(hexETH, 3000);
+
+      await tokenVault.connect(alice).deposit(hexETH, orderAmount.mul(2), {
+        value: orderAmount.mul(2),
+      });
+      await tokenVault.connect(bob).deposit(hexETH, orderAmount.mul(2), {
+        value: orderAmount.mul(2),
+      });
+      await tokenVault.connect(carol).deposit(hexETH, orderAmount.mul(2), {
+        value: orderAmount.mul(2),
+      });
+
+      await lendingMarketController
+        .connect(alice)
+        .executeOrder(
+          hexETH,
+          maturities[0],
+          Side.LEND,
+          orderAmount,
+          sourceMarketUnitPrice,
+        );
+      await lendingMarketController
+        .connect(bob)
+        .executeOrder(
+          hexETH,
+          maturities[0],
+          Side.BORROW,
+          orderAmount,
+          sourceMarketUnitPrice,
+        );
+
+      // This order book becomes the default market after rotation.
+      await lendingMarketController
+        .connect(alice)
+        .executeOrder(
+          hexETH,
+          maturities[1],
+          Side.LEND,
+          orderAmount,
+          destinationMarketUnitPrice,
+        );
+      await lendingMarketController
+        .connect(carol)
+        .executeOrder(
+          hexETH,
+          maturities[1],
+          Side.BORROW,
+          orderAmount,
+          destinationMarketUnitPrice,
+        );
+
+      const { futureValue: sourceFutureValue } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[0],
+          bob.address,
+        );
+      expect(sourceFutureValue).to.lt(0);
+
+      await time.increaseTo(maturities[0].toString());
+      await lendingMarketController.rotateOrderBooks(hexETH);
+
+      const autoRollLog = await genesisValueVault.getAutoRollLog(
+        hexETH,
+        maturities[0],
+      );
+      expect(autoRollLog.unitPrice).to.not.equal(0);
+
+      // Raise the configured floor after rotation so that the new default market trades below
+      // its current debt floor.
+      await lendingMarketController.updateMinDebtUnitPrice(hexETH, 8000);
+
+      const destinationMinDebtUnitPrice =
+        await lendingMarketController.getCurrentMinDebtUnitPrice(
+          hexETH,
+          maturities[1],
+        );
+      const actualDestinationMarketUnitPrice =
+        await lendingMarket.getMarketUnitPrice(orderBookIds[1]);
+      const { amount: genesisValue, amountInFV: convertedFutureValue } =
+        await lendingMarketController.getGenesisValue(hexETH, bob.address);
+      const bobFunds = await lendingMarketController.calculateFunds(
+        hexETH,
+        bob.address,
+        LIQUIDATION_THRESHOLD_RATE,
+      );
+      const expectedDebtAmount = convertedFutureValue
+        .abs()
+        .mul(destinationMinDebtUnitPrice)
+        .div(PRICE_DIGIT);
+
+      expect(actualDestinationMarketUnitPrice).to.equal(
+        destinationMarketUnitPrice,
+      );
+      expect(destinationMinDebtUnitPrice).to.gt(
+        actualDestinationMarketUnitPrice,
+      );
+      expect(genesisValue).to.lt(0);
+      expect(convertedFutureValue).to.lt(0);
+      expect(bobFunds.debtAmount.sub(expectedDebtAmount).abs()).to.lte(1);
+
+      const { amount: aliceGenesisValue } =
+        await lendingMarketController.getGenesisValue(hexETH, alice.address);
+      const aliceFunds = await lendingMarketController.calculateFunds(
+        hexETH,
+        alice.address,
+        LIQUIDATION_THRESHOLD_RATE,
+      );
+      const alicePresentValue =
+        await lendingMarketController.getTotalPresentValue(
+          hexETH,
+          alice.address,
+        );
+
+      expect(aliceGenesisValue).to.gt(0);
+      expect(aliceFunds.claimableAmount).to.equal(alicePresentValue);
+    });
+  });
+
   describe('Execute auto-roll with orders on the multiple markets', async () => {
     const orderAmount = BigNumber.from('100000000000000000');
 

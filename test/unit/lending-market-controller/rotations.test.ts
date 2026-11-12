@@ -712,6 +712,19 @@ describe('LendingMarketController - Rotations', () => {
 
       await time.increaseTo(maturities[1].toString());
 
+      const lendingMarket = await lendingMarketControllerProxy
+        .getLendingMarket(targetCurrency)
+        .then((address) => ethers.getContractAt('LendingMarket', address));
+      const destinationOrderBookId =
+        await lendingMarketControllerProxy.getOrderBookId(
+          targetCurrency,
+          maturities[2],
+        );
+
+      expect(
+        await lendingMarket.getMarketUnitPrice(destinationOrderBookId),
+      ).to.equal(0);
+
       await expect(
         lendingMarketControllerProxy.rotateOrderBooks(targetCurrency),
       ).to.emit(lendingMarketOperationLogic, 'OrderBooksRotated');
@@ -723,6 +736,9 @@ describe('LendingMarketController - Rotations', () => {
 
       expect(autoRollLog.prev).to.equal(maturities[1]);
       expect(autoRollLog.unitPrice).to.equal('9600');
+      expect(
+        await lendingMarket.getMarketUnitPrice(destinationOrderBookId),
+      ).to.equal(autoRollLog.unitPrice);
     });
 
     it('Rotate markets including one market that has orders adjusted by with the residual amount.', async () => {
