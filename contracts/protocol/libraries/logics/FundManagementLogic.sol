@@ -42,6 +42,11 @@ library FundManagementLogic {
     error InsufficientCollateral();
     error TooManyExposureCurrencies();
     error ProtocolIsInsolvent();
+    error InvalidFutureValueMaturity(
+        uint8 orderBookId,
+        uint256 expectedMaturity,
+        uint256 actualMaturity
+    );
 
     struct CalculatedTotalFundInBaseCurrencyVars {
         address user;
@@ -78,25 +83,13 @@ library FundManagementLogic {
         uint256 minDebtUnitPrice;
     }
 
-    struct FutureValueVaultFunds {
+    struct PositionFunds {
         int256 genesisValue;
         int256 presentValue;
         int256 futureValue;
-    }
-
-    struct InactiveBorrowOrdersFunds {
-        int256 genesisValue;
-        int256 presentValue;
-        int256 futureValue;
-        uint256 workingOrdersAmount;
+        uint256 workingBorrowOrdersAmount;
+        uint256 workingLendOrdersAmount;
         uint256 borrowedAmount;
-    }
-
-    struct InactiveLendOrdersFunds {
-        int256 genesisValue;
-        int256 presentValue;
-        int256 futureValue;
-        uint256 workingOrdersAmount;
         uint256 lentAmount;
     }
 
@@ -470,60 +463,24 @@ library FundManagementLogic {
         for (uint256 i; i < vars.maturities.length; i++) {
             uint256 currentMaturity = vars.maturities[i];
             uint8 currentOrderBookId = Storage.slot().maturityOrderBookIds[_ccy][currentMaturity];
-            bool isAutoRolled = AddressResolverLib.genesisValueVault().isAutoRolled(
-                _ccy,
-                currentMaturity
-            );
 
             if (vars.isDefaultMarket || currentOrderBookId == vars.orderBookId) {
                 {
                     bool isDefaultMarket = currentOrderBookId == vars.defaultOrderBookId;
 
-                    // Get current funds from Future Value Vault by lazy evaluations.
-                    FutureValueVaultFunds
-                        memory futureValueVaultFunds = _getFundsFromFutureValueVault(
-                            _ccy,
-                            _user,
-                            vars,
-                            currentOrderBookId,
-                            isDefaultMarket,
-                            isAutoRolled
-                        );
-                    // Get current funds from borrowing orders by lazy evaluations.
-                    InactiveBorrowOrdersFunds
-                        memory borrowOrdersFunds = _getFundsFromInactiveBorrowOrders(
-                            _ccy,
-                            _user,
-                            vars,
-                            currentOrderBookId,
-                            currentMaturity,
-                            isDefaultMarket,
-                            isAutoRolled
-                        );
-                    // Get current funds from lending orders by lazy evaluations.
-                    InactiveLendOrdersFunds
-                        memory lendOrdersFunds = _getFundsFromInactiveLendOrders(
-                            _ccy,
-                            _user,
-                            vars,
-                            currentOrderBookId,
-                            isDefaultMarket,
-                            isAutoRolled
-                        );
+                    PositionFunds memory positionFunds = _getNetPositionFunds(
+                        _ccy,
+                        _user,
+                        vars,
+                        currentOrderBookId,
+                        currentMaturity
+                    );
 
                     // Set genesis value.
-                    actualFunds.genesisValue +=
-                        futureValueVaultFunds.genesisValue -
-                        borrowOrdersFunds.genesisValue +
-                        lendOrdersFunds.genesisValue;
+                    actualFunds.genesisValue += positionFunds.genesisValue;
 
                     // Set present value.
-                    int256 presentValue = futureValueVaultFunds.presentValue -
-                        borrowOrdersFunds.presentValue +
-                        lendOrdersFunds.presentValue;
-                    int256 futureValue = futureValueVaultFunds.futureValue -
-                        borrowOrdersFunds.futureValue +
-                        lendOrdersFunds.futureValue;
+                    int256 presentValue = positionFunds.presentValue;
 
                     actualFunds.presentValue += presentValue;
 
@@ -540,13 +497,14 @@ library FundManagementLogic {
                     // Set future value.
                     // Note: When calculating total funds, total future value will be 0 because different maturities can not be added.
                     if (!vars.isTotal) {
-                        actualFunds.futureValue += futureValue;
+                        actualFunds.futureValue += positionFunds.futureValue;
                     }
 
-                    actualFunds.workingBorrowOrdersAmount += borrowOrdersFunds.workingOrdersAmount;
-                    actualFunds.workingLendOrdersAmount += lendOrdersFunds.workingOrdersAmount;
-                    actualFunds.borrowedAmount += borrowOrdersFunds.borrowedAmount;
-                    actualFunds.lentAmount += lendOrdersFunds.lentAmount;
+                    actualFunds.workingBorrowOrdersAmount += positionFunds
+                        .workingBorrowOrdersAmount;
+                    actualFunds.workingLendOrdersAmount += positionFunds.workingLendOrdersAmount;
+                    actualFunds.borrowedAmount += positionFunds.borrowedAmount;
+                    actualFunds.lentAmount += positionFunds.lentAmount;
                 }
 
                 // Get balance fluctuation amount by auto-rolls
@@ -940,175 +898,112 @@ library FundManagementLogic {
         activeOrderCount = activeLendOrderCount + activeBorrowOrderCount;
     }
 
-    function _getFundsFromFutureValueVault(
+    function _getNetPositionFunds(
         bytes32 _ccy,
         address _user,
         CalculateActualFundsVars memory vars,
         uint8 currentOrderBookId,
-        bool isDefaultMarket,
-        bool isAutoRolled
-    ) internal view returns (FutureValueVaultFunds memory funds) {
-        (int256 futureValueInMaturity, uint256 fvMaturity) = vars.futureValueVault.getBalance(
+        uint256 currentMaturity
+    ) internal view returns (PositionFunds memory funds) {
+        // Cleanup transfers filled-order FV into FutureValueVault. Net the raw FVs belonging
+        // to the same maturity before applying its market price or debt floor so valuation is
+        // unchanged by whether cleanup has run.
+        (int256 futureValueInVault, uint256 futureValueMaturity) = vars.futureValueVault.getBalance(
             currentOrderBookId,
             _user
         );
 
-        if (futureValueInMaturity != 0) {
-            if (isAutoRolled) {
-                if (vars.isDefaultMarket) {
-                    funds.genesisValue = AddressResolverLib.genesisValueVault().calculateGVFromFV(
-                        _ccy,
-                        fvMaturity,
-                        futureValueInMaturity
-                    );
-                }
-            } else {
-                if (vars.isTotal && !isDefaultMarket) {
-                    // Total-funds valuation aggregates positions across maturities in PV.
-                    // Leave `funds.futureValue` unset because FVs of different maturities cannot be summed.
-                    funds.presentValue = _calculatePVFromFVForTotalFunds(
-                        _ccy,
-                        vars,
-                        fvMaturity,
-                        futureValueInMaturity,
-                        futureValueInMaturity < 0 ? vars.minDebtUnitPrice : 0
-                    );
-                } else if (vars.isTotal || !vars.isDefaultMarket || isDefaultMarket) {
-                    uint256 unitPrice = vars.market.getMarketUnitPrice(vars.orderBookId);
-                    funds.futureValue = futureValueInMaturity;
-
-                    // Apply min debt unit price if the future value is negative (debt).
-                    if (funds.futureValue < 0) {
-                        uint256 currentMinDebtUnitPrice = getCurrentMinDebtUnitPrice(
-                            fvMaturity,
-                            vars.minDebtUnitPrice
-                        );
-
-                        funds.presentValue = _calculatePVFromFVWithMinDebtUnitPrice(
-                            futureValueInMaturity,
-                            unitPrice,
-                            currentMinDebtUnitPrice
-                        );
-                    } else {
-                        funds.presentValue = _calculatePVFromFV(futureValueInMaturity, unitPrice);
-                    }
-                }
-            }
+        // NOTE: Position valuation no longer assumes that an order book may be rotated, so a
+        // non-zero balance should always be recorded for `currentMaturity`. Keep this guard to
+        // detect inconsistent legacy or upgraded state rather than treating it as another maturity.
+        if (futureValueInVault != 0 && futureValueMaturity != currentMaturity) {
+            revert InvalidFutureValueMaturity(
+                currentOrderBookId,
+                currentMaturity,
+                futureValueMaturity
+            );
         }
-    }
 
-    function _getFundsFromInactiveBorrowOrders(
-        bytes32 _ccy,
-        address _user,
-        CalculateActualFundsVars memory vars,
-        uint8 currentOrderBookId,
-        uint256 currentMaturity,
-        bool isDefaultMarket,
-        bool isAutoRolled
-    ) internal view returns (InactiveBorrowOrdersFunds memory funds) {
-        uint256 filledFutureValue;
-        uint256 orderMaturity;
+        uint256 borrowedFutureValue;
         uint256 currentMinDebtUnitPrice = getCurrentMinDebtUnitPrice(
             currentMaturity,
             vars.minDebtUnitPrice
         );
 
-        (funds.workingOrdersAmount, funds.borrowedAmount, filledFutureValue, orderMaturity) = vars
+        (funds.workingBorrowOrdersAmount, funds.borrowedAmount, borrowedFutureValue, ) = vars
             .market
             .getTotalAmountFromBorrowOrders(currentOrderBookId, _user, currentMinDebtUnitPrice);
-
-        if (isAutoRolled) {
-            funds.workingOrdersAmount = 0;
-        }
-
-        if (filledFutureValue != 0) {
-            if (isAutoRolled) {
-                if (vars.isDefaultMarket) {
-                    funds.genesisValue = AddressResolverLib.genesisValueVault().calculateGVFromFV(
-                        _ccy,
-                        orderMaturity,
-                        filledFutureValue.toInt256()
-                    );
-                }
-            } else {
-                if (vars.isTotal && !isDefaultMarket) {
-                    // Total-funds valuation aggregates positions across maturities in PV.
-                    // Leave `funds.futureValue` unset because FVs of different maturities cannot be summed.
-                    funds.presentValue = _calculatePVFromFVForTotalFunds(
-                        _ccy,
-                        vars,
-                        orderMaturity,
-                        filledFutureValue.toInt256(),
-                        vars.minDebtUnitPrice
-                    );
-                } else if (vars.isTotal || !vars.isDefaultMarket || isDefaultMarket) {
-                    uint256 unitPrice = vars.market.getMarketUnitPrice(vars.orderBookId);
-
-                    funds.futureValue = filledFutureValue.toInt256();
-                    funds.presentValue = _calculatePVFromFVWithMinDebtUnitPrice(
-                        funds.futureValue,
-                        unitPrice,
-                        currentMinDebtUnitPrice
-                    );
-                }
-            }
-        }
-    }
-
-    function _getFundsFromInactiveLendOrders(
-        bytes32 _ccy,
-        address _user,
-        CalculateActualFundsVars memory vars,
-        uint8 currentOrderBookId,
-        bool isDefaultMarket,
-        bool isAutoRolled
-    ) internal view returns (InactiveLendOrdersFunds memory funds) {
-        uint256 filledFutureValue;
-        uint256 orderMaturity;
-        (funds.workingOrdersAmount, funds.lentAmount, filledFutureValue, orderMaturity) = vars
+        uint256 lentFutureValue;
+        (funds.workingLendOrdersAmount, funds.lentAmount, lentFutureValue, ) = vars
             .market
             .getTotalAmountFromLendOrders(currentOrderBookId, _user);
 
+        bool isAutoRolled = AddressResolverLib.genesisValueVault().isAutoRolled(
+            _ccy,
+            currentMaturity
+        );
+
         if (isAutoRolled) {
-            funds.workingOrdersAmount = 0;
+            funds.workingBorrowOrdersAmount = 0;
+            funds.workingLendOrdersAmount = 0;
         }
 
-        if (filledFutureValue != 0) {
-            if (isAutoRolled) {
-                if (vars.isDefaultMarket) {
-                    funds.genesisValue = AddressResolverLib.genesisValueVault().calculateGVFromFV(
-                        _ccy,
-                        orderMaturity,
-                        filledFutureValue.toInt256()
-                    );
-                }
-            } else {
-                if (vars.isTotal && !isDefaultMarket) {
-                    funds.presentValue = _calculatePVFromFVForTotalFunds(
-                        _ccy,
-                        vars,
-                        orderMaturity,
-                        filledFutureValue.toInt256(),
-                        0
-                    );
-                } else if (vars.isTotal || !vars.isDefaultMarket || isDefaultMarket) {
-                    funds.futureValue = filledFutureValue.toInt256();
-                    funds.presentValue = _calculatePVFromFV(
-                        vars.market,
-                        vars.orderBookId,
-                        funds.futureValue
-                    );
-                }
+        int256 netFutureValue = futureValueInVault +
+            lentFutureValue.toInt256() -
+            borrowedFutureValue.toInt256();
+
+        if (netFutureValue == 0) return funds;
+
+        if (isAutoRolled) {
+            if (vars.isDefaultMarket) {
+                funds.genesisValue = AddressResolverLib.genesisValueVault().calculateGVFromFV(
+                    _ccy,
+                    currentMaturity,
+                    netFutureValue
+                );
             }
+            return funds;
         }
+
+        bool isDefaultMarket = currentOrderBookId == vars.defaultOrderBookId;
+
+        if (vars.isTotal && !isDefaultMarket) {
+            funds.presentValue = _calculatePVFromFVForTotalFunds(
+                _ccy,
+                vars,
+                currentMaturity,
+                netFutureValue
+            );
+            return funds;
+        }
+
+        if (!vars.isTotal) {
+            // A single-maturity query exposes FV only for the queried maturity. A default-market
+            // query also visits other maturities to collect order amounts and rolled GV, so exclude
+            // unrolled positions that still belong to those maturities.
+            if (vars.isDefaultMarket && !isDefaultMarket) {
+                return funds;
+            }
+
+            funds.futureValue = netFutureValue;
+        }
+
+        uint256 netPositionMinDebtUnitPrice = netFutureValue < 0
+            ? getCurrentMinDebtUnitPrice(currentMaturity, vars.minDebtUnitPrice)
+            : 0;
+
+        funds.presentValue = _calculatePVFromFVWithMinDebtUnitPrice(
+            netFutureValue,
+            vars.market.getMarketUnitPrice(currentOrderBookId),
+            netPositionMinDebtUnitPrice
+        );
     }
 
     function _calculatePVFromFVForTotalFunds(
         bytes32 _ccy,
         CalculateActualFundsVars memory vars,
         uint256 _fromMaturity,
-        int256 _fromFutureValue,
-        uint256 _minDebtUnitPrice
+        int256 _fromFutureValue
     ) internal view returns (int256 presentValue) {
         IGenesisValueVault genesisValueVault = AddressResolverLib.genesisValueVault();
 
@@ -1116,9 +1011,9 @@ library FundManagementLogic {
             uint256 fromUnitPrice = vars.market.getMarketUnitPrice(
                 Storage.slot().maturityOrderBookIds[_ccy][_fromMaturity]
             );
-            uint256 currentMinDebtUnitPrice = _minDebtUnitPrice == 0
-                ? 0
-                : getCurrentMinDebtUnitPrice(_fromMaturity, _minDebtUnitPrice);
+            uint256 currentMinDebtUnitPrice = _fromFutureValue < 0
+                ? getCurrentMinDebtUnitPrice(_fromMaturity, vars.minDebtUnitPrice)
+                : 0;
 
             // The position still belongs to the source maturity, so its own debt floor applies.
             presentValue = _calculatePVFromFVWithMinDebtUnitPrice(
@@ -1134,12 +1029,12 @@ library FundManagementLogic {
                 _fromFutureValue
             );
             uint256 destinationUnitPrice = _getDefaultOrderBookMarketUnitPrice(vars);
-            uint256 currentMinDebtUnitPrice = _minDebtUnitPrice == 0
-                ? 0
-                : getCurrentMinDebtUnitPrice(
+            uint256 currentMinDebtUnitPrice = convertedFutureValue < 0
+                ? getCurrentMinDebtUnitPrice(
                     genesisValueVault.getCurrentMaturity(_ccy),
-                    _minDebtUnitPrice
-                );
+                    vars.minDebtUnitPrice
+                )
+                : 0;
 
             // Lazy evaluation has converted the position to the destination maturity, so the
             // destination debt floor applies to the converted future value.
