@@ -106,7 +106,6 @@ struct CalculateActualFundsVars {
   contract ILendingMarket market;
   contract IFutureValueVault futureValueVault;
   uint256 minDebtUnitPrice;
-  uint256 defaultOrderBookMinDebtUnitPrice;
 }
 ```
 
@@ -331,10 +330,10 @@ function _getFundsFromInactiveBorrowOrders(bytes32 _ccy, address _user, struct F
 function _getFundsFromInactiveLendOrders(bytes32 _ccy, address _user, struct FundManagementLogic.CalculateActualFundsVars vars, uint8 currentOrderBookId, bool isDefaultMarket, bool isAutoRolled) internal view returns (struct FundManagementLogic.InactiveLendOrdersFunds funds)
 ```
 
-### _convertFVtoOtherMaturity
+### _calculatePVFromFVForTotalFunds
 
 ```solidity
-function _convertFVtoOtherMaturity(bytes32 _ccy, contract ILendingMarket _market, uint256 _fromMaturity, int256 _fromFutureValue, uint256 _toUnitPrice) internal view returns (int256 presentValue, int256 futureValue)
+function _calculatePVFromFVForTotalFunds(bytes32 _ccy, struct FundManagementLogic.CalculateActualFundsVars vars, uint256 _fromMaturity, int256 _fromFutureValue, uint256 _minDebtUnitPrice) internal view returns (int256 presentValue)
 ```
 
 ### calculatePVFromFV
@@ -379,12 +378,6 @@ function _resetFundsPerCurrency(bytes32 _ccy, address _user) internal returns (i
 function _resetFundsPerMaturity(bytes32 _ccy, uint256 _maturity, address _user, int256 _amount) internal returns (int256 totalRemovedAmount)
 ```
 
-### _getDefaultOrderBookMinDebtUnitPrice
-
-```solidity
-function _getDefaultOrderBookMinDebtUnitPrice(struct FundManagementLogic.CalculateActualFundsVars vars) private view returns (uint256)
-```
-
 ### _getDefaultOrderBookMarketUnitPrice
 
 ```solidity
@@ -402,6 +395,16 @@ function _calculatePVFromFV(contract ILendingMarket _market, uint8 _orderBookId,
 ```solidity
 function _calculatePVFromFV(int256 _futureValue, uint256 _unitPrice) internal pure returns (int256)
 ```
+
+### _calculatePVFromFVWithMinDebtUnitPrice
+
+```solidity
+function _calculatePVFromFVWithMinDebtUnitPrice(int256 _futureValue, uint256 _unitPrice, uint256 _minDebtUnitPrice) internal pure returns (int256)
+```
+
+_Calculates PV using the debt floor while preserving the zero-price convention.
+A zero market unit price means that no price has been established and is valued at par.
+The minimum debt unit price therefore applies only to a non-zero market unit price._
 
 ### _calculateFVFromPV
 
