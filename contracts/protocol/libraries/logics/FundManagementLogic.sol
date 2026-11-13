@@ -42,6 +42,11 @@ library FundManagementLogic {
     error InsufficientCollateral();
     error TooManyExposureCurrencies();
     error ProtocolIsInsolvent();
+    error InvalidFutureValueMaturity(
+        uint8 orderBookId,
+        uint256 expectedMaturity,
+        uint256 actualMaturity
+    );
 
     struct CalculatedTotalFundInBaseCurrencyVars {
         address user;
@@ -903,7 +908,22 @@ library FundManagementLogic {
         // Cleanup transfers filled-order FV into FutureValueVault. Net the raw FVs belonging
         // to the same maturity before applying its market price or debt floor so valuation is
         // unchanged by whether cleanup has run.
-        (int256 futureValueInVault, ) = vars.futureValueVault.getBalance(currentOrderBookId, _user);
+        (int256 futureValueInVault, uint256 futureValueMaturity) = vars.futureValueVault.getBalance(
+            currentOrderBookId,
+            _user
+        );
+
+        // NOTE: Position valuation no longer assumes that an order book may be rotated, so a
+        // non-zero balance should always be recorded for `currentMaturity`. Keep this guard to
+        // detect inconsistent legacy or upgraded state rather than treating it as another maturity.
+        if (futureValueInVault != 0 && futureValueMaturity != currentMaturity) {
+            revert InvalidFutureValueMaturity(
+                currentOrderBookId,
+                currentMaturity,
+                futureValueMaturity
+            );
+        }
+
         uint256 borrowedFutureValue;
         uint256 currentMinDebtUnitPrice = getCurrentMinDebtUnitPrice(
             currentMaturity,
@@ -957,6 +977,17 @@ library FundManagementLogic {
             return funds;
         }
 
+        if (!vars.isTotal) {
+            // A single-maturity query exposes FV only for the queried maturity. A default-market
+            // query also visits other maturities to collect order amounts and rolled GV, so exclude
+            // unrolled positions that still belong to those maturities.
+            if (vars.isDefaultMarket && !isDefaultMarket) {
+                return funds;
+            }
+
+            funds.futureValue = netFutureValue;
+        }
+
         uint256 netPositionMinDebtUnitPrice = netFutureValue < 0
             ? getCurrentMinDebtUnitPrice(currentMaturity, vars.minDebtUnitPrice)
             : 0;
@@ -966,12 +997,6 @@ library FundManagementLogic {
             vars.market.getMarketUnitPrice(currentOrderBookId),
             netPositionMinDebtUnitPrice
         );
-
-        // Future values from different maturities cannot be aggregated, so only set
-        // `futureValue` when evaluating a single maturity.
-        if (!vars.isTotal) {
-            funds.futureValue = netFutureValue;
-        }
     }
 
     function _calculatePVFromFVForTotalFunds(

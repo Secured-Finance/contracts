@@ -1819,6 +1819,41 @@ describe('LendingMarketController - Operations', () => {
         expect(bobFunds.debtAmount).to.equal(debtFutureValue);
       });
 
+      it('Reject a non-zero FutureValueVault balance from a different maturity', async () => {
+        const debtFutureValue = BigNumber.from('100000000000000000');
+
+        // Register the maturity that FundManagementLogic will evaluate for Bob.
+        await lendingMarketControllerProxy
+          .connect(bob)
+          .executeOrder(targetCurrency, maturities[1], Side.LEND, 1, 8000);
+
+        // Seed the same order book with a non-zero balance tagged as another maturity.
+        await seedFutureValueVaultDebt(
+          orderBookIds[1],
+          bob,
+          debtFutureValue,
+          maturities[2],
+        );
+
+        let revertData: string | undefined;
+        try {
+          await lendingMarketControllerProxy.calculateFunds(
+            targetCurrency,
+            bob.address,
+            LIQUIDATION_THRESHOLD_RATE,
+          );
+        } catch (error) {
+          revertData = (error as { data?: string }).data;
+        }
+
+        expect(revertData).to.equal(
+          fundManagementLogic.interface.encodeErrorResult(
+            'InvalidFutureValueMaturity',
+            [orderBookIds[1], maturities[1], maturities[2]],
+          ),
+        );
+      });
+
       it('Value default-maturity debt at par when no market price is established', async () => {
         const debtFutureValue = BigNumber.from('100000000000000000');
 
