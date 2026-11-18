@@ -37,6 +37,12 @@ jobs:
         run: |
           public_repo="$PUBLIC_RELEASE_OWNER/$PUBLIC_RELEASE_REPOSITORY"
           [[ "$public_repo" =~ ^[A-Za-z0-9-]+/[A-Za-z0-9_.-]+$ ]]
+          source_repo=$(printf '%s' "$public_repo" | tr '[:upper:]' '[:lower:]')
+          current_repo=$(printf '%s' "$GITHUB_REPOSITORY" | tr '[:upper:]' '[:lower:]')
+          if [[ "$source_repo" == "$current_repo" ]]; then
+            echo 'The Public sync source must differ from this repository.' >&2
+            exit 1
+          fi
           git fetch --no-tags "https://github.com/$public_repo.git" refs/heads/main
           public_sha=$(git rev-parse FETCH_HEAD)
           git merge --ff-only "$public_sha"

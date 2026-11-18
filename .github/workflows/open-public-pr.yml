@@ -5,6 +5,7 @@ on:
     inputs:
       candidate_sha:
         description: 'Approved Private release branch commit SHA'
+        required: true
         type: string
       version_level:
         description: 'npm version bump for the Public PR'

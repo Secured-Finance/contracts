@@ -3,10 +3,6 @@ name: Reset smart contracts
 on:
   workflow_dispatch:
     inputs:
-      branch:
-        description: 'Branch to reset contracts and save deployment records to'
-        required: true
-        type: string
       network:
         description: 'Network'
         required: true
@@ -25,18 +21,19 @@ on:
 concurrency:
   group: smart-contract-deployment
   cancel-in-progress: false
+  queue: max
 
 jobs:
   validate:
     name: Validate target branch
     runs-on: ubuntu-latest
     steps:
-      - name: Reject main
+      - name: Validate workflow branch
         env:
-          TARGET_BRANCH: ${{ inputs.branch }}
+          TARGET_REF: ${{ github.ref }}
         run: |
-          if [[ "$TARGET_BRANCH" == main ]]; then
-            echo 'Deployments must target a feature or release branch, not main.' >&2
+          if [[ "$TARGET_REF" != refs/heads/* || "$TARGET_REF" == refs/heads/main ]]; then
+            echo 'Select a feature or release branch in Use workflow from.' >&2
             exit 1
           fi
   deploy:
@@ -54,7 +51,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: refs/heads/${{ inputs.branch }}
+          ref: ${{ github.ref }}
           token: ${{ steps.generate_token.outputs.token }}
       - uses: actions/setup-node@v4
         with:

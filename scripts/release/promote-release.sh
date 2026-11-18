@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+package_script="$(cd "$(dirname "$0")" && pwd)/publish-package.sh"
 phase=$1
 manifest=${2:-}
 version_level=${PACKAGE_VERSION_LEVEL:-none}
@@ -85,6 +86,9 @@ else
   npm version "$version_level" "${version_args[@]}"
   git add package.json package-lock.json
 fi
+
+previous_version=$(git show "$base:package.json" | jq -er .version)
+bash "$package_script" validate "$previous_version"
 
 body="$RUNNER_TEMP/public-pr.md"
 {
