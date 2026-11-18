@@ -4,7 +4,8 @@ on:
   push:
     branches:
       - main
-      - develop
+      - 'release/**'
+      - 'feature/**'
   pull_request:
     types:
       - opened
@@ -16,10 +17,10 @@ jobs:
   static-code-analysis:
     name: Static Code Analysis
     runs-on: ubuntu-latest
-    if: github.actor != 'secured-finance-machine-user[bot]'
+    if: github.event_name == 'pull_request' || github.actor != 'secured-finance-machine-user[bot]'
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version-file: '.nvmrc'
       - name: Install Dependencies
@@ -33,10 +34,10 @@ jobs:
   build-and-unit-test:
     name: Build and Unit Test
     runs-on: ubuntu-latest
-    if: github.actor != 'secured-finance-machine-user[bot]'
+    if: github.event_name == 'pull_request' || github.actor != 'secured-finance-machine-user[bot]'
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version-file: '.nvmrc'
       - name: Install Dependencies
@@ -46,6 +47,7 @@ jobs:
       - name: Run Unit Tests
         run: npm run test:cov
       - name: Upload Code Coverage
+        if: vars.IS_MIRROR_REPOSITORY != 'true'
         uses: codecov/codecov-action@v3
         with:
           token: ${{ secrets.CODECOV_TOKEN }}

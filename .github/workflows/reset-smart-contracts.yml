@@ -3,6 +3,10 @@ name: Reset smart contracts
 on:
   workflow_dispatch:
     inputs:
+      branch:
+        description: 'Branch to reset contracts and save deployment records to'
+        required: true
+        type: string
       network:
         description: 'Network'
         required: true
@@ -18,13 +22,28 @@ on:
           - staging-ava
           - staging-fil
 
+concurrency:
+  group: smart-contract-deployment
+  cancel-in-progress: false
+
 jobs:
+  validate:
+    name: Validate target branch
+    runs-on: ubuntu-latest
+    steps:
+      - name: Reject main
+        env:
+          TARGET_BRANCH: ${{ inputs.branch }}
+        run: |
+          if [[ "$TARGET_BRANCH" == main ]]; then
+            echo 'Deployments must target a feature or release branch, not main.' >&2
+            exit 1
+          fi
   deploy:
+    needs: validate
     name: Reset Smart Contracts
     runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.network }}
-    outputs:
-      docgenDiff: ${{ steps.docgenDiff.outputs.count }}
+    environment: ${{ inputs.network }}
     steps:
       - name: Generate token
         id: generate_token
@@ -32,12 +51,12 @@ jobs:
         with:
           app_id: ${{ secrets.MACHINE_USER_APP_ID }}
           private_key: ${{ secrets.MACHINE_USER_PRIVATE_KEY }}
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ (contains(github.event.inputs.network, 'development') && 'develop') || 'main' }}
+          ref: refs/heads/${{ inputs.branch }}
           token: ${{ steps.generate_token.outputs.token }}
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
           node-version-file: '.nvmrc'
       - name: 'Setup for git'
@@ -98,7 +117,9 @@ jobs:
           echo "ENABLE_FAUCET=true" >> $GITHUB_ENV
           echo "WAIT_CONFIRMATIONS=${{ vars.WAIT_CONFIRMATIONS }}" >> $GITHUB_ENV
       - name: Deploy smart contracts
-        run: npm run deploy:force ${{ github.event.inputs.network }}
+        env:
+          NETWORK: ${{ inputs.network }}
+        run: npm run deploy:force "$NETWORK"
       - name: Commit and push
         shell: bash
         run: |
@@ -106,7 +127,7 @@ jobs:
           git commit -m "chore: reset smart contracts" --no-verify
           git push
       - name: Update documents
-        if: ${{ github.event.inputs.network == 'development' }}
+        if: ${{ inputs.network == 'development' }}
         run: |
           npm run docgen
           git add .
@@ -120,11 +141,4 @@ jobs:
         if: ${{ steps.docgenDiff.outputs.count > 0 }}
         run: |
           git commit -m "chore: update docs" --no-verify
-          git push
-      - name: Merge main into develop
-        shell: bash
-        if: ${{ !contains(github.event.inputs.network, 'development') }}
-        run: |
-          git switch develop
-          git merge main --no-verify
           git push
