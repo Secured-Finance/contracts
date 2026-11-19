@@ -28,19 +28,18 @@ validate_version_level() {
 validate_destination
 
 if [[ "$phase" == prepare ]]; then
-  [[ "$CANDIDATE_SHA" =~ ^[0-9a-f]{40}$ ]]
   validate_version_level
-  git fetch --no-tags origin
-  git cat-file -e "$CANDIDATE_SHA^{commit}"
+  candidate_sha=$(git rev-parse HEAD)
+  echo "Preparing publication of commit $candidate_sha"
   git fetch --no-tags "https://github.com/$public_repo.git" main
   public_sha=$(git rev-parse FETCH_HEAD)
-  git merge-base --is-ancestor "$public_sha" "$CANDIDATE_SHA"
+  git merge-base --is-ancestor "$public_sha" "$candidate_sha"
   mkdir -p "$(dirname "$manifest")"
-  jq -n --arg candidate "$CANDIDATE_SHA" --arg base "$public_sha" \
+  jq -n --arg candidate "$candidate_sha" --arg base "$public_sha" \
     --arg versionLevel "$version_level" --arg publicRepository "$public_repo" \
     '{candidate: $candidate, base: $base, versionLevel: $versionLevel, publicRepository: $publicRepository}' > "$manifest"
   patch="$(dirname "$manifest")/release.patch"
-  git diff --binary --no-renames "$public_sha" "$CANDIDATE_SHA" > "$patch"
+  git diff --binary --no-renames "$public_sha" "$candidate_sha" > "$patch"
   workflow_changes=false
   if [[ -s "$patch" ]]; then
     workflow_diff=$(git apply --numstat --include='.github/workflows/*' "$patch")
