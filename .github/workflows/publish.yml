@@ -1,71 +1,77 @@
 name: Publish
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - package.json
+  pull_request:
+    branches: [main]
+    paths:
+      - package.json
   workflow_dispatch:
     inputs:
-      branch:
-        description: 'Branch'
+      release_sha:
+        description: 'Retry a version-changing commit already merged into Public main'
         required: true
-        default: 'develop'
-        type: choice
-        options:
-          - develop
-          - main
-      versionLevel:
-        description: 'Version Level'
-        required: true
-        default: 'patch'
-        type: choice
-        options:
-          - prerelease
-          - patch
-          - minor
-          - major
+        type: string
+
+permissions:
+  contents: read
 
 jobs:
-  publish:
-    name: Publish
+  check-package:
+    if: vars.IS_MIRROR_REPOSITORY != 'true' && github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
-      - name: Generate token
-        id: generate_token
-        uses: tibdex/github-app-token@v1
+      - uses: actions/checkout@v4
         with:
-          app_id: ${{ secrets.MACHINE_USER_APP_ID }}
-          private_key: ${{ secrets.MACHINE_USER_PRIVATE_KEY }}
-      - uses: actions/checkout@v3
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - run: npm ci
+      - run: npm run compile
+      - run: npm pack --dry-run
+
+  publish:
+    if: vars.IS_MIRROR_REPOSITORY != 'true' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    concurrency:
+      group: contracts-package
+      cancel-in-progress: false
+      queue: max
+    steps:
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ github.event.inputs.branch }}
-          token: ${{ steps.generate_token.outputs.token }}
-      - uses: actions/setup-node@v3
-        with:
-          node-version-file: '.nvmrc'
-      - name: 'Setup for npm'
-        run: |
-          npm set @secured-finance:registry=https://npm.pkg.github.com
-          npm set "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}"
-      - name: 'Setup for git'
-        run: |
-          git config user.name "SF Machine User[bot]"
-          git config user.email "${{ secrets.MACHINE_USER_APP_ID }}+sf-machine-user[bot]@users.noreply.github.com"
-      - name: Install Dependencies
-        run: npm ci
-      - name: Version and Publish
+      - name: Select the released commit
+        id: release
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_SHA: ${{ inputs.release_sha || github.sha }}
+          PREVIOUS_SHA: ${{ github.event.before }}
         run: |
-          if [ ${{ github.event.inputs.versionLevel }} = 'prerelease' ]; then
-            npm version prerelease --preid beta --no-commit-hooks -m "chore: upgrade to %s"
-          else
-            npm version ${{ github.event.inputs.versionLevel }} --no-commit-hooks -m "chore: upgrade to %s"
-          fi
-          npm publish
-          git push --follow-tags
-      - name: Merge main into develop
-        shell: bash
-        if: ${{ github.event.inputs.branch == 'main' }}
+          cp scripts/release/publish-package.sh "$RUNNER_TEMP/publish-package.sh"
+          bash "$RUNNER_TEMP/publish-package.sh" select
+      - uses: actions/setup-node@v4
+        if: steps.release.outputs.version != ''
+        with:
+          node-version-file: .nvmrc
+          registry-url: https://npm.pkg.github.com
+          scope: ${{ steps.release.outputs.scope }}
+      - name: Build the package
+        if: steps.release.outputs.version != ''
         run: |
-          git switch develop
-          git merge main --no-verify
-          git push
+          npm ci
+          npm run compile
+          npm pack --json --pack-destination "$RUNNER_TEMP" > "$RUNNER_TEMP/npm-pack.json"
+      - name: Publish the package and record its Git tag
+        if: steps.release.outputs.version != ''
+        env:
+          NODE_AUTH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.release.outputs.version }}
+          DIST_TAG: ${{ steps.release.outputs.tag }}
+        run: bash "$RUNNER_TEMP/publish-package.sh" publish

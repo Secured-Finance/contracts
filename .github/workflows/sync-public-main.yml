@@ -1,0 +1,54 @@
+name: Sync Public main
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sync-public-main
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    if: vars.IS_MIRROR_REPOSITORY == 'true' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate Private repository token
+        uses: actions/create-github-app-token@v2
+        id: app
+        with:
+          app-id: ${{ secrets.MACHINE_USER_APP_ID }}
+          private-key: ${{ secrets.MACHINE_USER_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+          permission-workflows: write
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/heads/main
+          fetch-depth: 0
+          token: ${{ steps.app.outputs.token }}
+      - name: Fast-forward Private main to Public main
+        env:
+          PUBLIC_RELEASE_OWNER: ${{ vars.PUBLIC_RELEASE_OWNER }}
+          PUBLIC_RELEASE_REPOSITORY: ${{ vars.PUBLIC_RELEASE_REPOSITORY }}
+        run: |
+          public_repo="$PUBLIC_RELEASE_OWNER/$PUBLIC_RELEASE_REPOSITORY"
+          [[ "$public_repo" =~ ^[A-Za-z0-9-]+/[A-Za-z0-9_.-]+$ ]]
+          source_repo=$(printf '%s' "$public_repo" | tr '[:upper:]' '[:lower:]')
+          current_repo=$(printf '%s' "$GITHUB_REPOSITORY" | tr '[:upper:]' '[:lower:]')
+          if [[ "$source_repo" == "$current_repo" ]]; then
+            echo 'The Public sync source must differ from this repository.' >&2
+            exit 1
+          fi
+          git fetch --no-tags "https://github.com/$public_repo.git" refs/heads/main
+          public_sha=$(git rev-parse FETCH_HEAD)
+          git merge --ff-only "$public_sha"
+          if [[ "$(git rev-parse HEAD)" != "$public_sha" ]]; then
+            echo 'Private main contains commits beyond Public main.' >&2
+            exit 1
+          fi
+          git push origin HEAD:refs/heads/main
+          echo "Private main synchronized to $public_sha" >> "$GITHUB_STEP_SUMMARY"

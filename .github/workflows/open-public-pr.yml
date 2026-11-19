@@ -1,0 +1,84 @@
+name: Open Public PR
+
+on:
+  workflow_dispatch:
+    inputs:
+      candidate_sha:
+        description: 'Approved Private release branch commit SHA'
+        required: true
+        type: string
+      version_level:
+        description: 'npm version bump for the Public PR'
+        type: choice
+        default: none
+        options:
+          - none
+          - prerelease
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: read
+
+concurrency:
+  group: open-public-pr
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    if: vars.IS_MIRROR_REPOSITORY == 'true' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    outputs:
+      workflow_changes: ${{ steps.plan.outputs.workflow_changes }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Prepare the public diff
+        id: plan
+        env:
+          PUBLIC_RELEASE_OWNER: ${{ vars.PUBLIC_RELEASE_OWNER }}
+          PUBLIC_RELEASE_REPOSITORY: ${{ vars.PUBLIC_RELEASE_REPOSITORY }}
+          CANDIDATE_SHA: ${{ inputs.candidate_sha }}
+          PACKAGE_VERSION_LEVEL: ${{ inputs.version_level }}
+        run: bash scripts/release/promote-release.sh prepare "$RUNNER_TEMP/public-pr-plan/release.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: public-pr-plan
+          path: ${{ runner.temp }}/public-pr-plan/
+          if-no-files-found: error
+
+  open-public-pr:
+    needs: plan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - uses: actions/download-artifact@v4
+        with:
+          name: public-pr-plan
+          path: ${{ runner.temp }}/release/public-pr-plan
+      - name: Generate Public PR token
+        uses: actions/create-github-app-token@v2
+        id: app
+        with:
+          app-id: ${{ secrets.MACHINE_USER_APP_ID }}
+          private-key: ${{ secrets.MACHINE_USER_PRIVATE_KEY }}
+          owner: ${{ vars.PUBLIC_RELEASE_OWNER }}
+          repositories: ${{ vars.PUBLIC_RELEASE_REPOSITORY }}
+          permission-contents: write
+          permission-pull-requests: write
+          permission-workflows: ${{ needs.plan.outputs.workflow_changes == 'true' && 'write' || '' }}
+      - name: Create or reuse Public PR
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          PUBLIC_RELEASE_OWNER: ${{ vars.PUBLIC_RELEASE_OWNER }}
+          PUBLIC_RELEASE_REPOSITORY: ${{ vars.PUBLIC_RELEASE_REPOSITORY }}
+          PUBLIC_PR_RUN_ID: ${{ github.run_id }}
+          MACHINE_USER_APP_ID: ${{ secrets.MACHINE_USER_APP_ID }}
+        run: bash scripts/release/promote-release.sh publish "$RUNNER_TEMP/release/public-pr-plan/release.json"

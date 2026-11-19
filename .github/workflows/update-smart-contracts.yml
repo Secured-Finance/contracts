@@ -33,20 +33,41 @@ on:
         required: false
         type: string
 
+concurrency:
+  group: smart-contract-deployment
+  cancel-in-progress: false
+  queue: max
+
 jobs:
+  validate:
+    name: Validate target branch
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate workflow branch
+        env:
+          TARGET_REF: ${{ github.ref }}
+        run: |
+          if [[ "$TARGET_REF" != refs/heads/* || "$TARGET_REF" == refs/heads/main ]]; then
+            echo 'Select a feature or release branch in Use workflow from.' >&2
+            exit 1
+          fi
   test:
+    needs: validate
     name: Test on a Fork
     runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.network }}
-    if: ${{ github.event.inputs.skip_test == 'false' }}
+    environment: ${{ inputs.network }}
+    if: ${{ !inputs.skip_test }}
     outputs:
-      diff: ${{ steps.diff.outputs.count }}
+      sha: ${{ steps.source.outputs.sha }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ (contains(github.event.inputs.network, 'development') && 'develop') || 'main' }}
-      - uses: actions/setup-node@v3
+          ref: ${{ github.ref }}
+      - name: Record tested commit
+        id: source
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@v4
         with:
           node-version-file: '.nvmrc'
       - name: Set environment variables
@@ -106,42 +127,45 @@ jobs:
       - name: Build Smart Contracts
         run: npm run compile
       - name: Create a fork environment
+        shell: bash
+        env:
+          NETWORK: ${{ inputs.network }}
         run: |
-          FORK_ID=$(npm run fork ${{ github.event.inputs.network }} | tail -n 1)
+          FORK_ID=$(npm run fork "$NETWORK" | tail -n 1)
           echo "fork id is $FORK_ID"
           echo "FORK_ID=$FORK_ID" >> $GITHUB_ENV
       - name: Deploy for fork environment
         run: |
           if [ -n "$DEPLOY_TAGS" ]; then
-            npm run deploy ${{ github.event.inputs.network }} -- --tags "$DEPLOY_TAGS"
+            npm run deploy "$NETWORK" -- --tags "$DEPLOY_TAGS"
           else
-            npm run deploy ${{ github.event.inputs.network }}
+            npm run deploy "$NETWORK"
           fi
         env:
           FORK_RPC_ENDPOINT: https://rpc.tenderly.co/fork/${{ env.FORK_ID }}
-          DEPLOY_TAGS: ${{ github.event.inputs.tags }}
+          DEPLOY_TAGS: ${{ inputs.tags }}
+          NETWORK: ${{ inputs.network }}
       - name: Check diff
         shell: bash
         id: diff
         run: |
-          echo "count=$(git diff --name-only . | wc -l)" >> $GITHUB_OUTPUT
+          echo "count=$(git status --porcelain --untracked-files=all | wc -l)" >> $GITHUB_OUTPUT
       - name: Run a Loan Test on fork environment
         if: ${{ steps.diff.outputs.count > 0 }}
         env:
+          NETWORK: ${{ inputs.network }}
           USE_DEFAULT_ACCOUNTS: true
           FORK_RPC_ENDPOINT: https://rpc.tenderly.co/fork/${{ env.FORK_ID }}
-        run: npx hardhat --network ${{ github.event.inputs.network }} test "scripts/zc-e2e.ts" --bail
+        run: npx hardhat --network "$NETWORK" test "scripts/zc-e2e.ts" --bail
       - name: Delete the fork environment
+        if: always() && env.FORK_ID != ''
         run: npm run unfork --forkid $FORK_ID
   deploy:
     name: Deploy Smart Contracts
     runs-on: ubuntu-latest
-    if: ${{ always() && ((!contains(needs.*.result, 'failure') && !contains(needs.*.result, 'canceled')) || github.event.inputs.skip_test == 'true')}}
-    environment: ${{ github.event.inputs.network }}
-    needs: [test]
-    outputs:
-      deploymentDiff: ${{ steps.deploymentDiff.outputs.count }}
-      docgenDiff: ${{ steps.docgenDiff.outputs.count }}
+    if: ${{ always() && !cancelled() && needs.validate.result == 'success' && (needs.test.result == 'success' || (inputs.skip_test && needs.test.result == 'skipped')) }}
+    environment: ${{ inputs.network }}
+    needs: [validate, test]
     steps:
       - name: Generate token
         id: generate_token
@@ -149,12 +173,21 @@ jobs:
         with:
           app_id: ${{ secrets.MACHINE_USER_APP_ID }}
           private_key: ${{ secrets.MACHINE_USER_PRIVATE_KEY }}
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ (contains(github.event.inputs.network, 'development') && 'develop') || 'main' }}
+          ref: ${{ github.ref }}
           token: ${{ steps.generate_token.outputs.token }}
-      - uses: actions/setup-node@v3
+      - name: Check the tested commit
+        if: needs.test.result == 'success'
+        env:
+          TESTED_SHA: ${{ needs.test.outputs.sha }}
+        run: |
+          if [[ "$(git rev-parse HEAD)" != "$TESTED_SHA" ]]; then
+            echo 'The branch changed after testing. Run the workflow again.' >&2
+            exit 1
+          fi
+      - uses: actions/setup-node@v4
         with:
           node-version-file: '.nvmrc'
       - name: 'Setup for git'
@@ -216,13 +249,12 @@ jobs:
           echo "WAIT_CONFIRMATIONS=${{ vars.WAIT_CONFIRMATIONS }}" >> $GITHUB_ENV
       - name: Deploy smart contracts
         env:
-          DEPLOY_TAGS: ${{ github.event.inputs.tags }}
+          NETWORK: ${{ inputs.network }}
+          DEPLOY_TAGS: ${{ inputs.tags }}
         run: |
-          if [ -n "$DEPLOY_TAGS" ]; then
-            npm run deploy ${{ github.event.inputs.network }} -- --tags "$DEPLOY_TAGS"
-          else
-            npm run deploy ${{ github.event.inputs.network }}
-          fi
+          deploy_args=()
+          if [[ -n "$DEPLOY_TAGS" ]]; then deploy_args=(-- --tags "$DEPLOY_TAGS"); fi
+          npm run deploy "$NETWORK" "${deploy_args[@]}"
           git add .
       - name: Check diff
         shell: bash
@@ -236,7 +268,7 @@ jobs:
           git commit -m "chore: update smart contracts" --no-verify
           git push
       - name: Update documents
-        if: ${{ github.event.inputs.network == 'development' }}
+        if: ${{ inputs.network == 'development' }}
         run: |
           npm run docgen
           git add .
@@ -250,11 +282,4 @@ jobs:
         if: ${{ steps.docgenDiff.outputs.count > 0 }}
         run: |
           git commit -m "chore: update docs" --no-verify
-          git push
-      - name: Merge main into develop
-        shell: bash
-        if: ${{ !contains(github.event.inputs.network, 'development') }}
-        run: |
-          git switch develop
-          git merge main --no-verify
           git push
