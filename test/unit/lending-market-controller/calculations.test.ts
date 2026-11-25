@@ -150,6 +150,7 @@ describe('LendingMarketController - Calculations', () => {
             borrowedAmount: 0,
           },
           LIQUIDATION_THRESHOLD_RATE,
+          false,
         );
 
       expect(totalFunds.workingLendOrdersAmount).to.equal('1000000000');
@@ -227,6 +228,7 @@ describe('LendingMarketController - Calculations', () => {
             borrowedAmount: 0,
           },
           LIQUIDATION_THRESHOLD_RATE,
+          false,
         );
 
       expect(totalFunds.workingLendOrdersAmount).to.equal('7000000000');
@@ -266,6 +268,7 @@ describe('LendingMarketController - Calculations', () => {
             borrowedAmount: 0,
           },
           LIQUIDATION_THRESHOLD_RATE,
+          false,
         );
 
       expect(totalFunds.workingLendOrdersAmount).to.equal('7000000000');
@@ -297,6 +300,7 @@ describe('LendingMarketController - Calculations', () => {
             borrowedAmount: 0,
           },
           LIQUIDATION_THRESHOLD_RATE,
+          false,
         );
 
       expect(totalFunds.workingBorrowOrdersAmount).to.equal(1);
@@ -322,6 +326,7 @@ describe('LendingMarketController - Calculations', () => {
             borrowedAmount: 0,
           },
           LIQUIDATION_THRESHOLD_RATE,
+          false,
         );
 
       expect(totalFunds.workingBorrowOrdersAmount).to.equal(2);

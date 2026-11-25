@@ -22,6 +22,7 @@ describe('LendingMarketController - Liquidations', () => {
   let mockReserveFund: MockContract;
   let mockERC20: MockContract;
   let lendingMarketControllerProxy: Contract;
+  let genesisValueVaultProxy: Contract;
   let maturities: BigNumber[];
 
   let fundManagementLogic: Contract;
@@ -85,6 +86,7 @@ describe('LendingMarketController - Liquidations', () => {
       mockTokenVault,
       mockReserveFund,
       lendingMarketControllerProxy,
+      genesisValueVaultProxy,
       fundManagementLogic,
       lendingMarketOperationLogic,
       liquidationLogic,
@@ -143,6 +145,270 @@ describe('LendingMarketController - Liquidations', () => {
     await mockCurrencyController.mock.currencyExists.returns(true);
 
     await initializeCurrency(targetCurrency);
+  });
+
+  describe('Liquidation rounding boundaries', () => {
+    for (const fullLiquidation of [false, true]) {
+      it(`rounds dated debt up and caps it at the balance for ${
+        fullLiquidation ? 'full' : 'partial'
+      } liquidation`, async () => {
+        [alice, bob] = getUsers(2);
+
+        await lendingMarketControllerProxy
+          .connect(bob)
+          .executeOrder(targetCurrency, maturities[1], Side.LEND, 100, 9500);
+        await lendingMarketControllerProxy
+          .connect(alice)
+          .executeOrder(targetCurrency, maturities[1], Side.BORROW, 100, 9500);
+
+        const before = await lendingMarketControllerProxy.getPosition(
+          targetCurrency,
+          maturities[1],
+          alice.address,
+        );
+        const liquidationAmount = fullLiquidation ? 1000 : 1;
+        await mockTokenVault.mock.getLiquidationAmount.returns(
+          liquidationAmount,
+          0,
+          0,
+        );
+        await mockCurrencyController.mock[
+          'convert(bytes32,bytes32,uint256)'
+        ].returns(liquidationAmount);
+
+        await lendingMarketControllerProxy
+          .connect(owner)
+          .executeLiquidationCall(
+            targetCurrency,
+            targetCurrency,
+            maturities[1],
+            alice.address,
+          );
+
+        const after = await lendingMarketControllerProxy.getPosition(
+          targetCurrency,
+          maturities[1],
+          alice.address,
+        );
+        expect(after.futureValue).to.equal(
+          fullLiquidation ? 0 : before.futureValue.add(2),
+        );
+
+        const received = await lendingMarketControllerProxy.getPosition(
+          targetCurrency,
+          maturities[1],
+          owner.address,
+        );
+        expect(received.futureValue).to.equal(
+          fullLiquidation ? before.futureValue : -2,
+        );
+      });
+    }
+
+    it('rounds collateral down and adjusts debt for the untransferred PV', async () => {
+      [alice, bob] = getUsers(2);
+
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .executeOrder(targetCurrency, maturities[0], Side.LEND, 100, 9500);
+      await lendingMarketControllerProxy
+        .connect(bob)
+        .executeOrder(targetCurrency, maturities[0], Side.BORROW, 100, 9500);
+      await lendingMarketControllerProxy
+        .connect(bob)
+        .executeOrder(targetCurrency, maturities[1], Side.LEND, 100, 9500);
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .executeOrder(targetCurrency, maturities[1], Side.BORROW, 100, 9500);
+
+      const collateralBefore = await lendingMarketControllerProxy.getPosition(
+        targetCurrency,
+        maturities[0],
+        alice.address,
+      );
+      const debtBefore = await lendingMarketControllerProxy.getPosition(
+        targetCurrency,
+        maturities[1],
+        alice.address,
+      );
+
+      const market = await ethers.getContractAt(
+        'LendingMarket',
+        await lendingMarketControllerProxy.getLendingMarket(targetCurrency),
+      );
+      const orderBookId = await lendingMarketControllerProxy.getOrderBookId(
+        targetCurrency,
+        maturities[0],
+      );
+      expect(await market.getMarketUnitPrice(orderBookId)).to.equal(9524);
+
+      // At this price, 11 PV converts to 11 FV with Down and 12 FV with nearest rounding.
+      // The 11 FV transfer is valued at 10 PV, leaving 1 PV untransferred.
+      await mockTokenVault.mock.getLiquidationAmount.returns(11, 0, 0);
+      await mockTokenVault.mock.transferFrom
+        .withArgs(targetCurrency, alice.address, owner.address, 11)
+        .returns(11);
+      await mockCurrencyController.mock[
+        'convert(bytes32,bytes32,uint256)'
+      ].returns(11);
+      await mockCurrencyController.mock['convert(bytes32,bytes32,uint256[])']
+        .withArgs(targetCurrency, targetCurrency, [1, 11, 0])
+        .returns([1, 11, 0]);
+
+      await lendingMarketControllerProxy
+        .connect(owner)
+        .executeLiquidationCall(
+          targetCurrency,
+          targetCurrency,
+          maturities[1],
+          alice.address,
+        );
+
+      const collateralAfter = await lendingMarketControllerProxy.getPosition(
+        targetCurrency,
+        maturities[0],
+        alice.address,
+      );
+      expect(collateralAfter.futureValue).to.equal(
+        collateralBefore.futureValue.sub(11),
+      );
+
+      const debtAfter = await lendingMarketControllerProxy.getPosition(
+        targetCurrency,
+        maturities[1],
+        alice.address,
+      );
+      expect(debtAfter.futureValue).to.equal(debtBefore.futureValue.add(11));
+    });
+
+    for (const fullLiquidation of [false, true]) {
+      it(`preserves positive FV during ${
+        fullLiquidation ? 'full' : 'partial'
+      } rolled-debt liquidation`, async () => {
+        [alice, bob] = getUsers(2);
+        targetCurrency = ethers.utils.formatBytes32String(
+          `RoundedGV${currencyIdx}`,
+        );
+        await initializeCurrency(targetCurrency, BigNumber.from(10).pow(26));
+
+        await lendingMarketControllerProxy
+          .connect(bob)
+          .executeOrder(targetCurrency, maturities[0], Side.LEND, 100, 9500);
+        await lendingMarketControllerProxy
+          .connect(alice)
+          .executeOrder(targetCurrency, maturities[0], Side.BORROW, 100, 9500);
+        await time.increaseTo(maturities[0].toString());
+        await lendingMarketControllerProxy.rotateOrderBooks(targetCurrency);
+        maturities = await lendingMarketControllerProxy.getMaturities(
+          targetCurrency,
+        );
+
+        await lendingMarketControllerProxy
+          .connect(alice)
+          .executeOrder(targetCurrency, maturities[0], Side.LEND, 10, 9500);
+        await lendingMarketControllerProxy
+          .connect(bob)
+          .executeOrder(targetCurrency, maturities[0], Side.BORROW, 10, 9500);
+        await lendingMarketControllerProxy.cleanUpFunds(
+          targetCurrency,
+          alice.address,
+        );
+
+        const genesisBefore =
+          await lendingMarketControllerProxy.getGenesisValue(
+            targetCurrency,
+            alice.address,
+          );
+        const positionBefore = await lendingMarketControllerProxy.getPosition(
+          targetCurrency,
+          maturities[0],
+          alice.address,
+        );
+        const rawFVBefore = positionBefore.futureValue.sub(
+          genesisBefore.amountInFV,
+        );
+        expect(rawFVBefore).to.be.gt(0);
+
+        const liquidationAmount = fullLiquidation ? 1000 : 1;
+
+        if (!fullLiquidation) {
+          const market = await ethers.getContractAt(
+            'LendingMarket',
+            await lendingMarketControllerProxy.getLendingMarket(targetCurrency),
+          );
+          const orderBookId = await lendingMarketControllerProxy.getOrderBookId(
+            targetCurrency,
+            maturities[0],
+          );
+          const unitPrice = await market.getMarketUnitPrice(orderBookId);
+          expect(unitPrice).to.equal(9091);
+
+          // Up converts the requested -1 PV to -2 FV, then to -3 GV.
+          const debtInGV = await genesisValueVaultProxy[
+            'calculateGVFromFV(bytes32,uint256,int256,bool)'
+          ](targetCurrency, 0, -2, true);
+          expect(debtInGV).to.equal(-3);
+
+          // Ensure the transfer is not capped by the user's remaining GV debt.
+          expect(genesisBefore.amount).to.be.lt(debtInGV);
+
+          const debtInFV = await genesisValueVaultProxy.calculateFVFromGV(
+            targetCurrency,
+            0,
+            debtInGV,
+          );
+          const transferredDebtInPV = debtInFV
+            .abs()
+            .mul(unitPrice)
+            .add(5000)
+            .div(10000);
+          expect(transferredDebtInPV).to.equal(3);
+
+          // Subtracting a -3 PV transfer from a -1 PV request would leave +2 PV.
+          expect(transferredDebtInPV.sub(liquidationAmount)).to.equal(2);
+
+          expect(rawFVBefore).to.equal(11);
+        }
+
+        await mockTokenVault.mock.getLiquidationAmount.returns(
+          liquidationAmount,
+          0,
+          0,
+        );
+        await mockCurrencyController.mock[
+          'convert(bytes32,bytes32,uint256)'
+        ].returns(liquidationAmount);
+        await lendingMarketControllerProxy
+          .connect(owner)
+          .executeLiquidationCall(
+            targetCurrency,
+            targetCurrency,
+            maturities[0],
+            alice.address,
+          );
+
+        const genesisAfter = await lendingMarketControllerProxy.getGenesisValue(
+          targetCurrency,
+          alice.address,
+        );
+        expect(genesisAfter.amount).to.be.gt(genesisBefore.amount);
+
+        if (fullLiquidation) {
+          expect(genesisAfter.amount).to.equal(0);
+        } else {
+          expect(genesisAfter.amount.sub(genesisBefore.amount)).to.equal(3);
+        }
+
+        const positionAfter = await lendingMarketControllerProxy.getPosition(
+          targetCurrency,
+          maturities[0],
+          alice.address,
+        );
+        expect(positionAfter.futureValue.sub(genesisAfter.amountInFV)).to.equal(
+          rawFVBefore,
+        );
+      });
+    }
   });
 
   describe('External liquidator', async () => {
@@ -484,7 +750,9 @@ describe('LendingMarketController - Liquidations', () => {
 
       // Set up for the mocks
       await mockReserveFund.mock.isPaused.returns(false);
-      await mockTokenVault.mock.getTotalCollateralAmount.returns(0);
+      await mockTokenVault.mock[
+        'getTotalCollateralAmount(address,bool)'
+      ].returns(0);
       await mockTokenVault.mock.transferFrom.returns(100);
       await mockCurrencyController.mock[
         'convert(bytes32,bytes32,uint256[])'
@@ -550,7 +818,9 @@ describe('LendingMarketController - Liquidations', () => {
 
       // Set up for the mocks
       await mockReserveFund.mock.isPaused.returns(false);
-      await mockTokenVault.mock.getTotalCollateralAmount.returns(100);
+      await mockTokenVault.mock[
+        'getTotalCollateralAmount(address,bool)'
+      ].returns(100);
       await mockTokenVault.mock.transferFrom.returns(100);
       await mockCurrencyController.mock[
         'convert(bytes32,bytes32,uint256[])'

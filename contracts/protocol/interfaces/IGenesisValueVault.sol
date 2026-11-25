@@ -77,6 +77,13 @@ interface IGenesisValueVault {
         int256 genesisValue
     ) external view returns (int256);
 
+    function calculateGVFromFV(
+        bytes32 ccy,
+        uint256 basisMaturity,
+        int256 futureValue,
+        bool roundUp
+    ) external view returns (int256);
+
     function getBalanceFluctuationByAutoRolls(
         bytes32 ccy,
         address user,

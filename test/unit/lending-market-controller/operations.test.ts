@@ -986,9 +986,9 @@ describe('LendingMarketController - Operations', () => {
         expect(range.maxBorrowUnitPrice).to.equal(10000);
         expect(range.referenceUnitPrice).to.equal(marketUnitPrice);
         expect(range.isMinDebtUnitPriceReference).to.equal(false);
-        expect(
-          await lendingMarket.getMarketUnitPrice(orderBookIds[0]),
-        ).to.equal(marketUnitPrice);
+        expect(await lendingMarket.getLiveUnitPrice(orderBookIds[0])).to.equal(
+          marketUnitPrice,
+        );
 
         await expect(
           lendingMarketControllerProxy
@@ -1032,9 +1032,9 @@ describe('LendingMarketController - Operations', () => {
             9000,
           );
 
-        expect(
-          await lendingMarket.getMarketUnitPrice(orderBookIds[0]),
-        ).to.equal(9000);
+        expect(await lendingMarket.getLiveUnitPrice(orderBookIds[0])).to.equal(
+          9000,
+        );
 
         const sameBlockThresholds =
           await lendingMarket.getCircuitBreakerThresholds(orderBookIds[0]);
@@ -1455,6 +1455,107 @@ describe('LendingMarketController - Operations', () => {
         expect(bobFunds.workingBorrowOrdersAmount).to.equal('0');
         expect(bobFunds.debtAmount).to.equal('30000000000000000');
         expect(bobFunds.borrowedAmount).to.equal('30000000000000000');
+      });
+
+      it('Excludes current-block fills from a third-party position valuation', async () => {
+        const amount = BigNumber.from('100000000000000000');
+        const establishedUnitPrice = BigNumber.from(8000);
+        const currentBlockUnitPrice = BigNumber.from(8400);
+
+        await lendingMarketControllerProxy.updateMinDebtUnitPrice(
+          targetCurrency,
+          3000,
+        );
+
+        // Establish Bob's debt and its valuation price in a completed block.
+        await lendingMarketControllerProxy
+          .connect(alice)
+          .executeOrder(
+            targetCurrency,
+            maturities[1],
+            Side.LEND,
+            amount,
+            establishedUnitPrice,
+          );
+        await lendingMarketControllerProxy
+          .connect(bob)
+          .executeOrder(
+            targetCurrency,
+            maturities[1],
+            Side.BORROW,
+            amount,
+            establishedUnitPrice,
+          );
+        await ethers.provider.send('evm_mine', []);
+
+        const debtBefore = (
+          await lendingMarketControllerProxy.calculateFunds(
+            targetCurrency,
+            bob.address,
+            LIQUIDATION_THRESHOLD_RATE,
+          )
+        ).debtAmount;
+        const displayedPVBefore =
+          await lendingMarketControllerProxy.getTotalPresentValue(
+            targetCurrency,
+            bob.address,
+          );
+
+        // Move the live price in one block with an unrelated trade.
+        await ethers.provider.send('evm_setAutomine', [false]);
+        try {
+          const lendTx = await lendingMarketControllerProxy
+            .connect(carol)
+            .executeOrder(
+              targetCurrency,
+              maturities[1],
+              Side.LEND,
+              amount,
+              currentBlockUnitPrice,
+            );
+          const borrowTx = await lendingMarketControllerProxy
+            .connect(owner)
+            .executeOrder(
+              targetCurrency,
+              maturities[1],
+              Side.BORROW,
+              amount,
+              currentBlockUnitPrice,
+            );
+
+          await ethers.provider.send('evm_mine', []);
+          await lendTx.wait();
+          await borrowTx.wait();
+        } finally {
+          await ethers.provider.send('evm_setAutomine', [true]);
+        }
+
+        const debtInManipulationBlock = (
+          await lendingMarketControllerProxy.calculateFunds(
+            targetCurrency,
+            bob.address,
+            LIQUIDATION_THRESHOLD_RATE,
+          )
+        ).debtAmount;
+        const displayedPVInManipulationBlock =
+          await lendingMarketControllerProxy.getTotalPresentValue(
+            targetCurrency,
+            bob.address,
+          );
+
+        expect(debtInManipulationBlock).to.equal(debtBefore);
+        expect(displayedPVInManipulationBlock).to.equal(displayedPVBefore);
+
+        // The completed block becomes eligible for valuation in the following block.
+        await ethers.provider.send('evm_mine', []);
+        const debtAfter = (
+          await lendingMarketControllerProxy.calculateFunds(
+            targetCurrency,
+            bob.address,
+            LIQUIDATION_THRESHOLD_RATE,
+          )
+        ).debtAmount;
+        expect(debtAfter).to.be.gt(debtBefore);
       });
 
       it('Apply the source maturity debt floor when aggregating a non-default market position', async () => {

@@ -65,20 +65,22 @@ describe('TokenVault - Calculations', () => {
       borrowedAmount?: number | BigNumber | string;
     } = {},
   ) => {
-    return mockLendingMarketController.mock.calculateTotalFundsInBaseCurrency.returns(
-      {
-        plusDepositAmountInAdditionalFundsCcy:
-          inputs.plusDepositAmountInAdditionalFundsCcy || 0,
-        minusDepositAmountInAdditionalFundsCcy:
-          inputs.minusDepositAmountInAdditionalFundsCcy || 0,
-        workingLendOrdersAmount: inputs.workingLendOrdersAmount || 0,
-        claimableAmount: inputs.claimableAmount || 0,
-        collateralAmount: inputs.collateralAmount || 0,
-        lentAmount: inputs.lentAmount || 0,
-        workingBorrowOrdersAmount: inputs.workingBorrowOrdersAmount || 0,
-        debtAmount: inputs.debtAmount || 0,
-        borrowedAmount: inputs.borrowedAmount || 0,
-      },
+    const funds = {
+      plusDepositAmountInAdditionalFundsCcy:
+        inputs.plusDepositAmountInAdditionalFundsCcy || 0,
+      minusDepositAmountInAdditionalFundsCcy:
+        inputs.minusDepositAmountInAdditionalFundsCcy || 0,
+      workingLendOrdersAmount: inputs.workingLendOrdersAmount || 0,
+      claimableAmount: inputs.claimableAmount || 0,
+      collateralAmount: inputs.collateralAmount || 0,
+      lentAmount: inputs.lentAmount || 0,
+      workingBorrowOrdersAmount: inputs.workingBorrowOrdersAmount || 0,
+      debtAmount: inputs.debtAmount || 0,
+      borrowedAmount: inputs.borrowedAmount || 0,
+    };
+
+    await mockLendingMarketController.mock.calculateTotalFundsInBaseCurrency.returns(
+      funds,
     );
   };
 

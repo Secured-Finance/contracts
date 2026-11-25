@@ -259,7 +259,7 @@ describe('Integration Test: Auto-rolls', async () => {
       expect(aliceFVAfter).to.equal(aliceActualFV.abs());
 
       // Check present value
-      const marketUnitPrice = await lendingMarket.getMarketUnitPrice(
+      const marketUnitPrice = await lendingMarket.getLiveUnitPrice(
         orderBookIds[0],
       );
       const alicePV = await lendingMarketController.getTotalPresentValue(
@@ -504,7 +504,7 @@ describe('Integration Test: Auto-rolls', async () => {
           maturities[1],
         );
       const actualDestinationMarketUnitPrice =
-        await lendingMarket.getMarketUnitPrice(orderBookIds[1]);
+        await lendingMarket.getLiveUnitPrice(orderBookIds[1]);
       const { amount: genesisValue, amountInFV: convertedFutureValue } =
         await lendingMarketController.getGenesisValue(hexETH, bob.address);
       const bobFunds = await lendingMarketController.calculateFunds(
@@ -1074,7 +1074,7 @@ describe('Integration Test: Auto-rolls', async () => {
           dave.address,
         );
 
-      const marketUnitPrice = await lendingMarket.getMarketUnitPrice(
+      const marketUnitPrice = await lendingMarket.getLiveUnitPrice(
         orderBookIds[0],
       );
       const davePV = await lendingMarketController.getTotalPresentValue(

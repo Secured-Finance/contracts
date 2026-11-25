@@ -315,13 +315,13 @@ Gets the best prices for borrowing.
 | ---- | ---- | ----------- |
 | [0] | uint256[] | The array of the best price for borrowing |
 
-### getMarketUnitPrice
+### getLiveUnitPrice
 
 ```solidity
-function getMarketUnitPrice(uint8 _orderBookId) external view returns (uint256)
+function getLiveUnitPrice(uint8 _orderBookId) external view returns (uint256)
 ```
 
-Gets the market unit price
+Gets the live unit price, including reliable current-block fills
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -329,7 +329,26 @@ Gets the market unit price
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| [0] | uint256 | The market unit price |
+| [0] | uint256 | The live unit price |
+
+### getMarketUnitPrice
+
+```solidity
+function getMarketUnitPrice(uint8 _orderBookId) external view returns (uint256)
+```
+
+Gets the market unit price used for position valuation.
+
+_Excludes current-block fills once a reference price exists.
+     An unpriced book uses its first reliable block price immediately._
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _orderBookId | uint8 | The order book id |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | uint256 | The unit price used for collateral valuation and liquidation conversion |
 
 ### getLastOrderTimestamp
 

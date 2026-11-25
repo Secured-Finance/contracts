@@ -44,6 +44,18 @@ modifier ifInactive()
 
 Modifier to check if the protocol is inactive.
 
+### _requireValidMaturity
+
+```solidity
+function _requireValidMaturity(bytes32 _ccy, uint256 _maturity) private view
+```
+
+### _requireActive
+
+```solidity
+function _requireActive() private view
+```
+
 ### initialize
 
 ```solidity
@@ -576,7 +588,7 @@ for the selected currency.
 ### calculateTotalFundsInBaseCurrency
 
 ```solidity
-function calculateTotalFundsInBaseCurrency(address _user, struct ILendingMarketController.AdditionalFunds _additionalFunds, uint256 _liquidationThresholdRate) external view returns (struct ILendingMarketController.CalculatedTotalFunds funds)
+function calculateTotalFundsInBaseCurrency(address _user, struct ILendingMarketController.AdditionalFunds _additionalFunds, uint256 _liquidationThresholdRate, bool _useConservativePrice) external view returns (struct ILendingMarketController.CalculatedTotalFunds funds)
 ```
 
 Gets the funds that are calculated from the user's lending and borrowing order list
@@ -587,6 +599,7 @@ for all currencies in base currency.
 | _user | address | User's address |
 | _additionalFunds | struct ILendingMarketController.AdditionalFunds | The funds to be added for calculating the total funds |
 | _liquidationThresholdRate | uint256 | The liquidation threshold rate |
+| _useConservativePrice | bool | Use the less favorable of the valuation and live prices |
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -1044,4 +1057,32 @@ This function is not inactivated after the emergency termination to allow users 
 | _ccy | bytes32 | Currency name in bytes32 |
 | _maturity | uint256 | The maturity of the order book |
 | _amount | uint256 | The amount of ZCToken to burn |
+
+### forceWithdrawZCToken
+
+```solidity
+function forceWithdrawZCToken(bytes32 _ccy, uint256 _maturity, address _from, address _to, uint256 _amount) external
+```
+
+Converts another user's positive FV into ZC for USDFC MAR2027 recovery.
+
+_Trusted operators may bypass collateral withdrawal limits, even while the market is paused.
+Amount must be nonzero and available in full. Not available after emergency termination._
+
+### forceDepositZCToken
+
+```solidity
+function forceDepositZCToken(bytes32 _ccy, uint256 _maturity, address _from, address _to, uint256 _amount) external
+```
+
+Burns USDFC MAR2027 ZC and restores FV to the recipient.
+
+_No allowance is required. Amount must be nonzero and available in full.
+Not available after emergency termination, to preserve the settlement snapshot._
+
+### _validateZCRecovery
+
+```solidity
+function _validateZCRecovery(bytes32 _ccy, uint256 _maturity, address _from, address _to) private view
+```
 

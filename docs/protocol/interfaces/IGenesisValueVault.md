@@ -194,6 +194,12 @@ function calculateGVFromFV(bytes32 ccy, uint256 basisMaturity, int256 futureValu
 function calculateFVFromGV(bytes32 ccy, uint256 basisMaturity, int256 genesisValue) external view returns (int256)
 ```
 
+### calculateGVFromFV
+
+```solidity
+function calculateGVFromFV(bytes32 ccy, uint256 basisMaturity, int256 futureValue, bool roundUp) external view returns (int256)
+```
+
 ### getBalanceFluctuationByAutoRolls
 
 ```solidity

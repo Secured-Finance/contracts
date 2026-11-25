@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.19;
 
+import {ILendingMarket} from "../../protocol/interfaces/ILendingMarket.sol";
 import {FundManagementLogic} from "../../protocol/libraries/logics/FundManagementLogic.sol";
 import {LendingMarketControllerStorage as Storage} from "../../protocol/storages/LendingMarketControllerStorage.sol";
 import {EnumerableSet} from "../../dependencies/openzeppelin/utils/structs/EnumerableSet.sol";
@@ -35,5 +36,20 @@ contract FundManagementLogicCaller {
         uint256 _index
     ) external view returns (uint256) {
         return Storage.slot().usedMaturities[_ccy][_user].at(_index);
+    }
+
+    function getUnitPriceForValuation(
+        ILendingMarket market,
+        bool useConservativePrice,
+        uint8 orderBookId,
+        bool isLend
+    ) external view returns (uint256) {
+        return
+            FundManagementLogic.getUnitPriceForValuation(
+                market,
+                useConservativePrice,
+                orderBookId,
+                isLend
+            );
     }
 }

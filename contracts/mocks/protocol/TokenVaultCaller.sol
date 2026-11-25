@@ -52,13 +52,15 @@ contract TokenVaultCaller {
     function calculateTotalFundsInBaseCurrency(
         address _user,
         ILendingMarketController.AdditionalFunds calldata _additionalFunds,
-        uint256 _liquidationThresholdRate
+        uint256 _liquidationThresholdRate,
+        bool _useConservativePrice
     ) public view returns (ILendingMarketController.CalculatedTotalFunds memory calculatedFunds) {
         return
             lendingMarketController.calculateTotalFundsInBaseCurrency(
                 _user,
                 _additionalFunds,
-                _liquidationThresholdRate
+                _liquidationThresholdRate,
+                _useConservativePrice
             );
     }
 

@@ -110,6 +110,18 @@ function withdrawZCToken(bytes32 _ccy, uint256 _maturity, address _user, uint256
 function depositZCToken(bytes32 _ccy, uint256 _maturity, address _user, uint256 _amount) public
 ```
 
+### forceWithdrawZCToken
+
+```solidity
+function forceWithdrawZCToken(bytes32 _ccy, uint256 _maturity, address _from, address _to, uint256 _amount) public
+```
+
+### forceDepositZCToken
+
+```solidity
+function forceDepositZCToken(bytes32 _ccy, uint256 _maturity, address _from, address _to, uint256 _amount) public
+```
+
 ### getWithdrawableZCTokenAmount
 
 ```solidity
@@ -138,6 +150,12 @@ function _estimateCollateralCoverage(struct LendingMarketUserLogic.EstimateColla
 
 ```solidity
 function _estimateFilledAmountWithFee(bytes32 _ccy, uint256 _maturity, enum ProtocolTypes.Side side, uint256 filledAmount, uint256 filledAmountInFV, uint256 orderFeeInFV) internal view returns (uint256)
+```
+
+### _getConservativeUnitPriceForFill
+
+```solidity
+function _getConservativeUnitPriceForFill(bytes32 _ccy, uint256 _maturity, enum ProtocolTypes.Side _side, uint256 _filledAmount, uint256 _filledAmountInFV) private view returns (uint256 unitPrice)
 ```
 
 ### _unwindPosition
@@ -182,10 +200,10 @@ function _getWithdrawableZCTokenAmount(bytes32 _ccy, uint256 _maturity, address 
 function _getWithdrawableZCPerpetualTokenAmount(bytes32 _ccy, address _user) internal view returns (uint256 amount)
 ```
 
-### _getWithdrawableAmount
+### _getZCWithdrawalCollateralLimitInPV
 
 ```solidity
-function _getWithdrawableAmount(bytes32 _ccy, address _user) internal view returns (uint256 withdrawableAmount, bool hasAllocatedCollateral)
+function _getZCWithdrawalCollateralLimitInPV(bytes32 _ccy, address _user) internal view returns (uint256 collateralLimitInPV)
 ```
 
 ### _isCovered

@@ -400,7 +400,9 @@ describe('LendingMarketController - Orders', () => {
 
       // Setup mocks for order execution
       await mockTokenVault.mock.isCovered.returns(true, true);
-      await mockTokenVault.mock.getTotalCollateralAmount.returns('1000');
+      await mockTokenVault.mock[
+        'getTotalCollateralAmount(address,bool)'
+      ].returns('1000');
       await mockTokenVault.mock.getCollateralCurrencies.returns([
         targetCurrency,
       ]);
@@ -1395,6 +1397,17 @@ describe('LendingMarketController - Orders', () => {
       ).sub(calculateFutureValue('100000000000000000', '9500'));
       expect(positions[0].futureValue).to.equal(expectedFutureValue);
       expect(positions[0].presentValue).to.equal(
+        calculatePresentValue(expectedFutureValue, '9400'),
+      );
+
+      await ethers.provider.send('evm_mine', []);
+      const completedBlockPositions = await lendingMarketReader[
+        'getPositions(bytes32[],address)'
+      ]([targetCurrency], alice.address);
+      expect(completedBlockPositions[0].futureValue).to.equal(
+        expectedFutureValue,
+      );
+      expect(completedBlockPositions[0].presentValue).to.equal(
         calculatePresentValue(expectedFutureValue, '9500'),
       );
     });

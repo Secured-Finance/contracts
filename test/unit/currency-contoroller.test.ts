@@ -503,6 +503,57 @@ describe('CurrencyController', () => {
       expect(zeroAmount).to.equal('0');
     });
 
+    it('converts from base currency with explicit rounding and preserves nearest rounding', async () => {
+      const { timestamp: now } = await ethers.provider.getBlock('latest');
+
+      await mockPriceFeed.mock.latestRoundData.returns(
+        0,
+        ethers.utils.parseEther('3'),
+        0,
+        now,
+        0,
+      );
+
+      for (const [input, down, up, nearest] of [
+        [0, 0, 0, 0],
+        [1, 0, 1, 0],
+        [2, 0, 1, 1],
+        [3, 1, 1, 1],
+      ]) {
+        expect(
+          await currencyControllerProxy[
+            'convertFromBaseCurrency(bytes32,uint256,bool)'
+          ](currency, input, false),
+        ).to.equal(down);
+
+        expect(
+          await currencyControllerProxy[
+            'convertFromBaseCurrency(bytes32,uint256,bool)'
+          ](currency, input, true),
+        ).to.equal(up);
+
+        expect(
+          await currencyControllerProxy[
+            'convertFromBaseCurrency(bytes32,uint256)'
+          ](currency, input),
+        ).to.equal(nearest);
+      }
+
+      const largeAmount = ethers.constants.MaxUint256;
+
+      expect(
+        await currencyControllerProxy[
+          'convertFromBaseCurrency(bytes32,uint256,bool)'
+        ](currency, largeAmount, false),
+      ).to.equal(largeAmount.div(3));
+
+      expect(
+        await currencyControllerProxy[
+          'convertFromBaseCurrency(bytes32,uint256,bool)'
+        ](currency, largeAmount, true),
+      ).to.equal(largeAmount.div(3));
+    });
+
     it('Get the array of converted amounts(uint256[]) in the base currency', async () => {
       const amounts = await currencyControllerProxy[
         'convertToBaseCurrency(bytes32,uint256[])'

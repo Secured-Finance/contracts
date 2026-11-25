@@ -124,9 +124,9 @@ describe('Integration Test: Liquidations', async () => {
         await wFILToken
           .connect(owner)
           .transfer(signer.address, initialFILBalance);
-        await usdcToken
-          .connect(owner)
-          .transfer(signer.address, initialUSDCBalance);
+
+        // Fund each participant without depending on the deployer's initial USDC supply.
+        await usdcToken.connect(owner).mint(signer.address, initialUSDCBalance);
       }
       await wFILToken
         .connect(signer)
@@ -319,9 +319,11 @@ describe('Integration Test: Liquidations', async () => {
     await wFILToken
       .connect(owner)
       .transfer(mockUniswapRouter.address, initialFILBalance.mul(10));
+
+    // Provide the mock DEX with the liquidity required by liquidation swaps.
     await usdcToken
       .connect(owner)
-      .transfer(mockUniswapRouter.address, initialUSDCBalance.mul(10));
+      .mint(mockUniswapRouter.address, initialUSDCBalance.mul(10));
     await owner.sendTransaction({
       to: mockUniswapRouter.address,
       value: initialETHBalance.mul(10),

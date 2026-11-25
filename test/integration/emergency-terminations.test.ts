@@ -282,8 +282,9 @@ describe('Integration Test: Emergency terminations', async () => {
           await lendingMarketController.getTotalPresentValueInBaseCurrency(
             bob.address,
           );
-        const bobTotalCollateralBefore =
-          await tokenVault.getTotalCollateralAmount(bob.address);
+        const bobTotalCollateralBefore = await tokenVault[
+          'getTotalCollateralAmount(address,bool)'
+        ](bob.address, false);
 
         // Execute forced redemption for alice
         const alicePV =
@@ -299,7 +300,10 @@ describe('Integration Test: Emergency terminations', async () => {
 
         // Execute forced redemption for bob
         const [bobCollateral, bobPV] = await Promise.all([
-          tokenVault.getTotalCollateralAmount(bob.address),
+          tokenVault['getTotalCollateralAmount(address,bool)'](
+            bob.address,
+            false,
+          ),
           lendingMarketController.getTotalPresentValueInBaseCurrency(
             bob.address,
           ),
@@ -338,10 +342,12 @@ describe('Integration Test: Emergency terminations', async () => {
         }
 
         // Check collateral
-        const aliceTotalCollateralAfter =
-          await tokenVault.getTotalCollateralAmount(alice.address);
-        const bobTotalCollateralAfter =
-          await tokenVault.getTotalCollateralAmount(bob.address);
+        const aliceTotalCollateralAfter = await tokenVault[
+          'getTotalCollateralAmount(address,bool)'
+        ](alice.address, false);
+        const bobTotalCollateralAfter = await tokenVault[
+          'getTotalCollateralAmount(address,bool)'
+        ](bob.address, false);
 
         const roundedDecimals =
           orderAmountInETH.toString().length -

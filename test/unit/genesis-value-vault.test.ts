@@ -270,6 +270,38 @@ describe('GenesisValueVault', () => {
         );
       });
 
+      it('rounds GV magnitudes explicitly for positive and negative FV', async () => {
+        const compoundFactor =
+          await genesisValueVaultProxy.getLendingCompoundFactor(targetCurrency);
+        const scale = BigNumber.from(10).pow(decimals);
+
+        for (const futureValue of [0, 1, 3, 100]) {
+          const numerator = scale.mul(futureValue);
+          const down = numerator.div(compoundFactor);
+          const up = numerator.add(compoundFactor).sub(1).div(compoundFactor);
+
+          for (const sign of [1, -1]) {
+            expect(
+              await genesisValueVaultProxy[
+                'calculateGVFromFV(bytes32,uint256,int256,bool)'
+              ](targetCurrency, 0, futureValue * sign, false),
+            ).to.equal(down.mul(sign));
+
+            expect(
+              await genesisValueVaultProxy[
+                'calculateGVFromFV(bytes32,uint256,int256,bool)'
+              ](targetCurrency, 0, futureValue * sign, true),
+            ).to.equal(up.mul(sign));
+
+            expect(
+              await genesisValueVaultProxy[
+                'calculateGVFromFV(bytes32,uint256,int256)'
+              ](targetCurrency, 0, futureValue * sign),
+            ).to.equal(down.mul(sign));
+          }
+        }
+      });
+
       it('Convert balance to selected maturity from another maturity', async () => {
         const amount = await genesisValueVaultProxy.calculateFVFromFV(
           targetCurrency,
@@ -368,7 +400,7 @@ describe('GenesisValueVault', () => {
 
       it('Fail to calculate amount in GV from amount in FV due to no compound factor', async () => {
         await expect(
-          genesisValueVaultProxy.calculateGVFromFV(
+          genesisValueVaultProxy['calculateGVFromFV(bytes32,uint256,int256)'](
             targetCurrency,
             1234567890,
             fvAmount,
@@ -1136,11 +1168,9 @@ describe('GenesisValueVault', () => {
     });
 
     it('Calculate the balance fluctuation of auto-rolls by on the current maturity', async () => {
-      const gvAmount = await genesisValueVaultProxy.calculateGVFromFV(
-        targetCurrency,
-        maturity,
-        fvAmount,
-      );
+      const gvAmount = await genesisValueVaultProxy[
+        'calculateGVFromFV(bytes32,uint256,int256)'
+      ](targetCurrency, maturity, fvAmount);
 
       await genesisValueVaultCaller.updateGenesisValueWithFutureValue(
         targetCurrency,
@@ -1186,11 +1216,9 @@ describe('GenesisValueVault', () => {
     });
 
     it('Calculate the balance fluctuation of auto-rolls by on the future maturity', async () => {
-      const gvAmount = await genesisValueVaultProxy.calculateGVFromFV(
-        targetCurrency,
-        maturity,
-        fvAmount,
-      );
+      const gvAmount = await genesisValueVaultProxy[
+        'calculateGVFromFV(bytes32,uint256,int256)'
+      ](targetCurrency, maturity, fvAmount);
 
       await genesisValueVaultCaller.updateGenesisValueWithFutureValue(
         targetCurrency,
@@ -1219,11 +1247,9 @@ describe('GenesisValueVault', () => {
     });
 
     it('Calculate the balance fluctuation of auto-rolls by on the past maturity', async () => {
-      const gvAmount = await genesisValueVaultProxy.calculateGVFromFV(
-        targetCurrency,
-        maturity,
-        fvAmount,
-      );
+      const gvAmount = await genesisValueVaultProxy[
+        'calculateGVFromFV(bytes32,uint256,int256)'
+      ](targetCurrency, maturity, fvAmount);
 
       await genesisValueVaultCaller.updateGenesisValueWithFutureValue(
         targetCurrency,

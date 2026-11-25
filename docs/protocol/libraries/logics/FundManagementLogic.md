@@ -106,12 +106,12 @@ struct CalculateActualFundsVars {
   bool isDefaultMarket;
   uint8 orderBookId;
   uint8 defaultOrderBookId;
-  uint256 defaultOrderBookMarketUnitPrice;
   uint256[] maturities;
   int256 presentValueOfDefaultMarket;
   contract ILendingMarket market;
   contract IFutureValueVault futureValueVault;
   uint256 minDebtUnitPrice;
+  bool useConservativePrice;
 }
 ```
 
@@ -235,7 +235,7 @@ function executeEmergencySettlement(address _user) external
 ### getActualFunds
 
 ```solidity
-function getActualFunds(bytes32 _ccy, uint256 _maturity, address _user, uint256 _minDebtUnitPrice) public view returns (struct FundManagementLogic.ActualFunds actualFunds)
+function getActualFunds(bytes32 _ccy, uint256 _maturity, address _user, uint256 _minDebtUnitPrice, bool _useConservativePrice) public view returns (struct FundManagementLogic.ActualFunds actualFunds)
 ```
 
 ### getCurrentMinDebtUnitPrice
@@ -253,13 +253,13 @@ function getMinDebtUnitPriceAt(uint256 _maturity, uint256 _minDebtUnitPrice, uin
 ### calculateFunds
 
 ```solidity
-function calculateFunds(bytes32 _ccy, address _user, struct ILendingMarketController.AdditionalFunds _additionalFunds, uint256 _liquidationThresholdRate) public view returns (struct ILendingMarketController.CalculatedFunds funds)
+function calculateFunds(bytes32 _ccy, address _user, struct ILendingMarketController.AdditionalFunds _additionalFunds, uint256 _liquidationThresholdRate, bool _useConservativePrice) public view returns (struct ILendingMarketController.CalculatedFunds funds)
 ```
 
 ### calculateTotalFundsInBaseCurrency
 
 ```solidity
-function calculateTotalFundsInBaseCurrency(address _user, struct ILendingMarketController.AdditionalFunds _additionalFunds, uint256 _liquidationThresholdRate) external view returns (struct ILendingMarketController.CalculatedTotalFunds totalFunds)
+function calculateTotalFundsInBaseCurrency(address _user, struct ILendingMarketController.AdditionalFunds _additionalFunds, uint256 _liquidationThresholdRate, bool _useConservativePrice) external view returns (struct ILendingMarketController.CalculatedTotalFunds totalFunds)
 ```
 
 ### _ensureNonZeroLiability
@@ -319,13 +319,35 @@ function calculatePVFromFV(bytes32 _ccy, uint256 _maturity, int256 _futureValue)
 ### calculateFVFromPV
 
 ```solidity
-function calculateFVFromPV(bytes32 _ccy, uint256 _maturity, int256 _presentValue) public view returns (int256 futureValue)
+function calculateFVFromPV(bytes32 _ccy, uint256 _maturity, int256 _presentValue, bool _useConservativePrice, bool _roundUp) public view returns (int256 futureValue)
 ```
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 |  |
+| _maturity | uint256 |  |
+| _presentValue | int256 |  |
+| _useConservativePrice | bool | Use the less favorable of the valuation and live prices. |
+| _roundUp | bool | True to round the absolute value up, false to round it down. |
 
 ### calculateFVFromPV
 
 ```solidity
-function calculateFVFromPV(bytes32 _ccy, uint256 _maturity, uint256 _presentValue) public view returns (uint256 futureValue)
+function calculateFVFromPV(bytes32 _ccy, uint256 _maturity, uint256 _presentValue, bool _useConservativePrice, bool _roundUp) public view returns (uint256 futureValue)
+```
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 |  |
+| _maturity | uint256 |  |
+| _presentValue | uint256 |  |
+| _useConservativePrice | bool | Use the less favorable of the valuation and live prices. |
+| _roundUp | bool | True to round up, false to round down. |
+
+### _calculateFVFromPVWithRounding
+
+```solidity
+function _calculateFVFromPVWithRounding(bytes32 _ccy, uint256 _maturity, uint256 _presentValue, bool _useConservativePrice, bool _isLend, bool _roundUp) private view returns (uint256 futureValue)
 ```
 
 ### _convertToBaseCurrencyAtMarketTerminationPrice
@@ -352,11 +374,15 @@ function _resetFundsPerCurrency(bytes32 _ccy, address _user) internal returns (i
 function _resetFundsPerMaturity(bytes32 _ccy, uint256 _maturity, address _user, int256 _amount) internal returns (int256 totalRemovedAmount)
 ```
 
-### _getDefaultOrderBookMarketUnitPrice
+### getUnitPriceForValuation
 
 ```solidity
-function _getDefaultOrderBookMarketUnitPrice(struct FundManagementLogic.CalculateActualFundsVars vars) private view returns (uint256)
+function getUnitPriceForValuation(contract ILendingMarket _market, bool _useConservativePrice, uint8 _orderBookId, bool _isLend) public view returns (uint256)
 ```
+
+Selects the standard price, or the adverse price for a lending or borrowing position.
+
+_Returns zero if neither price exists; callers retain their own unpriced-book fallback._
 
 ### _calculatePVFromFV
 
@@ -379,16 +405,4 @@ function _calculatePVFromFVWithMinDebtUnitPrice(int256 _futureValue, uint256 _un
 _Calculates PV using the debt floor while preserving the zero-price convention.
 A zero market unit price means that no price has been established and is valued at par.
 The minimum debt unit price therefore applies only to a non-zero market unit price._
-
-### _calculateFVFromPV
-
-```solidity
-function _calculateFVFromPV(int256 _presentValue, uint256 _unitPrice) internal pure returns (int256)
-```
-
-### _calculateFVFromPV
-
-```solidity
-function _calculateFVFromPV(uint256 _presentValue, uint256 _unitPrice) internal pure returns (uint256)
-```
 

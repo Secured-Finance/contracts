@@ -258,12 +258,23 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     }
 
     /**
-     * @notice Gets the market unit price
+     * @notice Gets the live unit price, including reliable current-block fills
      * @param _orderBookId The order book id
-     * @return The market unit price
+     * @return The live unit price
+     */
+    function getLiveUnitPrice(uint8 _orderBookId) external view override returns (uint256) {
+        return OrderBookLogic.getMarketUnitPrice(_orderBookId, true);
+    }
+
+    /**
+     * @notice Gets the market unit price used for position valuation.
+     * @dev Excludes current-block fills once a reference price exists.
+     *      An unpriced book uses its first reliable block price immediately.
+     * @param _orderBookId The order book id
+     * @return The unit price used for collateral valuation and liquidation conversion
      */
     function getMarketUnitPrice(uint8 _orderBookId) external view override returns (uint256) {
-        return OrderBookLogic.getMarketUnitPrice(_orderBookId);
+        return OrderBookLogic.getMarketUnitPrice(_orderBookId, false);
     }
 
     /**

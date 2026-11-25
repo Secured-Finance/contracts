@@ -1,4 +1,4 @@
-import { BigNumber, Contract } from 'ethers';
+import { Contract } from 'ethers';
 import { ethers } from 'hardhat';
 import moment from 'moment';
 
@@ -129,12 +129,8 @@ const deployContracts = async () => {
 
   const tokens: Record<string, Contract> = {};
   for (const currency of currencyIterator()) {
-    const args = currency.isNative ? [] : currency.args;
-
-    // Increase initial mint amount for testing
-    if (args[0]) {
-      args[0] = BigNumber.from(args[0]).mul(100).toString();
-    }
+    // Keep deployment arguments independent of the shared currency configuration.
+    const args = currency.isNative ? [] : [...currency.args];
 
     tokens[currency.symbol] = await ethers
       .getContractFactory(mocks[currency.symbol].tokenName)

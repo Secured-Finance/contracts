@@ -224,6 +224,17 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         uint256 _basisMaturity,
         int256 _futureValue
     ) public view override returns (int256) {
+        return calculateGVFromFV(_ccy, _basisMaturity, _futureValue, false);
+    }
+
+    /// @dev Rounding applies to the absolute value, including for negative debt.
+    /// @param _roundUp True to round the absolute value up, false to round it down.
+    function calculateGVFromFV(
+        bytes32 _ccy,
+        uint256 _basisMaturity,
+        int256 _futureValue,
+        bool _roundUp
+    ) public view override returns (int256) {
         uint256 compoundFactor = _basisMaturity == 0 ||
             _basisMaturity == Storage.slot().currentMaturity[_ccy]
             ? getLendingCompoundFactor(_ccy)
@@ -238,7 +249,7 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
             absFv,
             10 ** decimals(_ccy),
             compoundFactor,
-            Math.Rounding.Down
+            _roundUp ? Math.Rounding.Up : Math.Rounding.Down
         );
 
         return isPlus ? absGv.toInt256() : -(absGv.toInt256());

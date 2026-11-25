@@ -220,6 +220,7 @@ library LendingMarketUserLogic {
             filledAmount -
             partiallyFilledOrder.amount;
 
+        // Check once after all updates so same-maturity FV is netted before valuation.
         _isCovered(_user, _ccy);
     }
 
@@ -273,7 +274,7 @@ library LendingMarketUserLogic {
 
         {
             int256 futureValue = FundManagementLogic
-                .getActualFunds(_ccy, _maturity, _user, 0)
+                .getActualFunds(_ccy, _maturity, _user, 0, false)
                 .futureValue;
 
             // Apply cap if specified
@@ -377,6 +378,47 @@ library LendingMarketUserLogic {
             _depositZCToken(_ccy, _maturity, _user, _amount);
             FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, _user);
         }
+    }
+
+    function forceWithdrawZCToken(
+        bytes32 _ccy,
+        uint256 _maturity,
+        address _from,
+        address _to,
+        uint256 _amount
+    ) public {
+        if (_amount == 0) revert AmountIsZero();
+        FundManagementLogic.cleanUpFunds(_ccy, _from);
+
+        // The controller restricts recovery to USDFC MAR2027; bypass the collateral budget.
+        IFutureValueVault(Storage.slot().futureValueVaults[_ccy]).lock(
+            Storage.slot().maturityOrderBookIds[_ccy][_maturity],
+            _from,
+            _amount,
+            _maturity
+        );
+        IZCToken(Storage.slot().zcTokens[_ccy][_maturity]).mint(_to, _amount);
+    }
+
+    function forceDepositZCToken(
+        bytes32 _ccy,
+        uint256 _maturity,
+        address _from,
+        address _to,
+        uint256 _amount
+    ) public {
+        if (_amount == 0) revert AmountIsZero();
+        FundManagementLogic.cleanUpFunds(_ccy, _to);
+
+        // burn reverts on insufficient balance; recovery must never silently reduce the amount.
+        IZCToken(Storage.slot().zcTokens[_ccy][_maturity]).burn(_from, _amount);
+        IFutureValueVault(Storage.slot().futureValueVaults[_ccy]).unlock(
+            Storage.slot().maturityOrderBookIds[_ccy][_maturity],
+            _to,
+            _amount,
+            _maturity
+        );
+        FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, _to);
     }
 
     function getWithdrawableZCTokenAmount(
@@ -523,23 +565,52 @@ library LendingMarketUserLogic {
             filledAmountWithFeeInFV += orderFeeInFV;
         }
 
+        uint256 unitPrice = _getConservativeUnitPriceForFill(
+            _ccy,
+            _maturity,
+            side,
+            filledAmount,
+            filledAmountInFV
+        );
+
+        return (filledAmountWithFeeInFV * unitPrice).div(Constants.PRICE_DIGIT);
+    }
+
+    function _getConservativeUnitPriceForFill(
+        bytes32 _ccy,
+        uint256 _maturity,
+        ProtocolTypes.Side _side,
+        uint256 _filledAmount,
+        uint256 _filledAmountInFV
+    ) private view returns (uint256 unitPrice) {
         ILendingMarket lendingMarket = ILendingMarket(Storage.slot().lendingMarkets[_ccy]);
-        uint256 minimumReliableAmount = AddressResolverLib
-            .currencyController()
-            .convertFromBaseCurrency(_ccy, lendingMarket.minimumReliableAmountInBaseCurrency());
+        uint8 orderBookId = Storage.slot().maturityOrderBookIds[_ccy][_maturity];
+        bool isLend = _side == ProtocolTypes.Side.LEND;
+        uint256 conservativeUnitPrice = FundManagementLogic.getUnitPriceForValuation(
+            lendingMarket,
+            true,
+            orderBookId,
+            isLend
+        );
 
-        uint256 marketUnitPrice;
-        if (filledAmount < minimumReliableAmount) {
-            marketUnitPrice = lendingMarket.getMarketUnitPrice(
-                Storage.slot().maturityOrderBookIds[_ccy][_maturity]
+        unitPrice = (_filledAmount * Constants.PRICE_DIGIT).div(_filledAmountInFV);
+        if (isLend) {
+            if (conservativeUnitPrice != 0 && conservativeUnitPrice < unitPrice) {
+                unitPrice = conservativeUnitPrice;
+            }
+        } else {
+            if (conservativeUnitPrice > unitPrice) {
+                unitPrice = conservativeUnitPrice;
+            }
+
+            uint256 minDebtUnitPrice = FundManagementLogic.getCurrentMinDebtUnitPrice(
+                _maturity,
+                Storage.slot().minDebtUnitPrices[_ccy]
             );
+            if (minDebtUnitPrice > unitPrice) {
+                unitPrice = minDebtUnitPrice;
+            }
         }
-
-        if (marketUnitPrice == 0) {
-            marketUnitPrice = (filledAmount * Constants.PRICE_DIGIT).div(filledAmountInFV);
-        }
-
-        return (filledAmountWithFeeInFV * marketUnitPrice).div(Constants.PRICE_DIGIT);
     }
 
     function _unwindPosition(
@@ -671,26 +742,39 @@ library LendingMarketUserLogic {
         uint256 _maturity,
         address _user
     ) internal view returns (uint256 amount) {
-        (uint256 withdrawableAmount, bool hasAllocatedCollateral) = _getWithdrawableAmount(
-            _ccy,
-            _user
-        );
+        uint256 collateralLimitInPV = _getZCWithdrawalCollateralLimitInPV(_ccy, _user);
 
         FundManagementLogic.ActualFunds memory funds = FundManagementLogic.getActualFunds(
             _ccy,
             _maturity,
             _user,
-            0
+            Storage.slot().minDebtUnitPrices[_ccy],
+            true
         );
         int256 presentValue = funds.presentValue - funds.genesisValueInPV;
         int256 futureValue = funds.futureValue - funds.genesisValueInFV;
 
-        if (futureValue <= 0 || withdrawableAmount == 0) {
+        // Keep the part of FV that offsets rolled debt in the account.
+        if (funds.genesisValueInFV < 0) {
+            uint256 netClaim = funds.presentValue > 0 ? funds.presentValue.toUint256() : 0;
+            if (collateralLimitInPV > netClaim) {
+                collateralLimitInPV = netClaim;
+            }
+        }
+
+        if (futureValue <= 0 || collateralLimitInPV == 0) {
             return 0;
-        } else if (!hasAllocatedCollateral || withdrawableAmount >= presentValue.toUint256()) {
+        } else if (collateralLimitInPV >= presentValue.toUint256()) {
             return futureValue.toUint256();
         } else {
-            return FundManagementLogic.calculateFVFromPV(_ccy, _maturity, withdrawableAmount);
+            return
+                FundManagementLogic.calculateFVFromPV({
+                    _ccy: _ccy,
+                    _maturity: _maturity,
+                    _presentValue: collateralLimitInPV,
+                    _useConservativePrice: true,
+                    _roundUp: false
+                });
         }
     }
 
@@ -698,30 +782,37 @@ library LendingMarketUserLogic {
         bytes32 _ccy,
         address _user
     ) internal view returns (uint256 amount) {
-        (uint256 withdrawableAmount, bool hasAllocatedCollateral) = _getWithdrawableAmount(
-            _ccy,
-            _user
-        );
+        uint256 collateralLimitInPV = _getZCWithdrawalCollateralLimitInPV(_ccy, _user);
+        uint256 currentMaturity = AddressResolverLib.genesisValueVault().getCurrentMaturity(_ccy);
 
         FundManagementLogic.ActualFunds memory funds = FundManagementLogic.getActualFunds(
             _ccy,
-            0,
+            currentMaturity,
             _user,
-            0
+            Storage.slot().minDebtUnitPrices[_ccy],
+            true
         );
 
-        if (funds.genesisValue <= 0 || withdrawableAmount == 0) {
+        // Keep the part of GV that offsets debt in the current book in the account.
+        if (funds.futureValue < funds.genesisValueInFV) {
+            uint256 netClaim = funds.presentValue > 0 ? funds.presentValue.toUint256() : 0;
+            if (collateralLimitInPV > netClaim) {
+                collateralLimitInPV = netClaim;
+            }
+        }
+
+        if (funds.genesisValue <= 0 || collateralLimitInPV == 0) {
             return 0;
-        } else if (
-            !hasAllocatedCollateral || withdrawableAmount >= funds.genesisValueInPV.toUint256()
-        ) {
+        } else if (collateralLimitInPV >= funds.genesisValueInPV.toUint256()) {
             return funds.genesisValue.toUint256();
         } else {
-            int256 withdrawableAmountInFV = FundManagementLogic.calculateFVFromPV(
-                _ccy,
-                AddressResolverLib.genesisValueVault().getCurrentMaturity(_ccy),
-                withdrawableAmount.toInt256()
-            );
+            int256 withdrawableAmountInFV = FundManagementLogic.calculateFVFromPV({
+                _ccy: _ccy,
+                _maturity: currentMaturity,
+                _presentValue: collateralLimitInPV.toInt256(),
+                _useConservativePrice: true,
+                _roundUp: false
+            });
 
             return
                 AddressResolverLib
@@ -731,10 +822,10 @@ library LendingMarketUserLogic {
         }
     }
 
-    function _getWithdrawableAmount(
+    function _getZCWithdrawalCollateralLimitInPV(
         bytes32 _ccy,
         address _user
-    ) internal view returns (uint256 withdrawableAmount, bool hasAllocatedCollateral) {
+    ) internal view returns (uint256 collateralLimitInPV) {
         ILendingMarketController.AdditionalFunds memory emptyAdditionalFunds;
         uint256 liquidationThresholdRate = AddressResolverLib
             .tokenVault()
@@ -743,18 +834,17 @@ library LendingMarketUserLogic {
             _ccy,
             _user,
             emptyAdditionalFunds,
-            liquidationThresholdRate
+            liquidationThresholdRate,
+            true
         );
 
-        uint256[] memory amounts = new uint256[](2);
-        (amounts[0], amounts[1], ) = AddressResolverLib.tokenVault().getCollateralDetail(_user);
-        amounts = AddressResolverLib.currencyController().convertFromBaseCurrency(_ccy, amounts);
-
-        uint256 totalCollateral = amounts[0];
-        uint256 totalUsedCollateral = amounts[1];
+        (uint256 totalCollateral, uint256 totalUsedCollateral, ) = AddressResolverLib
+            .tokenVault()
+            .getCollateralDetail(_user, true);
 
         if (totalUsedCollateral == 0) {
-            return (totalCollateral, false);
+            // No collateral-based withdrawal limit applies.
+            return type(uint256).max;
         }
 
         uint256 haircut = AddressResolverLib.currencyController().getHaircut(_ccy);
@@ -762,15 +852,21 @@ library LendingMarketUserLogic {
         uint256 scaledUsedCollateralThreshold = totalUsedCollateral * liquidationThresholdRate;
 
         if (scaledTotalCollateral <= scaledUsedCollateralThreshold) {
-            return (0, funds.unallocatedCollateralAmount != 0);
+            return 0;
         }
 
-        uint256 availableAmount = (scaledTotalCollateral - scaledUsedCollateralThreshold).div(
-            Constants.PCT_DIGIT
-        );
+        // Subtract in base currency before converting; rounding each total independently
+        // can overstate the remaining collateral budget.
+        uint256 availableAmountInBaseCurrency = (scaledTotalCollateral -
+            scaledUsedCollateralThreshold) / Constants.PCT_DIGIT;
+        uint256 availableAmount = AddressResolverLib.currencyController().convertFromBaseCurrency({
+            _ccy: _ccy,
+            _amount: availableAmountInBaseCurrency,
+            _roundUp: false
+        });
 
         if (funds.unallocatedCollateralAmount == 0) {
-            return (availableAmount, false);
+            return availableAmount;
         } else {
             // If the available amount is insufficient, unallocated collateral, which is discounted by a haircut and used between different currencies,
             // is used first. Then, the allocated collateral, which is used to offset positions in the same currency, is used for the rest of the amount.
@@ -779,20 +875,17 @@ library LendingMarketUserLogic {
             // totalWithdrawableAmount = allocatedCollateralAmount + unallocatedCollateralAmount
 
             if (haircut == 0) {
-                return (availableAmount + funds.unallocatedCollateralAmount, true);
+                return availableAmount + funds.unallocatedCollateralAmount;
             } else {
                 uint256 discountedUnallocatedCollateralAmount = (funds.unallocatedCollateralAmount *
                     haircut).div(Constants.PCT_DIGIT);
 
                 if (availableAmount < discountedUnallocatedCollateralAmount) {
-                    return ((availableAmount * Constants.PCT_DIGIT).div(haircut), true);
+                    return (availableAmount * Constants.PCT_DIGIT) / haircut;
                 } else {
-                    return (
-                        availableAmount +
-                            funds.unallocatedCollateralAmount -
-                            discountedUnallocatedCollateralAmount,
-                        true
-                    );
+                    return (availableAmount +
+                        funds.unallocatedCollateralAmount -
+                        discountedUnallocatedCollateralAmount);
                 }
             }
         }

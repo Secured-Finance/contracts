@@ -261,7 +261,9 @@ Gets the total amount of the unused collateral in the base currency
 function getTotalCollateralAmount(address _user) external view returns (uint256 totalCollateralAmount)
 ```
 
-Gets the total collateral amount.
+Gets the total collateral amount using valuation prices.
+
+_Preserves the single-argument interface used by existing SDK clients._
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -271,10 +273,27 @@ Gets the total collateral amount.
 | ---- | ---- | ----------- |
 | totalCollateralAmount | uint256 | The total collateral amount in the base currency |
 
+### getTotalCollateralAmount
+
+```solidity
+function getTotalCollateralAmount(address _user, bool _useConservativePrice) external view returns (uint256 totalCollateralAmount)
+```
+
+Gets the total collateral amount.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _user | address | User's address |
+| _useConservativePrice | bool | Use conservative prices for risk-increasing actions |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| totalCollateralAmount | uint256 | The total collateral amount in the base currency |
+
 ### getCollateralDetail
 
 ```solidity
-function getCollateralDetail(address _user) external view returns (uint256 totalCollateral, uint256 totalUsedCollateral, uint256 totalDeposit)
+function getCollateralDetail(address _user, bool _useConservativePrice) external view returns (uint256 totalCollateral, uint256 totalUsedCollateral, uint256 totalDeposit)
 ```
 
 Gets the collateral detail.
@@ -282,6 +301,7 @@ Gets the collateral detail.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _user | address | User's address |
+| _useConservativePrice | bool | Use conservative prices for risk-increasing actions |
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
