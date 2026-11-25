@@ -146,7 +146,7 @@ function getBlockUnitPriceHistory(struct OrderBookLib.OrderBook self, bool _isRe
 ### getMarketUnitPrice
 
 ```solidity
-function getMarketUnitPrice(struct OrderBookLib.OrderBook self, bool _isReadOnly) internal view returns (uint256 unitPrice)
+function getMarketUnitPrice(struct OrderBookLib.OrderBook self, bool _includeCurrentBlock) internal view returns (uint256 unitPrice)
 ```
 
 ### getBlockUnitPriceAverage

@@ -60,7 +60,7 @@ contract LendingMarketController is
      * @param _maturity The maturity of the order book
      */
     modifier ifValidMaturity(bytes32 _ccy, uint256 _maturity) {
-        if (!isValidMaturity(_ccy, _maturity)) revert InvalidMaturity();
+        _requireValidMaturity(_ccy, _maturity);
         _;
     }
 
@@ -68,7 +68,7 @@ contract LendingMarketController is
      * @notice Modifier to check if the protocol is active.
      */
     modifier ifActive() {
-        if (isTerminated()) revert MarketTerminated();
+        _requireActive();
         _;
     }
 
@@ -78,6 +78,14 @@ contract LendingMarketController is
     modifier ifInactive() {
         if (!isTerminated()) revert NotTerminated();
         _;
+    }
+
+    function _requireValidMaturity(bytes32 _ccy, uint256 _maturity) private view {
+        if (!isValidMaturity(_ccy, _maturity)) revert InvalidMaturity();
+    }
+
+    function _requireActive() private view {
+        if (isTerminated()) revert MarketTerminated();
     }
 
     /**
@@ -440,7 +448,9 @@ contract LendingMarketController is
         bytes32 _ccy,
         address _user
     ) external view override returns (int256 totalPresentValue) {
-        totalPresentValue = FundManagementLogic.getActualFunds(_ccy, 0, _user, 0).presentValue;
+        totalPresentValue = FundManagementLogic
+            .getActualFunds(_ccy, 0, _user, 0, false)
+            .presentValue;
     }
 
     /**
@@ -453,10 +463,15 @@ contract LendingMarketController is
     ) external view override returns (int256 totalPresentValue) {
         EnumerableSet.Bytes32Set storage currencySet = Storage.slot().usedCurrencies[_user];
 
-        for (uint256 i; i < currencySet.length(); i++) {
+        for (uint256 i; i < currencySet.length(); ) {
             bytes32 ccy = currencySet.at(i);
-            int256 amount = FundManagementLogic.getActualFunds(ccy, 0, _user, 0).presentValue;
+            int256 amount = FundManagementLogic
+                .getActualFunds(ccy, 0, _user, 0, false)
+                .presentValue;
             totalPresentValue += currencyController().convertToBaseCurrency(ccy, amount);
+            unchecked {
+                ++i;
+            }
         }
     }
 
@@ -547,7 +562,8 @@ contract LendingMarketController is
                     _ccy,
                     _user,
                     emptyAdditionalFunds,
-                    _liquidationThresholdRate
+                    _liquidationThresholdRate,
+                    false
                 );
         }
     }
@@ -558,18 +574,21 @@ contract LendingMarketController is
      * @param _user User's address
      * @param _additionalFunds The funds to be added for calculating the total funds
      * @param _liquidationThresholdRate The liquidation threshold rate
+     * @param _useConservativePrice Use the less favorable of the valuation and live prices
      * @return funds The total funds calculated from the user's lending and borrowing order list
      */
     function calculateTotalFundsInBaseCurrency(
         address _user,
         AdditionalFunds calldata _additionalFunds,
-        uint256 _liquidationThresholdRate
+        uint256 _liquidationThresholdRate,
+        bool _useConservativePrice
     ) external view override returns (CalculatedTotalFunds memory funds) {
         return
             FundManagementLogic.calculateTotalFundsInBaseCurrency(
                 _user,
                 _additionalFunds,
-                _liquidationThresholdRate
+                _liquidationThresholdRate,
+                _useConservativePrice
             );
     }
 
@@ -1102,5 +1121,50 @@ contract LendingMarketController is
         if (_maturity != 0 && !isValidMaturity(_ccy, _maturity)) revert InvalidMaturity();
 
         LendingMarketUserLogic.depositZCToken(_ccy, _maturity, msg.sender, _amount);
+    }
+
+    /**
+     * @notice Converts another user's positive FV into ZC for USDFC MAR2027 recovery.
+     * @dev Trusted operators may bypass collateral withdrawal limits, even while the market is paused.
+     * Amount must be nonzero and available in full. Not available after emergency termination.
+     */
+    function forceWithdrawZCToken(
+        bytes32 _ccy,
+        uint256 _maturity,
+        address _from,
+        address _to,
+        uint256 _amount
+    ) external override onlyOperator nonReentrant ifActive {
+        _validateZCRecovery(_ccy, _maturity, _from, _to);
+        LendingMarketUserLogic.forceWithdrawZCToken(_ccy, _maturity, _from, _to, _amount);
+        emit ZCTokenForceWithdrawn(msg.sender, _ccy, _maturity, _from, _to, _amount);
+    }
+
+    /**
+     * @notice Burns USDFC MAR2027 ZC and restores FV to the recipient.
+     * @dev No allowance is required. Amount must be nonzero and available in full.
+     * Not available after emergency termination, to preserve the settlement snapshot.
+     */
+    function forceDepositZCToken(
+        bytes32 _ccy,
+        uint256 _maturity,
+        address _from,
+        address _to,
+        uint256 _amount
+    ) external override onlyOperator nonReentrant ifActive {
+        _validateZCRecovery(_ccy, _maturity, _from, _to);
+        LendingMarketUserLogic.forceDepositZCToken(_ccy, _maturity, _from, _to, _amount);
+        emit ZCTokenForceDeposited(msg.sender, _ccy, _maturity, _from, _to, _amount);
+    }
+
+    function _validateZCRecovery(
+        bytes32 _ccy,
+        uint256 _maturity,
+        address _from,
+        address _to
+    ) private view {
+        if (_from == address(0) || _to == address(0)) revert InvalidZCRecoveryAddress();
+        if (_ccy != bytes32("USDFC") || _maturity != 1806019200) revert InvalidRecoveryTarget();
+        if (!isValidMaturity(_ccy, _maturity)) revert InvalidMaturity();
     }
 }

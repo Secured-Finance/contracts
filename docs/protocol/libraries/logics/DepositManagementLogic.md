@@ -68,7 +68,7 @@ function getDepositAmount(address _user, bytes32 _ccy) public view returns (uint
 ### getTotalCollateralAmount
 
 ```solidity
-function getTotalCollateralAmount(address _user) public view returns (uint256 totalCollateral, uint256 totalUsedCollateral, uint256 totalDeposit)
+function getTotalCollateralAmount(address _user, bool _useConservativePrice) public view returns (uint256 totalCollateral, uint256 totalUsedCollateral, uint256 totalDeposit)
 ```
 
 ### getCollateralAmount
@@ -104,7 +104,7 @@ function calculateCoverage(address _user, struct ILendingMarketController.Additi
 ### _calculateCollateral
 
 ```solidity
-function _calculateCollateral(address _user, struct ILendingMarketController.AdditionalFunds _funds) internal view returns (uint256 totalCollateral, uint256 totalUsedCollateral, uint256 totalDeposit, bool isInsufficientDepositAmount)
+function _calculateCollateral(address _user, struct ILendingMarketController.AdditionalFunds _funds, bool _useConservativePrice) internal view returns (uint256 totalCollateral, uint256 totalUsedCollateral, uint256 totalDeposit, bool isInsufficientDepositAmount)
 ```
 
 ### getWithdrawableCollateral

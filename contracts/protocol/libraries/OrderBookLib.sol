@@ -146,7 +146,7 @@ library OrderBookLib {
 
     function getMarketUnitPrice(
         OrderBook storage self,
-        bool _isReadOnly
+        bool _includeCurrentBlock
     ) internal view returns (uint256 unitPrice) {
         unitPrice = _unpackBlockUnitPriceHistory(self.blockUnitPriceHistory)[0];
 
@@ -154,8 +154,9 @@ library OrderBookLib {
         // In this case, the market unit price is calculated from the current block total amount and total future value
         // to avoid unwinding or liquidation the order in the same block using 0 as the market unit price.
         if (
-            (self.lastOrderTimestamp != block.timestamp || unitPrice == 0 || _isReadOnly) &&
-            self.isReliableBlock
+            (self.lastOrderTimestamp != block.timestamp ||
+                unitPrice == 0 ||
+                _includeCurrentBlock) && self.isReliableBlock
         ) {
             unitPrice = (self.blockTotalAmount * Constants.PRICE_DIGIT).div(
                 self.blockTotalFutureValue

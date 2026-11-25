@@ -55,6 +55,8 @@ interface ILendingMarket {
         uint8[] calldata orderBookIds
     ) external view returns (uint256[] memory);
 
+    function getLiveUnitPrice(uint8 orderBookId) external view returns (uint256);
+
     function getMarketUnitPrice(uint8 orderBookId) external view returns (uint256);
 
     function getLastOrderTimestamp(uint8 orderBookId) external view returns (uint48);

@@ -1671,11 +1671,22 @@ describe('Integration Test: Tokenization', async () => {
             alice.address,
           );
 
-        // BORROW PV should have increased due to higher unitPrice
-        expect(aliceBorrowPV.abs()).to.be.gt(borrowAmount);
+        // Displayed PV excludes the current-block fill; coverage already uses the adverse live price.
+        expect(aliceBorrowPV.abs()).to.equal(borrowAmount);
 
         const coverage = await tokenVault.getCoverage(alice.address);
         expect(coverage).to.be.gt(8000); // Coverage should be above 80%
+
+        await ethers.provider.send('evm_mine', []);
+        const completedBlockPosition =
+          await lendingMarketController.getPosition(
+            hexETH,
+            maturities[1],
+            alice.address,
+          );
+        expect(completedBlockPosition.presentValue.abs()).to.be.gt(
+          borrowAmount,
+        );
       });
 
       it('Verify withdrawableAmount is 0 due to increased BORROW position PV', async () => {

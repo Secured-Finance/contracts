@@ -120,9 +120,9 @@ describe('LendingMarket - Orders', () => {
       marketUnitPrice: string,
       blockUnitPriceAverage: string,
     ) => {
-      expect(
-        await lendingMarket.getMarketUnitPrice(currentOrderBookId),
-      ).to.equal(marketUnitPrice);
+      expect(await lendingMarket.getLiveUnitPrice(currentOrderBookId)).to.equal(
+        marketUnitPrice,
+      );
 
       expect(
         await lendingMarket.getBlockUnitPriceAverage(currentOrderBookId, 5),
@@ -185,6 +185,33 @@ describe('LendingMarket - Orders', () => {
 
       await checkBlockUnitPrice('8640', '8640');
       await checkBlockUnitPriceHistory(['8640']);
+    });
+
+    it('Excludes the current block from the market unit price while the live price includes it', async () => {
+      await fillOrder('100000000000000', '8000');
+      await ethers.provider.send('evm_mine', []);
+
+      expect(
+        await lendingMarket.getMarketUnitPrice(currentOrderBookId),
+      ).to.equal('8000');
+
+      await ethers.provider.send('evm_setAutomine', [false]);
+
+      await fillOrder('200000000000000', '9000');
+      await ethers.provider.send('evm_mine', []);
+
+      expect(await lendingMarket.getLiveUnitPrice(currentOrderBookId)).to.equal(
+        '9000',
+      );
+      expect(
+        await lendingMarket.getMarketUnitPrice(currentOrderBookId),
+      ).to.equal('8000');
+
+      await ethers.provider.send('evm_mine', []);
+
+      expect(
+        await lendingMarket.getMarketUnitPrice(currentOrderBookId),
+      ).to.equal('9000');
     });
 
     it('Check with multiple orders in the different block', async () => {

@@ -127,8 +127,11 @@ library OrderBookLogic {
         return _getOrderBook(_orderBookId).getBlockUnitPriceHistory(true);
     }
 
-    function getMarketUnitPrice(uint8 _orderBookId) external view returns (uint256) {
-        return _getOrderBook(_orderBookId).getMarketUnitPrice(true);
+    function getMarketUnitPrice(
+        uint8 _orderBookId,
+        bool _includeCurrentBlock
+    ) external view returns (uint256) {
+        return _getOrderBook(_orderBookId).getMarketUnitPrice(_includeCurrentBlock);
     }
 
     function getBlockUnitPriceAverage(

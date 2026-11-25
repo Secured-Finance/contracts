@@ -2221,8 +2221,9 @@ describe('Integration Test: Order Book', async () => {
           .connect(alice)
           .approve(tokenVault.address, orderAmountInFIL);
 
-        const totalCollateralAmountBefore =
-          await tokenVault.getTotalCollateralAmount(alice.address);
+        const totalCollateralAmountBefore = await tokenVault[
+          'getTotalCollateralAmount(address,bool)'
+        ](alice.address, false);
         const depositAmountBefore = await tokenVault.getDepositAmount(
           alice.address,
           hexETH,
@@ -2240,8 +2241,9 @@ describe('Integration Test: Order Book', async () => {
             ),
         ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
-        const totalCollateralAmountAfter =
-          await tokenVault.getTotalCollateralAmount(alice.address);
+        const totalCollateralAmountAfter = await tokenVault[
+          'getTotalCollateralAmount(address,bool)'
+        ](alice.address, false);
         const depositAmountAfter = await tokenVault.getDepositAmount(
           alice.address,
           hexETH,

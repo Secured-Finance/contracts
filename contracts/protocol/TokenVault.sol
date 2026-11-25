@@ -233,25 +233,44 @@ contract TokenVault is
     }
 
     /**
-     * @notice Gets the total collateral amount.
+     * @notice Gets the total collateral amount using valuation prices.
+     * @dev Preserves the single-argument interface used by existing SDK clients.
      * @param _user User's address
      * @return totalCollateralAmount The total collateral amount in the base currency
      */
     function getTotalCollateralAmount(
         address _user
     ) external view override returns (uint256 totalCollateralAmount) {
-        (totalCollateralAmount, , ) = DepositManagementLogic.getTotalCollateralAmount(_user);
+        (totalCollateralAmount, , ) = DepositManagementLogic.getTotalCollateralAmount(_user, false);
+    }
+
+    /**
+     * @notice Gets the total collateral amount.
+     * @param _user User's address
+     * @param _useConservativePrice Use conservative prices for risk-increasing actions
+     * @return totalCollateralAmount The total collateral amount in the base currency
+     */
+    function getTotalCollateralAmount(
+        address _user,
+        bool _useConservativePrice
+    ) external view override returns (uint256 totalCollateralAmount) {
+        (totalCollateralAmount, , ) = DepositManagementLogic.getTotalCollateralAmount(
+            _user,
+            _useConservativePrice
+        );
     }
 
     /**
      * @notice Gets the collateral detail.
      * @param _user User's address
+     * @param _useConservativePrice Use conservative prices for risk-increasing actions
      * @return totalCollateral The total collateral amount in the base currency
      * @return totalUsedCollateral The total used collateral amount in the base currency
      * @return totalDeposit The total deposit amount in the base currency
      */
     function getCollateralDetail(
-        address _user
+        address _user,
+        bool _useConservativePrice
     )
         external
         view
@@ -259,7 +278,7 @@ contract TokenVault is
         returns (uint256 totalCollateral, uint256 totalUsedCollateral, uint256 totalDeposit)
     {
         (totalCollateral, totalUsedCollateral, totalDeposit) = DepositManagementLogic
-            .getTotalCollateralAmount(_user);
+            .getTotalCollateralAmount(_user, _useConservativePrice);
     }
 
     /**

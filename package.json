@@ -1,6 +1,6 @@
 {
   "name": "@secured-finance/contracts",
-  "version": "1.5.5-beta.0",
+  "version": "1.5.5-beta.1",
   "description": "Secured Finance protocol smart contracts",
   "files": [
     "/build/**/*",
@@ -10,6 +10,7 @@
   ],
   "scripts": {
     "test": "DOTENV_CONFIG_PATH=.env.test hardhat test",
+    "test:recovery": "DOTENV_CONFIG_PATH=.env.test hardhat test --config hardhat.recovery.config.ts",
     "test:unit": "DOTENV_CONFIG_PATH=.env.test hardhat test ./test/unit/*.test.ts ./test/unit/**/*.test.ts",
     "test:integration": "DOTENV_CONFIG_PATH=.env.test hardhat test ./test/integration/*.test.ts",
     "test:performance": "DOTENV_CONFIG_PATH=.env.test hardhat test ./test/performance/*.test.ts",

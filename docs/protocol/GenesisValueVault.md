@@ -289,6 +289,21 @@ Calculates the genesis value from the future value at the basis maturity using t
 | ---- | ---- | ----------- |
 | [0] | int256 | The genesis value |
 
+### calculateGVFromFV
+
+```solidity
+function calculateGVFromFV(bytes32 _ccy, uint256 _basisMaturity, int256 _futureValue, bool _roundUp) public view returns (int256)
+```
+
+_Rounding applies to the absolute value, including for negative debt._
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 |  |
+| _basisMaturity | uint256 |  |
+| _futureValue | int256 |  |
+| _roundUp | bool | True to round the absolute value up, false to round it down. |
+
 ### calculateFVFromGV
 
 ```solidity

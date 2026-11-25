@@ -78,7 +78,7 @@ library LiquidationLogic {
         FundManagementLogic.cleanUpFunds(_debtCcy, _user);
 
         uint256 debtAmount = FundManagementLogic
-            .getActualFunds(_debtCcy, _debtMaturity, _user, 0)
+            .getActualFunds(_debtCcy, _debtMaturity, _user, 0, false)
             .debtAmount;
 
         if (debtAmount == 0) revert NoDebt(_user, _debtCcy, _debtMaturity);
@@ -138,7 +138,7 @@ library LiquidationLogic {
             // Use reserve funds to cover insolvent amounts if user does not have collateral in other currencies.
             if (
                 !AddressResolverLib.reserveFund().isPaused() &&
-                AddressResolverLib.tokenVault().getTotalCollateralAmount(_user) == 0
+                AddressResolverLib.tokenVault().getTotalCollateralAmount(_user, false) == 0
             ) {
                 untransferredAmountInDebtCcy = _transferPositionsPerMaturity(
                     address(AddressResolverLib.reserveFund()),
@@ -237,7 +237,8 @@ library LiquidationLogic {
             _debtCcy,
             _debtMaturity,
             _user,
-            0
+            0,
+            false
         );
 
         if (funds.futureValue >= 0) revert NoDebt(_user, _debtCcy, _debtMaturity);
@@ -439,7 +440,14 @@ library LiquidationLogic {
             int256 gvAmount = AddressResolverLib.genesisValueVault().calculateGVFromFV(
                 _ccy,
                 0,
-                FundManagementLogic.calculateFVFromPV(_ccy, currentMaturity, untransferredAmount)
+                FundManagementLogic.calculateFVFromPV(
+                    _ccy,
+                    currentMaturity,
+                    untransferredAmount,
+                    false,
+                    isDebt
+                ),
+                isDebt
             );
 
             if ((isDebt && userGVAmount > gvAmount) || (!isDebt && userGVAmount < gvAmount)) {
@@ -454,6 +462,10 @@ library LiquidationLogic {
                 currentMaturity,
                 AddressResolverLib.genesisValueVault().calculateFVFromGV(_ccy, 0, gvAmount)
             );
+
+            if ((isDebt && untransferredAmount > 0) || (!isDebt && untransferredAmount < 0)) {
+                untransferredAmount = 0;
+            }
 
             FundManagementLogic.registerCurrency(_ccy, _to);
         }
@@ -480,7 +492,9 @@ library LiquidationLogic {
             int256 fvAmount = FundManagementLogic.calculateFVFromPV(
                 _ccy,
                 _maturity,
-                untransferredAmount
+                untransferredAmount,
+                false,
+                isDebt
             );
 
             if ((isDebt && userFVAmount > fvAmount) || (!isDebt && userFVAmount < fvAmount)) {
@@ -489,6 +503,10 @@ library LiquidationLogic {
 
             futureValueVault.transferFrom(orderBookId, _from, _to, fvAmount, _maturity);
             untransferredAmount -= FundManagementLogic.calculatePVFromFV(_ccy, _maturity, fvAmount);
+
+            if ((isDebt && untransferredAmount > 0) || (!isDebt && untransferredAmount < 0)) {
+                untransferredAmount = 0;
+            }
 
             FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, _to);
         }

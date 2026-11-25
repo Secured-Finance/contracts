@@ -187,7 +187,7 @@ function getBlockUnitPriceHistory(uint8 _orderBookId) external view returns (uin
 ### getMarketUnitPrice
 
 ```solidity
-function getMarketUnitPrice(uint8 _orderBookId) external view returns (uint256)
+function getMarketUnitPrice(uint8 _orderBookId, bool _includeCurrentBlock) external view returns (uint256)
 ```
 
 ### getBlockUnitPriceAverage

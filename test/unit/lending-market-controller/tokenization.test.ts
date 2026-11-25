@@ -70,6 +70,9 @@ describe('LendingMarketController - Tokenization', () => {
     await mockCurrencyController.mock[
       'convertFromBaseCurrency(bytes32,uint256)'
     ].returns('10');
+    await mockCurrencyController.mock[
+      'convertFromBaseCurrency(bytes32,uint256,bool)'
+    ].returns('10');
     await mockTokenVault.mock.addDepositAmount.returns();
     await mockTokenVault.mock.removeDepositAmount.returns();
     await mockTokenVault.mock.depositFrom.returns();
@@ -258,17 +261,35 @@ describe('LendingMarketController - Tokenization', () => {
   describe('Withdraw and Deposit', async () => {
     const value = BigNumber.from('100000000000000000');
 
+    const setCollateralDetail = async (
+      collateral: BigNumber | number,
+      usedCollateral: BigNumber | number,
+    ) => {
+      const scaledMargin = BigNumber.from(collateral)
+        .mul(PCT_DIGIT)
+        .sub(BigNumber.from(usedCollateral).mul(LIQUIDATION_THRESHOLD_RATE));
+      const budget = scaledMargin.gt(0)
+        ? scaledMargin.div(PCT_DIGIT)
+        : BigNumber.from(0);
+      await mockTokenVault.mock.getCollateralDetail.returns(
+        collateral,
+        usedCollateral,
+        0,
+      );
+      await mockCurrencyController.mock[
+        'convertFromBaseCurrency(bytes32,uint256,bool)'
+      ]
+        .withArgs(targetCurrency, budget, false)
+        .returns(budget);
+    };
+
     beforeEach(async () => {
       await initializeCurrency(targetCurrency);
-      await mockCurrencyController.mock[
-        'convertFromBaseCurrency(bytes32,uint256[])'
-      ].returns([0, 0]);
+      await setCollateralDetail(0, 0);
     });
 
     it('Withdraw zc tokens without used collaterals', async () => {
-      await mockCurrencyController.mock[
-        'convertFromBaseCurrency(bytes32,uint256[])'
-      ].returns([value, 0]);
+      await setCollateralDetail(value, 0);
 
       const zcTokenAddress = await lendingMarketControllerProxy.getZCToken(
         targetCurrency,
@@ -318,9 +339,7 @@ describe('LendingMarketController - Tokenization', () => {
       const totalCollateral = value;
       const totalUsedCollateral = value.div(10);
 
-      await mockCurrencyController.mock[
-        'convertFromBaseCurrency(bytes32,uint256[])'
-      ].returns([totalCollateral, totalUsedCollateral]);
+      await setCollateralDetail(totalCollateral, totalUsedCollateral);
 
       const zcTokenAddress = await lendingMarketControllerProxy.getZCToken(
         targetCurrency,
@@ -407,9 +426,7 @@ describe('LendingMarketController - Tokenization', () => {
       const totalCollateral = value;
       const totalUsedCollateral = value.div(10);
 
-      await mockCurrencyController.mock[
-        'convertFromBaseCurrency(bytes32,uint256[])'
-      ].returns([totalCollateral, totalUsedCollateral]);
+      await setCollateralDetail(totalCollateral, totalUsedCollateral);
 
       const zcTokenAddress = await lendingMarketControllerProxy.getZCToken(
         targetCurrency,
@@ -477,12 +494,11 @@ describe('LendingMarketController - Tokenization', () => {
         .mul(HAIRCUT)
         .div(PCT_DIGIT);
 
-      const estimatedAmount = calculateFutureValue(
-        availableAmount
-          .add(unallocatedCollateralAmount)
-          .sub(discountedUnallocatedCollateralAmount),
-        9500,
-      );
+      const estimatedAmount = availableAmount
+        .add(unallocatedCollateralAmount)
+        .sub(discountedUnallocatedCollateralAmount)
+        .mul(PCT_DIGIT)
+        .div(9500);
 
       expect(withdrawableAmount).to.equal(estimatedAmount);
 
@@ -509,9 +525,7 @@ describe('LendingMarketController - Tokenization', () => {
         .mul(PCT_DIGIT)
         .div(LIQUIDATION_THRESHOLD_RATE);
 
-      await mockCurrencyController.mock[
-        'convertFromBaseCurrency(bytes32,uint256[])'
-      ].returns([totalCollateral, totalUsedCollateral]);
+      await setCollateralDetail(totalCollateral, totalUsedCollateral);
 
       const zcTokenAddress = await lendingMarketControllerProxy.getZCToken(
         targetCurrency,
@@ -620,9 +634,7 @@ describe('LendingMarketController - Tokenization', () => {
         .mul(PCT_DIGIT)
         .div(LIQUIDATION_THRESHOLD_RATE);
 
-      await mockCurrencyController.mock[
-        'convertFromBaseCurrency(bytes32,uint256[])'
-      ].returns([totalCollateral, totalUsedCollateral]);
+      await setCollateralDetail(totalCollateral, totalUsedCollateral);
 
       const zcTokenAddress = await lendingMarketControllerProxy.getZCToken(
         targetCurrency,
@@ -709,9 +721,7 @@ describe('LendingMarketController - Tokenization', () => {
     });
 
     it('Withdraw zc perpetual tokens without allocated collaterals', async () => {
-      await mockCurrencyController.mock[
-        'convertFromBaseCurrency(bytes32,uint256[])'
-      ].returns([value, 0]);
+      await setCollateralDetail(value, 0);
 
       const zcTokenAddress = await lendingMarketControllerProxy.getZCToken(
         targetCurrency,
@@ -783,9 +793,7 @@ describe('LendingMarketController - Tokenization', () => {
       const totalCollateral = value;
       const totalUsedCollateral = value.div(10);
 
-      await mockCurrencyController.mock[
-        'convertFromBaseCurrency(bytes32,uint256[])'
-      ].returns([totalCollateral, totalUsedCollateral]);
+      await setCollateralDetail(totalCollateral, totalUsedCollateral);
 
       const zcTokenAddress = await lendingMarketControllerProxy.getZCToken(
         targetCurrency,
@@ -851,11 +859,10 @@ describe('LendingMarketController - Tokenization', () => {
           LIQUIDATION_THRESHOLD_RATE,
         );
 
-      // Match the rounding order in _getWithdrawableAmount().
+      // Match the rounding order in _getZCWithdrawalCollateralLimitInPV().
       const availableAmount = totalCollateral
         .mul(PCT_DIGIT)
         .sub(totalUsedCollateral.mul(LIQUIDATION_THRESHOLD_RATE))
-        .add(PCT_DIGIT / 2)
         .div(PCT_DIGIT);
       const discountedUnallocatedCollateralAmount = unallocatedCollateralAmount
         .mul(HAIRCUT)
@@ -907,9 +914,7 @@ describe('LendingMarketController - Tokenization', () => {
         .mul(PCT_DIGIT)
         .div(LIQUIDATION_THRESHOLD_RATE);
 
-      await mockCurrencyController.mock[
-        'convertFromBaseCurrency(bytes32,uint256[])'
-      ].returns([totalCollateral, totalUsedCollateral]);
+      await setCollateralDetail(totalCollateral, totalUsedCollateral);
 
       const zcTokenAddress = await lendingMarketControllerProxy.getZCToken(
         targetCurrency,
@@ -1007,9 +1012,7 @@ describe('LendingMarketController - Tokenization', () => {
     });
 
     it('Withdraw zc tokens partially', async () => {
-      await mockCurrencyController.mock[
-        'convertFromBaseCurrency(bytes32,uint256[])'
-      ].returns([value, 0]);
+      await setCollateralDetail(value, 0);
 
       const zcTokenAddress = await lendingMarketControllerProxy.getZCToken(
         targetCurrency,
@@ -1050,9 +1053,7 @@ describe('LendingMarketController - Tokenization', () => {
     });
 
     it('Withdraw zc perpetual tokens partially', async () => {
-      await mockCurrencyController.mock[
-        'convertFromBaseCurrency(bytes32,uint256[])'
-      ].returns([value, 0]);
+      await setCollateralDetail(value, 0);
 
       const zcTokenAddress = await lendingMarketControllerProxy.getZCToken(
         targetCurrency,
@@ -1098,9 +1099,7 @@ describe('LendingMarketController - Tokenization', () => {
     });
 
     it('Deposit zc tokens', async () => {
-      await mockCurrencyController.mock[
-        'convertFromBaseCurrency(bytes32,uint256[])'
-      ].returns([value, 0]);
+      await setCollateralDetail(value, 0);
 
       const zcTokenAddress = await lendingMarketControllerProxy.getZCToken(
         targetCurrency,
@@ -1152,9 +1151,7 @@ describe('LendingMarketController - Tokenization', () => {
     });
 
     it('Withdraw only the withdrawable ZC token amount when requesting more than available', async () => {
-      await mockCurrencyController.mock[
-        'convertFromBaseCurrency(bytes32,uint256[])'
-      ].returns([value, 0]);
+      await setCollateralDetail(value, 0);
 
       const zcTokenAddress = await lendingMarketControllerProxy.getZCToken(
         targetCurrency,
@@ -1195,9 +1192,7 @@ describe('LendingMarketController - Tokenization', () => {
     });
 
     it('Deposit zc tokens with exceeded amount', async () => {
-      await mockCurrencyController.mock[
-        'convertFromBaseCurrency(bytes32,uint256[])'
-      ].returns([value, 0]);
+      await setCollateralDetail(value, 0);
 
       const zcTokenAddress = await lendingMarketControllerProxy.getZCToken(
         targetCurrency,
@@ -1239,9 +1234,7 @@ describe('LendingMarketController - Tokenization', () => {
     });
 
     it('Deposit zc perpetual tokens', async () => {
-      await mockCurrencyController.mock[
-        'convertFromBaseCurrency(bytes32,uint256[])'
-      ].returns([value, 0]);
+      await setCollateralDetail(value, 0);
 
       const zcTokenAddress = await lendingMarketControllerProxy.getZCToken(
         targetCurrency,
@@ -1303,9 +1296,7 @@ describe('LendingMarketController - Tokenization', () => {
     });
 
     it('Withdraw only the withdrawable ZC perpetual token amount when requesting more than available', async () => {
-      await mockCurrencyController.mock[
-        'convertFromBaseCurrency(bytes32,uint256[])'
-      ].returns([value, 0]);
+      await setCollateralDetail(value, 0);
 
       const zcTokenAddress = await lendingMarketControllerProxy.getZCToken(
         targetCurrency,
@@ -1354,9 +1345,7 @@ describe('LendingMarketController - Tokenization', () => {
     });
 
     it('Deposit zc perpetual tokens with exceeded amount', async () => {
-      await mockCurrencyController.mock[
-        'convertFromBaseCurrency(bytes32,uint256[])'
-      ].returns([value, 0]);
+      await setCollateralDetail(value, 0);
 
       const zcTokenAddress = await lendingMarketControllerProxy.getZCToken(
         targetCurrency,

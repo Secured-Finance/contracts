@@ -113,6 +113,12 @@ function convertFromBaseCurrency(bytes32 _ccy, uint256 _amountETH) external view
 ### convertFromBaseCurrency
 
 ```solidity
+function convertFromBaseCurrency(bytes32 _ccy, uint256 _amount, bool _roundUp) external view returns (uint256 amount)
+```
+
+### convertFromBaseCurrency
+
+```solidity
 function convertFromBaseCurrency(bytes32 _ccy, uint256[] _amounts) external view returns (uint256[] amounts)
 ```
 

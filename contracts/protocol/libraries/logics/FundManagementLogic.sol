@@ -4,6 +4,7 @@ pragma solidity 0.8.19;
 // dependencies
 import {EnumerableSet} from "../../../dependencies/openzeppelin/utils/structs/EnumerableSet.sol";
 import {SafeCast} from "../../../dependencies/openzeppelin/utils/math/SafeCast.sol";
+import {Math} from "../../../dependencies/openzeppelin/utils/math/Math.sol";
 // interfaces
 import {ILendingMarket} from "../../interfaces/ILendingMarket.sol";
 import {ILendingMarketController} from "../../interfaces/ILendingMarketController.sol";
@@ -75,12 +76,12 @@ library FundManagementLogic {
         bool isDefaultMarket;
         uint8 orderBookId;
         uint8 defaultOrderBookId;
-        uint256 defaultOrderBookMarketUnitPrice;
         uint256[] maturities;
         int256 presentValueOfDefaultMarket;
         ILendingMarket market;
         IFutureValueVault futureValueVault;
         uint256 minDebtUnitPrice;
+        bool useConservativePrice;
     }
 
     struct PositionFunds {
@@ -315,7 +316,7 @@ library FundManagementLogic {
 
         cleanUpFunds(_ccy, _user);
 
-        int256 amount = getActualFunds(_ccy, _maturity, _user, 0).futureValue;
+        int256 amount = getActualFunds(_ccy, _maturity, _user, 0, false).futureValue;
         if (amount <= 0) revert NoRedemptionAmount();
 
         uint256 redemptionAmount = _resetFundsPerMaturity(_ccy, _maturity, _user, amount)
@@ -339,7 +340,7 @@ library FundManagementLogic {
         cleanUpFunds(_ccy, _user);
 
         int256 resetAmount = _amount == 0
-            ? getActualFunds(_ccy, _maturity, _user, 0).futureValue
+            ? getActualFunds(_ccy, _maturity, _user, 0, false).futureValue
             : -_amount.toInt256();
 
         if (resetAmount >= 0) revert NoRepaymentAmount();
@@ -425,7 +426,8 @@ library FundManagementLogic {
         bytes32 _ccy,
         uint256 _maturity,
         address _user,
-        uint256 _minDebtUnitPrice
+        uint256 _minDebtUnitPrice,
+        bool _useConservativePrice
     ) public view returns (ActualFunds memory actualFunds) {
         uint8[] memory orderBookIdList = Storage.slot().orderBookIdLists[_ccy];
 
@@ -439,6 +441,7 @@ library FundManagementLogic {
         vars.futureValueVault = IFutureValueVault(Storage.slot().futureValueVaults[_ccy]);
         vars.defaultOrderBookId = orderBookIdList[0];
         vars.minDebtUnitPrice = _minDebtUnitPrice;
+        vars.useConservativePrice = _useConservativePrice;
 
         if (_maturity == 0) {
             vars.isTotal = true;
@@ -529,7 +532,12 @@ library FundManagementLogic {
                 actualFunds.genesisValue
             );
 
-            uint256 unitPrice = _getDefaultOrderBookMarketUnitPrice(vars);
+            uint256 unitPrice = getUnitPriceForValuation(
+                vars.market,
+                vars.useConservativePrice,
+                vars.defaultOrderBookId,
+                futureValue >= 0
+            );
             uint256 defaultOrderBookMinDebtUnitPrice = futureValue < 0 && vars.minDebtUnitPrice != 0
                 ? getCurrentMinDebtUnitPrice(
                     vars.market.getMaturity(vars.defaultOrderBookId),
@@ -607,13 +615,15 @@ library FundManagementLogic {
         bytes32 _ccy,
         address _user,
         ILendingMarketController.AdditionalFunds memory _additionalFunds,
-        uint256 _liquidationThresholdRate
+        uint256 _liquidationThresholdRate,
+        bool _useConservativePrice
     ) public view returns (ILendingMarketController.CalculatedFunds memory funds) {
         ActualFunds memory actualFunds = getActualFunds(
             _ccy,
             0,
             _user,
-            Storage.slot().minDebtUnitPrices[_ccy]
+            Storage.slot().minDebtUnitPrices[_ccy],
+            _useConservativePrice
         );
 
         funds.workingLendOrdersAmount =
@@ -656,7 +666,8 @@ library FundManagementLogic {
     function calculateTotalFundsInBaseCurrency(
         address _user,
         ILendingMarketController.AdditionalFunds calldata _additionalFunds,
-        uint256 _liquidationThresholdRate
+        uint256 _liquidationThresholdRate,
+        bool _useConservativePrice
     ) external view returns (ILendingMarketController.CalculatedTotalFunds memory totalFunds) {
         EnumerableSet.Bytes32Set storage currencySet = Storage.slot().usedCurrencies[_user];
         CalculatedTotalFundInBaseCurrencyVars memory vars;
@@ -702,7 +713,8 @@ library FundManagementLogic {
                 vars.ccys[i],
                 vars.user,
                 additionalFunds,
-                vars.liquidationThresholdRate
+                vars.liquidationThresholdRate,
+                _useConservativePrice
             );
 
             amounts[0] = funds.workingLendOrdersAmount;
@@ -767,7 +779,7 @@ library FundManagementLogic {
         bytes32 _ccy,
         address _user
     ) public view returns (int256 amount, int256 amountInPV, int256 amountInFV) {
-        FundManagementLogic.ActualFunds memory funds = getActualFunds(_ccy, 0, _user, 0);
+        ActualFunds memory funds = getActualFunds(_ccy, 0, _user, 0, false);
         amount = funds.genesisValue;
         amountInPV = funds.genesisValueInPV;
         amountInFV = funds.genesisValueInFV;
@@ -778,7 +790,7 @@ library FundManagementLogic {
         uint256 _maturity,
         address _user
     ) public view returns (int256 presentValue, int256 futureValue) {
-        FundManagementLogic.ActualFunds memory funds = getActualFunds(_ccy, _maturity, _user, 0);
+        ActualFunds memory funds = getActualFunds(_ccy, _maturity, _user, 0, false);
         presentValue = funds.presentValue;
         futureValue = funds.futureValue;
     }
@@ -988,14 +1000,16 @@ library FundManagementLogic {
             funds.futureValue = netFutureValue;
         }
 
-        uint256 netPositionMinDebtUnitPrice = netFutureValue < 0
-            ? getCurrentMinDebtUnitPrice(currentMaturity, vars.minDebtUnitPrice)
-            : 0;
-
+        uint256 unitPrice = getUnitPriceForValuation(
+            vars.market,
+            vars.useConservativePrice,
+            currentOrderBookId,
+            netFutureValue >= 0
+        );
         funds.presentValue = _calculatePVFromFVWithMinDebtUnitPrice(
             netFutureValue,
-            vars.market.getMarketUnitPrice(currentOrderBookId),
-            netPositionMinDebtUnitPrice
+            unitPrice,
+            netFutureValue < 0 ? currentMinDebtUnitPrice : 0
         );
     }
 
@@ -1008,8 +1022,11 @@ library FundManagementLogic {
         IGenesisValueVault genesisValueVault = AddressResolverLib.genesisValueVault();
 
         if (genesisValueVault.getAutoRollLog(_ccy, _fromMaturity).unitPrice == 0) {
-            uint256 fromUnitPrice = vars.market.getMarketUnitPrice(
-                Storage.slot().maturityOrderBookIds[_ccy][_fromMaturity]
+            uint256 fromUnitPrice = getUnitPriceForValuation(
+                vars.market,
+                vars.useConservativePrice,
+                Storage.slot().maturityOrderBookIds[_ccy][_fromMaturity],
+                _fromFutureValue >= 0
             );
             uint256 currentMinDebtUnitPrice = _fromFutureValue < 0
                 ? getCurrentMinDebtUnitPrice(_fromMaturity, vars.minDebtUnitPrice)
@@ -1028,7 +1045,12 @@ library FundManagementLogic {
                 0,
                 _fromFutureValue
             );
-            uint256 destinationUnitPrice = _getDefaultOrderBookMarketUnitPrice(vars);
+            uint256 destinationUnitPrice = getUnitPriceForValuation(
+                vars.market,
+                vars.useConservativePrice,
+                vars.defaultOrderBookId,
+                convertedFutureValue >= 0
+            );
             uint256 currentMinDebtUnitPrice = convertedFutureValue < 0
                 ? getCurrentMinDebtUnitPrice(
                     genesisValueVault.getCurrentMaturity(_ccy),
@@ -1058,26 +1080,66 @@ library FundManagementLogic {
         );
     }
 
+    /// @param _useConservativePrice Use the less favorable of the valuation and live prices.
+    /// @param _roundUp True to round the absolute value up, false to round it down.
     function calculateFVFromPV(
         bytes32 _ccy,
         uint256 _maturity,
-        int256 _presentValue
+        int256 _presentValue,
+        bool _useConservativePrice,
+        bool _roundUp
     ) public view returns (int256 futureValue) {
-        uint256 unitPrice = ILendingMarket(Storage.slot().lendingMarkets[_ccy]).getMarketUnitPrice(
-            Storage.slot().maturityOrderBookIds[_ccy][_maturity]
+        uint256 magnitude = _calculateFVFromPVWithRounding(
+            _ccy,
+            _maturity,
+            (_presentValue < 0 ? -_presentValue : _presentValue).toUint256(),
+            _useConservativePrice,
+            _presentValue >= 0,
+            _roundUp
         );
-        futureValue = _calculateFVFromPV(_presentValue, unitPrice);
+        // Rounding applies to the magnitude, including for negative debt.
+        futureValue = _presentValue < 0 ? -magnitude.toInt256() : magnitude.toInt256();
     }
 
+    /// @param _useConservativePrice Use the less favorable of the valuation and live prices.
+    /// @param _roundUp True to round up, false to round down.
     function calculateFVFromPV(
         bytes32 _ccy,
         uint256 _maturity,
-        uint256 _presentValue
+        uint256 _presentValue,
+        bool _useConservativePrice,
+        bool _roundUp
     ) public view returns (uint256 futureValue) {
-        uint256 unitPrice = ILendingMarket(Storage.slot().lendingMarkets[_ccy]).getMarketUnitPrice(
-            Storage.slot().maturityOrderBookIds[_ccy][_maturity]
+        futureValue = _calculateFVFromPVWithRounding(
+            _ccy,
+            _maturity,
+            _presentValue,
+            _useConservativePrice,
+            true,
+            _roundUp
         );
-        futureValue = _calculateFVFromPV(_presentValue, unitPrice);
+    }
+
+    function _calculateFVFromPVWithRounding(
+        bytes32 _ccy,
+        uint256 _maturity,
+        uint256 _presentValue,
+        bool _useConservativePrice,
+        bool _isLend,
+        bool _roundUp
+    ) private view returns (uint256 futureValue) {
+        uint256 unitPrice = getUnitPriceForValuation(
+            ILendingMarket(Storage.slot().lendingMarkets[_ccy]),
+            _useConservativePrice,
+            Storage.slot().maturityOrderBookIds[_ccy][_maturity],
+            _isLend
+        );
+        futureValue = Math.mulDiv(
+            _presentValue,
+            Constants.PRICE_DIGIT,
+            unitPrice == 0 ? Constants.PRICE_DIGIT : unitPrice,
+            _roundUp ? Math.Rounding.Up : Math.Rounding.Down
+        );
     }
 
     function _convertToBaseCurrencyAtMarketTerminationPrice(
@@ -1097,7 +1159,7 @@ library FundManagementLogic {
     }
 
     function _resetFundsPerCurrency(bytes32 _ccy, address _user) internal returns (int256 amount) {
-        amount = getActualFunds(_ccy, 0, _user, 0).presentValue;
+        amount = getActualFunds(_ccy, 0, _user, 0, false).presentValue;
 
         uint256[] memory maturities = Storage.slot().usedMaturities[_ccy][_user].values();
         for (uint256 j; j < maturities.length; j++) {
@@ -1150,16 +1212,32 @@ library FundManagementLogic {
         }
     }
 
-    function _getDefaultOrderBookMarketUnitPrice(
-        CalculateActualFundsVars memory vars
-    ) private view returns (uint256) {
-        if (vars.defaultOrderBookMarketUnitPrice == 0) {
-            vars.defaultOrderBookMarketUnitPrice = vars.market.getMarketUnitPrice(
-                vars.defaultOrderBookId
-            );
-        }
+    /**
+     * @notice Selects the standard price, or the adverse price for a lending or borrowing position.
+     * @dev Returns zero if neither price exists; callers retain their own unpriced-book fallback.
+     */
+    function getUnitPriceForValuation(
+        ILendingMarket _market,
+        bool _useConservativePrice,
+        uint8 _orderBookId,
+        bool _isLend
+    ) public view returns (uint256) {
+        if (!_useConservativePrice) {
+            return _market.getMarketUnitPrice(_orderBookId);
+        } else {
+            uint256 referencePrice = _market.getMarketUnitPrice(_orderBookId);
+            uint256 liveUnitPrice = _market.getLiveUnitPrice(_orderBookId);
 
-        return vars.defaultOrderBookMarketUnitPrice;
+            // A zero value means no price exists for that source. Use the available price.
+            if (referencePrice == 0) return liveUnitPrice;
+            if (liveUnitPrice == 0) return referencePrice;
+
+            // For risk-increasing actions, value claims at the lower price and debts at the higher price.
+            return
+                _isLend
+                    ? (referencePrice < liveUnitPrice ? referencePrice : liveUnitPrice)
+                    : (referencePrice > liveUnitPrice ? referencePrice : liveUnitPrice);
+        }
     }
 
     function _calculatePVFromFV(
@@ -1194,23 +1272,5 @@ library FundManagementLogic {
             ? _minDebtUnitPrice
             : _unitPrice;
         return _calculatePVFromFV(_futureValue, unitPrice);
-    }
-
-    function _calculateFVFromPV(
-        int256 _presentValue,
-        uint256 _unitPrice
-    ) internal pure returns (int256) {
-        uint256 unitPrice = _unitPrice == 0 ? Constants.PRICE_DIGIT : _unitPrice;
-        // NOTE: The formula is: futureValue = presentValue / unitPrice.
-        return (_presentValue * Constants.PRICE_DIGIT.toInt256()).div(unitPrice.toInt256());
-    }
-
-    function _calculateFVFromPV(
-        uint256 _presentValue,
-        uint256 _unitPrice
-    ) internal pure returns (uint256) {
-        uint256 unitPrice = _unitPrice == 0 ? Constants.PRICE_DIGIT : _unitPrice;
-        // NOTE: The formula is: futureValue = presentValue / unitPrice.
-        return (_presentValue * Constants.PRICE_DIGIT).div(unitPrice);
     }
 }

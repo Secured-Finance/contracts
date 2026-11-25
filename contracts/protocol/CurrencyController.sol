@@ -5,6 +5,7 @@ pragma solidity 0.8.19;
 import {AggregatorV3Interface} from "../dependencies/chainlink/AggregatorV3Interface.sol";
 import {EnumerableSet} from "../dependencies/openzeppelin/utils/structs/EnumerableSet.sol";
 import {SafeCast} from "../dependencies/openzeppelin/utils/math/SafeCast.sol";
+import {Math} from "../dependencies/openzeppelin/utils/math/Math.sol";
 import {Multicall} from "../dependencies/openzeppelin/utils/Multicall.sol";
 // interfaces
 import {ICurrencyController} from "./interfaces/ICurrencyController.sol";
@@ -314,6 +315,31 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable, Multical
         amount = (_amount * 10 ** Storage.slot().decimalsCaches[_ccy]).div(
             _getAggregatedLastPrice(_ccy).toUint256()
         );
+    }
+
+    /**
+     * @notice Converts from the base currency with the specified rounding direction.
+     * @param _ccy Currency to convert to
+     * @param _amount Amount in the base currency
+     * @param _roundUp True to round up, false to round down
+     * @return amount The converted amount
+     */
+    function convertFromBaseCurrency(
+        bytes32 _ccy,
+        uint256 _amount,
+        bool _roundUp
+    ) public view override returns (uint256 amount) {
+        if (_amount == 0) {
+            return 0;
+        }
+
+        return
+            Math.mulDiv(
+                _amount,
+                10 ** Storage.slot().decimalsCaches[_ccy],
+                _getAggregatedLastPrice(_ccy).toUint256(),
+                _roundUp ? Math.Rounding.Up : Math.Rounding.Down
+            );
     }
 
     /**

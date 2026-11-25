@@ -65,6 +65,12 @@ interface ICurrencyController {
 
     function convertFromBaseCurrency(
         bytes32 _ccy,
+        uint256 _amount,
+        bool _roundUp
+    ) external view returns (uint256 amount);
+
+    function convertFromBaseCurrency(
+        bytes32 _ccy,
         uint256[] calldata _amounts
     ) external view returns (uint256[] memory amounts);
 

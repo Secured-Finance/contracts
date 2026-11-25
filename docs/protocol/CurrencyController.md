@@ -320,6 +320,24 @@ Gets the converted amount to the selected currency from the base currency.
 ### convertFromBaseCurrency
 
 ```solidity
+function convertFromBaseCurrency(bytes32 _ccy, uint256 _amount, bool _roundUp) public view returns (uint256 amount)
+```
+
+Converts from the base currency with the specified rounding direction.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency to convert to |
+| _amount | uint256 | Amount in the base currency |
+| _roundUp | bool | True to round up, false to round down |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| amount | uint256 | The converted amount |
+
+### convertFromBaseCurrency
+
+```solidity
 function convertFromBaseCurrency(bytes32 _ccy, uint256[] _amounts) public view returns (uint256[] amounts)
 ```
 

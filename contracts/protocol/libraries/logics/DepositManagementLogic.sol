@@ -47,7 +47,7 @@ library DepositManagementLogic {
             uint256 totalUsedCollateral,
             ,
             bool isInsufficientDepositAmount
-        ) = _calculateCollateral(_user, _funds);
+        ) = _calculateCollateral(_user, _funds, true);
 
         isEnoughDepositInOrderCcy = !isInsufficientDepositAmount;
         isEnoughCollateral = _isEnoughCollateral(totalCollateral, totalUsedCollateral);
@@ -139,7 +139,8 @@ library DepositManagementLogic {
     }
 
     function getTotalCollateralAmount(
-        address _user
+        address _user,
+        bool _useConservativePrice
     )
         public
         view
@@ -148,7 +149,8 @@ library DepositManagementLogic {
         ILendingMarketController.AdditionalFunds memory _funds;
         (totalCollateral, totalUsedCollateral, totalDeposit, ) = _calculateCollateral(
             _user,
-            _funds
+            _funds,
+            _useConservativePrice
         );
     }
 
@@ -179,14 +181,17 @@ library DepositManagementLogic {
     }
 
     function getTotalUnusedCollateralAmount(address _user) public view returns (uint256) {
-        (uint256 totalCollateral, uint256 totalUsedCollateral, ) = getTotalCollateralAmount(_user);
+        (uint256 totalCollateral, uint256 totalUsedCollateral, ) = getTotalCollateralAmount(
+            _user,
+            false
+        );
 
         return totalCollateral > totalUsedCollateral ? totalCollateral - totalUsedCollateral : 0;
     }
 
     function getBorrowableAmount(address _user, bytes32 _ccy) external view returns (uint256) {
         uint256[] memory amounts = new uint256[](2);
-        (amounts[0], amounts[1], ) = getTotalCollateralAmount(_user);
+        (amounts[0], amounts[1], ) = getTotalCollateralAmount(_user, false);
         amounts = AddressResolverLib.currencyController().convertFromBaseCurrency(_ccy, amounts);
 
         uint256 totalCollateralAmount = amounts[0];
@@ -219,7 +224,7 @@ library DepositManagementLogic {
             totalUsedCollateral,
             ,
             isInsufficientDepositAmount
-        ) = _calculateCollateral(_user, _additionalFunds);
+        ) = _calculateCollateral(_user, _additionalFunds, true);
 
         if (totalCollateral == 0) {
             coverage = totalUsedCollateral == 0 ? 0 : type(uint256).max;
@@ -230,7 +235,8 @@ library DepositManagementLogic {
 
     function _calculateCollateral(
         address _user,
-        ILendingMarketController.AdditionalFunds memory _funds
+        ILendingMarketController.AdditionalFunds memory _funds,
+        bool _useConservativePrice
     )
         internal
         view
@@ -248,7 +254,8 @@ library DepositManagementLogic {
             .calculateTotalFundsInBaseCurrency(
                 _user,
                 _funds,
-                Storage.slot().liquidationThresholdRate
+                Storage.slot().liquidationThresholdRate,
+                _useConservativePrice
             );
 
         vars.plusDepositAmountInAdditionalFundsCcy = funds.plusDepositAmountInAdditionalFundsCcy;
@@ -285,7 +292,7 @@ library DepositManagementLogic {
             uint256 totalCollateral,
             uint256 totalUsedCollateral,
             uint256 totalDeposit
-        ) = getTotalCollateralAmount(_user);
+        ) = getTotalCollateralAmount(_user, true);
 
         return
             totalUsedCollateral == 0
@@ -307,7 +314,7 @@ library DepositManagementLogic {
                 uint256 totalCollateral,
                 uint256 totalUsedCollateral,
                 uint256 totalDeposit
-            ) = getTotalCollateralAmount(_user);
+            ) = getTotalCollateralAmount(_user, true);
 
             if (
                 totalUsedCollateral == 0 ||
@@ -488,7 +495,7 @@ library DepositManagementLogic {
             uint256 totalCollateralInBaseCcy,
             uint256 totalUsedCollateralInBaseCcy,
 
-        ) = getTotalCollateralAmount(_user);
+        ) = getTotalCollateralAmount(_user, false);
 
         if (totalUsedCollateralInBaseCcy == 0) {
             return (0, 0, 0);

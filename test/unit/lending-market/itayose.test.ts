@@ -257,7 +257,7 @@ describe('LendingMarket - Itayose', () => {
       expect(openingUnitPrice).to.equal(test.openingPrice);
 
       const itayoseLog = await lendingMarket.getItayoseLog(maturity);
-      const marketUnitPrice = await lendingMarket.getMarketUnitPrice(
+      const marketUnitPrice = await lendingMarket.getLiveUnitPrice(
         currentOrderBookId,
       );
 

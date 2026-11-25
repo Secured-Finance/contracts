@@ -722,7 +722,7 @@ describe('LendingMarketController - Rotations', () => {
         );
 
       expect(
-        await lendingMarket.getMarketUnitPrice(destinationOrderBookId),
+        await lendingMarket.getLiveUnitPrice(destinationOrderBookId),
       ).to.equal(0);
 
       await expect(
@@ -737,7 +737,7 @@ describe('LendingMarketController - Rotations', () => {
       expect(autoRollLog.prev).to.equal(maturities[1]);
       expect(autoRollLog.unitPrice).to.equal('9600');
       expect(
-        await lendingMarket.getMarketUnitPrice(destinationOrderBookId),
+        await lendingMarket.getLiveUnitPrice(destinationOrderBookId),
       ).to.equal(autoRollLog.unitPrice);
     });
 
