@@ -44,7 +44,11 @@ publish_release() {
     tag_sha=$(awk 'END { print $1 }' <<< "$remote_tag")
     [[ "$tag_sha" == "$(git rev-parse HEAD)" ]] || { echo "$tag already points to another commit"; exit 1; }
   fi
-  tarball=$(jq -er '.[0].filename' "$RUNNER_TEMP/npm-pack.json")
+  # npm 8 reports scoped filenames with @scope/name instead of scope-name.
+  tarball=$(jq -er '.[0].filename | sub("^@"; "") | gsub("/"; "-")' "$RUNNER_TEMP/npm-pack.json")
+  [[ -f "$RUNNER_TEMP/$tarball" ]] || {
+    echo "Package tarball not found: $RUNNER_TEMP/$tarball" >&2; exit 1;
+  }
   integrity=$(jq -er '.[0].integrity' "$RUNNER_TEMP/npm-pack.json")
   registry=https://npm.pkg.github.com
   package=$(jq -er .name package.json)
