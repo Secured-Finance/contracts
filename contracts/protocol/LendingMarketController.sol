@@ -1122,49 +1122,4 @@ contract LendingMarketController is
 
         LendingMarketUserLogic.depositZCToken(_ccy, _maturity, msg.sender, _amount);
     }
-
-    /**
-     * @notice Converts another user's positive FV into ZC for USDFC MAR2027 recovery.
-     * @dev Trusted operators may bypass collateral withdrawal limits, even while the market is paused.
-     * Amount must be nonzero and available in full. Not available after emergency termination.
-     */
-    function forceWithdrawZCToken(
-        bytes32 _ccy,
-        uint256 _maturity,
-        address _from,
-        address _to,
-        uint256 _amount
-    ) external override onlyOperator nonReentrant ifActive {
-        _validateZCRecovery(_ccy, _maturity, _from, _to);
-        LendingMarketUserLogic.forceWithdrawZCToken(_ccy, _maturity, _from, _to, _amount);
-        emit ZCTokenForceWithdrawn(msg.sender, _ccy, _maturity, _from, _to, _amount);
-    }
-
-    /**
-     * @notice Burns USDFC MAR2027 ZC and restores FV to the recipient.
-     * @dev No allowance is required. Amount must be nonzero and available in full.
-     * Not available after emergency termination, to preserve the settlement snapshot.
-     */
-    function forceDepositZCToken(
-        bytes32 _ccy,
-        uint256 _maturity,
-        address _from,
-        address _to,
-        uint256 _amount
-    ) external override onlyOperator nonReentrant ifActive {
-        _validateZCRecovery(_ccy, _maturity, _from, _to);
-        LendingMarketUserLogic.forceDepositZCToken(_ccy, _maturity, _from, _to, _amount);
-        emit ZCTokenForceDeposited(msg.sender, _ccy, _maturity, _from, _to, _amount);
-    }
-
-    function _validateZCRecovery(
-        bytes32 _ccy,
-        uint256 _maturity,
-        address _from,
-        address _to
-    ) private view {
-        if (_from == address(0) || _to == address(0)) revert InvalidZCRecoveryAddress();
-        if (_ccy != bytes32("USDFC") || _maturity != 1806019200) revert InvalidRecoveryTarget();
-        if (!isValidMaturity(_ccy, _maturity)) revert InvalidMaturity();
-    }
 }

@@ -400,9 +400,7 @@ describe('LendingMarketController - Orders', () => {
 
       // Setup mocks for order execution
       await mockTokenVault.mock.isCovered.returns(true, true);
-      await mockTokenVault.mock[
-        'getTotalCollateralAmount(address,bool)'
-      ].returns('1000');
+      await mockTokenVault.mock.getTotalCollateralAmount.returns('1000');
       await mockTokenVault.mock.getCollateralCurrencies.returns([
         targetCurrency,
       ]);

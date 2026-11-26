@@ -1058,31 +1058,3 @@ This function is not inactivated after the emergency termination to allow users 
 | _maturity | uint256 | The maturity of the order book |
 | _amount | uint256 | The amount of ZCToken to burn |
 
-### forceWithdrawZCToken
-
-```solidity
-function forceWithdrawZCToken(bytes32 _ccy, uint256 _maturity, address _from, address _to, uint256 _amount) external
-```
-
-Converts another user's positive FV into ZC for USDFC MAR2027 recovery.
-
-_Trusted operators may bypass collateral withdrawal limits, even while the market is paused.
-Amount must be nonzero and available in full. Not available after emergency termination._
-
-### forceDepositZCToken
-
-```solidity
-function forceDepositZCToken(bytes32 _ccy, uint256 _maturity, address _from, address _to, uint256 _amount) external
-```
-
-Burns USDFC MAR2027 ZC and restores FV to the recipient.
-
-_No allowance is required. Amount must be nonzero and available in full.
-Not available after emergency termination, to preserve the settlement snapshot._
-
-### _validateZCRecovery
-
-```solidity
-function _validateZCRecovery(bytes32 _ccy, uint256 _maturity, address _from, address _to) private view
-```
-

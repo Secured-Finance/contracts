@@ -308,54 +308,6 @@ describe('OrderStatisticsTree - order chunks', () => {
     expect(await verifyBlackHeightConsistency(ost)).to.be.true;
   });
 
-  it('migrates legacy single and multiple chunks and preserves orderIdExists', async () => {
-    for (let orderId = 1; orderId <= CHUNK_SIZE + 1; orderId++) {
-      await ost.insertLegacyOrder(
-        PRICE,
-        orderId,
-        constants.AddressZero,
-        AMOUNT,
-      );
-    }
-    expectBn((await ost.getChunkMetadata(PRICE)).firstChunkId, 0);
-    expect(await ost.orderIdExists(PRICE, 1)).to.be.true;
-    expect(await ost.orderIdExists(PRICE, CHUNK_SIZE + 1)).to.be.true;
-    await ost.migrateOrderChunks(PRICE);
-    const metadata = await ost.getChunkMetadata(PRICE);
-    expectBn(metadata.firstChunkId, 1);
-    expectBn(metadata.lastChunkId, 2);
-    expectBn(metadata.explicitMappingStartOrderId, CHUNK_SIZE + 1);
-    expectBn(metadata.activeChunkCount, 2);
-    await assertChunkInvariants(PRICE, [1, CHUNK_SIZE, CHUNK_SIZE + 1]);
-    await expect(ost.migrateOrderChunks(PRICE)).to.be.revertedWith(
-      'Already migrated',
-    );
-    await expect(ost.migrateOrderChunks(9999)).to.be.revertedWith(
-      'Value does not exist',
-    );
-    await insertOrders(1, PRICE, CHUNK_SIZE + 2);
-    await ost.removeAmountValue(PRICE, CHUNK_SIZE / 2);
-    await ost.removeOrders(PRICE, 10);
-    await assertChunkInvariants(PRICE, [
-      2,
-      CHUNK_SIZE,
-      CHUNK_SIZE + 1,
-      CHUNK_SIZE + 2,
-    ]);
-  }).timeout(180000);
-
-  it('lazily builds chunk metadata before inserting into a legacy price level', async () => {
-    await ost.insertLegacyOrder(PRICE, 1, constants.AddressZero, AMOUNT);
-    expectBn((await ost.getChunkMetadata(PRICE)).firstChunkId, 0);
-
-    await insertOrders(1, PRICE, 2);
-    const metadata = await ost.getChunkMetadata(PRICE);
-    expectBn(metadata.firstChunkId, 1);
-    expectBn(metadata.lastChunkId, 1);
-    expectBn(metadata.activeChunkCount, 1);
-    await assertChunkInvariants(PRICE, [1, 2]);
-  });
-
   it('rejects stale order ids across repeated price-node lifecycles', async () => {
     await insertOrders(2);
     await ost.removeAmountValue(PRICE, 1);

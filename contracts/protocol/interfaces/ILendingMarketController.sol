@@ -7,29 +7,9 @@ import {ZCTokenInfo, TerminationCurrencyCache} from "../storages/LendingMarketCo
 
 interface ILendingMarketController {
     error InvalidMaturity();
-    error InvalidZCRecoveryAddress();
-    error InvalidRecoveryTarget();
     error MarketTerminated();
     error NotTerminated();
     error AlreadyInitialized();
-
-    event ZCTokenForceWithdrawn(
-        address indexed operator,
-        bytes32 indexed ccy,
-        uint256 indexed maturity,
-        address from,
-        address to,
-        uint256 amount
-    );
-
-    event ZCTokenForceDeposited(
-        address indexed operator,
-        bytes32 indexed ccy,
-        uint256 indexed maturity,
-        address from,
-        address to,
-        uint256 amount
-    );
 
     event ItayoseProcessInitialized(
         bytes32 indexed ccy,
@@ -363,23 +343,4 @@ interface ILendingMarketController {
     ) external returns (uint256 withdrawnAmount);
 
     function depositZCToken(bytes32 _ccy, uint256 _maturity, uint256 _amount) external;
-
-    /// @notice Converts exactly `amount` FV to ZC for USDFC MAR2027 recovery only.
-    /// @dev Operator recovery bypasses collateral limits. `to` receives the minted ZC.
-    function forceWithdrawZCToken(
-        bytes32 ccy,
-        uint256 maturity,
-        address from,
-        address to,
-        uint256 amount
-    ) external;
-
-    /// @notice Burns exactly `amount` USDFC MAR2027 ZC from `from` and credits FV to `to`.
-    function forceDepositZCToken(
-        bytes32 ccy,
-        uint256 maturity,
-        address from,
-        address to,
-        uint256 amount
-    ) external;
 }

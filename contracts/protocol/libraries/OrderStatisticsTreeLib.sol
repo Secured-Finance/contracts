@@ -1189,10 +1189,6 @@ library OrderStatisticsTreeLib {
 
         insert(self, value);
 
-        // TODO: Remove this check after the migration is complete.
-        // This is to ensure that the chunk metadata is created for existing orders.
-        _ensureChunkMetadata(self, value);
-
         addTail(self, value, orderId, user, amount);
         _addOrderToChunk(self.chunkMetadata[value], orderId, amount);
     }
@@ -1202,10 +1198,6 @@ library OrderStatisticsTreeLib {
         uint256 value,
         uint48 orderId
     ) internal returns (uint256 amount) {
-        // TODO: Remove this check after the migration is complete.
-        // This is to ensure that the chunk metadata is created for existing orders.
-        _ensureChunkMetadata(self, value);
-
         Node storage gn = self.nodes[value];
         OrderItem storage order = gn.orders[orderId];
         _removeOrderFromChunk(self.chunkMetadata[value], orderId, order.amount, order.next);
@@ -1221,10 +1213,6 @@ library OrderStatisticsTreeLib {
     ) internal returns (PartiallyRemovedOrder memory partiallyRemovedOrder) {
         Node storage gn = self.nodes[value];
         require(gn.orderTotalAmount >= amount, "OSTLib: Amount to remove is insufficient");
-
-        // TODO: Remove this check after the migration is complete.
-        // This is to ensure that the chunk metadata is created for existing orders.
-        _ensureChunkMetadata(self, value);
 
         PriceChunkMetadata storage metadata = self.chunkMetadata[value];
         uint256 remainingAmount = amount;
@@ -1305,17 +1293,6 @@ library OrderStatisticsTreeLib {
                 _calculateFutureValue(value, partiallyRemovedAmount)
             );
         }
-    }
-
-    function migrateOrderChunks(Tree storage self, uint256 value) internal {
-        Node storage gn = self.nodes[value];
-        PriceChunkMetadata storage metadata = self.chunkMetadata[value];
-
-        require(exists(self, value), "Value does not exist");
-        require(gn.orderCounter > 0, "No orders to migrate");
-
-        require(metadata.firstChunkId == 0, "Already migrated");
-        _migrateChunkMetadata(self, value);
     }
 
     /**
@@ -1537,26 +1514,6 @@ library OrderStatisticsTreeLib {
 
         gn.orders[prevId].next = nextId;
         gn.orders[nextId].prev = prevId;
-    }
-
-    function _ensureChunkMetadata(Tree storage self, uint256 value) private {
-        PriceChunkMetadata storage metadata = self.chunkMetadata[value];
-
-        if (self.nodes[value].orderCounter > 0 && metadata.firstChunkId == 0) {
-            _migrateChunkMetadata(self, value);
-        }
-    }
-
-    function _migrateChunkMetadata(Tree storage self, uint256 value) private {
-        Node storage gn = self.nodes[value];
-        PriceChunkMetadata storage metadata = self.chunkMetadata[value];
-
-        uint48 orderId = gn.head;
-        while (orderId != 0) {
-            OrderItem storage order = gn.orders[orderId];
-            _addOrderToChunk(metadata, orderId, order.amount);
-            orderId = order.next;
-        }
     }
 
     function _addOrderToChunk(

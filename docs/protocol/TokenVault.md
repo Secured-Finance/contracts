@@ -258,24 +258,6 @@ Gets the total amount of the unused collateral in the base currency
 ### getTotalCollateralAmount
 
 ```solidity
-function getTotalCollateralAmount(address _user) external view returns (uint256 totalCollateralAmount)
-```
-
-Gets the total collateral amount using valuation prices.
-
-_Preserves the single-argument interface used by existing SDK clients._
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _user | address | User's address |
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| totalCollateralAmount | uint256 | The total collateral amount in the base currency |
-
-### getTotalCollateralAmount
-
-```solidity
 function getTotalCollateralAmount(address _user, bool _useConservativePrice) external view returns (uint256 totalCollateralAmount)
 ```
 

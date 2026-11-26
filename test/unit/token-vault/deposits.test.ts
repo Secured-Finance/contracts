@@ -531,16 +531,7 @@ describe('TokenVault - Deposits', () => {
         await tokenVaultProxy.getTotalUnusedCollateralAmount(carol.address),
       ).to.equal(valueInETH.add(borrowedAmount));
       expect(
-        await tokenVaultProxy['getTotalCollateralAmount(address,bool)'](
-          carol.address,
-          false,
-        ),
-      ).to.equal(valueInETH.add(borrowedAmount));
-
-      expect(
-        await tokenVaultProxy['getTotalCollateralAmount(address)'](
-          carol.address,
-        ),
+        await tokenVaultProxy.getTotalCollateralAmount(carol.address, false),
       ).to.equal(valueInETH.add(borrowedAmount));
 
       const { totalCollateral, totalUsedCollateral, totalDeposit } =
@@ -625,10 +616,7 @@ describe('TokenVault - Deposits', () => {
         await tokenVaultProxy.getTotalUnusedCollateralAmount(signer.address),
       ).to.equal(value);
       expect(
-        await tokenVaultProxy['getTotalCollateralAmount(address,bool)'](
-          signer.address,
-          false,
-        ),
+        await tokenVaultProxy.getTotalCollateralAmount(signer.address, false),
       ).to.equal(value);
 
       await tokenVaultCaller
@@ -639,10 +627,7 @@ describe('TokenVault - Deposits', () => {
         await tokenVaultProxy.getTotalUnusedCollateralAmount(signer.address),
       ).to.equal('0');
       expect(
-        await tokenVaultProxy['getTotalCollateralAmount(address,bool)'](
-          signer.address,
-          false,
-        ),
+        await tokenVaultProxy.getTotalCollateralAmount(signer.address, false),
       ).to.equal('0');
     });
 
@@ -674,10 +659,7 @@ describe('TokenVault - Deposits', () => {
         .addDepositAmount(signer.address, targetCurrency, value);
 
       expect(
-        await tokenVaultProxy['getTotalCollateralAmount(address,bool)'](
-          signer.address,
-          false,
-        ),
+        await tokenVaultProxy.getTotalCollateralAmount(signer.address, false),
       ).to.equal(value);
 
       await tokenVaultCaller
@@ -688,10 +670,7 @@ describe('TokenVault - Deposits', () => {
         await tokenVaultProxy.getTotalUnusedCollateralAmount(signer.address),
       ).to.equal('0');
       expect(
-        await tokenVaultProxy['getTotalCollateralAmount(address,bool)'](
-          signer.address,
-          false,
-        ),
+        await tokenVaultProxy.getTotalCollateralAmount(signer.address, false),
       ).to.equal('0');
 
       const currencies = await tokenVaultProxy.getUsedCurrencies(
@@ -727,10 +706,7 @@ describe('TokenVault - Deposits', () => {
         .deposit(nonCollateralCurrency, value);
 
       expect(
-        await tokenVaultProxy['getTotalCollateralAmount(address,bool)'](
-          signer.address,
-          false,
-        ),
+        await tokenVaultProxy.getTotalCollateralAmount(signer.address, false),
       ).to.equal(valueInETH);
 
       expect(await tokenVaultProxy.getCoverage(signer.address)).to.equal(

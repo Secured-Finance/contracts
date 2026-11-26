@@ -421,12 +421,6 @@ function removeOrder(struct OrderStatisticsTreeLib.Tree self, uint256 value, uin
 function removeOrders(struct OrderStatisticsTreeLib.Tree self, uint256 value, uint256 amount) internal returns (struct PartiallyRemovedOrder partiallyRemovedOrder)
 ```
 
-### migrateOrderChunks
-
-```solidity
-function migrateOrderChunks(struct OrderStatisticsTreeLib.Tree self, uint256 value) internal
-```
-
 ### addHead
 
 ```solidity
@@ -494,18 +488,6 @@ function _link(struct OrderStatisticsTreeLib.Tree self, uint256 value, uint48 pr
 ```
 
 _Internal function to link an Object to another._
-
-### _ensureChunkMetadata
-
-```solidity
-function _ensureChunkMetadata(struct OrderStatisticsTreeLib.Tree self, uint256 value) private
-```
-
-### _migrateChunkMetadata
-
-```solidity
-function _migrateChunkMetadata(struct OrderStatisticsTreeLib.Tree self, uint256 value) private
-```
 
 ### _addOrderToChunk
 

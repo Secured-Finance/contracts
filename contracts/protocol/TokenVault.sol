@@ -233,18 +233,6 @@ contract TokenVault is
     }
 
     /**
-     * @notice Gets the total collateral amount using valuation prices.
-     * @dev Preserves the single-argument interface used by existing SDK clients.
-     * @param _user User's address
-     * @return totalCollateralAmount The total collateral amount in the base currency
-     */
-    function getTotalCollateralAmount(
-        address _user
-    ) external view override returns (uint256 totalCollateralAmount) {
-        (totalCollateralAmount, , ) = DepositManagementLogic.getTotalCollateralAmount(_user, false);
-    }
-
-    /**
      * @notice Gets the total collateral amount.
      * @param _user User's address
      * @param _useConservativePrice Use conservative prices for risk-increasing actions

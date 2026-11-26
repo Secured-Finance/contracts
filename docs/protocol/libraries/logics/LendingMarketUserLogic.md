@@ -110,18 +110,6 @@ function withdrawZCToken(bytes32 _ccy, uint256 _maturity, address _user, uint256
 function depositZCToken(bytes32 _ccy, uint256 _maturity, address _user, uint256 _amount) public
 ```
 
-### forceWithdrawZCToken
-
-```solidity
-function forceWithdrawZCToken(bytes32 _ccy, uint256 _maturity, address _from, address _to, uint256 _amount) public
-```
-
-### forceDepositZCToken
-
-```solidity
-function forceDepositZCToken(bytes32 _ccy, uint256 _maturity, address _from, address _to, uint256 _amount) public
-```
-
 ### getWithdrawableZCTokenAmount
 
 ```solidity
