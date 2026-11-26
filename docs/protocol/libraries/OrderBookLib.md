@@ -215,12 +215,6 @@ function fillOrders(struct OrderBookLib.OrderBook self, enum ProtocolTypes.Side 
 function getItayoseBoundaryUnitPrice(struct OrderBookLib.OrderBook self, enum ProtocolTypes.Side _takerSide, uint256 _maxPriceLevels) internal view returns (uint256 boundaryUnitPrice)
 ```
 
-### migrateOrderChunks
-
-```solidity
-function migrateOrderChunks(struct OrderBookLib.OrderBook self, enum ProtocolTypes.Side _side, uint256 _unitPrice) internal
-```
-
 ### setInitialBlockUnitPrice
 
 ```solidity

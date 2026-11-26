@@ -721,22 +721,6 @@ Calculates the amount to be filled when executing an order in the order book fro
 | filledAmountInFV | uint256 | The amount in the future value that is filled on the order book |
 | orderFeeInFV | uint256 | The order fee amount in the future value |
 
-### migrateOrderChunks
-
-```solidity
-function migrateOrderChunks(uint8 _orderBookId, enum ProtocolTypes.Side _side, uint256 _unitPrice) external
-```
-
-Builds chunk metadata for a legacy price level after the chunk-index upgrade.
-
-_Permissionless and callable only while the price level has orders and no chunk metadata._
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _orderBookId | uint8 | The order book id |
-| _side | enum ProtocolTypes.Side | The order side to migrate |
-| _unitPrice | uint256 | The unit price to migrate |
-
 ### createOrderBook
 
 ```solidity

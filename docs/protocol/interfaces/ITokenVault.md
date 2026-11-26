@@ -155,12 +155,6 @@ function getTotalUnusedCollateralAmount(address user) external view returns (uin
 ### getTotalCollateralAmount
 
 ```solidity
-function getTotalCollateralAmount(address user) external view returns (uint256)
-```
-
-### getTotalCollateralAmount
-
-```solidity
 function getTotalCollateralAmount(address user, bool useConservativePrice) external view returns (uint256)
 ```
 

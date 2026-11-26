@@ -380,47 +380,6 @@ library LendingMarketUserLogic {
         }
     }
 
-    function forceWithdrawZCToken(
-        bytes32 _ccy,
-        uint256 _maturity,
-        address _from,
-        address _to,
-        uint256 _amount
-    ) public {
-        if (_amount == 0) revert AmountIsZero();
-        FundManagementLogic.cleanUpFunds(_ccy, _from);
-
-        // The controller restricts recovery to USDFC MAR2027; bypass the collateral budget.
-        IFutureValueVault(Storage.slot().futureValueVaults[_ccy]).lock(
-            Storage.slot().maturityOrderBookIds[_ccy][_maturity],
-            _from,
-            _amount,
-            _maturity
-        );
-        IZCToken(Storage.slot().zcTokens[_ccy][_maturity]).mint(_to, _amount);
-    }
-
-    function forceDepositZCToken(
-        bytes32 _ccy,
-        uint256 _maturity,
-        address _from,
-        address _to,
-        uint256 _amount
-    ) public {
-        if (_amount == 0) revert AmountIsZero();
-        FundManagementLogic.cleanUpFunds(_ccy, _to);
-
-        // burn reverts on insufficient balance; recovery must never silently reduce the amount.
-        IZCToken(Storage.slot().zcTokens[_ccy][_maturity]).burn(_from, _amount);
-        IFutureValueVault(Storage.slot().futureValueVaults[_ccy]).unlock(
-            Storage.slot().maturityOrderBookIds[_ccy][_maturity],
-            _to,
-            _amount,
-            _maturity
-        );
-        FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, _to);
-    }
-
     function getWithdrawableZCTokenAmount(
         bytes32 _ccy,
         uint256 _maturity,

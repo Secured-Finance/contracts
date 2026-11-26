@@ -131,21 +131,11 @@ describe('Integration Test: Conservative ZC withdrawals', () => {
       const [conservativeCollateral, conservativeDebt] =
         await tokenVault.getCollateralDetail(user.address, true);
       expect(
-        await tokenVault['getTotalCollateralAmount(address,bool)'](
-          user.address,
-          false,
-        ),
+        await tokenVault.getTotalCollateralAmount(user.address, false),
       ).to.equal(valuationCollateral);
 
       expect(
-        await tokenVault['getTotalCollateralAmount(address)'](user.address),
-      ).to.equal(valuationCollateral);
-
-      expect(
-        await tokenVault['getTotalCollateralAmount(address,bool)'](
-          user.address,
-          true,
-        ),
+        await tokenVault.getTotalCollateralAmount(user.address, true),
       ).to.equal(conservativeCollateral);
       // Higher debt also allocates more same-currency claims without a haircut.
       // Compare the coverage ratio, rather than either collateral amount in isolation.

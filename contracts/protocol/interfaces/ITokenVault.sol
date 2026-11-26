@@ -46,8 +46,6 @@ interface ITokenVault {
 
     function getTotalUnusedCollateralAmount(address user) external view returns (uint256);
 
-    function getTotalCollateralAmount(address user) external view returns (uint256);
-
     function getTotalCollateralAmount(
         address user,
         bool useConservativePrice

@@ -8,18 +8,6 @@
 error InvalidMaturity()
 ```
 
-### InvalidZCRecoveryAddress
-
-```solidity
-error InvalidZCRecoveryAddress()
-```
-
-### InvalidRecoveryTarget
-
-```solidity
-error InvalidRecoveryTarget()
-```
-
 ### MarketTerminated
 
 ```solidity
@@ -36,18 +24,6 @@ error NotTerminated()
 
 ```solidity
 error AlreadyInitialized()
-```
-
-### ZCTokenForceWithdrawn
-
-```solidity
-event ZCTokenForceWithdrawn(address operator, bytes32 ccy, uint256 maturity, address from, address to, uint256 amount)
-```
-
-### ZCTokenForceDeposited
-
-```solidity
-event ZCTokenForceDeposited(address operator, bytes32 ccy, uint256 maturity, address from, address to, uint256 amount)
 ```
 
 ### ItayoseProcessInitialized
@@ -495,22 +471,4 @@ function withdrawZCToken(bytes32 _ccy, uint256 _maturity, uint256 _amount) exter
 ```solidity
 function depositZCToken(bytes32 _ccy, uint256 _maturity, uint256 _amount) external
 ```
-
-### forceWithdrawZCToken
-
-```solidity
-function forceWithdrawZCToken(bytes32 ccy, uint256 maturity, address from, address to, uint256 amount) external
-```
-
-Converts exactly `amount` FV to ZC for USDFC MAR2027 recovery only.
-
-_Operator recovery bypasses collateral limits. `to` receives the minted ZC._
-
-### forceDepositZCToken
-
-```solidity
-function forceDepositZCToken(bytes32 ccy, uint256 maturity, address from, address to, uint256 amount) external
-```
-
-Burns exactly `amount` USDFC MAR2027 ZC from `from` and credits FV to `to`.
 

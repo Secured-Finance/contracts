@@ -750,9 +750,7 @@ describe('LendingMarketController - Liquidations', () => {
 
       // Set up for the mocks
       await mockReserveFund.mock.isPaused.returns(false);
-      await mockTokenVault.mock[
-        'getTotalCollateralAmount(address,bool)'
-      ].returns(0);
+      await mockTokenVault.mock.getTotalCollateralAmount.returns(0);
       await mockTokenVault.mock.transferFrom.returns(100);
       await mockCurrencyController.mock[
         'convert(bytes32,bytes32,uint256[])'
@@ -818,9 +816,7 @@ describe('LendingMarketController - Liquidations', () => {
 
       // Set up for the mocks
       await mockReserveFund.mock.isPaused.returns(false);
-      await mockTokenVault.mock[
-        'getTotalCollateralAmount(address,bool)'
-      ].returns(100);
+      await mockTokenVault.mock.getTotalCollateralAmount.returns(100);
       await mockTokenVault.mock.transferFrom.returns(100);
       await mockCurrencyController.mock[
         'convert(bytes32,bytes32,uint256[])'

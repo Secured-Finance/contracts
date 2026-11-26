@@ -130,12 +130,6 @@ event OrderBookCreated(uint8 orderBookId, uint256 maturity, uint256 openingDate)
 event ItayoseExecuted(bytes32 ccy, uint256 maturity, uint256 openingUnitPrice, uint256 lastLendUnitPrice, uint256 lastBorrowUnitPrice, uint256 offsetAmount)
 ```
 
-### migrateOrderChunks
-
-```solidity
-function migrateOrderChunks(uint8 _orderBookId, enum ProtocolTypes.Side _side, uint256 _unitPrice) external
-```
-
 ### isReady
 
 ```solidity

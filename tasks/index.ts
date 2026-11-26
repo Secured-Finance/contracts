@@ -2,7 +2,6 @@ import './add-currency';
 import './add-order-books';
 import './change-owners';
 import './fork';
-import './migrate-order-chunks';
 import './open-markets';
 import './register-orders';
 import './revoke-role';

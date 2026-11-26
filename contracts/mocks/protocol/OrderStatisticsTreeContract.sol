@@ -165,16 +165,6 @@ contract OrderStatisticsTreeContract {
         return tree.removeOrders(value, amount);
     }
 
-    /// @dev Reproduces state written by the pre-chunk implementation for migration tests.
-    function insertLegacyOrder(uint256 value, uint48 orderId, address user, uint256 amount) public {
-        tree.insert(value);
-        tree.addTail(value, orderId, user, amount);
-    }
-
-    function migrateOrderChunks(uint256 value) public {
-        tree.migrateOrderChunks(value);
-    }
-
     function calculateDroppedAmountFromLeft(
         uint256 amount,
         uint256 amountInFV,

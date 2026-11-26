@@ -374,7 +374,7 @@ describe('Integration Test: Deposit', async () => {
         await tokenVault.getTotalDepositAmount(hexETH);
       const collateralAmountBefore = await tokenVault
         .connect(alice)
-        ['getTotalCollateralAmount(address,bool)'](alice.address, false);
+        .getTotalCollateralAmount(alice.address, false);
 
       await tokenVault
         .connect(alice)
@@ -411,7 +411,7 @@ describe('Integration Test: Deposit', async () => {
         await tokenVault.getTotalDepositAmount(hexWFIL);
       const collateralAmountBefore = await tokenVault
         .connect(alice)
-        ['getTotalCollateralAmount(address,bool)'](alice.address, false);
+        .getTotalCollateralAmount(alice.address, false);
 
       await wFILToken
         .connect(alice)
@@ -422,7 +422,7 @@ describe('Integration Test: Deposit', async () => {
 
       const collateralAmountAfter = await tokenVault
         .connect(alice)
-        ['getTotalCollateralAmount(address,bool)'](alice.address, false);
+        .getTotalCollateralAmount(alice.address, false);
       const tokenVaultBalance = await wFILToken.balanceOf(tokenVault.address);
       const currencies = await tokenVault.getUsedCurrencies(alice.address);
       const depositAmount = await tokenVault.getDepositAmount(
@@ -488,7 +488,7 @@ describe('Integration Test: Deposit', async () => {
         await tokenVault.getTotalDepositAmount(hexUSDC);
       const collateralAmountBefore = await tokenVault
         .connect(alice)
-        ['getTotalCollateralAmount(address,bool)'](alice.address, false);
+        .getTotalCollateralAmount(alice.address, false);
 
       await usdcToken
         .connect(alice)
@@ -499,7 +499,7 @@ describe('Integration Test: Deposit', async () => {
 
       const collateralAmountAfter = await tokenVault
         .connect(alice)
-        ['getTotalCollateralAmount(address,bool)'](alice.address, false);
+        .getTotalCollateralAmount(alice.address, false);
       const tokenVaultBalance = await usdcToken.balanceOf(tokenVault.address);
       const currencies = await tokenVault.getUsedCurrencies(alice.address);
       const depositAmount = await tokenVault.getDepositAmount(
@@ -530,7 +530,7 @@ describe('Integration Test: Deposit', async () => {
         await tokenVault.getTotalDepositAmount(hexWBTC);
       const collateralAmountBefore = await tokenVault
         .connect(alice)
-        ['getTotalCollateralAmount(address,bool)'](alice.address, false);
+        .getTotalCollateralAmount(alice.address, false);
       await wBTCToken
         .connect(alice)
         .approve(tokenVault.address, initialWBTCBalance.div(5));
@@ -540,7 +540,7 @@ describe('Integration Test: Deposit', async () => {
 
       const collateralAmountAfter = await tokenVault
         .connect(alice)
-        ['getTotalCollateralAmount(address,bool)'](alice.address, false);
+        .getTotalCollateralAmount(alice.address, false);
       const tokenVaultBalance = await wBTCToken.balanceOf(tokenVault.address);
       const currencies = await tokenVault.getUsedCurrencies(alice.address);
       const depositAmount = await tokenVault.getDepositAmount(
@@ -570,7 +570,7 @@ describe('Integration Test: Deposit', async () => {
         await tokenVault.getTotalDepositAmount(hexWFIL);
       const collateralAmountBefore = await tokenVault
         .connect(alice)
-        ['getTotalCollateralAmount(address,bool)'](alice.address, false);
+        .getTotalCollateralAmount(alice.address, false);
       const tokenVaultBalanceBefore = await wFILToken.balanceOf(
         tokenVault.address,
       );
@@ -579,7 +579,7 @@ describe('Integration Test: Deposit', async () => {
 
       const collateralAmountAfter = await tokenVault
         .connect(alice)
-        ['getTotalCollateralAmount(address,bool)'](alice.address, false);
+        .getTotalCollateralAmount(alice.address, false);
 
       const tokenVaultBalanceAfter = await wFILToken.balanceOf(
         tokenVault.address,
