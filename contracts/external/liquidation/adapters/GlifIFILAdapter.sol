@@ -57,7 +57,10 @@ contract GlifIFILAdapter is IConversionAdapter {
         uint256 nativeBalanceBefore = address(this).balance;
         uint256 wrappedBalanceBefore = IERC20(tokenOut).balanceOf(address(this));
 
+        // The pool pulls iFIL from the owner before burning the redeemed shares.
+        TransferHelper.safeApprove(tokenIn, address(pool), _amountIn);
         pool.redeem(_amountIn, address(this), address(this));
+        TransferHelper.safeApprove(tokenIn, address(pool), 0);
 
         uint256 receivedNativeAmount = address(this).balance - nativeBalanceBefore;
         uint256 receivedWrappedAmount = IERC20(tokenOut).balanceOf(address(this)) -

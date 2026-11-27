@@ -43,7 +43,8 @@ contract MockInfinityPool {
         address _owner
     ) external returns (uint256 assets) {
         assets = convertToAssets(_shares);
-        iFIL.burn(_owner, _shares);
+        TransferHelper.safeTransferFrom(address(iFIL), _owner, address(this), _shares);
+        iFIL.burn(address(this), _shares);
 
         if (returnsWrappedToken) {
             wFIL.deposit{value: assets}();
