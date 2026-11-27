@@ -94,6 +94,36 @@ describe('Liquidator', () => {
   });
 
   describe('GlifIFILAdapter', () => {
+    it('requires pool approval even when the caller owns the shares', async () => {
+      await expect(
+        pool.redeem(collateralAmount, owner.address, owner.address),
+      ).to.be.revertedWith('TransferHelper: TRANSFER_FROM_FAILED');
+
+      await iFIL.approve(pool.address, collateralAmount);
+      await pool.redeem(collateralAmount, owner.address, owner.address);
+
+      expect(await iFIL.balanceOf(pool.address)).to.equal(0);
+      expect(await iFIL.allowance(owner.address, pool.address)).to.equal(0);
+    });
+
+    it('approves the pool for repeated conversions and clears the allowance', async () => {
+      await iFIL.approve(adapter.address, collateralAmount.mul(2));
+
+      for (let index = 0; index < 2; index++) {
+        await expect(adapter.convert(collateralAmount))
+          .to.emit(iFIL, 'Approval')
+          .withArgs(adapter.address, pool.address, collateralAmount);
+
+        expect(await iFIL.allowance(adapter.address, pool.address)).to.equal(0);
+        expect(await iFIL.balanceOf(adapter.address)).to.equal(0);
+        expect(await iFIL.balanceOf(pool.address)).to.equal(0);
+      }
+
+      expect(await wFIL.balanceOf(owner.address)).to.equal(
+        convertedAmount.mul(2),
+      );
+    });
+
     it('previews and converts iFIL into wrapped FIL', async () => {
       expect(await adapter.previewConvert(collateralAmount)).to.equal(
         convertedAmount,
